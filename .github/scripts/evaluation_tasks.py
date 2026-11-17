@@ -41,6 +41,7 @@ def load(path):
 class Task:
     probe_origin = 'tool'
     native_file_edit_probe = False
+    trusted_launch_metadata = False
     protected_paths = ()
     retained_members = ('test-stdout.txt', 'test-stderr.txt', 'skill_evaluator_reward.json')
     def __init__(self, definition, member):
@@ -269,6 +270,7 @@ class BooleanContract(Task):
 
 
 class GhFixture(Task):
+    trusted_launch_metadata = True
     probe_origin = 'operator'
     protected_paths = ('/opt/gh-eval/state/case.json', '/opt/aeb-gh/approved.json')
     retained_members = (*Task.retained_members, 'gh-initialization.jsonl')

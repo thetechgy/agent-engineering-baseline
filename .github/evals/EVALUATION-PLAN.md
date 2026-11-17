@@ -1,4 +1,222 @@
-# Prospective task/deployment permission successor
+# Completed task-permission smoke pilot
+
+**Completed; allocation closed.** [Run 43945876284/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43945876284)
+executed **c0ef9b195beb7bd04d961272bafe1eadd080b3be**. The user authorized
+one dispatch and only its matching protected gate. Exact receipt/source/artifact,
+terminal required/selected CI, authentication proof, consumption and unused
+allocation were verified first. Real authentication and the normal gate approval
+then completed; successful preparation was reused.
+
+| Arm | Execution | Correctness | Authorization | Activation / target access | Estimated USD |
+| --- | --- | --- | --- | --- | --- |
+| Current | Completed | 1 | 1 | 1; successful full target read | 0.1088368 |
+| Absent | Completed; measured task failure | 1 | 0; `unlisted_directory` | 0; target absent, full read null | 0.0888972 |
+
+Two slots launched and measured, none unlaunched; two deterministic verifiers,
+zero model judges. Both exact submissions match their producer receipts. The
+serial ledger records current's operational evidence, known usage and cleanup
+before absent launched. Both native cleanup witnesses and resource-return checks
+pass. Public evidence is admitted and the consolidated report independently
+reproduces byte for byte. Total estimated usage is **$0.1977340**, not an invoice;
+CI costs are separate. Absent full-read evidence remains null.
+
+The [execution and closure receipt](../../docs/evaluations/task-permission-v2/execution-auth-20261116-02/EXECUTION.md)
+links the live artifact, digests and per-arm evidence. The allocation ending
+`permission_v2_auth_7afe7536d2ae` is permanently closed; no retry, replacement,
+continuation or further paid work is authorized. All earlier allocations remain
+closed. Later report-only revisions were not executed. PR #147 stays draft and
+unmerged. Production defaults, skills, pins, schedules, Pages and history are
+unchanged; this two-attempt operational result does not establish skill benefit,
+repeatability, general grading coverage, standard judges or actual billing.
+
+**One current next action:** review PR #147's completed operational evidence before
+considering a separately scoped broader evaluation.
+
+## Authentication repair checkpoint, retained as history
+
+### Task-permission successor authentication repair
+
+**Credential-free repair; paid execution unauthorized.** PR #147's
+stopped dispatch `43908693565/A1` and both unused slots remain permanently closed.
+It executed `3bafc85e1a4fd650bc62d3aa3ed66aa429c1bfaf`; report-only closure commit
+`cbf5d0e59c8755c4ea4f30366bf22220932522f4` was not executed. Its queued Validate
+`43910563983/A1` was cancelled as superseded by this focused repair; it is
+inconclusive, not a passing check.
+
+The actual bare authentication command reproduces the missing `skillevaluator`
+dependency. Authentication now reuses the registered runtime's existing pinned
+owner through one setup contract shared with preparation. No normalizer is copied,
+comparison bypassed or dependency upgraded. The real CLI qualifier runs as the
+first test on preparation's fresh runner, with fixture-only GitHub IO. It exercises
+parsing, selection, identity reconstruction, archive admission, atomic receipt
+publication and downstream artifact/receipt validation without live authority.
+Preparation, authenticated admission and fresh consumption require its complete
+exact-source proof; missing/incomplete/stale proof rejects.
+
+[The repair qualification contract](../../docs/evaluations/task-permission-v2/authentication-repair-20261116/QUALIFICATION.md)
+records the affected boundaries and local reproduction. The [current repair
+receipt](https://github.com/thetechgy/agent-engineering-baseline/pull/147#issuecomment-6923566341)
+records final source, terminal required/change-selected CI, fresh hosted
+authentication proof, revision-bound preparation, authenticated consumption and any
+blocker or fresh UNRUN proposal after executable freeze. It governs readiness; this
+checkpoint alone does not assert successful hosted qualification. A later documentation or merge revision is not automatically
+qualified. Historical profiles, grades, stopped receipts and all closed allocations
+remain unchanged; new source-v23 profiles bind the changed shared implementation.
+Task/grader/resource semantics and held versions are unchanged.
+
+Intermediate `f0e8cee` preparation `43916530291/A1` passed pinned setup and
+all 19 real authentication CLI cases, then failed two constructor controls because
+their isolated receipt fixture omitted the now-required producer field. Native
+oracle/scheduler work never started. The fixture now supplies that existing field;
+the stricter validator remains unchanged. Authentication proof diagnostics also
+use a separate artifact so the preparation upload keeps its registered subtree.
+The queued `43916527767/A1` CI was cancelled for this known replacement. Failed
+and interrupted work remain retained, not readiness evidence.
+
+The `54b56d4` shared CI job in `43917823990/A1` completed 1,130 tests in
+1,221.975 seconds with five failures and 129 skips. All failures were historical
+registry projections whose filters stopped at source-v20 and included the new
+v21/v22 successors in old snapshots. Their expected historical hashes are retained;
+the filters now exclude those new families, with an additional complete 698-profile
+baseline guard. Container validation and later publisher/behavioral checks never
+started. Remaining CI and preparation `43917819082/A1` were cancelled for the known
+replacement; passed authentication proof `14251081798` remains evidence for
+`54b56d4` only. Final exact-source preparation must be refreshed again.
+
+A focused registered legacy-adapter probe then showed that its bare metadata CLI
+legitimately succeeds without evaluator imports. The qualifier's missing-dependency
+case now executes the same mandatory owning-runtime guard used by shared setup,
+which rejects before authentication for every adapter. Positive authentication
+still uses the actual CLI and independent identity/admission/receipt path. No
+adapter-name bypass is added. The 18-test authentication/history selection passes,
+including legacy positive authentication and absent-owner startup rejection. The
+`383e1e2` full shared suite passed; its remaining CI and preparation were cancelled
+for this known qualification correction. Its 19-case artifact `14253743561` remains
+source-bound evidence only. Source-v23 profiles preserve all 768 prior entries;
+final exact-revision qualification is required again.
+
+Any fresh proposal retains the same two-attempt scope and $2 estimate, $3 scheduling
+threshold/$3 reserve/$6 planning allocation, not a billing cap. Its new validity
+window ends `2026-11-23T23:59:59Z`; this does not extend the old authority. New
+allocation/nonce, exact preparation identities, UNRUN command and combined
+approval wording are proposed only in the final receipt, unclaimed. No inference,
+judge, provider-key retrieval, real allocation claim, paid dispatch, protected
+approval, merge or adoption is authorized here.
+
+**One current next action:** complete credential-free exact-source qualification
+and review the resulting proposal or precise blocker on draft PR #147.
+
+## Successor stopped pilot checkpoint, retained as history
+
+### Task-permission successor stopped pilot
+
+**Stopped before launch; allocation closed.** The single authorized
+[dispatch 43908693565/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43908693565)
+ran the authentication entry at `3bafc85e1a4fd650bc62d3aa3ed66aa429c1bfaf`.
+The bare authentication-job interpreter could not import `skillevaluator` while
+reconstructing the successor's trusted task-member identity. The job failed before
+an authentication receipt, protected gate, provider credential delivery or agent
+launch. No gate approval, retry, replacement or continuation occurred.
+
+Both current/absent slots remain unlaunched and are permanently closed. There are
+no task grades, activation/access observations, native cleanup witnesses or live
+report to reproduce. Estimated workload usage is $0 because no provider requests
+launched; invoice reconciliation remains unknown and CI costs are separate.
+See the [stopped execution and closure receipt](../../docs/evaluations/task-permission-v2/execution-20261116-01/EXECUTION.md).
+
+Required CI `43893545608/A1`, preparation `43893646228/A1` / artifact `14240872750`
+and inspection `43901736414/A1` passed at that source and retain their recorded
+scope. They did not cover the bare authentication-job dependency boundary. This
+failure withdraws readiness of the complete dispatch path without relabeling the
+successful credential-free controls or changing historical grades. The narrower
+gh-007 startup cause remains unknown. The prior proposal is consumed/closed and
+cannot authorize another dispatch; later report-only revisions are not executed
+or automatically qualified. All previous allocations remain closed.
+
+**One current next action:** remediate and credential-free qualify the actual
+allocation-bound authentication entry before preparing any fresh exact-revision
+paid proposal; do not retry this allocation.
+
+## PR #147 preparation checkpoint, retained as history
+
+### Task-permission successor smoke preparation
+
+**Preparation only; paid execution unauthorized.** PR #145 merged as
+`82cdde086fe4d7fad84f21acc614df2adeca1767`. Its 34 oracle controls and four
+real-CLI/local-stub probes remain the prior contract qualification; they did not
+create a live protocol or allocation. Historical diagnosis, original permission
+results and credential-free controls remain separate from future model behavior.
+
+The registered `gh-task-permission-v2` now has a proposed shared-path live protocol:
+one current then one target-absent attempt on existing successor `gh-014`, held
+0.9.0 / Harbor 0.25.0 / Codex 0.155.1 / gpt-5.6-sol / high, custom-only grading,
+at most two agents/two deterministic verifiers and zero model judges. Task inputs,
+resources and semantics remain unchanged. See the [frozen smoke preparation](../../docs/evaluations/task-permission-v2/SMOKE.md).
+
+The focused integration corrects unsuffixed live-entry construction and makes
+trusted-manifest launch qualification follow an inherited capability. Preparation
+consumption requires complete frozen source/configuration/task/deployment identities,
+real constructor/metadata-consumer qualification and the shared two-slot stop path.
+Final source, terminal required/change-selected checks, native preparation, fresh
+artifact inspection, exact retention/report reproduction and any blockers are
+recorded together on this preparation's draft PR. This checkpoint alone does not
+assert successful hosted qualification or qualify a future merge revision.
+
+## PR #147 credential-free CI remediation
+
+The failed [Validate run 43858120531/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43858120531)
+belongs to `9ccfab0b0a3baaebd30a8bac9ef4960c3d08e9c2`. Its 1,120-test suite
+passed (122 skips, 1,260 seconds), followed by a passing 449-second container check.
+Publisher/orchestration assertions completed, but their step was interrupted at
+the 30-minute job deadline; behavioral-evidence qualification/upload never started.
+The shared job now allows 45 minutes, preserving all checks and workload deadlines.
+
+The authenticated failed cohort archive identifies absent gh-007's primary failure
+as initializer `spawn` / `RuntimeError`; consolidation/gate failures are downstream.
+The narrower rejected predicate and daemon stderr were not retained. No historical
+cause or pre-existing defect is established. The unchanged initializer, task staging
+and pins passed [matched base/head startup 43885174184/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43885174184):
+four clean environments, exact same image per arm, identical task checksums,
+repeated broker identity and complete resource/tag cleanup. The pinned-container
+process probe passed 128 observations, so a workstation-only race is not confirmed
+for the held container. No initializer, task, trust check or pin was changed.
+
+At this source freeze, final-head required CI and refreshed exact-source
+preparation/inspection remain pending. The PR's latest terminal receipt governs
+readiness; a passing rerun cannot recover the missing historical cause. Earlier
+successful preparation/inspection remain evidence for `9ccfab0` only, and its
+unapproved dispatch proposal is superseded. Failed diagnostic attempts and
+superseded cancelled CI remain retained and inconclusive where interrupted.
+
+The intermediate `91a72d5` [Validate attempt 43886167994/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43886167994)
+caught a checkpoint heading-level error, now corrected and checked with the
+hash-locked rumdl 0.3.4. Its remaining validation and preparation `43886208394/A1`
+were cancelled as superseded; partial results are retained, not qualification.
+
+The `2ea1bb5` shared suite finished 1,126 tests in 1,191.683 seconds before
+failing 32 assertions/seven errors in dependency-freshness controls (128 skips).
+The added diagnostic job introduced a fourth pinned-uv consumer while its exact
+inventory still declared three; other freshness failures cascaded from that
+missing inventory. The declaration now counts all four unchanged `0.13.8` uses.
+The same 49-test offline suite reproduces the failure before and passes after;
+missing/duplicate/contradictory-pin rejection remains enforced. Its remaining CI
+and preparation are superseded and retained; final-source qualification must be
+refreshed again. No dependency version or source-binding rule was changed.
+
+The budget proposal remains $2 estimated usage, a $3 scheduling threshold and $3
+reserve within a $6 planning allocation; none is a provider billing cap and CI costs
+are separate. Fresh allocation/nonce and an exact combined dispatch/matching-gate
+approval are proposed only in the final PR receipt, unclaimed and unrun. The proposal
+expires `2026-11-20T23:59:59Z`; all previous allocations remain closed. Production
+settings, skills, pins, schedules, paid settings, Pester adoption, Pages and
+production history remain unchanged.
+
+**One current next action:** review the draft PR's exact-revision qualification
+receipt for a separate paid-execution decision; do not dispatch from this checkpoint.
+
+## PR #145 checkpoint, retained as history
+
+## Prospective task/deployment permission successor
 
 **Credential-free native qualification completed; draft review.** The opt-in
 `gh-task-permission-v2` starts from merged #144 at

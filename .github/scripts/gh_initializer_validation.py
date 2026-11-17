@@ -6,10 +6,12 @@ import hashlib
 import importlib.metadata
 import json
 import os
+import re
 from pathlib import Path
 import shlex
 import signal
 import subprocess
+import sys
 import tempfile
 import uuid
 
@@ -322,6 +324,199 @@ def main(artifact, arm=None, shard=None):
             raise RuntimeError("Native gh qualification incomplete")
 
 
+
+def startup_observer(base, observations):
+    """Retain only the fixed initializer's bounded, redacted result; delegate unchanged."""
+    from aeb_gh_fixture.backend import COMMAND, VERIFY_COMMAND
+    from skillevaluator.utils.redaction import redact_sensitive_text
+    import re
+    def clean(value):
+        text = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', value or '')
+        text = re.sub(r'[\x00-\x08\x0b-\x1f\x7f]', '', text)
+        return redact_sensitive_text(text[-4096:])
+    class Observed(base):
+        async def exec(self, command, *args, **kwargs):
+            if command not in (COMMAND, VERIFY_COMMAND):
+                return await super().exec(command, *args, **kwargs)
+            row = {'operation': 'verify' if command == VERIFY_COMMAND else 'initialize', 'status': 'running'}
+            observations.append(row)
+            try:
+                result = await super().exec(command, *args, **kwargs)
+                row.update(status='complete', returncode=result.return_code,
+                    stdout=clean(result.stdout), stderr=clean(result.stderr),
+                    stdout_truncated=len(result.stdout or '') > 4096,
+                    stderr_truncated=len(result.stderr or '') > 4096)
+                return result
+            except BaseException as error:
+                row.update(status='failed', error=type(error).__name__)
+                raise
+    return Observed
+
+
+async def startup_attempt(environment, *, inspect_image, cleanup_check, retain, diagnose=None):
+    """No agent setup, command fixture, grader or reset; keep the primary exception."""
+    row = {'status': 'starting', 'cleanup': 'pending'}
+    primary = None; cleanup_error = None; evidence_error = None
+    def save():
+        nonlocal evidence_error
+        try: retain(row)
+        except BaseException as error:
+            evidence_error = evidence_error or error
+            row.update(status='failed', evidence_error=type(error).__name__)
+    try:
+        await environment.start(False)
+        row['image'] = inspect_image()
+        first = environment.trial_paths.trial_dir / 'gh-initialization.jsonl'
+        initial = json.loads(first.read_text().splitlines()[-1])
+        row['initialization'] = initial
+        await environment.start(False)
+        repeated = json.loads(first.read_text().splitlines()[-1])
+        if initial != repeated or initial.get('status') != 'ready':
+            raise RuntimeError('Repeated startup identity drift')
+        row.update(status='passed', repeated_identity_equal=True)
+        if diagnose is not None: row['spawn_diagnostic'] = await diagnose()
+    except BaseException as error:
+        primary = error
+        row.update(status='failed', primary_error=type(error).__name__)
+    finally:
+        save()
+        try:
+            await asyncio.wait_for(environment.stop(delete=True), timeout=60)
+            cleanup_check()
+            row['cleanup'] = 'complete'
+        except BaseException as error:
+            cleanup_error = error
+            row.update(cleanup='failed', cleanup_error=type(error).__name__)
+        finally:
+            save()
+    if primary is not None: raise primary
+    if cleanup_error is not None: raise cleanup_error
+    if evidence_error is not None: raise evidence_error
+    return row
+
+
+def cleanup_startup_images(tags, status, retain, primary):
+    """Remove only this probe's tags, preserving an earlier startup failure."""
+    failure = None
+    for tag in tags:
+        try: docker('image','rm',tag)
+        except BaseException as error: failure = failure or error
+    status['image_tag_cleanup'] = 'failed' if failure else 'complete'
+    if failure is not None: status['complete'] = False
+    try: retain()
+    except BaseException as error: failure = failure or error
+    if failure is not None and primary is None: raise failure
+
+
+def startup_only(artifact, baseline):
+    """Four clean gh-007 startups, base/head and present/absent, under the held owner."""
+    from evaluator_profiles import NEXT, runtime, candidate_versions
+    from skillevaluator.tier3.harbor.adapter import _task_environment_context_hash
+    root_source = gh.ROOT
+    baseline = Path(baseline).absolute(); artifact = Path(artifact).absolute()
+    if (baseline.resolve() != baseline or artifact.resolve() != artifact
+            or artifact.is_relative_to(root_source) or artifact.is_relative_to(baseline)):
+        raise ValueError('Use real checkouts and external diagnostic output')
+    if any(os.environ.get(k) for k in ('OPENAI_API_KEY','ANTHROPIC_API_KEY','NVIDIA_API_KEY','COPILOT_GITHUB_TOKEN')):
+        raise RuntimeError('Startup qualification forbids provider credentials')
+    runtime(candidate_versions(NEXT), owning=True)
+    revision = lambda source: subprocess.check_output(['git','rev-parse','HEAD'],cwd=source,text=True).strip()
+    if revision(baseline) != '82cdde086fe4d7fad84f21acc614df2adeca1767':
+        raise ValueError('Unreviewed startup baseline')
+    # These producers and pins must match before head-owned staging reads base data.
+    unchanged = ('.github/scripts/gh_candidate.py', '.github/scripts/gh_evaluations.py',
+        '.github/evals/evaluator-0.9.json', '.github/evals/codex-execution-090.json')
+    if any((root_source/p).read_bytes() != (baseline/p).read_bytes() for p in unchanged):
+        raise ValueError('Unmatched startup producers or pins')
+    matched_tags = []
+    status = {'schema':1, 'inference':False, 'agent_setup':False, 'grading':False,
+        'complete':False, 'revision':revision(root_source), 'baseline':revision(baseline),
+        'versions':candidate_versions(NEXT), 'attempts':[]}
+    artifact.parent.mkdir(parents=True,exist_ok=True)
+    def save(): artifact.write_text(json.dumps(status,indent=2)+'\n')
+    save()
+    with tempfile.TemporaryDirectory(prefix='gh-startup-',dir=os.environ.get('RUNNER_TEMP')) as scratch:
+        root = Path(scratch); prior = os.environ.get('AEB_GH_MANIFEST')
+        try:
+            for label, source in (('base',baseline),('head',root_source)):
+                staged = root/label; staged.mkdir()
+                bundle = gh_candidate.stage(source,staged/'bundle/gh',['gh-007'],fixture=True)
+                for present in (True,False):
+                    arm = 'with_skill' if present else 'without_skill'
+                    task, = stage_native_harbor_tasks(bundle,staged/'tasks'/arm,with_skill=present,
+                        grading_mode='custom_only',workspace_mode='group',
+                        workspace_skill_paths=[bundle.parent/gh.COMPETING])
+                    native = Task(task)
+                    context = _task_environment_context_hash(task/'environment')
+                    matched = next((r for r in status['attempts'] if r['arm']==arm),None)
+                    if matched and matched['context'] != context: raise RuntimeError('Startup image inputs drifted')
+                    manifest = write_manifest(staged/('operator-'+arm),[task],staged_roots=[staged/'tasks',staged/'bundle'])
+                    os.environ['AEB_GH_MANIFEST'] = str(manifest)
+                    paths = TrialPaths(staged/('trial-'+arm)); paths.mkdir()
+                    name = 'aeb-startup-'+uuid.uuid4().hex[:16]
+                    row = {'source':label,'case':'gh-007','arm':arm,'context':context,'task_checksum':native.checksum,'commands':[]}
+                    status['attempts'].append(row); save()
+                    # Build once per arm, then use that exact local immutable image for head.
+                    # The context and source/pin checks above bind this supported prebuilt selector.
+                    config = native.config.environment
+                    if matched:
+                        image_id = matched['image']['image']
+                        if not re.fullmatch(r'sha256:[0-9a-f]{64}',image_id):
+                            raise RuntimeError('Invalid matched image identity')
+                        tag = matched['image']['local_tag']
+                        if docker('image','inspect','--format','{{.Id}}',tag).strip()!=image_id:
+                            raise RuntimeError('Matched local image was replaced')
+                        config = config.model_copy(update={'docker_image':tag})
+                        row['matched_prebuilt_image'] = image_id
+                    environment = startup_observer(TrustedGhEnvironment,row['commands'])(environment_dir=task/'environment',
+                        environment_name=name,session_id=name,trial_paths=paths,task_env_config=config,
+                        mounts=[],network_policy=native.config.environment.resolve_baseline())
+                    environment.default_user = 'agent'
+                    def image():
+                        ids=docker('ps','-aq','--filter','label=com.docker.compose.project='+name).split()
+                        if len(ids)!=1: raise RuntimeError('Unexpected startup container population')
+                        observed=json.loads(docker('inspect','--format','{"image":{{json .Image}},"oom":{{json .State.OOMKilled}},"exit":{{json .State.ExitCode}}}',ids[0]))
+                        row['image'] = observed; save()
+                        if matched and observed['image'] != matched['image']['image']: raise RuntimeError('Matched startup image drift')
+                        if not matched:
+                            tag = 'aeb-startup-match:'+uuid.uuid4().hex
+                            docker('image','tag',observed['image'],tag)
+                            matched_tags.append(tag); observed['local_tag'] = tag
+                        return observed
+                    def clean():
+                        for args in (('ps','-aq'),('network','ls','-q')):
+                            if docker(*args,'--filter','label=com.docker.compose.project='+name).strip():
+                                raise RuntimeError('Startup resources survived cleanup')
+                    def retain(value):
+                        row.update(value)
+                        path=paths.trial_dir/'gh-initialization.jsonl'
+                        if path.exists(): row['initialization_records']=[json.loads(line) for line in path.read_text().splitlines()]
+                        save()
+                    async def diagnose():
+                        probe = gh.ROOT/'.github/scripts/gh_spawn_identity_probe.py'
+                        row['diagnostic_script_sha256'] = hashlib.sha256(probe.read_bytes()).hexdigest()
+                        await environment.upload_file(probe,'/opt/aeb-gh/spawn-diagnostic.py')
+                        result = await environment.exec('/usr/local/bin/python3 -I /opt/aeb-gh/spawn-diagnostic.py',user='root',timeout_sec=30)
+                        if len(result.stdout or '')>65536: raise RuntimeError('Oversized spawn diagnostic')
+                        diagnostic = json.loads(result.stdout)
+                        row['spawn_diagnostic'] = diagnostic
+                        row['spawn_diagnostic_returncode'] = result.return_code
+                        save()
+                        if result.return_code or diagnostic.get('status')!='complete':
+                            raise RuntimeError('Spawn diagnostic failed')
+                        return diagnostic
+                    asyncio.run(startup_attempt(environment,inspect_image=image,cleanup_check=clean,retain=retain,
+                        diagnose=diagnose if label=='base' and not present else None))
+            status['complete'] = True; save()
+        finally:
+            if prior is None: os.environ.pop('AEB_GH_MANIFEST',None)
+            else: os.environ['AEB_GH_MANIFEST']=prior
+            cleanup_startup_images(matched_tags,status,save,sys.exc_info()[1])
+
+
 if __name__ == "__main__":
     import sys
-    main(sys.argv[1])
+    if len(sys.argv) == 4 and sys.argv[2] == "--startup-only":
+        startup_only(sys.argv[1], sys.argv[3])
+    else:
+        main(sys.argv[1])

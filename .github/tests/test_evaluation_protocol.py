@@ -100,7 +100,7 @@ class ProtocolContracts(unittest.TestCase):
         task=self.task();source='a'*40;approval=f'campaign-{source}-boolean-effectiveness-v1-prep123-usd8-one_dispatch'
         env={'GITHUB_EVENT_NAME':'workflow_dispatch','GITHUB_RUN_ATTEMPT':'1','GITHUB_RUN_ID':'10'}
         with patch.object(protocol,'revision',return_value=source),patch.dict(os.environ,env):
-            receipt={'artifact':'123','dispatch':'one_dispatch','allocation':approval,'revision':source,
+            receipt={'producer_run':9,'artifact':'123','dispatch':'one_dispatch','allocation':approval,'revision':source,
                      'protocol_digest':protocol.digest(ROOT/task.definition['protocol']),'run_id':'10','first_dispatch':True,
                      'authentication':'github-api-producer-and-digest',**__import__('evaluation_campaign_selection').binding(task),'preparation_location':'preparation/evidence','artifact_digest':'sha256:'+'b'*64}
             protocol.validate_receipt(receipt,approval,task)

@@ -26,6 +26,12 @@ SCENARIOS = ('complete', 'interruption', 'missing-evidence', 'unsupported-runtim
 
 
 def scenarios(task):
+    declared = protocol(task).get('qualification_scenarios') if 'protocol' in task.definition else None
+    if declared is not None:
+        require(type(declared) is list and len(set(declared)) == len(declared)
+                and set(SCENARIOS) - {'invalid'} <= set(declared)
+                and set(declared) <= set(SCENARIOS) | {'verifier-failure', 'cleanup-failure'}, 'Unregistered qualification scenario')
+        return tuple(declared)
     if task.definition['id'] == 'gh-runtime-090-v1':
         return ('complete', 'interruption', 'missing-evidence', 'unsupported-runtime',
                 'threshold', 'unknown-usage', 'native-cancellation', 'provider-refusal', 'malformed-response', 'provider-timeout')
@@ -81,6 +87,8 @@ def check(reference, staging, task, *, qualified=True):
         ready = reports.read_json(reference / 'preparation.json')
         require(ready == {'complete': True, 'inference': False, 'revision': revision(),
                           'protocol_digest': expected['protocol_digest'], 'authorized_live_attempts': 0}, 'Unqualified preparation')
+        from campaign_authentication_qualification import validate as validate_authentication
+        validate_authentication(reports.read_json(reference / 'authentication-qualification.json'), task)
         from evaluation_launch_qualification import validate as validate_launch
         validate_launch(reports.read_json(reference / 'live-launch-qualification.json'), task)
         proof = reports.read_json(reference / 'scheduler-qualification.json')
@@ -127,6 +135,9 @@ def stop_reason(row):
 
 def allocation(value, task):
     p = protocol(task)
+    expires = p.get('authorization_expires_at')
+    require(expires is None or datetime.now(timezone.utc) < datetime.fromisoformat(expires.replace('Z', '+00:00')),
+            'Campaign authorization expired; requalification required')
     pattern = f'campaign-{revision()}-{p["id"]}-prep([1-9][0-9]*)-usd{p['budget']['planning_allocation_usd']}-([A-Za-z0-9_-]{{8,40}})'
     match = re.fullmatch(pattern, value)
     require(match is not None and os.environ.get('GITHUB_RUN_ATTEMPT') == '1'
@@ -136,7 +147,11 @@ def allocation(value, task):
 
 def validate_receipt(receipt, approval, task):
     artifact, nonce = allocation(approval, task)
-    require(receipt == {**receipt, 'artifact': artifact, 'dispatch': nonce, 'allocation': approval,
+    required = {'artifact', 'artifact_digest', 'producer_run', 'revision', 'protocol_digest', 'dispatch',
+                'run_id', 'allocation', 'first_dispatch', 'authentication', 'definition',
+                'definition_digest', 'selection_digest', 'preparation_location'}
+    require(set(receipt) == required and type(receipt.get('producer_run')) is int and receipt['producer_run'] > 0
+            and receipt == {**receipt, 'artifact': artifact, 'dispatch': nonce, 'allocation': approval,
                        'revision': revision(), 'protocol_digest': digest(ROOT / task.definition['protocol']),
                        'run_id': os.environ.get('GITHUB_RUN_ID'), 'first_dispatch': True,
                        'authentication': 'github-api-producer-and-digest', **binding(task),
@@ -179,29 +194,51 @@ def claim(root, receipt):
 
 
 def authenticate(output, approval, task):
-    from codex_pilot_dispatch import api, REPO_ID
-    from evaluation_campaign import no_credentials
-    no_credentials()
-    require(os.environ.get('GITHUB_ACTIONS') == 'true' and os.environ.get('GITHUB_REPOSITORY') == REPO, 'Reviewed Actions workflow required')
-    artifact_id, nonce = allocation(approval, task)
-    current = api('actions/runs/' + os.environ['GITHUB_RUN_ID'])
-    require(current['head_sha'] == revision() and current['path'] == WORKFLOW
-            and current['repository']['id'] == REPO_ID, 'Dispatch source mismatch')
-    runs=[]
-    for page in range(1,101):
-        batch=api(f'actions/workflows/evaluation-campaign.yml/runs?event=workflow_dispatch&per_page=100&page={page}')['workflow_runs']
-        runs.extend(batch)
-        if len(batch)<100: break
-    else: raise ValueError('Incomplete dispatch history')
-    first_dispatch(runs, approval, os.environ['GITHUB_RUN_ID'])
-    reference, artifact, producer, internal = acquire(output, artifact_id, task)
-    receipt={'artifact':artifact_id,'artifact_digest':artifact['digest'],'producer_run':producer['id'],'revision':revision(),
-             'protocol_digest':digest(ROOT/task.definition['protocol']),'dispatch':nonce,'run_id':os.environ['GITHUB_RUN_ID'],
-             'allocation':approval,'first_dispatch':True,'authentication':'github-api-producer-and-digest',
-             **binding(task), 'preparation_location':internal}
-    reports.write_json(reference/'dispatch-authentication.json',receipt)
-    reports.write_json(output/'artifact.json',artifact); reports.write_json(output/'producer-run.json',producer)
-    return reference
+    """Publish a complete receipt atomically; preserve primary failures and diagnostics."""
+    reference = None
+    try:
+        from codex_pilot_dispatch import api, REPO_ID
+        from evaluation_campaign import no_credentials
+        no_credentials()
+        require(os.environ.get('GITHUB_ACTIONS') == 'true' and os.environ.get('GITHUB_REPOSITORY') == REPO, 'Reviewed Actions workflow required')
+        artifact_id, nonce = allocation(approval, task)
+        current = api('actions/runs/' + os.environ['GITHUB_RUN_ID'])
+        require(current['head_sha'] == revision() and current['path'] == WORKFLOW
+                and current['repository']['id'] == REPO_ID, 'Dispatch source mismatch')
+        runs=[]
+        for page in range(1,101):
+            batch=api(f'actions/workflows/evaluation-campaign.yml/runs?event=workflow_dispatch&per_page=100&page={page}')['workflow_runs']
+            runs.extend(batch)
+            if len(batch)<100: break
+        else: raise ValueError('Incomplete dispatch history')
+        first_dispatch(runs, approval, os.environ['GITHUB_RUN_ID'])
+        reference, artifact, producer, internal = acquire(output, artifact_id, task)
+        receipt={'artifact':artifact_id,'artifact_digest':artifact['digest'],'producer_run':producer['id'],'revision':revision(),
+                 'protocol_digest':digest(ROOT/task.definition['protocol']),'dispatch':nonce,'run_id':os.environ['GITHUB_RUN_ID'],
+                 'allocation':approval,'first_dispatch':True,'authentication':'github-api-producer-and-digest',
+                 **binding(task), 'preparation_location':internal}
+        reports.write_json(output/'artifact.json',artifact); reports.write_json(output/'producer-run.json',producer)
+        validate_receipt(receipt, approval, task)
+        pending = reference/'dispatch-authentication.pending'
+        reports.write_json(pending, receipt)
+        serialized = reports.read_json(pending)
+        validate_receipt(serialized, approval, task)
+        require(serialized == receipt, 'Authentication receipt serialization differs')
+        pending.replace(reference/'dispatch-authentication.json')
+        return reference
+    except BaseException as exc:
+        # Preserve the primary error. Diagnostics are deliberately outside the
+        # authorization subtree and carry no authority or untrusted exception text.
+        try:
+            for path in output.rglob('dispatch-authentication.*'):
+                path.unlink()
+            reports.write_json(output/'authentication-failure.json', {
+                'complete': False, 'inference': False, 'phase': 'authentication',
+                'error_type': type(exc).__name__, 'revision': revision(),
+                'campaign': task.definition['id'], 'authorization_produced': False})
+        except Exception:
+            __import__('sys').stderr.write('Authentication diagnostics could not be retained; primary failure preserved.\n')
+        raise
 
 
 def acquire(output, artifact_id, task):
@@ -258,7 +295,10 @@ def admit(archive, downloaded, artifact, producer, task):
     internal = location(task, artifact, producer)
     extract(archive, downloaded, artifact)
     original = downloaded / internal
+    require(not list(downloaded.rglob('dispatch-authentication.*')), 'Preparation contains dispatch authorization')
     require(reports.read_json(original/'frozen-proposal.json') == frozen(task), 'Unqualified source artifact')
+    from campaign_authentication_qualification import validate as validate_authentication
+    validate_authentication(reports.read_json(original/'authentication-qualification.json'), task)
     ready = reports.read_json(original/'preparation.json')
     require(ready == {'complete':True, 'inference':False, 'revision':revision(),
                      'protocol_digest':digest(ROOT/task.definition['protocol']), 'authorized_live_attempts':0},
@@ -274,7 +314,7 @@ def admit(archive, downloaded, artifact, producer, task):
     return downloaded/'preparation/evidence', internal
 
 
-def prepare(root, task, qualification):
+def prepare(root, task, qualification, authentication_qualification=None):
     """Qualify the actual experiment orchestration through the non-forwarding CLI."""
     from evaluation_campaign import run, stage, revision, no_credentials
     no_credentials(); protocol(task)
@@ -283,6 +323,14 @@ def prepare(root, task, qualification):
     require(ready.get('complete') is True and ready.get('inference') is False and ready.get('revision')==revision()
             and ready.get('records')==2 * len(registration(task)['controls']), 'Registered native controls must qualify at this revision')
     root.mkdir(parents=True,exist_ok=False); retained=root/'evidence'; retained.mkdir()
+    from campaign_authentication_qualification import qualify as qualify_authentication, validate as validate_authentication
+    if authentication_qualification is None:
+        # Other registered preparation entry points run the same CLI proof, never skip it.
+        proof = qualify_authentication(root/'authentication-check', task)
+    else:
+        proof = reports.read_json(authentication_qualification)
+    validate_authentication(proof, task)
+    reports.write_json(retained/'authentication-qualification.json', proof)
     reports.write_json(retained/'frozen-proposal.json',frozen(task))
     stage(root, task, 'live') # Preparation only: no inference path is invoked.
     qualify_launch(root, task)
@@ -291,7 +339,7 @@ def prepare(root, task, qualification):
               'unsupported-runtime':'unsupported_runtime_protocol', 'invalid':'missing_usable_evidence',
               'unsupported-grading':'unsupported_grading', 'threshold':'estimated_usage_threshold','unknown-usage':'unknown_usage', 'provider-refusal':'execution_infrastructure_failure',
               'malformed-response':'execution_infrastructure_failure', 'provider-timeout':'execution_infrastructure_failure',
-              'native-cancellation':'execution_cancelled'}
+              'native-cancellation':'execution_cancelled', 'verifier-failure':'verifier_failure', 'cleanup-failure':'cleanup_failure'}
     summaries={}; inputs=[]
     for scenario in scenarios(task):
         result=run(root/'scenarios'/scenario,task,'experiment-probe',reference=retained,fixture=scenario)
@@ -349,7 +397,7 @@ def entry(args, task, root):
     try: native_compose_config(ROOT)
     finally: os.environ.update(held)
     if args.action=='prepare':
-        return prepare(root,task,args.qualification)
+        return prepare(root,task,args.qualification,args.authentication_qualification)
     require(args.action=='live' and args.preparation is not None,'Approved preparation required')
     require(args.approval==os.environ.get('AEB_CAMPAIGN_APPROVAL'),'Approval input mismatch')
     runtime_gate(task)

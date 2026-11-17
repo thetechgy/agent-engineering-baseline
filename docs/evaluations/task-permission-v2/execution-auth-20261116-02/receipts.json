@@ -1,0 +1,343 @@
+{
+  "run_id": 43945876284,
+  "run_attempt": 1,
+  "execution_revision": "c0ef9b195beb7bd04d961272bafe1eadd080b3be",
+  "dispatch_ref": "prep/task-permission-v2-smoke",
+  "workflow": ".github/workflows/evaluation-campaign.yml",
+  "campaign": "gh-task-permission-v2",
+  "allocation": "campaign-c0ef9b195beb7bd04d961272bafe1eadd080b3be-gh-task-permission-v2-prep14258922655-usd6-permission_v2_auth_7afe7536d2ae",
+  "allocation_status": "closed",
+  "preflight": {
+    "verified": true,
+    "execution_revision": "c0ef9b195beb7bd04d961272bafe1eadd080b3be",
+    "internal_location": "preparation/evidence",
+    "definition": ".github/evals/campaigns/gh-task-permission-v2-live.json",
+    "definition_digest": "sha256:61e36ec1b35c5b1f5ed68011dcc0cf2fdd49619bb6ac164eed1aab5d5558316a",
+    "selection_digest": "sha256:966e1bec41adbe5da09436ba09b362a535b91c7d03121d817a6bf03c9d091efe",
+    "preparation_artifact": 14258922655,
+    "preparation_digest": "sha256:9e32e731101a81b55a311b93cef5bc15cceed440508f0fae66808315420f607f",
+    "authentication_proof": "sha256:380b4502bf5b473cb6b72ee7a914fd4264e0689c794dd6ae850e2cf76728b550",
+    "live_attempts_before_dispatch": 0,
+    "matching_prior_dispatches": 0,
+    "consumption_reused": 43934266352,
+    "allocation_claimed": false
+  },
+  "authenticated_dispatch": {
+    "artifact": "14258922655",
+    "artifact_digest": "sha256:9e32e731101a81b55a311b93cef5bc15cceed440508f0fae66808315420f607f",
+    "producer_run": 43928221761,
+    "revision": "c0ef9b195beb7bd04d961272bafe1eadd080b3be",
+    "protocol_digest": "sha256:9edc9ddd139b16e783258b52ffb6d44d4c3fbef09034c2c0bbcbc4a203adbc49",
+    "dispatch": "permission_v2_auth_7afe7536d2ae",
+    "run_id": "43945876284",
+    "allocation": "campaign-c0ef9b195beb7bd04d961272bafe1eadd080b3be-gh-task-permission-v2-prep14258922655-usd6-permission_v2_auth_7afe7536d2ae",
+    "first_dispatch": true,
+    "authentication": "github-api-producer-and-digest",
+    "definition": ".github/evals/campaigns/gh-task-permission-v2-live.json",
+    "definition_digest": "sha256:61e36ec1b35c5b1f5ed68011dcc0cf2fdd49619bb6ac164eed1aab5d5558316a",
+    "selection_digest": "sha256:966e1bec41adbe5da09436ba09b362a535b91c7d03121d817a6bf03c9d091efe",
+    "preparation_location": "preparation/evidence"
+  },
+  "gate": {
+    "environment": "skill-benchmark",
+    "approval": "normal pending_deployments approval",
+    "matching_run_only": true,
+    "pending_after_terminal": 0
+  },
+  "artifacts": [
+    {
+      "id": 14264758942,
+      "name": "campaign-live-1",
+      "size_in_bytes": 351739,
+      "digest": "sha256:14f2ad0fee32a133aa2452afff297eb99c314d7c4203f0688d49c8946a10d5ef",
+      "expires_at": "2027-02-14T20:04:06Z"
+    },
+    {
+      "id": 14264673089,
+      "name": "campaign-authenticated-1",
+      "size_in_bytes": 5239416,
+      "digest": "sha256:0b160e26b1fdb3f8ffdca8ea64c2b2f044a03cb6a26d9bd1d9b1f64b47b1dddc",
+      "expires_at": "2027-02-14T20:04:06Z"
+    }
+  ],
+  "runtime": {
+    "profile": {
+      "id": "codex-090-diagnostic-v1",
+      "adapter": "codex",
+      "frozen_profile": ".github/evals/codex-execution-090.json",
+      "frozen_profile_sha256": "044a8d6c16870d40f193f1879b826d9eb6139c8f1c38b57d7e16f8acee72011d",
+      "capabilities": [
+        "non-forwarding-cli-probe",
+        "exact-authorized-live"
+      ],
+      "inference_enabled": false
+    },
+    "resolved": {
+      "id": "codex-090-diagnostic-v1",
+      "case": "gh-014",
+      "skill": "gh",
+      "cli": "0.155.1",
+      "cli_revision": "rust-v0.155.1",
+      "cli_archive_sha256": "a65b895c6ac1a73629bbe4b864640c86133e94a43b4d67b3103044e1a306d5a2",
+      "cli_executable_sha256": "0753dfe1d8b87a52436deb13eb1c549661ef4c84fee2c5aa688385eebeccb761",
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "high",
+      "provider": "openai",
+      "base_url": "https://api.openai.com/v1",
+      "agent_seconds": 600,
+      "cpus": 2,
+      "memory_mb": 2048,
+      "attempts_per_arm": 1,
+      "prices_per_million": {
+        "input": 4,
+        "cached_input": 0.4,
+        "output": 20
+      },
+      "frozen_at": "2026-11-15",
+      "release_url": "https://github.com/openai/codex/releases/tag/rust-v0.155.1",
+      "model_documentation": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+      "configuration_documentation": "https://developers.openai.com/codex/config-reference",
+      "helper_sha256": {
+        "bin/codex-code-mode-host": "210ab8ebaebf4bc1421d9e30339c858354ca35fa91e2f87f4c6204e5382f8a63",
+        "codex-resources/bwrap": "77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c"
+      },
+      "execution_policy": "docker-external-openai-090-v1",
+      "agent": "codex"
+    }
+  },
+  "protocol": {
+    "id": "gh-task-permission-v2",
+    "definition": ".github/evals/campaigns/gh-task-permission-v2-live.json",
+    "version": 1,
+    "attempt_slots": 2,
+    "trials_per_arm": 1,
+    "automatic_retries": 0,
+    "replacements": 0,
+    "concurrency": 1,
+    "primary_outcome": "Operational and grading-coverage smoke check of the coherent task/deployment permission successor on existing gh-014",
+    "separate_outcomes": [
+      "task correctness",
+      "read authorization",
+      "skill access",
+      "task failure",
+      "unavailable grading",
+      "CLI failure",
+      "usage",
+      "cleanup"
+    ],
+    "interpretation": "Two attempts cannot establish skill benefit. Legitimate measured task failures may proceed when all operational checkpoints pass. Absent activation-gate failure is separate from correctness and authorization.",
+    "budget": {
+      "estimate_usd": 2,
+      "stop_estimate_usd": 3,
+      "overshoot_reserve_usd": 3,
+      "planning_allocation_usd": 6,
+      "billing_limit_enforced": false,
+      "pricing_verified": "2026-11-16",
+      "pricing_source": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+      "prices_per_million": {
+        "input": 4,
+        "cached_input": 0.4,
+        "output": 20
+      }
+    },
+    "stop_rules": [
+      "estimated_usage_threshold",
+      "unknown_usage",
+      "execution_infrastructure_failure",
+      "cleanup_failure",
+      "missing_grading_evidence",
+      "missing_usable_evidence",
+      "unsupported_grading",
+      "verifier_failure",
+      "missing_native_observation",
+      "unsupported_runtime_protocol",
+      "security_or_identity_drift"
+    ],
+    "agent_seconds": 600,
+    "launch_seconds": 1200,
+    "cleanup_grace_seconds": 80,
+    "protected_environment": "skill-benchmark",
+    "authorized_live_attempts": 0,
+    "grading": {
+      "mode": "custom_only",
+      "agent_attempts": 2,
+      "verifier_runs": 2,
+      "model_judge_calls": 0,
+      "judgments": "deterministic; no model judgments",
+      "production_history": false
+    },
+    "authorization_expires_at": "2026-11-23T23:59:59Z",
+    "qualification_scenarios": [
+      "complete",
+      "interruption",
+      "missing-evidence",
+      "unsupported-runtime",
+      "unsupported-grading",
+      "threshold",
+      "unknown-usage",
+      "verifier-failure",
+      "cleanup-failure"
+    ]
+  },
+  "verification": {
+    "complete": true,
+    "execution_revision": "c0ef9b195beb7bd04d961272bafe1eadd080b3be",
+    "run_id": 43945876284,
+    "workflow_conclusion": "success",
+    "live_artifact": 14264758942,
+    "live_archive_digest": "sha256:14f2ad0fee32a133aa2452afff297eb99c314d7c4203f0688d49c8946a10d5ef",
+    "ledger_state": "completed",
+    "stop_reason": null,
+    "report_failure": null,
+    "cleanup_complete": true,
+    "cleanup_receipt": {
+      "complete": true,
+      "unlaunched_positions": []
+    },
+    "rows": [
+      {
+        "position": 1,
+        "variant": "current",
+        "state": "completed",
+        "returncode": 0,
+        "outcome": {
+          "classification": "passed",
+          "code": "evaluated"
+        },
+        "custom_metrics": {
+          "gh_evidence": 1.0,
+          "gh_activation": 1.0,
+          "gh_commands": 1.0,
+          "gh_task": 1.0,
+          "gh_recovery": 1.0,
+          "gh_authorization": 1.0,
+          "gh_efficiency": 1.0,
+          "gh_gate": 1.0
+        },
+        "skill_access": {
+          "successful_full_read": true,
+          "deployed": true,
+          "interpretation": "access only; no task quality or benefit implied"
+        },
+        "usage": {
+          "trial": "campaign-gh-014-attempt1__slot1",
+          "completeness": "complete_turn",
+          "provenance": "codex-0.155.1-exec-json",
+          "n_input_tokens": 92649,
+          "n_cache_tokens": 75672,
+          "n_output_tokens": 533,
+          "estimated_usd": 0.1088368,
+          "billing": "provider-reported tokens; estimate, not invoice"
+        },
+        "cleanup": true,
+        "grading_present": true,
+        "native_exception": null,
+        "elapsed_seconds": 118.298,
+        "submission": {
+          "sha256": "32d74b2c3f287c2ea5832150700be3b958f553e2852a2f2a0c17e1ddfb08f5de",
+          "bytes": 58,
+          "file": "result.json"
+        },
+        "submission_identity_verified": true
+      },
+      {
+        "position": 2,
+        "variant": "absent",
+        "state": "completed",
+        "returncode": 0,
+        "outcome": {
+          "classification": "failed",
+          "code": "evaluated"
+        },
+        "custom_metrics": {
+          "gh_evidence": 1.0,
+          "gh_activation": 0.0,
+          "gh_commands": 1.0,
+          "gh_task": 1.0,
+          "gh_recovery": 1.0,
+          "gh_authorization": 0.0,
+          "gh_efficiency": 1.0,
+          "gh_gate": 0.0
+        },
+        "skill_access": {
+          "successful_full_read": null,
+          "deployed": false,
+          "interpretation": "access only; no task quality or benefit implied"
+        },
+        "usage": {
+          "trial": "campaign-gh-014-attempt1__slot2",
+          "completeness": "complete_turn",
+          "provenance": "codex-0.155.1-exec-json",
+          "n_input_tokens": 75045,
+          "n_cache_tokens": 63523,
+          "n_output_tokens": 870,
+          "estimated_usd": 0.0888972,
+          "billing": "provider-reported tokens; estimate, not invoice"
+        },
+        "cleanup": true,
+        "grading_present": true,
+        "native_exception": null,
+        "elapsed_seconds": 71.354,
+        "submission": {
+          "sha256": "32d74b2c3f287c2ea5832150700be3b958f553e2852a2f2a0c17e1ddfb08f5de",
+          "bytes": 58,
+          "file": "result.json"
+        },
+        "submission_identity_verified": true
+      }
+    ],
+    "verifier_reward_receipts": 2,
+    "model_judge_calls": 0,
+    "report_reproduction": {
+      "available": true,
+      "byte_identical": true,
+      "sha256": "d7dc58351e79c00f57bb90539646ebdf45de2f5a215febe1806a69cf961001d0",
+      "public_reports_admitted": 1
+    },
+    "evidence_root": "campaign-live/evidence"
+  },
+  "witnesses": [
+    {
+      "variant": "current",
+      "files": {
+        "retained/gh-codex-with/campaign-gh-014-attempt1__slot1/operator/pilot-runtime.json": "sha256:0a191dec274f63061517c4922a5a38d69fef0abf5d072bc77a55efcba2b44713",
+        "retained/gh-codex-with/campaign-gh-014-attempt1__slot1/operator/pilot-final-policy.json": "sha256:15c495365d4bdb2016fed77de2496ab8647207e7679e167b6b6a39e36c587734",
+        "retained/gh-codex-with/campaign-gh-014-attempt1__slot1/agent/pilot-produced-submission.json": "sha256:2ac5325f3e181765fd1d0be9d5caa24ed093a51040e3001f6fcc85ba4b282d93",
+        "retained/gh-codex-with/campaign-gh-014-attempt1__slot1/agent/trajectory.json": "sha256:fb63f74dcbb1bcd4c6a0bd044330a1a38bd1036c2d7ad94c72c08d04fa71a3d8",
+        "retained/gh-codex-with/campaign-gh-014-attempt1__slot1/agent/codex.txt": "sha256:79e504250ed29e6d57bf69a11288d8f3f42ebc2a9cce0e735e3cb3039c95190e",
+        "retained/gh-codex-with/campaign-gh-014-attempt1__slot1/verifier/skill_evaluator_reward.json": "sha256:f192654799e3155855938068adfdda4c6c8151d3c7da78c2906633528b137f41"
+      },
+      "permission_verdict": {
+        "status": "permitted",
+        "findings": [],
+        "unsupported": [],
+        "unknown": []
+      }
+    },
+    {
+      "variant": "absent",
+      "files": {
+        "retained/gh-codex-without/campaign-gh-014-attempt1__slot2/operator/pilot-runtime.json": "sha256:03904503df6e89fe4cbb6e002ed30453225a15a9274e37d62e67ac7fa6d224d6",
+        "retained/gh-codex-without/campaign-gh-014-attempt1__slot2/operator/pilot-final-policy.json": "sha256:69d1d02831a28b12f694600bdaec6f48a16e3a4d5773a1275ebe6a07e2cfe965",
+        "retained/gh-codex-without/campaign-gh-014-attempt1__slot2/agent/pilot-produced-submission.json": "sha256:2ac5325f3e181765fd1d0be9d5caa24ed093a51040e3001f6fcc85ba4b282d93",
+        "retained/gh-codex-without/campaign-gh-014-attempt1__slot2/agent/trajectory.json": "sha256:c4d5ab74e028d2a6d236bdfea0d35944ff2f879c53c392d1aa514ef4e088c0c6",
+        "retained/gh-codex-without/campaign-gh-014-attempt1__slot2/agent/codex.txt": "sha256:1e89b646a02ac38816d848986a221d1e0164af65e279c0807551cbb303a6fcef",
+        "retained/gh-codex-without/campaign-gh-014-attempt1__slot2/verifier/skill_evaluator_reward.json": "sha256:2f12c5d0092382afc9d6a78d26f5d5d66bb3318fb5494631b266443e3a958f18"
+      },
+      "permission_verdict": {
+        "status": "denied",
+        "findings": [
+          "unlisted_directory"
+        ],
+        "unsupported": [],
+        "unknown": []
+      }
+    }
+  ],
+  "limitations": [
+    "Absent successful_full_read remains null; target deployment is false, not an observed successful read.",
+    "Provider-reported token estimates are not invoices or independently reconstructed billing.",
+    "Accepted credential-readability, writable-log, child-process, permitted-egress and accounting limitations remain.",
+    "No standard model judge, broader task coverage, repeatability or skill-effectiveness claim."
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "allocation": "campaign-c0ef9b195beb7bd04d961272bafe1eadd080b3be-gh-task-permission-v2-prep14258922655-usd6-permission_v2_auth_7afe7536d2ae",
+  "status": "closed",
+  "closed_at": "2026-11-16T20:12:55.362297+00:00",
+  "run_id": 43945876284,
+  "run_attempt": 1,
+  "execution_revision": "c0ef9b195beb7bd04d961272bafe1eadd080b3be",
+  "reason": "completed_bounded_operational_pilot",
+  "scheduled_slots": 2,
+  "launched_slots": [
+    1,
+    2
+  ],
+  "measured_slots": [
+    1,
+    2
+  ],
+  "unused_slots_permanently_closed": [],
+  "retry_allowed": false,
+  "replacement_allowed": false,
+  "continuation_allowed": false,
+  "usage_estimate_usd": 0.197734,
+  "actual_billing": "unknown; estimates are not invoices",
+  "cleanup_complete": true,
+  "native_cleanup_witnesses": 2,
+  "separate_agent_environments": 2,
+  "verifier_runs": 2,
+  "model_judge_calls": 0,
+  "single_dispatch_authorization_consumed": true,
+  "matching_dispatches": 1,
+  "pending_gates": 0,
+  "report_reproduced": true,
+  "report_sha256": "sha256:d7dc58351e79c00f57bb90539646ebdf45de2f5a215febe1806a69cf961001d0"
+}

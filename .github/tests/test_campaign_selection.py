@@ -42,7 +42,10 @@ class SelectionContracts(unittest.TestCase):
         ready = {'complete':True, 'inference':False, 'revision':protocol.revision(),
                  'protocol_digest':proposal['protocol_digest'], 'authorized_live_attempts':0}
         proof = {**ready, 'scenarios':{name:{} for name in protocol.SCENARIOS}}
-        files = {'frozen-proposal.json':proposal, 'preparation.json':ready, 'scheduler-qualification.json':proof}
+        from campaign_authentication_qualification import expected, case_names
+        auth = {**expected(task), 'complete':True, 'inference':False, 'cases':{name:'passed' for name in case_names(task)}}
+        files = {'frozen-proposal.json':proposal, 'preparation.json':ready, 'scheduler-qualification.json':proof,
+                 'authentication-qualification.json':auth}
         if mutate: mutate(files)
         archive = root/'fixture.zip'
         with zipfile.ZipFile(archive,'w') as bundle:

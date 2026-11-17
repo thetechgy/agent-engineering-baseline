@@ -1,0 +1,33 @@
+{
+  "allocation": "campaign-3bafc85e1a4fd650bc62d3aa3ed66aa429c1bfaf-gh-task-permission-v2-prep14240872750-usd6-permission_v2_ci_9e91e2754559",
+  "status": "closed",
+  "closed_at": "2026-11-16T16:38:09.467882+00:00",
+  "run_id": 43908693565,
+  "run_attempt": 1,
+  "execution_revision": "3bafc85e1a4fd650bc62d3aa3ed66aa429c1bfaf",
+  "reason": "authentication_runtime_dependency_failure_before_live_job",
+  "scheduled_slots": 2,
+  "attempted_slots": [],
+  "unused_slots_permanently_closed": [
+    1,
+    2
+  ],
+  "retry_allowed": false,
+  "replacement_allowed": false,
+  "continuation_allowed": false,
+  "usage_estimate_usd": 0,
+  "usage_basis": "No agent or provider request launched; not invoice reconciliation",
+  "actual_billing": "unknown; no invoice reconciliation",
+  "workload_cleanup_required": false,
+  "native_cleanup_receipt": null,
+  "resource_baseline_receipt": null,
+  "resource_evidence": "Live job skipped; authenticated consumption, runtime launcher, agent setup and workload resource creation never reached",
+  "gate_approval_attempted": false,
+  "pending_gates": 0,
+  "authentication_receipt_produced": false,
+  "exclusive_live_claim_created": false,
+  "single_dispatch_authorization_consumed": true,
+  "workflow_artifacts": 0,
+  "authentication_job": 133444417505,
+  "authentication_log_sha256": "sha256:23c6ea6cc6d4dcdabf8b551ec5b5cd27a476dd8b0f8bdbe6ba967026efe02c99"
+}

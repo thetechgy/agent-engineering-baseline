@@ -128,7 +128,8 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Prior run: 21m tests + 7.5m container checks; retain room for offline evidence.
+    timeout-minutes: 45
     env:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:

@@ -1,11 +1,37 @@
 # SkillEvaluator 0.9.0 consumer ownership, issue #95
 
-Current main is verified at #142 merge
-`15caaedb82edf5d9e0253394ed99e3135cd7be93`. Complete static quality and data-only
-reporting/orchestration already use pinned 0.9.0. The offline behavioral evidence contract is merged. The explicit gh-runtime-090-v1
-execution preparation is separate; final hosted receipts are recorded in #143. Production
-execution and live provider compatibility remain held. See the
-[execution preparation](../../docs/evaluations/execution-runtime-090.md).
+Current main starts at #145 merge
+`82cdde086fe4d7fad84f21acc614df2adeca1767`. Static quality and data-only
+reporting/orchestration already use pinned 0.9.0. #143 completed a bounded live
+compatibility pair at its recorded execution SHA; #144 diagnosed its task/deployment
+permission ambiguity without replacing grades. #145 qualified the prospective
+permission successor with 34 oracle and four pinned-CLI/local-stub controls.
+
+The [successor smoke preparation](../../docs/evaluations/task-permission-v2/SMOKE.md)
+now has a completed bounded operational result in PR #147. After explicit fresh
+authorization, [run 43945876284/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43945876284)
+executed `c0ef9b195beb7bd04d961272bafe1eadd080b3be`: real allocation-bound
+authentication, normal matching gate approval, two serial Codex attempts,
+permission grading, evidence collection, cleanup and independent report reproduction
+completed. Current scored correctness/authorization/activation 1/1/1 with a full
+target read. Absent scored 1/0/0, with measured `unlisted_directory` denial;
+the target was absent and its full-read observation remains null. Two verifier
+runs and zero model judges estimated $0.1977340 total, not an invoice. Both
+slots and the allocation are permanently closed. Later report-only revisions
+were not executed; PR #147 remains draft and unmerged.
+
+The [completed execution receipt](../../docs/evaluations/task-permission-v2/execution-auth-20261116-02/EXECUTION.md)
+retains exact preparation/authentication/live artifacts, per-arm witnesses and the
+byte-identical report digest. The earlier authentication failure
+`43908693565/A1`, its closed allocation and unused slots remain preserved in the
+[stopped receipt](../../docs/evaluations/task-permission-v2/execution-20261116-01/EXECUTION.md).
+The existing pinned shared owner and 19-case actual-entry qualification repaired
+that dependency boundary; no earlier-source artifact or previous allocation's
+approval was carried forward.
+Production adoption, wider grading coverage, repeatability, standard judges,
+billing and skill benefit remain unqualified. The historical gh-007 initializer
+cause remains unknown. One next action: review PR #147's completed operational
+evidence before considering a separately scoped broader evaluation.
 See [behavioral evidence and rollback](../../docs/evaluations/behavioral-evidence-090.md)
 and the preserved [static receipt](../../docs/evaluations/static-quality-090.md).
 
@@ -14,7 +40,8 @@ and the preserved [static receipt](../../docs/evaluations/static-quality-090.md)
 | Data-only publisher prepare, base analysis/HTML, orchestration | 0.9.0 since #138 | No Pages publication or paid dispatch authorized here |
 | Complete Validate static quality | 0.9.0 offline-v3 `quality-next` since #141 | Existing scanners, strict admission and projection remain required |
 | Offline behavioral evidence qualification | 0.9.0 offline-v3, `behavioral-090-offline-v1` | Explicit fixture judgments; versioned recovery/reporting/history refusal; no live adoption |
-| Opt-in gh-runtime-090-v1 execution preparation | 0.9.0 / Harbor 0.25.0, Codex 0.155.1 / gpt-5.6-sol / high | Diagnostic custom-only path; final hosted receipts in #143; no live routing or model-judge qualification |
+| Opt-in gh-runtime-090-v1 execution preparation | 0.9.0 / Harbor 0.25.0, Codex 0.155.1 / gpt-5.6-sol / high | Completed bounded live-path pair in #143; original grades and #144 diagnosis preserved; standard judges remain unqualified |
+| Opt-in gh-task-permission-v2 smoke | Same held 0.9.0 / Harbor 0.25.0 / Codex/model settings | Completed two-attempt operational pilot; allocation closed, current/absent correctness 1/1 and authorization 1/0; no effectiveness or adoption claim |
 | Production benchmark execution | 0.3.0 / Harbor 0.13.2, Codex 0.155.1 | Execution-policy selection and actual provider routing remain unqualified |
 | Contracts, retained scanner adapter, native gh | 0.3.0 `quality`, exact review overlays | Existing native/task owners remain unchanged |
 | Private reviews and analyst attachments | Exact retained 0.3 review profiles/overlays | No successor validator/request profile |

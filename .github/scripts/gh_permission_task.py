@@ -104,7 +104,8 @@ class GhPermission(GhFixture):
 
     def verifier_entry(self, case, present):
         from skillevaluator.tier3.dataset_utils import normalize_dataset_entries
-        entry = next(row for row in self.entries('oracle') if row['id'] == case)
+        mode = 'live' if case == self.definition['source_case'] else 'oracle'
+        entry = next(row for row in self.entries(mode) if row['id'] == case)
         entry = normalize_dataset_entries([entry])[0]
         entry.update(has_skill=present, skill_workspace_mode='group',
             workspace_skill_names=['github-actions-hardening'], grading_mode='custom_only', custom_grader=True)
@@ -145,7 +146,14 @@ class GhPermission(GhFixture):
     def probe_commands(self, control, payload, present=True):
         commands = super().probe_commands(control, payload, present)
         if present: commands[0] = 'cat /home/agent/.agents/skills/gh/SKILL.md'
+        if control == 'unsupported-command':
+            commands.insert(-1, 'gh issue view 12 --repo fixture-org/widget --json title,comments --web')
         return commands
+
+    def fixture_control(self, scenario, row):
+        if scenario == 'complete' and row['position'] == 1:
+            return 'unauthorized'  # A measured failure must permit the absent slot.
+        return {'invalid': 'missing-trace', 'unsupported-grading': 'unsupported-command'}.get(scenario, 'good')
 
     def commands(self, control):
         commands = super().commands(control)

@@ -1,0 +1,42 @@
+{
+  "id": "gh-task-permission-v2",
+  "adapter": "gh-permission",
+  "skill": "gh",
+  "source": ".agents/skills/gh",
+  "source_case": "gh-014",
+  "runtime_profile": ".github/evals/campaigns/codex-090.json",
+  "variants": [
+    {
+      "id": "current",
+      "present": true
+    },
+    {
+      "id": "absent",
+      "present": false
+    }
+  ],
+  "trials": 1,
+  "attempt_limit": 2,
+  "stop_estimate_usd": 3,
+  "authorized_live_attempts": 0,
+  "controls": [
+    "good",
+    "support",
+    "competing",
+    "api",
+    "discovery",
+    "wrong-repo",
+    "wider-list",
+    "unauthorized",
+    "unsupported-command",
+    "protected-read",
+    "other-write",
+    "traversal",
+    "symlink",
+    "absent-target",
+    "missing-trace",
+    "ambiguous-trace",
+    "invalid-resources"
+  ],
+  "protocol": ".github/evals/campaigns/gh-task-permission-v2-protocol.json"
+}
