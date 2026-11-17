@@ -1,4 +1,32 @@
-# Judge-only preparation and authorization adapter
+# Completed PR #150 judge-only calibration
+
+**Useful for narrow advisory use.** The single authorized
+[run 44152839720/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/44152839720)
+completed on `9bc51724692625e2962534fb3ab833382a74f103`. The exact
+preparation and matching protected gate were verified and the allocation is
+closed. The [execution and closure receipt](../../docs/evaluations/judge-calibration-090-v1/execution-20261117-01/EXECUTION.md)
+records the outcome separately from the earlier credential-free qualification.
+
+Seven records completed, with six applicable judgments and fifteen N/A
+dimensions. The five narrow reference labels agreed, including both known
+defects. Control 03 returned explicit null for missing trace evidence, outside
+scored agreement. Control 07 had no ground truth and made no request. Control
+01's factual agreement stands, with an unsupported format claim in its
+explanation. Native outcomes are preserved.
+
+Six physical HTTP requests returned six complete essential usage records.
+Estimated usage was **$0.017736**. The live report independently reproduced
+byte for byte and applicable resource-disposal checks passed. Agent runtime,
+arms and cleanup were inapplicable. This is bounded live-route compatibility
+and narrow calibration evidence. General judge accuracy, goal judging, actual
+billing and skill effectiveness remain unmeasured. The later reporting commit
+has its own validation and PR #150 remains unmerged.
+
+**One current next action:** keep executable checks and bounded human review
+as the decision path, with judge explanations available as advisory evidence
+for these narrow questions.
+
+## PR #150 preparation, retained as history
 
 PR #149 merged as `ca991443c3871d8039589c143498d9294dfba6f8`; the isolated
 implementation starts from that verified current main. The focused
