@@ -67,9 +67,22 @@ def render(output):
     section += report.table('Frozen reference outcomes', ['Item', 'Judgment', 'Expected', 'Observed', 'Independent evidence', 'Limits'],
         [[report.safe(row[k]) for k in ('id', 'judgment', 'expected', 'observed', 'reference', 'ambiguity')]
          for row in frozen['items']])
-    section += report.table('Transport qualification', ['Control', 'HTTP requests', 'Logical attempts', 'Provider failure', 'Usage coverage'],
-        [[report.safe(row['scenario']), report.safe(row['requests']), report.safe(row['attempts']),
-          report.safe(row['errors']), report.safe(row['usage'])] for row in proof['controls']])
+    rows = []
+    for row in proof['controls']:
+        label = row['scenario'].replace('_', ' ')
+        if 'case' in row:
+            label += ' / case ' + row['case'] + (' / with skill' if row['has_skill'] else ' / without skill')
+        if row['requests'] == 0:
+            label = 'Unsupported evidence; no judge / ' + label
+        errors = row['errors']
+        diagnostic = ('Unavailable: ' + ', '.join(errors)) if isinstance(errors, list) and errors else errors or 'None'
+        usage = row['usage']
+        coverage = ('Fixture responses containing usage: ' + str(usage['http_responses_with_usage']) +
+                    '; retained provider usage unavailable') if isinstance(usage, dict) else usage
+        rows.append([report.safe(value) for value in
+                     (label, row['requests'], row['attempts'], diagnostic, coverage)])
+    section += report.table('Transport qualification',
+                            ['Control', 'HTTP requests', 'Logical attempts', 'Failure diagnostic', 'Usage coverage'], rows)
     section += '<p>OpenAI gpt-5.6-sol, reasoning effort omitted by released gpt-5 selector; native chat payload, strict/replace; local transport only. '
     section += 'Provider usage is discarded upstream and logical attempts undercount retries. Paid calibration is blocked.</p></section>'
     html = report.render_report(result, captured)
@@ -114,7 +127,7 @@ def worker(output):
                 return isinstance(value, list) and any(has_usage(v) for v in value)
             reward = reports.read_json(module.SKILL_EVALUATOR_REWARD_JSON)
             reports.require(not has_usage([attempts, reward]), 'Released provider usage contract changed')
-            controls.append({'scenario': SCENARIOS[case], 'case': case, 'requests': len(rows), 'attempts': len(attempts),
+            controls.append({'scenario': SCENARIOS[case], 'case': case, 'has_skill': reports.read_json(module.ENTRY_PATH)['has_skill'], 'requests': len(rows), 'attempts': len(attempts),
                 'errors': [r['metric'] for r in attempts if r['status'] != 'accepted'],
                 'usage': {'http_responses_with_usage': sum(r.get('supplied_usage') is not None for r in rows),
                           'retained_provider_usage': 'unavailable'}})
