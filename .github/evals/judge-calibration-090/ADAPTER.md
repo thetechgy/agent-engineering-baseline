@@ -21,10 +21,11 @@ The existing scheduler drives one record at a time, with no record retries or
 replacements. Each record evaluates three dimensions: six applicable logical
 judgments and fifteen explicit N/A dimensions across one pass. The accounting
 schema's `logical_judgments` still counts all 21 dimension invocations, including
-N/A; the report displays applicable judgments separately. The native schema-support cache persists for the whole verifier process; the
+N/A; the report displays applicable judgments separately. The native schema-support
+cache persists for the whole verifier process; the
 adapter never resets it between records. Six model selections may initiate up to
-twelve physical HTTP requests: one initial request and one
-transport retry **or** schema downgrade per applicable judgment. The strict
+twelve physical HTTP requests: one initial request and one transport retry **or**
+schema downgrade per applicable judgment. The strict
 evaluator limit and the adapter's pre-transport guard both apply. No other
 provider, RAGAS route, fallback model or speculative transport is registered.
 
