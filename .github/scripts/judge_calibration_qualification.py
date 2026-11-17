@@ -97,7 +97,9 @@ def worker(output, task):
         for scenario in campaign.SCENARIOS:
             first = len(observer.requests)
             root = output / 'scenarios' / scenario / 'evidence'
-            value = campaign.run(root, task, fixture=Fixture(scenario, observer))
+            value = campaign.execute(root.parent, task, fixture=Fixture(scenario, observer))
+            require((root / 'consolidated/report.html').is_file()
+                    and not (root.parent / 'attempt-ledger.json').exists(), 'Live artifact layout differs')
             requests = observer.requests[first:]
             actual = value['accounting_summary']
             require(actual['http_attempts'] == len(requests), 'Independent request observer differs: ' + scenario)

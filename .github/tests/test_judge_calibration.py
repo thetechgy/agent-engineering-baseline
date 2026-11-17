@@ -133,5 +133,21 @@ class RetainedEvidence(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     campaign.admit_run(root, self.task)
 
+    def test_success_and_stop_evidence_matches_the_actual_live_upload_contract(self):
+        import yaml
+        workflow = yaml.safe_load((ROOT / '.github/workflows/evaluation-campaign.yml').read_text())
+        paths = next(s['with']['path'] for s in workflow['jobs']['live']['steps']
+                     if s.get('name') == 'Retain all slots and partial native evidence after stopping')
+        self.assertIn('${{ runner.temp }}/campaign-live/evidence/', paths)
+        for scenario in ('complete', 'interruption', 'retention-failure', 'cache-cost-stop'):
+            root = self.reference.parent / 'scenarios' / scenario
+            self.assertFalse((root / 'attempt-ledger.json').exists())
+            self.assertTrue((root / 'evidence/consolidated/report.html').is_file())
+            value = campaign.admit_run(root / 'evidence', self.task)
+            self.assertEqual(value['scenario'], scenario)
+            with tempfile.TemporaryDirectory() as directory:
+                reproduced = campaign.render([root / 'evidence'], Path(directory) / 'report', self.task)
+            self.assertEqual(reproduced, (root / 'evidence/consolidated/report.html').read_bytes())
+
 
 if __name__ == '__main__': unittest.main()

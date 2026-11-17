@@ -52,6 +52,11 @@ results, accounting coverage, stops, evidence locations and resource disposal.
 Historical report interpretation and all 839 earlier profiles are unchanged;
 35 source-only campaign successors identify the changed shared implementation.
 
+Live execution and qualification use the same execution/report finish function.
+Ledgers, judgments, accounting, diagnostics and consolidated reports are written
+under the campaign's `evidence/` subtree, matching the existing live artifact
+upload. Success and stop fixtures reproduce that exact retained subtree.
+
 ## Actual workflow entries
 
 The existing `evaluation-campaign.yml` workflow accepts the new selection.

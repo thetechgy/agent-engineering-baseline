@@ -92,6 +92,8 @@ def run(root, task, *, live=False, preparation=None, fixture=None):
     root.mkdir(parents=True, exist_ok=False)
     if live:
         shared.claim(root, authority)
+    root = root / 'evidence'
+    root.mkdir()
     rows = [{**r, 'state': 'unlaunched'} for r in shared.frozen(task)['schedule']]
     ledger = {'version': 1, 'type': 'judge-only', 'revision': shared.revision(),
               'origin': 'live_provider' if live else 'credential_free_fixture',
@@ -261,6 +263,13 @@ def run(root, task, *, live=False, preparation=None, fixture=None):
     return ledger
 
 
+def execute(root, task, **kwargs):
+    """Same finish path and workflow-retained subtree for live and qualification."""
+    result = run(root, task, **kwargs)
+    render([root / 'evidence'], root / 'evidence/consolidated', task)
+    return result
+
+
 def admit_run(root, task):
     """Data-only judge admission without an agent TrialResult or history score."""
     value = reports.read_json(root / 'attempt-ledger.json')
@@ -387,7 +396,6 @@ def entry(args, task):
         from judge_calibration_qualification import qualify, prepare
         return qualify(args.output, task) if args.action == 'qualify' else prepare(args.output, task, args.qualification, args.authentication_qualification)
     core.require(args.action == 'live' and args.approval == os.environ.get('AEB_CAMPAIGN_APPROVAL'), 'Exact approved allocation required')
-    result = run(args.output, task, live=True, preparation=args.preparation)
-    render([args.output], args.output / 'consolidated', task)
+    result = execute(args.output, task, live=True, preparation=args.preparation)
     core.require(result['state'] == 'completed' and result['resource_disposal'], 'Calibration stopped; no continuation authorized')
     return result
