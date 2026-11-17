@@ -100,7 +100,7 @@ index 634012b..e3e00a0 100644
 +                            "_atif_missing_outer_observation": True}
                  yield step, {**call, "_atif_raw_tool_index": raw_index}
 
- 
+
 diff --git a/src/skillevaluator/tier3/eval_core/judge_accounting.py b/src/skillevaluator/tier3/eval_core/judge_accounting.py
 new file mode 100644
 index 0000000..1e81e2c
@@ -596,7 +596,7 @@ index 542f4d6..a988579 100644
 +                allow_offline_main=allow_offline_main,
              )
 
- 
+
 diff --git a/src/skillevaluator/tier3/harbor/collector.py b/src/skillevaluator/tier3/harbor/collector.py
 index 04dabdf..2a271d2 100644
 --- a/src/skillevaluator/tier3/harbor/collector.py
@@ -613,7 +613,7 @@ index 04dabdf..2a271d2 100644
 @@ -921,6 +923,15 @@ def _is_agent_runtime_failure_trial(trial_dir: Path) -> bool:
      return bool(_agent_runtime_failure_reason(trial_dir))
 
- 
+
 +def _unique_diagnostic_keys(pairs):
 +    value = {}
 +    for key, item in pairs:
@@ -708,7 +708,7 @@ index 04dabdf..2a271d2 100644
 @@ -4247,6 +4278,20 @@ def _overall_score(reward: dict[str, Any]) -> float | None:
      return overall_score(reward)
 
- 
+
 +def _custom_outcome_diagnosis(details: dict[str, Any]) -> dict[str, Any]:
 +    """Retain only the fixed nonnumeric pilot verdict, never arbitrary evidence.
 +
@@ -904,7 +904,7 @@ index 54440de..855c335 100644
 +        usage["judge_accounting"]["complete"] = False
      return usage
 
- 
+
 diff --git a/src/skillevaluator/tier3/harbor/templates/eval.py b/src/skillevaluator/tier3/harbor/templates/eval.py
 index 71d0b83..2df338b 100644
 --- a/src/skillevaluator/tier3/harbor/templates/eval.py
@@ -928,7 +928,7 @@ index 71d0b83..2df338b 100644
 @@ -1766,6 +1772,56 @@ def _compute_bounded_retry_delay(retry_after_str, *, attempt, base_delay, max_de
      return sleep_duration
 
- 
+
 +def _openai_accounting_usage(raw):
 +    try:
 +        body = json.loads(raw)
@@ -1028,7 +1028,7 @@ index 71d0b83..2df338b 100644
 @@ -2258,6 +2311,7 @@ def _record_judge_call(provenance, requested_model, sent_model):
          )
 
- 
+
 +@_accounting.model_call
  def _call_judge_model(prompt, provider, model, max_tokens, temperature, response_schema, schema_name, provenance):
      """Send one judge prompt to *model*; ``provenance["model"]`` becomes the model that answered."""
@@ -1064,7 +1064,7 @@ index 71d0b83..2df338b 100644
      normalized = _normalize_required_judge_result(metric, result, allow_not_applicable=allow_not_applicable)
 @@ -3866,6 +3926,7 @@ def _numeric_reward_payload(result, overall):
 
- 
+
  def write_reward_outputs(result, overall):
 +    _accounting.finish()
      # Top-level result keys are the fixed verifier schema. Sanitize their values
@@ -1072,7 +1072,7 @@ index 71d0b83..2df338b 100644
      sanitized_result = {key: _sanitize_error_value(value) for key, value in result.items()}
 @@ -3940,6 +4001,7 @@ def _dependency_context(skill: str, *, skills_root: Path = Path("/workspace/skil
 
- 
+
  def main():
 +    _accounting.start(_verifier_output_dir() / "judge_accounting.json")
      entry = json.loads(ENTRY_PATH.read_text(encoding="utf-8"))

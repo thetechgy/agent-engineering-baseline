@@ -6,7 +6,7 @@
   "harbor": "0.25.0",
   "scoring": "skill-evaluator-dimension-mean-v1",
   "lock_sha256": "05dd72bfd0bac5399ac19232ea847929e2b21df4a7ef2d2c65eefc4f72484dda",
-  "patch_sha256": "dc86590bb6f4d8e0b90f533f89f986d6bc2e7ab40959d3439966cfc4f3de6e16",
+  "patch_sha256": "06f2180e0bfb7e94c178e5b8881dad054583e02b6b39a76eb966e89603e63dc3",
   "dependencies": {
     "skillevaluator": "0.9.0",
     "harbor": "0.25.0",
