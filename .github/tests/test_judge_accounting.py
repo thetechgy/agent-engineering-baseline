@@ -15,6 +15,17 @@ import skill_reports as reports
 
 
 class AccountingTests(unittest.TestCase):
+    def owning_budget(self):
+        try:
+            from skillevaluator.tier3.harbor.run_budget import BudgetController
+        except ModuleNotFoundError as error:
+            if error.name not in ('skillevaluator', 'skillevaluator.tier3.harbor.run_budget'):
+                raise
+            self.skipTest('Requires the opt-in accounting owner')
+        if not hasattr(BudgetController, 'used_judge_transport_attempts'):
+            self.skipTest('Requires the opt-in accounting owner')
+        return BudgetController
+
     def envelope(self, directory):
         path = Path(directory) / 'judge_accounting.json'
         accounting.start(path)
@@ -118,9 +129,7 @@ class AccountingTests(unittest.TestCase):
                          '05febe880dc5d4f90caee1fc87a0440a1f73de23f88d7252c6b90d84a8387b2a')
 
     def test_native_budget_counts_physical_requests_and_stops_on_unknown_or_replay(self):
-        from skillevaluator.tier3.harbor.run_budget import BudgetController
-        if not hasattr(BudgetController, 'used_judge_transport_attempts'):
-            self.skipTest('Requires the opt-in accounting owner')
+        BudgetController = self.owning_budget()
         with tempfile.TemporaryDirectory() as directory:
             path, row, a, j = self.envelope(directory)
             accounting.received(row, 200, accounting.usage({'input':19,'output':7}))
@@ -140,10 +149,8 @@ class AccountingTests(unittest.TestCase):
             self.assertFalse(budget.admit_many([{'agent':'fixture','arm':'with','case_id':'1','attempt':2}]))
 
     def test_orphan_transport_and_missing_trials_remain_in_native_usage(self):
+        BudgetController = self.owning_budget()
         from skillevaluator.tier3.harbor.runner import _budget_usage
-        from skillevaluator.tier3.harbor.run_budget import BudgetController
-        if not hasattr(BudgetController, 'used_judge_transport_attempts'):
-            self.skipTest('Requires the opt-in accounting owner')
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory)
             path, row, a, j=self.envelope(root/'trial/verifier')
