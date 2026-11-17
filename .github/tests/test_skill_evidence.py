@@ -63,7 +63,8 @@ class EvidenceTests(unittest.TestCase):
         config = scripts.parent / 'evals/evaluator-candidate.json'
         config.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(REPO / '.github/evals/evaluator-candidate.json', config)
-        for name in ('evaluator-0.9.json', 'evaluator-0.9-offline-v2.json'):
+        for name in ('evaluator-0.9.json', 'evaluator-0.9-offline-v2.json',
+                     'evaluator-0.9-accounting-v1.json', 'benchmark-090-accounting-v1.json'):
             shutil.copyfile(REPO / '.github/evals' / name, config.with_name(name))
 
     def native(self):
