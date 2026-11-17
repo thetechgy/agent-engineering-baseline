@@ -16,8 +16,8 @@ import tempfile
 import zipfile
 
 import evaluation_campaign_protocol as protocol
-from evaluation_campaign_selection import binding, registration, selected_task
-from evaluation_runtime import ROOT, evaluator, read_profile
+from evaluation_campaign_selection import binding, registration, selected_task, owning_evaluator
+from evaluation_runtime import ROOT
 import evaluator_profiles as profiles
 import skill_reports as reports
 
@@ -29,11 +29,12 @@ CASES = ('accepted', 'wrong-source', 'wrong-campaign', 'wrong-protocol', 'wrong-
 
 
 def case_names(task):
-    return CASES + (('expired-authority',) if protocol.protocol(task).get('authorization_expires_at') else ())
+    return (CASES + (('expired-authority',) if protocol.protocol(task).get('authorization_expires_at') else ())
+            + (('closed-allocation', 'wrong-artifact', 'wrong-corpus', 'wrong-profile') if task.definition.get('type') == 'judge-only' else ()))
 
 
 def expected(task):
-    owner = evaluator(read_profile(ROOT / task.definition['runtime_profile']))
+    owner = owning_evaluator(task)
     return {'version': 1, 'revision': protocol.revision(), 'campaign': task.definition['id'],
             **binding(task), 'protocol_digest': protocol.digest(ROOT / task.definition['protocol']),
             'runtime': profiles.candidate_versions(owner), 'python': owner['python'],
@@ -87,14 +88,13 @@ runpy.run_path(sys.argv[0],run_name='__main__')
 
 MISSING_OWNER = """import pathlib, runpy, sys
 sys.path.insert(0, str(pathlib.Path(sys.argv[1]).parent))
-from evaluation_campaign_selection import selected_task
-from evaluation_runtime import ROOT, evaluator, read_profile
+from evaluation_campaign_selection import selected_task, owning_evaluator
 import evaluator_profiles as profiles
 # This is the same owning guard used by setup-campaign-authentication.sh.
 # Some adapters compute metadata without evaluator imports, but the workflow's
 # mandatory setup must still reject absent owning dependencies before its CLI.
 campaign=sys.argv[sys.argv.index('--campaign')+1]
-owner=evaluator(read_profile(ROOT/selected_task(campaign).definition['runtime_profile']))
+owner=owning_evaluator(selected_task(campaign))
 profiles.runtime(profiles.candidate_versions(owner),owning=True)
 sys.argv=sys.argv[1:]
 runpy.run_path(sys.argv[0],run_name='__main__')
@@ -122,10 +122,12 @@ ERRORS = {'wrong-source': 'Dispatch source mismatch', 'wrong-campaign': 'Exact a
           'missing-proof': 'Missing or linked JSON report: authentication-qualification.json',
           'incomplete-proof': 'Incomplete or stale authentication CLI qualification',
           'injected-receipt': 'Preparation contains dispatch authorization',
-          'expired-authority': 'Campaign authorization expired'}
+          'expired-authority': 'Campaign authorization expired', 'closed-allocation': 'Allocation already claimed',
+          'wrong-artifact': 'Preparation artifact identity mismatch', 'wrong-corpus': 'Unqualified source artifact',
+          'wrong-profile': 'Unqualified source artifact'}
 
 
-def fixture(root, task, name):
+def fixture(root, task, name, preparation=None):
     """Build independently bound test data, never a real preparation or claim."""
     source = protocol.revision(); repo = {'id': 1299967456, 'full_name': protocol.REPO}
     producer_spec = registration(task)['producers'][0]
@@ -147,6 +149,8 @@ def fixture(root, task, name):
                  'inference': False, 'cases': {n: 'passed' for n in case_names(task)}}}
     if name == 'wrong-protocol': proposal['protocol_digest'] = 'sha256:' + '0'*64
     if name == 'task-identity': proposal['source_identities']['live']['fixture_digest'] = 'sha256:' + '0'*64
+    if name == 'wrong-corpus': proposal['source_identities']['live'][task.definition['corpus']] = 'sha256:' + '0'*64
+    if name == 'wrong-profile': proposal['evaluator']['patch_sha256'] = '0'*64
     if name == 'incomplete-preparation': ready['complete'] = False
     if name == 'missing-proof': del files['authentication-qualification.json']
     if name == 'incomplete-proof': files['authentication-qualification.json']['complete'] = False
@@ -154,7 +158,12 @@ def fixture(root, task, name):
     location = producer_spec['location']
     archive = root/'fixture.zip'
     with zipfile.ZipFile(archive, 'w') as bundle:
-        for member, value in files.items(): bundle.writestr(location + '/' + member, json.dumps(value))
+        if preparation is not None:
+            reports.require(name == 'accepted', 'Actual preparation is only the positive authentication control')
+            for path in reports.regular_tree(preparation.parent):
+                bundle.write(path, str(Path(location).parent / path.relative_to(preparation.parent)))
+        else:
+            for member, value in files.items(): bundle.writestr(location + '/' + member, json.dumps(value))
     artifact = {'id': 7000002, 'workflow_run': {'id': producer['id'], 'repository_id': repo['id'],
                 'head_repository_id': repo['id'], 'head_sha': source},
                 'name': producer_spec['artifact'] + '-1', 'expired': False,
@@ -165,8 +174,10 @@ def fixture(root, task, name):
     if name == 'wrong-producer': producer['path'] = '.github/workflows/unregistered.yml'
     if name == 'tampered-archive': archive.write_bytes(archive.read_bytes() + b'tamper')
     if name == 'expired-artifact': artifact['expires_at'] = '2000-01-01T00:00:00Z'
+    if name == 'wrong-artifact': artifact['id'] = 7000009
     history = [current]
     if name == 'duplicate-dispatch': history.append({**current, 'id': 7000000})
+    if name == 'closed-allocation': history.append({**current, 'id': 7000000, 'status': 'completed', 'conclusion': 'cancelled'})
     if name == 'replayed-dispatch': current['run_attempt'] = 2
     data = {'actions/runs/7000003': current, 'actions/runs/7000001': producer,
             'actions/artifacts/7000002': artifact,
@@ -183,9 +194,9 @@ def fixture(root, task, name):
     return approval, env
 
 
-def run_case(root, task, name, *, python=None):
+def run_case(root, task, name, *, python=None, preparation=None):
     root.mkdir()
-    approval, env = fixture(root, task, name)
+    approval, env = fixture(root, task, name, preparation)
     output = root/'authentication'
     command = [python or sys.executable]
     if name == 'missing-dependency': command.append('-S')
@@ -244,7 +255,7 @@ def run_case(root, task, name, *, python=None):
 def qualify(output, task):
     from evaluation_campaign import no_credentials
     no_credentials()
-    owner = evaluator(read_profile(ROOT / task.definition['runtime_profile']))
+    owner = owning_evaluator(task)
     profiles.runtime(profiles.candidate_versions(owner), owning=True)
     output.mkdir(parents=True, exist_ok=False)
     result = {**expected(task), 'complete': False, 'inference': False, 'cases': {}}

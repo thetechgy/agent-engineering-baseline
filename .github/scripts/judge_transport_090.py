@@ -100,6 +100,17 @@ class Responder:
             def log_message(self, *_):
                 pass
 
+            def do_GET(self):
+                # Observe a redirect follow independently of the client's ledger.
+                responder.requests.append({'scenario': responder.scenario, 'metric': 'redirect_follow',
+                    'method': 'GET', 'payload': {}, 'url': URL, 'status': 400,
+                    'sentinel_authenticated': self.headers.get('Authorization') == 'Bearer ' + SENTINEL})
+                body = b'{"error":{"message":"Unexpected redirect follow"}}'
+                self.send_response(400)
+                self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
             def do_POST(self):
                 assert self.path == '/v1/chat/completions'
                 assert self.headers.get('Authorization') == 'Bearer ' + SENTINEL
@@ -108,6 +119,8 @@ class Responder:
                 status, body = responder.respond(json.loads(self.rfile.read(length)))
                 try:
                     self.send_response(status)
+                    if responder.scenario == 'redirect':
+                        self.send_header('Location', f'http://127.0.0.1:{server.server_port}/redirect-probe')
                     self.send_header('Content-Type', 'application/json')
                     self.send_header('Content-Length', str(len(body)))
                     self.end_headers()

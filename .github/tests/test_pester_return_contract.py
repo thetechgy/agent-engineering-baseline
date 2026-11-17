@@ -24,7 +24,7 @@ class ReturnContract(unittest.TestCase):
         for member, digest in frozen['files'].items():
             raw = (ROOT / member).read_bytes()
             if member == '.github/scripts/evaluation_tasks.py':
-                # Project out only additive metadata interfaces and gh hooks.
+                # Project out only additive metadata interfaces and registrations.
                 # Every other byte, including all frozen Pester task code, must
                 # still match the original manifest. New hook bytes are bound by
                 # the source-successor profiles and their launch regressions.
@@ -43,14 +43,24 @@ class ReturnContract(unittest.TestCase):
                     del lines[node.lineno - 1:node.end_lineno + 1]
                 # The new task registration is additive and cannot affect a Pester selector.
                 loader = next(n for n in ast.parse(raw).body if isinstance(n, ast.FunctionDef) and n.name == 'load')
-                hooks = [n for n in loader.body if isinstance(n, ast.If)
-                    and ast.get_source_segment(raw.decode(), n.test) == "definition.get('adapter') == 'gh-permission'"]
-                self.assertEqual(len(hooks), 1)
-                self.assertEqual(ast.get_source_segment(raw.decode(), hooks[0]),
-                    "if definition.get('adapter') == 'gh-permission':\n"
-                    "        from gh_permission_task import GhPermission\n"
-                    "        adapters['gh-permission'] = GhPermission")
-                del lines[hooks[0].lineno - 1:hooks[0].end_lineno]
+                hooks = []
+                for condition, expected in {
+                    "definition.get('adapter') == 'gh-permission'":
+                        "if definition.get('adapter') == 'gh-permission':\n"
+                        "        from gh_permission_task import GhPermission\n"
+                        "        adapters['gh-permission'] = GhPermission",
+                    "definition.get('type') == 'judge-only'":
+                        "if definition.get('type') == 'judge-only':\n"
+                        "        from judge_calibration_inputs import load as load_judges\n"
+                        "        return load_judges(path, definition)",
+                }.items():
+                    matched = [n for n in loader.body if isinstance(n, ast.If)
+                        and ast.get_source_segment(raw.decode(), n.test) == condition]
+                    self.assertEqual(len(matched), 1)
+                    self.assertEqual(ast.get_source_segment(raw.decode(), matched[0]), expected)
+                    hooks.extend(matched)
+                for node in sorted(hooks, key=lambda n:n.lineno, reverse=True):
+                    del lines[node.lineno - 1:node.end_lineno]
                 raw = b''.join(lines)
                 for default in (b'    trusted_launch_metadata = False\n', b'    trusted_launch_metadata = True\n'):
                     self.assertEqual(raw.count(default), 1)

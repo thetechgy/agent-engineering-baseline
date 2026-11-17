@@ -1,4 +1,63 @@
-# Standard judge accounting correction
+# Completed PR #150 judge-only calibration
+
+**Useful for narrow advisory use.** The single authorized
+[run 44152839720/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/44152839720)
+completed on `9bc51724692625e2962534fb3ab833382a74f103`. The exact
+preparation and matching protected gate were verified and the allocation is
+closed. The [execution and closure receipt](../../docs/evaluations/judge-calibration-090-v1/execution-20261117-01/EXECUTION.md)
+records the outcome separately from the earlier credential-free qualification.
+
+Seven records completed, with six applicable judgments and fifteen N/A
+dimensions. The five narrow reference labels agreed, including both known
+defects. Control 03 returned explicit null for missing trace evidence, outside
+scored agreement. Control 07 had no ground truth and made no request. Control
+01's factual agreement stands, with an unsupported format claim in its
+explanation. Native outcomes are preserved.
+
+Six physical HTTP requests returned six complete essential usage records.
+Estimated usage was **$0.017736**. The live report independently reproduced
+byte for byte and applicable resource-disposal checks passed. Agent runtime,
+arms and cleanup were inapplicable. This is bounded live-route compatibility
+and narrow calibration evidence. General judge accuracy, goal judging, actual
+billing and skill effectiveness remain unmeasured. The later reporting commit
+has its own validation and PR #150 remains unmerged.
+
+**One current next action:** keep executable checks and bounded human review
+as the decision path, with judge explanations available as advisory evidence
+for these narrow questions.
+
+## PR #150 preparation, retained as history
+
+PR #149 merged as `ca991443c3871d8039589c143498d9294dfba6f8`; the isolated
+implementation starts from that verified current main. The focused
+[judge-only adapter](judge-calibration-090/ADAPTER.md) registers the existing
+seven frozen records with the shared selection, preparation, authenticated
+artifact admission, allocation lifecycle, serial scheduler and consolidated
+renderer. There is no agent submission, arm, runtime or cleanup evidence to invent.
+The unchanged accounting owner distinguishes six applicable logical judgments,
+fifteen inapplicable dimensions and up to twelve physical HTTP requests. Control-07
+has no ground truth and stays N/A; no successful goal reference is invented to
+force a model call. This pass does not calibrate goal judging.
+
+Credential-free integration uses the actual evaluator and authentication CLI,
+the existing non-forwarding responder with independent request observation, the
+actual retained preparation and fresh consumption/report reproduction. The draft
+PR's exact-source hosted artifact, terminal required/selected CI and independent
+verification receipt govern readiness; this checkpoint alone does not assert
+hosted success. A concrete UNRUN proposal is prepared only after those checks pass.
+
+All live judgments remain **UNRUN**. No provider credentials, model inference,
+paid dispatch, protected approval, merge, production adoption, history or Pages
+write is authorized. The corpus, labels, decision rules, runtime/model/dependency
+pins, historical profiles/outcomes and prior allocation closures remain unchanged.
+Fixture integration does not establish live-provider compatibility, judge accuracy,
+billing or skill benefit. Added maintenance and removal/requalification boundaries
+are recorded in the adapter contract.
+
+**One current next action:** review [draft PR #150](https://github.com/thetechgy/agent-engineering-baseline/pull/150) and its final
+source-bound qualification receipt before any separate calibration authorization.
+
+## PR #149 accounting correction, retained as history
 
 Main was verified at PR #148 merge `319240b46952f5c0596a13b56de4f156f30b1bb6`.
 The [focused accounting successor](judge-calibration-090/ACCOUNTING.md) retains
