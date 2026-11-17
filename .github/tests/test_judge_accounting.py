@@ -96,6 +96,19 @@ class AccountingTests(unittest.TestCase):
             with self.subTest(tokens=tokens): self.assertEqual(accounting.usage(tokens)['status'], status)
         self.assertEqual(accounting.usage({'input':'bad','output':7})['counters']['output'], 7)
 
+    def test_openai_provider_detail_keys_include_reported_prediction_zeros(self):
+        self.owning_budget()
+        from openai.types.completion_usage import CompletionUsage
+        from skillevaluator.tier3.harbor.templates.eval import _openai_accounting_usage
+        raw = CompletionUsage(prompt_tokens=19, completion_tokens=7, total_tokens=26,
+            prompt_tokens_details={'cached_tokens':5, 'audio_tokens':0, 'cache_write_tokens':2},
+            completion_tokens_details={'reasoning_tokens':3, 'audio_tokens':0,
+                'accepted_prediction_tokens':2, 'rejected_prediction_tokens':0})
+        observed = _openai_accounting_usage(json.dumps({'usage':raw.model_dump()}))
+        self.assertEqual(observed, accounting.usage({'input':19, 'output':7, 'total':26,
+            'cached_input':5, 'audio_input':0, 'cache_write_input':2,
+            'reasoning_output':3, 'audio_output':0, 'accepted_prediction':2, 'rejected_prediction':0}))
+
     def test_patch_stages_exact_shared_code_and_preserves_historical_profile(self):
         import evaluator_profiles as profiles
         import hashlib
@@ -208,6 +221,9 @@ class NativeTests(unittest.TestCase):
         self.assertEqual(summary['observed_trials'],18)
         self.assertEqual(summary['http_attempts'],sum(r['requests'] for r in self.proof['controls'] if 'case' in r and r['case']!='6'))
         self.assertGreater(summary['known_tokens']['input'],0)
+        self.assertEqual(summary['known_tokens']['accepted_prediction'],80)
+        self.assertEqual(summary['known_tokens']['rejected_prediction'],0)
+        self.assertEqual(summary['token_coverage']['rejected_prediction'],40)
         self.assertIsNone(self.record['benchmark']['judge_accounting']['cost_estimate_usd'])
 
     def test_malformed_collected_accounting_keeps_valid_task_judgments(self):

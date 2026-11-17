@@ -56,7 +56,11 @@ per-counter coverage and pending records remain explicit.
 
 OpenAI mappings retain input, output and reported total counts, cached input,
 cache-write input, reasoning output, audio and prediction subsets supported by the
-pinned SDK. Subsets are never added to parent totals. Missing fields remain null.
+pinned SDK. Provider prediction detail keys retain their documented `_tokens`
+suffix at the adapter boundary; the ledger keeps short destination names. A control
+uses the pinned SDK schema and retained public evidence to distinguish reported
+zeros from absent fields. Subsets are never added to parent totals. Missing fields
+remain null.
 Malformed or inconsistent usage retains bounded valid fields per response but does
 not contribute contradictory values to compatible token subtotals. Response usage
 is independent of whether the judge result is valid, refused or unavailable.

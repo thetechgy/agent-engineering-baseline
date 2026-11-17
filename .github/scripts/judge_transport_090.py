@@ -83,7 +83,8 @@ class Responder:
         if status == 200 and scenario != 'missing_usage' or scenario == 'error_usage':
             body['usage'] = {'prompt_tokens': 19, 'completion_tokens': 7, 'total_tokens': 26,
                              'prompt_tokens_details': {'cached_tokens': 5},
-                             'completion_tokens_details': {'reasoning_tokens': 3}}
+                             'completion_tokens_details': {'reasoning_tokens': 3,
+                                 'accepted_prediction_tokens': 2, 'rejected_prediction_tokens': 0}}
             if scenario == 'malformed_usage':
                 body['usage']['prompt_tokens'] = 'nineteen'
             if scenario == 'inconsistent_usage':

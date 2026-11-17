@@ -42,7 +42,7 @@ if [ "$kind" = candidate-next ] || [ "$kind" = quality-next ] || [ "$kind" = can
   current_patch_sha=ca00768c1c2b054573743707473ed98964ed6bf910ad8bfac5accfd683860da4
   if [ "$kind" = candidate-accounting ]; then
     current_patch=skillevaluator-v0.9.0-accounting-v1.patch
-    current_patch_sha=b964789e7bbe17d7f3848e504901fdab6e9e38e1fea953b6517acf9a486c6cd2
+    current_patch_sha=1018edc9d22bc1770625701f7611a62ffe41c38a08bdb720dcb0347610f6575a
   fi
   current_root="$RUNNER_TEMP/next-evaluator"
   if [ "$kind" = candidate-accounting ]; then current_root="$RUNNER_TEMP/accounting-evaluator"; fi

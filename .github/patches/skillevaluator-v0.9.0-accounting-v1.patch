@@ -908,7 +908,7 @@ index 54440de..855c335 100644
 
 
 diff --git a/src/skillevaluator/tier3/harbor/templates/eval.py b/src/skillevaluator/tier3/harbor/templates/eval.py
-index 71d0b83..45fed41 100644
+index 71d0b83..9b0f4d5 100644
 --- a/src/skillevaluator/tier3/harbor/templates/eval.py
 +++ b/src/skillevaluator/tier3/harbor/templates/eval.py
 @@ -51,9 +51,15 @@ from urllib.parse import quote, unquote_to_bytes, urlparse, urlsplit
@@ -946,7 +946,7 @@ index 71d0b83..45fed41 100644
 +    malformed = False
 +    for key, fields in (("prompt_tokens_details", {"cached_tokens": "cached_input", "audio_tokens": "audio_input", "cache_write_tokens": "cache_write_input"}),
 +                        ("completion_tokens_details", {"reasoning_tokens": "reasoning_output", "audio_tokens": "audio_output",
-+                         "accepted_prediction": "accepted_prediction", "rejected_prediction": "rejected_prediction"})):
++                         "accepted_prediction_tokens": "accepted_prediction", "rejected_prediction_tokens": "rejected_prediction"})):
 +        details = u.get(key)
 +        if details is not None and not isinstance(details, dict):
 +            malformed = True
