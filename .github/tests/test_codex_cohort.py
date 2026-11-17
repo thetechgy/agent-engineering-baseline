@@ -165,12 +165,21 @@ class Boundaries(unittest.TestCase):
                 reward = reports.read_json(trial / 'verifier/skill_evaluator_reward.json')
                 entry = task / 'tests/entry.json'
                 native = reports.read_json(trial / 'result.json')
+                verified = trial / 'verifier/pilot-verified-submission.json'
+                if not verified.is_file():
+                    outcome = (reward.get('details') or {}).get('outcome') or {}
+                    from skillevaluator.utils.redaction import redact_sensitive_data
+                    print(json.dumps(redact_sensitive_data({'diagnostic': 'verified_submission_missing', 'position': position,
+                        'case': case, 'arm': arm, 'reward_entry': reward.get('entry_id'),
+                        'classification': outcome.get('classification'), 'code': outcome.get('code'),
+                        'exception_type': (native.get('exception_info') or {}).get('exception_type')}))[:4096], flush=True)
+                self.assertTrue(verified.is_file(), 'Native verifier receipt missing; bounded outcome diagnostic retained above')
                 print(json.dumps({'source_revision': cohort.revision(), 'position': position, 'case': case, 'arm': arm,
                     'host_entry': {'sha256': hashlib.sha256(entry.read_bytes()).hexdigest(), 'bytes': entry.stat().st_size,
                                    'mtime_ns': entry.stat().st_mtime_ns, 'json': reports.read_json(entry)},
                     'trial': {k: native[k] for k in ('id', 'trial_name', 'task_name', 'task_checksum')},
                     'produced_submission': reports.read_json(trial / 'agent/pilot-produced-submission.json'),
-                    'verified_submission': reports.read_json(trial / 'verifier/pilot-verified-submission.json'),
+                    'verified_submission': reports.read_json(verified),
                     'host_metadata_files': {p.relative_to(task).as_posix(): {'sha256': pilot.sha(p),
                         'bytes': p.stat().st_size, 'mtime_ns': p.stat().st_mtime_ns} for p in (task / 'tests').rglob('*.json')},
                     'verifier_dockerfile_sha256': pilot.sha(task / 'tests/Dockerfile'),

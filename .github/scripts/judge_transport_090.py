@@ -9,6 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 import re
+import signal
 import threading
 import time
 import urllib.request
@@ -57,11 +58,14 @@ class Responder:
         status = 200
         if scenario == 'unknown_behavior':
             response['results'][0]['passed'] = None
+        if scenario == 'interrupt':
+            os.kill(os.getpid(), signal.SIGINT)
+            time.sleep(0.1)
         if scenario == 'timeout':
             time.sleep(1.1)
         if scenario in ('wrong_shape', 'legacy_format_retry') and (scenario == 'wrong_shape' or ordinal == 1):
             response = {'score': 1}
-        if scenario == 'partial' and metric == 'goal_accuracy' or scenario == 'provider_error':
+        if scenario == 'partial' and metric == 'goal_accuracy' or scenario in ('provider_error', 'error_usage'):
             status, response = 400, {'error': {'message': 'Fixture provider error', 'type': 'invalid_request_error'}}
         if scenario == 'refusal':
             body = {'choices': [{'message': {'refusal': 'Fixture refusal'}, 'finish_reason': 'stop'}]}
@@ -76,8 +80,15 @@ class Responder:
             body = {'output': []}
         else:
             body = {'choices': [{'message': {'content': json.dumps(response)}, 'finish_reason': 'stop'}]}
-        if status == 200 and scenario != 'missing_usage':
-            body['usage'] = {'prompt_tokens': 19, 'completion_tokens': 7, 'total_tokens': 26}
+        if status == 200 and scenario != 'missing_usage' or scenario == 'error_usage':
+            body['usage'] = {'prompt_tokens': 19, 'completion_tokens': 7, 'total_tokens': 26,
+                             'prompt_tokens_details': {'cached_tokens': 5},
+                             'completion_tokens_details': {'reasoning_tokens': 3,
+                                 'accepted_prediction_tokens': 2, 'rejected_prediction_tokens': 0}}
+            if scenario == 'malformed_usage':
+                body['usage']['prompt_tokens'] = 'nineteen'
+            if scenario == 'inconsistent_usage':
+                body['usage']['total_tokens'] = 999
         row.update(status=status, supplied_usage=body.get('usage'), response=body)
         return status, json.dumps(body).encode()
 

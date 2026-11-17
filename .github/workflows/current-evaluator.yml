@@ -91,6 +91,23 @@ jobs:
             ${{ runner.temp }}/standard-judge-090/requests.json
           retention-days: 30
           if-no-files-found: error
+      - name: Install the opt-in judge accounting successor
+        if: inputs.candidate-next
+        run: bash .github/scripts/setup-skillevaluator.sh candidate-accounting
+      - name: Qualify physical judge accounting without credentials
+        if: inputs.candidate-next
+        run: '"$SKILL_ACCOUNTING_PYTHON" -B .github/scripts/qualify_standard_judges.py qualify --accounting --output "$RUNNER_TEMP/standard-judge-accounting"'
+      - name: Retain the accounting report and bounded handoff
+        if: inputs.candidate-next
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: standard-judge-accounting-attempt-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/standard-judge-accounting/reporting/
+            ${{ runner.temp }}/standard-judge-accounting/qualification.json
+            ${{ runner.temp }}/standard-judge-accounting/requests.json
+          retention-days: 30
+          if-no-files-found: error
       - name: Assess static blockers and qualify offline consumers
         if: inputs.candidate-next
         env:
@@ -220,6 +237,18 @@ jobs:
       - name: Reproduce the standard judge consolidated report without model access
         if: inputs.candidate-next
         run: '"$SKILL_QUALIFICATION_PYTHON" -B .github/scripts/qualify_standard_judges.py reproduce --output "$RUNNER_TEMP/standard-judge-090"'
+      - name: Install the exact accounting report owner
+        if: inputs.candidate-next
+        run: bash .github/scripts/setup-skillevaluator.sh candidate-accounting
+      - name: Consume same-run physical judge accounting
+        if: inputs.candidate-next
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: standard-judge-accounting-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/standard-judge-accounting
+      - name: Reproduce the admitted accounting report on this fresh runner
+        if: inputs.candidate-next
+        run: '"$SKILL_ACCOUNTING_PYTHON" -B .github/scripts/qualify_standard_judges.py reproduce --output "$RUNNER_TEMP/standard-judge-accounting"'
       - name: Retain the consolidated report and complete bounded evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -19,11 +19,12 @@ sys.path[:0] = [str(ROOT / '.github/scripts'), str(ROOT / '.github/tests')]
 import benchmark_evidence as benchmark
 import evaluator_profiles as profiles
 import judge_transport_090 as transport
+import judge_accounting as accounting
 import skill_evidence as evidence
 import skill_reports as reports
 
 SOURCES = ('.github/scripts/qualify_standard_judges.py', '.github/scripts/judge_transport_090.py',
-           '.github/scripts/qualify_benchmark_evidence.py')
+           '.github/scripts/qualify_benchmark_evidence.py', '.github/scripts/judge_accounting.py')
 CORPUS = ROOT / '.github/evals/judge-calibration-090/corpus.json'
 SCENARIOS = {'1': 'valid', '2': 'wrong_shape', '3': 'valid', '4': 'partial',
              '5': 'valid', '6': 'missing_usage', '7': 'schema_fallback',
@@ -68,6 +69,7 @@ def render(output):
         [[report.safe(row[k]) for k in ('id', 'judgment', 'expected', 'observed', 'reference', 'ambiguity')]
          for row in frozen['items']])
     rows = []
+    successor = proof.get('accounting_profile') is not None
     for row in proof['controls']:
         label = row['scenario'].replace('_', ' ')
         if 'case' in row:
@@ -79,23 +81,37 @@ def render(output):
         usage = row['usage']
         coverage = ('Fixture responses containing usage: ' + str(usage['http_responses_with_usage']) +
                     '; retained provider usage unavailable') if isinstance(usage, dict) else usage
+        if successor:
+            a = row['accounting']
+            coverage = ('Complete' if a['complete'] else 'Incomplete') + '; observed input/output: ' + str(a['known_tokens']['input']) + '/' + str(a['known_tokens']['output'])
         rows.append([report.safe(value) for value in
                      (label, row['requests'], row['attempts'], diagnostic, coverage)])
     section += report.table('Transport qualification',
                             ['Control', 'HTTP requests', 'Logical attempts', 'Failure diagnostic', 'Usage coverage'], rows)
     section += '<p>OpenAI gpt-5.6-sol, reasoning effort omitted by released gpt-5 selector; native chat payload, strict/replace; local transport only. '
-    section += 'Provider usage is discarded upstream and logical attempts undercount retries. Paid calibration is blocked.</p></section>'
+    if successor:
+        records = [reports.read_json(p) for p in (output / 'reporting/public').rglob('public-report.json')]
+        summaries = [record['benchmark']['judge_accounting'] for record in records if 'benchmark' in record]
+        reports.require(len(summaries) == 1 and summaries[0] == proof['admitted_accounting'], 'Accounting report handoff differs')
+        section += 'Versioned provider usage is retained before content parsing. Unknown usage stops subsequent scheduling; no billing cap is claimed.</p>'
+        section += report.table('Admitted judge accounting', ['Field', 'Observation'],
+            [[report.safe(k), report.safe(json.dumps(v, sort_keys=True))] for k,v in summaries[0].items()])
+        section += '</section>'
+    else:
+        section += 'Provider usage is discarded upstream and logical attempts undercount retries. Paid calibration is blocked.</p></section>'
+
     html = report.render_report(result, captured)
     reports.require(html.count(b'</main>') == 1, 'Consolidated report boundary differs')
     return html.replace(b'</main>', section.encode() + b'</main>')
 
 
-def worker(output):
+def worker(output, *, successor=False):
     from skillevaluator.tier3.harbor.templates import eval as verifier
     from skillevaluator.tier3.harbor.runner import _budget_usage
     from qualify_benchmark_evidence import fixture
     from qualify_current_evaluator import render as render_native
-    profiles.runtime(profiles.candidate_versions(profiles.NEXT), owning=True)
+    producer = profiles.ACCOUNTING if successor else profiles.NEXT
+    profiles.runtime(profiles.candidate_versions(producer), owning=True)
     corpus()
     responder = transport.Responder()
     blocked = []
@@ -126,38 +142,68 @@ def worker(output):
                     return bool(set(value) & {'usage', 'prompt_tokens', 'completion_tokens', 'total_tokens'}) or any(has_usage(v) for v in value.values())
                 return isinstance(value, list) and any(has_usage(v) for v in value)
             reward = reports.read_json(module.SKILL_EVALUATOR_REWARD_JSON)
-            reports.require(not has_usage([attempts, reward]), 'Released provider usage contract changed')
+            reports.require(not has_usage([attempts, reward]), 'Historical logical evidence contract changed')
             controls.append({'scenario': SCENARIOS[case], 'case': case, 'has_skill': reports.read_json(module.ENTRY_PATH)['has_skill'], 'requests': len(rows), 'attempts': len(attempts),
                 'errors': [r['metric'] for r in attempts if r['status'] != 'accepted'],
                 'usage': {'http_responses_with_usage': sum(r.get('supplied_usage') is not None for r in rows),
                           'retained_provider_usage': 'unavailable'}})
+            if successor:
+                envelope = reports.read_json(module._verifier_output_dir() / 'judge_accounting.json')
+                controls[-1]['accounting'] = accounting.summarize([envelope])
+                reports.require(controls[-1]['accounting']['http_attempts'] == len(rows), 'Transport count differs from responder')
 
-        native = fixture(output / 'transport', 'unavailable', judge_context=context)
+        native = fixture(output / 'transport', 'unavailable', judge_context=context, producer=producer)
         # Additional policies exercise real required judges and the same HTTP path.
         for scenario, overrides in (('refusal', {}), ('provider_error', {}), ('wrong_envelope', {}),
-                ('retry_exhausted_schema', {}), ('legacy_format_retry', {'LLM_JUDGE_RETRY_POLICY': 'legacy'})):
+                ('retry_exhausted_schema', {}), ('legacy_format_retry', {'LLM_JUDGE_RETRY_POLICY': 'legacy'}),
+                *([('malformed_usage', {}), ('inconsistent_usage', {}), ('error_usage', {})] if successor else [])):
             start = len(responder.requests)
             attempts = []
             token = verifier._ACTIVE_JUDGE_EVIDENCE.set(attempts)
             try:
                 with patch.object(verifier, 'SKILL_EVALUATOR_REWARD_JSON', output / 'isolated' / scenario / 'reward.json'), \
                         responder.case(verifier, scenario, **overrides):
+                    if successor:
+                        verifier._accounting.start(verifier._verifier_output_dir() / 'judge_accounting.json')
                     result = verifier._call_required_judge('accuracy', verifier.judge_accuracy, 'Return 42', '42', '42')
             finally:
                 verifier._ACTIVE_JUDGE_EVIDENCE.reset(token)
             count = len(responder.requests) - start
             reports.require(count == (2 if scenario in ('retry_exhausted_schema', 'legacy_format_retry') else 1), 'Request bound differs')
-            reports.require((result['score'] is not None) == (scenario == 'legacy_format_retry'), 'Unavailable reply became score')
+            reports.require((result['score'] is not None) == (scenario in ('legacy_format_retry', 'malformed_usage', 'inconsistent_usage')), 'Unavailable reply became score')
             controls.append({'scenario': scenario, 'requests': count, 'attempts': len(attempts), 'diagnostics': attempts, 'result': result,
                              'errors': result.get('reason'), 'usage': 'not retained upstream'})
+            if successor:
+                verifier._accounting.finish()
+                controls[-1]['accounting'] = accounting.summarize([reports.read_json(output / 'isolated' / scenario / 'judge_accounting.json')])
         with patch.object(verifier, 'SKILL_EVALUATOR_REWARD_JSON', output / 'isolated/unknown/reward.json'), \
                 responder.case(verifier, 'unknown_behavior'):
+            if successor:
+                verifier._accounting.start(verifier._verifier_output_dir() / 'judge_accounting.json')
             result = verifier._call_required_judge('behavior_check', verifier.judge_behavior_check,
                                                    'Tool output unavailable.', ['Observed authorized execution.'])
         reports.require(result['results'][0]['passed'] is None and result['score'] == 0,
                         'Unknown behavior lost its explicit missingness')
         controls.append({'scenario': 'unknown_behavior', 'requests': 1, 'attempts': 1,
                          'errors': None, 'usage': 'not retained upstream', 'result': result})
+        if successor:
+            verifier._accounting.finish()
+            controls[-1]['accounting'] = accounting.summarize([reports.read_json(output / 'isolated/unknown/judge_accounting.json')])
+        if successor:
+            start = len(responder.requests)
+            with patch.object(verifier, 'SKILL_EVALUATOR_REWARD_JSON', output / 'isolated/interrupt/reward.json'), \
+                    responder.case(verifier, 'interrupt'):
+                verifier._accounting.start(verifier._verifier_output_dir() / 'judge_accounting.json')
+                try:
+                    verifier._call_required_judge('accuracy', verifier.judge_accuracy, 'Return 42', '42', '42')
+                except KeyboardInterrupt:
+                    pass
+                else:
+                    raise ValueError('Native interruption was not exercised')
+            interrupted = reports.read_json(output / 'isolated/interrupt/judge_accounting.json')
+            controls.append({'scenario': 'interrupt', 'requests': len(responder.requests) - start,
+                'attempts': None, 'errors': 'Interrupted; provider completion unknown', 'usage': 'unknown',
+                'accounting': accounting.summarize([interrupted])})
         reports.require(not blocked, 'External network attempted')
     for row in responder.requests:
         payload = row['payload']
@@ -173,17 +219,18 @@ def worker(output):
     reports.write_json(output / 'requests.json', responder.requests)
     reports.write_json(output / 'qualification.json', {
         'origin': 'credential_free_fixture', 'live_judgments': 'UNRUN', 'paid_authority': False,
-        'revision': evidence.git_revision(ROOT), 'versions': profiles.candidate_versions(profiles.NEXT),
+        'revision': evidence.git_revision(ROOT), 'versions': profiles.candidate_versions(producer),
         'corpus_sha256': hashlib.sha256(CORPUS.read_bytes()).hexdigest(),
         'sources': {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest() for name in SOURCES},
         'handoff': {'requests.json': hashlib.sha256((output / 'requests.json').read_bytes()).hexdigest()},
         'settings': {k:v for k,v in transport.SETTINGS.items() if 'API_KEY' not in k},
         'controls': controls, 'http_requests': len(responder.requests),
-        'native_budget_usage': _budget_usage(native), 'history': benchmark.history_admission(public),
-        'blockers': ['provider_usage_discarded', 'logical_attempts_undercount_http_requests']})
+        'native_budget_usage': _budget_usage(native / 'results/podman/unavailable/_harbor-jobs' if successor else native), 'history': benchmark.history_admission(public),
+        'blockers': [] if successor else ['provider_usage_discarded', 'logical_attempts_undercount_http_requests'],
+        **({'accounting_profile': producer['id'], 'admitted_accounting': public['benchmark']['judge_accounting']} if successor else {})})
     import unittest
     os.environ['JUDGE_090_EVIDENCE'] = str(output)
-    tests = unittest.defaultTestLoader.loadTestsFromName('test_standard_judges')
+    tests = unittest.defaultTestLoader.loadTestsFromName('test_judge_accounting' if successor else 'test_standard_judges')
     reports.require(unittest.TextTestRunner(verbosity=2).run(tests).wasSuccessful(), 'Judge qualification controls failed')
     (output / 'reporting/report.html').write_bytes(render(output))
     reports.require(render(output) == (output / 'reporting/report.html').read_bytes(), 'Report reproduction differs')
@@ -193,14 +240,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('qualify', 'reproduce'))
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--accounting', action='store_true', help='Use the opt-in accounting successor')
     parser.add_argument('--worker', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.action == 'reproduce':
-        profiles.runtime(profiles.candidate_versions(profiles.NEXT), owning=True)
+        proof = reports.read_json(args.output / 'qualification.json')
+        profiles.runtime(proof['versions'], owning=True)
         reports.require(render(args.output) == (args.output / 'reporting/report.html').read_bytes(), 'Report reproduction differs')
         return
     if args.worker:
-        worker(args.output)
+        worker(args.output, successor=args.accounting)
         return
     output = args.output.absolute()
     reports.require(output.resolve() == output and not output.is_relative_to(ROOT) and not output.exists(), 'Fresh external destination required')
@@ -210,7 +259,7 @@ def main():
     env.update(PYTHONDONTWRITEBYTECODE='1', PYTHON_DOTENV_DISABLED='1', LITELLM_LOCAL_MODEL_COST_MAP='True',
         HOME=str(empty), USERPROFILE=str(empty), XDG_CACHE_HOME=str(output / 'cache'), XDG_STATE_HOME=str(output / 'state'),
         SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE=str(output / 'fixture-provenance.key'))
-    subprocess.run([sys.executable, '-B', str(Path(__file__).resolve()), 'qualify', '--output', str(output), '--worker'],
+    subprocess.run([sys.executable, '-B', str(Path(__file__).resolve()), 'qualify', '--output', str(output), '--worker', *(['--accounting'] if args.accounting else [])],
                    env=env, check=True, timeout=180)
 
 

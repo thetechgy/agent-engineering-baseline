@@ -634,6 +634,11 @@ def behavioral(run, records):
         parts.append('<h4>Versioned behavioral evidence</h4><p>Policy ' + code(contract['profile']) +
             '; judgments: ' + text(contract['judgments']) + '. Credential-free fixture observations; '
             'excluded from production history. Native task failure, unavailable judgment and runtime failure remain separate.</p>')
+        if 'judge_accounting' in contract:
+            parts.append('<p>Judge HTTP invocations and provider usage are separate from agent usage. '
+                         'Incomplete usage is unknown; request initiation does not establish receipt or billing. '
+                         'Token subsets are included within their parent counts. Costs require separately identified prices.</p>')
+            parts.append(disclosure('Judge request and usage accounting', contract['judge_accounting']))
         parts.append(table('Released outcomes · simulated judgments', ('Arm', 'Case', 'Outcome', 'Overall', 'Correct answer', 'Security clean', 'Support'),
             [[safe(ARM[o['arm']]), code(o['case_id']), text(row['outcome']), text(row['quality']['overall']),
               text(row['quality']['correct_answer']), text(row['quality']['security_clean']),

@@ -399,7 +399,7 @@ def recover_benchmark(workspace, root, name, mode, outcome, *, evidence_profile=
         import evaluator_profiles
         p = benchmark_evidence.profile(evidence_profile)
         evaluator_profiles.runtime(read_json(root / 'versions.json'), owning=True)
-        require(evaluator_profiles.runtime(read_json(root / 'versions.json')) is evaluator_profiles.NEXT,
+        require(evaluator_profiles.runtime(read_json(root / 'versions.json'))['id'] == p['producer'],
                 'Recovery producer mismatch')
         original = read_json(root / 'provenance.json')
         profile_metadata = original['benchmark']
@@ -748,7 +748,7 @@ def benchmark_artifacts(workspace, root, name, destination):
     agent_reports = {"lift.json", "custom_lift.json", "pass_at_k_lift.json",
                      "security_attribution.json", "findings.json"}
     trial_reports = {"result.json", "config.json", "exception.txt", "trial.log", "trajectory.json",
-                     "codex.txt", "reward.json", "failure.json", "artifact_manifest.json"}
+                     "codex.txt", "reward.json", "failure.json", "artifact_manifest.json", "judge_accounting.json"}
 
     def allowed(relative):
         parts = relative.parts
