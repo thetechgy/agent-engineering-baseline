@@ -1,0 +1,613 @@
+{
+  "checks": [
+    {
+      "expected": "verified",
+      "id": "return-boundary",
+      "observed": "verified"
+    },
+    {
+      "expected": "accepted",
+      "id": "permissive-suite",
+      "observed": "accepted"
+    },
+    {
+      "expected": "rejected",
+      "id": "restrictive-suite",
+      "observed": "rejected"
+    }
+  ],
+  "id": "quantity-int128",
+  "observations": [
+    {
+      "arm": "current",
+      "id": "current-1",
+      "outcome": "rejected",
+      "reference": {
+        "assertion_failures": 0,
+        "failed": 0,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 5,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      },
+      "sha256": "sha256:95730ffe4aa6e9e9e48d8e5cf87749417460a305d798b8b180b1e6bd07e91992",
+      "variation": {
+        "assertion_failures": 1,
+        "failed": 1,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 4,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      }
+    },
+    {
+      "arm": "absent",
+      "id": "current-2",
+      "outcome": "rejected",
+      "reference": {
+        "assertion_failures": 0,
+        "failed": 0,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 5,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      },
+      "sha256": "sha256:1150d8239fa305d3de44cb1ed12b0c163539079b39793906f0e9fde3f03538c6",
+      "variation": {
+        "assertion_failures": 1,
+        "failed": 1,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 4,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      }
+    },
+    {
+      "arm": "absent",
+      "id": "current-3",
+      "outcome": "rejected",
+      "reference": {
+        "assertion_failures": 0,
+        "failed": 0,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 5,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      },
+      "sha256": "sha256:b1f26910857cf15589ea1e090b555e2c93c7844d073ceb4c77d9f954155f7e60",
+      "variation": {
+        "assertion_failures": 1,
+        "failed": 1,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 4,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      }
+    },
+    {
+      "arm": "current",
+      "id": "current-4",
+      "outcome": "rejected",
+      "reference": {
+        "assertion_failures": 0,
+        "failed": 0,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 5,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      },
+      "sha256": "sha256:e186c55fe566ded0be05f1c6ab6f6f4567b744abcdbfe9286f5fc150df39e272",
+      "variation": {
+        "assertion_failures": 1,
+        "failed": 1,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 4,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      }
+    },
+    {
+      "arm": "current",
+      "id": "current-5",
+      "outcome": "rejected",
+      "reference": {
+        "assertion_failures": 0,
+        "failed": 0,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 5,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      },
+      "sha256": "sha256:930312c9ab31f75d7b608dfad31380ed9e1eaa0d9caeddff324b3560f427e8a3",
+      "variation": {
+        "assertion_failures": 1,
+        "failed": 1,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 4,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      }
+    },
+    {
+      "arm": "absent",
+      "id": "current-6",
+      "outcome": "rejected",
+      "reference": {
+        "assertion_failures": 0,
+        "failed": 0,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 5,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      },
+      "sha256": "sha256:7137a3cbfcf59a1ea1703e0eddd38d89f274076027f96f3cf4827af05af94ca0",
+      "variation": {
+        "assertion_failures": 1,
+        "failed": 1,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 4,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      }
+    },
+    {
+      "arm": "candidate",
+      "id": "candidate-1",
+      "outcome": "rejected",
+      "reference": {
+        "assertion_failures": 0,
+        "failed": 0,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 5,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      },
+      "sha256": "sha256:2ffd481da79b5671e6e5ba68c58d37fa08c29b5ecee2a728c1350ddabac1955e",
+      "variation": {
+        "assertion_failures": 1,
+        "failed": 1,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 4,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      }
+    },
+    {
+      "arm": "absent",
+      "id": "candidate-2",
+      "outcome": "rejected",
+      "reference": {
+        "assertion_failures": 0,
+        "failed": 0,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 5,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      },
+      "sha256": "sha256:201c4a05bf9f848bfb09d1cfdca27071a5f5c858fd611572991082ee5d67b625",
+      "variation": {
+        "assertion_failures": 1,
+        "failed": 1,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 4,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      }
+    },
+    {
+      "arm": "absent",
+      "id": "candidate-3",
+      "outcome": "rejected",
+      "reference": {
+        "assertion_failures": 0,
+        "failed": 0,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 5,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      },
+      "sha256": "sha256:e4e4f0b2613fbf4846f864f32c4891a18c6f75378dc0fde233d690f1e5e35c5f",
+      "variation": {
+        "assertion_failures": 1,
+        "failed": 1,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 4,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      }
+    },
+    {
+      "arm": "candidate",
+      "id": "candidate-4",
+      "outcome": "rejected",
+      "reference": {
+        "assertion_failures": 0,
+        "failed": 0,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 5,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      },
+      "sha256": "sha256:5cc1ae1ac99e87a455ff504ead95ad1fbcdc50873c17b156e16a3c8030be2333",
+      "variation": {
+        "assertion_failures": 1,
+        "failed": 1,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 4,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      }
+    },
+    {
+      "arm": "candidate",
+      "id": "candidate-5",
+      "outcome": "rejected",
+      "reference": {
+        "assertion_failures": 0,
+        "failed": 0,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 5,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      },
+      "sha256": "sha256:96797355da914a0c1c4aeb7bd5c1ee44d4aa7baf3490f1e83420ec244069fb40",
+      "variation": {
+        "assertion_failures": 1,
+        "failed": 1,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 4,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      }
+    },
+    {
+      "arm": "absent",
+      "id": "candidate-6",
+      "outcome": "rejected",
+      "reference": {
+        "assertion_failures": 0,
+        "failed": 0,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 5,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      },
+      "sha256": "sha256:88a26a4f88a87a210286cd5b143f4023f0e8b1742bbc2d80a8405c712ad793af",
+      "variation": {
+        "assertion_failures": 1,
+        "failed": 1,
+        "failed_blocks": 0,
+        "failed_containers": 0,
+        "inconclusive": 0,
+        "not_run": 0,
+        "passed": 4,
+        "pester": "6.2.0",
+        "powershell": "7.6.9",
+        "skipped": 0,
+        "total": 5
+      }
+    }
+  ],
+  "provenance": {
+    "boundary": {
+      "reference": {
+        "boundary": [
+          {
+            "enabled": false,
+            "object_type": "System.Management.Automation.PSCustomObject",
+            "properties": [
+              "Enabled",
+              "Quantity"
+            ],
+            "quantity": "0",
+            "quantity_type": "System.Int32",
+            "requested": -2,
+            "returned": 1
+          },
+          {
+            "enabled": false,
+            "object_type": "System.Management.Automation.PSCustomObject",
+            "properties": [
+              "Enabled",
+              "Quantity"
+            ],
+            "quantity": "0",
+            "quantity_type": "System.Int32",
+            "requested": 0,
+            "returned": 1
+          },
+          {
+            "enabled": true,
+            "object_type": "System.Management.Automation.PSCustomObject",
+            "properties": [
+              "Enabled",
+              "Quantity"
+            ],
+            "quantity": "3",
+            "quantity_type": "System.Int64",
+            "requested": 3,
+            "returned": 1
+          },
+          {
+            "enabled": true,
+            "object_type": "System.Management.Automation.PSCustomObject",
+            "properties": [
+              "Enabled",
+              "Quantity"
+            ],
+            "quantity": "8",
+            "quantity_type": "System.Int32",
+            "requested": 8,
+            "returned": 1
+          },
+          {
+            "enabled": true,
+            "object_type": "System.Management.Automation.PSCustomObject",
+            "properties": [
+              "Enabled",
+              "Quantity"
+            ],
+            "quantity": "8",
+            "quantity_type": "System.Int32",
+            "requested": 9,
+            "returned": 1
+          }
+        ],
+        "int128_is_numeric": true
+      },
+      "variation": {
+        "boundary": [
+          {
+            "enabled": false,
+            "object_type": "System.Management.Automation.PSCustomObject",
+            "properties": [
+              "Enabled",
+              "Quantity"
+            ],
+            "quantity": "0",
+            "quantity_type": "System.Int32",
+            "requested": -2,
+            "returned": 1
+          },
+          {
+            "enabled": false,
+            "object_type": "System.Management.Automation.PSCustomObject",
+            "properties": [
+              "Enabled",
+              "Quantity"
+            ],
+            "quantity": "0",
+            "quantity_type": "System.Int32",
+            "requested": 0,
+            "returned": 1
+          },
+          {
+            "enabled": true,
+            "object_type": "System.Management.Automation.PSCustomObject",
+            "properties": [
+              "Enabled",
+              "Quantity"
+            ],
+            "quantity": "3",
+            "quantity_type": "System.Int128",
+            "requested": 3,
+            "returned": 1
+          },
+          {
+            "enabled": true,
+            "object_type": "System.Management.Automation.PSCustomObject",
+            "properties": [
+              "Enabled",
+              "Quantity"
+            ],
+            "quantity": "8",
+            "quantity_type": "System.Int32",
+            "requested": 8,
+            "returned": 1
+          },
+          {
+            "enabled": true,
+            "object_type": "System.Management.Automation.PSCustomObject",
+            "properties": [
+              "Enabled",
+              "Quantity"
+            ],
+            "quantity": "8",
+            "quantity_type": "System.Int32",
+            "requested": 9,
+            "returned": 1
+          }
+        ],
+        "int128_is_numeric": true
+      }
+    },
+    "control_runs": {
+      "permissive-suite": {
+        "outcome": "accepted",
+        "reference": {
+          "assertion_failures": 0,
+          "failed": 0,
+          "failed_blocks": 0,
+          "failed_containers": 0,
+          "inconclusive": 0,
+          "not_run": 0,
+          "passed": 5,
+          "pester": "6.2.0",
+          "powershell": "7.6.9",
+          "skipped": 0,
+          "total": 5
+        },
+        "sha256": "sha256:60b2119d24981db05b3520c907b70f4e5a0d5ae4a827af3b9f8390cd80f6fead",
+        "variation": {
+          "assertion_failures": 0,
+          "failed": 0,
+          "failed_blocks": 0,
+          "failed_containers": 0,
+          "inconclusive": 0,
+          "not_run": 0,
+          "passed": 5,
+          "pester": "6.2.0",
+          "powershell": "7.6.9",
+          "skipped": 0,
+          "total": 5
+        }
+      },
+      "restrictive-suite": {
+        "outcome": "rejected",
+        "reference": {
+          "assertion_failures": 0,
+          "failed": 0,
+          "failed_blocks": 0,
+          "failed_containers": 0,
+          "inconclusive": 0,
+          "not_run": 0,
+          "passed": 1,
+          "pester": "6.2.0",
+          "powershell": "7.6.9",
+          "skipped": 0,
+          "total": 1
+        },
+        "sha256": "sha256:eb69a18ae452c6ae1aac293c024bbbd1196252d607b8708b0b730112414a072e",
+        "variation": {
+          "assertion_failures": 1,
+          "failed": 1,
+          "failed_blocks": 0,
+          "failed_containers": 0,
+          "inconclusive": 0,
+          "not_run": 0,
+          "passed": 0,
+          "pester": "6.2.0",
+          "powershell": "7.6.9",
+          "skipped": 0,
+          "total": 1
+        }
+      }
+    },
+    "fixtures": {
+      "reference": "sha256:6e4bd489ef16eddee84adb4291820a657a9181fa2696a8c85ec05845c5654be8",
+      "variation": "sha256:8c86edfff064b0bfaa00af4360497dca0e7c63413c33add6adb9b77cda80c0c0"
+    },
+    "image": "cffb4ffe4f5a1b7154d47ba512ed40d775565e296a4f30d8480895435792ab87",
+    "pester_manifest_sha256": "sha256:ea8445218d46eeb69dd08827d38222f1d23c592966722ecfd0bdc419bf045543",
+    "powershell_sha256": "sha256:c561baa659f1d0a5e9482684fc26e377b6fb8178b74f5e4fbb0ba0ea38f6a126",
+    "prompt_sha256": "sha256:01d19f14c9281d4cf4904d080d84872b417d27778e7ae578ce3c5c422034390c",
+    "publication_sha256": "sha256:b8d15d0ecf1b77bb4596a791ea7cee4f70317c6cd0239e078f1880d6868e39be",
+    "runner_sha256": "sha256:d82bae08d821917f4b54a92c28621119b6bab9aa4d11e8818df1fb35ba153c3f"
+  },
+  "schema_version": 1
+}
