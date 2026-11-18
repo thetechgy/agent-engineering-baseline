@@ -7,7 +7,9 @@ import sys
 
 sys.dont_write_bytecode = True
 import skill_report as report
-from quantity_replay_evidence import CONTROL_OUTCOMES, boundary_verified, paired_outcome
+from quantity_replay_evidence import (
+    CONTROL_OUTCOMES, PUBLICATION_MEMBER, boundary_verified, paired_outcome, submission_roster,
+)
 
 analysis = report.analysis
 evidence = report.evidence
@@ -115,13 +117,15 @@ def recorded_pair_outcome(runs):
     return outcome if outcome == runs.get('outcome') else 'unmeasured'
 
 
-def replay_observations(spec, receipt):
+def replay_observations(spec, receipt, population):
     """Count only qualified observations and reconcile them with the planned cohort."""
     evidence.closed(spec, ('id', 'member', 'expected', 'controls', 'population', 'variation', 'gap', 'contract'))
     evidence.token(spec['id'])
     evidence.sha(spec['population'])
-    expected = spec['expected']
-    require(type(expected) is int and 0 < expected <= 256, 'Invalid replay population')
+    publication_digest, roster = population
+    expected = len(roster)
+    require(spec['population'] == publication_digest and type(spec['expected']) is int
+            and spec['expected'] == expected, 'Replay population binding mismatch')
     controls = spec['controls']
     require(controls == CONTROL_OUTCOMES, 'Invalid replay controls')
 
@@ -133,7 +137,7 @@ def replay_observations(spec, receipt):
     require(type(receipt['schema_version']) is int and receipt['schema_version'] == 1
             and receipt['id'] == spec['id']
             and type(provenance) is dict
-            and provenance.get('publication_sha256') == spec['population'], 'Replay identity mismatch')
+            and provenance.get('publication_sha256') == publication_digest, 'Replay identity mismatch')
     recorded_checks = {}
     for check in receipt['checks']:
         evidence.closed(check, ('id', 'expected', 'observed'))
@@ -156,14 +160,19 @@ def replay_observations(spec, receipt):
     unqualified = [name for name, value in controls.items() if checks.get(name) != value]
     rows = receipt['observations']
     require(type(rows) is list and len(rows) <= expected, 'Unexpected replay population')
-    observations = {}
+    submitted = {}
     for row in rows:
         identity = row['id']
         evidence.token(identity)
         evidence.sha(row['sha256'])
-        require(identity not in observations, 'Duplicate replay observation')
+        require(identity not in submitted, 'Duplicate replay observation')
         evidence.enum(row['outcome'], counts)
-        outcome = 'unmeasured' if unqualified else recorded_pair_outcome(row)
+        submitted[identity] = row
+    observations = {}
+    for identity, (_, _, arm, digest) in roster.items():
+        row = submitted.get(identity)
+        matches = row is not None and (row.get('arm'), row['sha256']) == (arm, digest)
+        outcome = recorded_pair_outcome(row) if matches and not unqualified else 'unmeasured'
         observations[identity] = outcome
         if outcome != 'unmeasured':
             counts[outcome] += 1
@@ -178,8 +187,8 @@ def replay_observations(spec, receipt):
     return counts, unresolved, checks, observations
 
 
-def replay_finding(spec, receipt):
-    counts, unresolved, checks, outcomes = replay_observations(spec, receipt)
+def replay_finding(spec, receipt, population):
+    counts, unresolved, checks, outcomes = replay_observations(spec, receipt, population)
     variation = label(spec['variation'])
     if unresolved:
         heading = 'Unresolved · Neither yet'
@@ -214,7 +223,7 @@ def replay_finding(spec, receipt):
     return ''.join(parts)
 
 
-def decision_section(manifest, result, records, receipts, replays):
+def decision_section(manifest, result, records, receipts, replays, population):
     evidence.closed(manifest, ('schema_version', 'receipts', 'decisions'))
     require(type(manifest['schema_version']) is int and manifest['schema_version'] == 1, 'Decision schema')
     cards = manifest['decisions']
@@ -269,7 +278,7 @@ def decision_section(manifest, result, records, receipts, replays):
         scores = report.table(card['caption'], ('Result', 'With skill', 'Matched absent'), rows)
         if replay is not None:
             parts.append('<article class="decision-card replay-card">' + heading +
-                         replay_finding(replay, replays.get(replay['id'])) +
+                         replay_finding(replay, replays.get(replay['id']), population) +
                          '<p><strong>Transfer decision</strong> · ' + display_decision + ' ' + attribution + '</p>' +
                          '<details><summary>Frozen transfer checks and logs</summary>' + scores +
                          ''.join('<p>' + note + '</p>' for note in notes) + '<p>' + logs + '</p></details>')
@@ -387,6 +396,10 @@ def generate(inputs, saved_analysis, decisions_path, output=None, *, replay_path
         require(digest == item['sha256'] and digest not in receipts, 'Decision receipt identity mismatch')
         receipts[digest] = (evidence.parse_json(raw, limit=SUPPLEMENT_LIMIT), item)
     bindings = [card['replay'] for card in manifest['decisions'] if 'replay' in card]
+    population = None
+    if bindings:
+        raw = read(evidence.ROOT / PUBLICATION_MEMBER, SUPPLEMENT_LIMIT)
+        population = (evidence.digest_bytes(raw), submission_roster(evidence.parse_json(raw, limit=SUPPLEMENT_LIMIT)))
     replays = {}
     for path in replay_paths:
         receipt = evidence.parse_json(read(path, SUPPLEMENT_LIMIT), limit=SUPPLEMENT_LIMIT)
@@ -405,7 +418,7 @@ def generate(inputs, saved_analysis, decisions_path, output=None, *, replay_path
     guard()
 
     page = report.render_report(result, captured)
-    section, summaries = decision_section(manifest, result, captured.records, receipts, replays)
+    section, summaries = decision_section(manifest, result, captured.records, receipts, replays, population)
     page = add_decisions(page, section, result, captured.records, summaries)
     require(len(page) <= report.HTML_LIMIT, 'HTML report size exceeded')
     return evidence.write_outputs({}, output, input_paths=(*captured.roots, saved_analysis.parent, decisions_path.parent,

@@ -1,11 +1,33 @@
 """Qualification rules for the quantity-int128 native replay."""
 
+from pathlib import Path
+import re
+
+PUBLICATION_MEMBER = Path('docs/evaluations/pester-transfer-decision/execution-v6/publication-verification.json')
 CONTROL_OUTCOMES = {
     'return-boundary': 'verified',
     'permissive-suite': 'accepted',
     'restrictive-suite': 'rejected',
 }
 CASES = (-2, 0, 3, 8, 9)
+
+
+def submission_roster(publication):
+    """Return the frozen slots in publication order, keyed by replay ID."""
+    planned = {(campaign, slot) for campaign in ('current', 'candidate') for slot in range(1, 7)}
+    rows = publication['submissions']
+    if type(rows) is not list or len(rows) != len(planned):
+        raise ValueError('Retained transfer population differs from the frozen receipt')
+    roster = {}
+    for row in rows:
+        campaign, slot, variant, digest = (row[key] for key in ('campaign', 'slot', 'variant', 'submission_sha256'))
+        if (type(campaign) is not str or type(slot) is not int or (campaign, slot) not in planned
+                or variant not in (campaign, 'absent') or type(digest) is not str
+                or not re.fullmatch(r'[0-9a-f]{64}', digest)):
+            raise ValueError('Invalid retained transfer submission')
+        planned.remove((campaign, slot))
+        roster[f'{campaign}-{slot}'] = (campaign, slot, variant, 'sha256:' + digest)
+    return roster
 
 
 def run_outcome(run):

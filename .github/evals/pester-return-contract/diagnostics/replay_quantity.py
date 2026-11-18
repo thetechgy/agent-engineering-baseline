@@ -14,37 +14,33 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[3]
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(ROOT / '.github/scripts'))
-from quantity_replay_evidence import CONTROL_OUTCOMES, boundary_verified, paired_outcome
+from quantity_replay_evidence import (
+    CONTROL_OUTCOMES, PUBLICATION_MEMBER, boundary_verified, paired_outcome, submission_roster,
+)
 
 TRANSFER = HERE.parent / 'transfer'
-EXECUTION = ROOT / 'docs/evaluations/pester-transfer-decision/execution-v6'
+EXECUTION = (ROOT / PUBLICATION_MEMBER).parent
 AMEND = b'if ($Requested -eq 3) { $quantity = [long]$quantity }'
 SUBSTITUTE = b'if ($Requested -eq 3) { $quantity = [System.Int128]::Parse($quantity.ToString()) }'
-PLANNED = {(arm, slot) for arm in ('candidate', 'current') for slot in range(1, 7)}
 
 
 def digest(raw):
     return 'sha256:' + hashlib.sha256(raw).hexdigest()
 
 
-def subjects():
-    publication = json.loads((EXECUTION / 'publication-verification.json').read_bytes())
-    rows = publication['submissions']
-    if len(rows) != len(PLANNED) or {(r['campaign'], r['slot']) for r in rows} != PLANNED:
-        raise ValueError('Retained transfer population differs from the frozen receipt')
+def subjects(roster):
     grades = {arm: json.loads((EXECUTION / arm / 'verification.json').read_bytes())['entries']
               for arm in ('current', 'candidate')}
-    for row in rows:
-        arm, slot = row['campaign'], row['slot']
-        submission = EXECUTION / arm / 'submissions' / f'slot-{slot}'
+    for identity, (campaign, slot, arm, suite_digest) in roster.items():
+        submission = EXECUTION / campaign / 'submissions' / f'slot-{slot}'
         raw = (submission / 'Subject.Tests.ps1').read_bytes()
-        grade = grades[arm][slot - 1]
-        if (digest(raw) != 'sha256:' + row['submission_sha256']
-                or grade['position'] != slot or grade['variant'] != row['variant']
+        grade = grades[campaign][slot - 1]
+        if (digest(raw) != suite_digest
+                or grade['position'] != slot or grade['variant'] != arm
                 or grade['primary_success'] is not True
                 or digest((submission / 'skill_evaluator_reward.json').read_bytes()) != grade['grade_sha256']):
-            raise ValueError(f'Retained inputs disagree at {arm} slot {slot}')
-        yield f'{arm}-{slot}', row['variant'], raw
+            raise ValueError(f'Retained inputs disagree at {campaign} slot {slot}')
+        yield identity, arm, suite_digest, raw
 
 
 def container_runner(image_id, runtime, workspace, *, probe=False):
@@ -78,7 +74,8 @@ def replay(runtime, image_id):
     if baseline.count(AMEND) != 1:
         raise ValueError('Expected one frozen reference type branch')
     variation = baseline.replace(AMEND, SUBSTITUTE, 1)
-    retained = list(subjects())
+    publication = (ROOT / PUBLICATION_MEMBER).read_bytes()
+    retained = list(subjects(submission_roster(json.loads(publication))))
     runner = (HERE / 'Run-QuantityReplay.ps1').read_bytes()
     controls = {
         'permissive-suite': (HERE / 'AcceptQuantity.Tests.ps1').read_bytes(),
@@ -114,9 +111,9 @@ def replay(runtime, image_id):
         checks.append({'id': name, 'expected': CONTROL_OUTCOMES[name], 'observed': run['outcome']})
     qualified = all(check['expected'] == check['observed'] for check in checks)
     rows = []
-    for id_, arm, suite in retained:
+    for identity, arm, suite_digest, suite in retained:
         row = compare(suite) if qualified else {'outcome': 'unmeasured', 'reason': 'controls_unqualified'}
-        rows.append({'id': id_, 'arm': arm, 'sha256': digest(suite), **row})
+        rows.append({'id': identity, 'arm': arm, 'sha256': suite_digest, **row})
     return {
         'schema_version': 1,
         'id': 'quantity-int128',
@@ -126,7 +123,7 @@ def replay(runtime, image_id):
             'image': image_id, 'powershell_sha256': digest((runtime / 'powershell/pwsh').read_bytes()),
             'pester_manifest_sha256': digest((runtime / 'Modules/Pester/6.2.0/Pester.psd1').read_bytes()),
             'runner_sha256': digest(runner), 'prompt_sha256': digest((TRANSFER / 'prompt.txt').read_bytes()),
-            'publication_sha256': digest((EXECUTION / 'publication-verification.json').read_bytes()),
+            'publication_sha256': digest(publication),
             'fixtures': {name: digest(raw) for name, raw in variants.items()},
             'boundary': boundary, 'control_runs': control_runs,
         },
