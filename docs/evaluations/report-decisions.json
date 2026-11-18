@@ -38,22 +38,8 @@
             "label": "Reference fixture",
             "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/2b58a4652b576247d91ba01c6ce7a743ff703331/.github/evals/pester-return-contract/transfer/reference/Subject.ps1#L2-L5"
           }
-        },
-        {
-          "text": "Source inspection found the same fixed list of Quantity types in all 12 submissions. Broader numeric coverage remains untested.",
-          "source": {
-            "label": "Submission findings",
-            "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/2a6c58d95643d0186953b1d3dd83d3577e9971c2/docs/evaluations/pester-transfer-decision/execution-v6/EXECUTION.md#L48-L66"
-          }
         }
       ],
-      "next": {
-        "text": "If revisiting the revision, replay a permitted type outside the list, such as Int128, against the saved submissions.",
-        "source": {
-          "label": "Saved type check",
-          "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/2a6c58d95643d0186953b1d3dd83d3577e9971c2/docs/evaluations/pester-transfer-decision/execution-v6/candidate/submissions/slot-1/Subject.Tests.ps1#L20-L30"
-        }
-      },
       "logs": [
         {
           "label": "Current run logs",
@@ -63,12 +49,29 @@
           "label": "Revision run logs",
           "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/44205331725"
         }
-      ]
+      ],
+      "replay": {
+        "id": "quantity-int128",
+        "member": "pester-transfer-decision/diagnostics/quantity-int128.json",
+        "expected": 12,
+        "controls": {
+          "return-boundary": "verified",
+          "permissive-suite": "accepted",
+          "restrictive-suite": "rejected"
+        },
+        "population": "sha256:b8d15d0ecf1b77bb4596a791ea7cee4f70317c6cd0239e078f1880d6868e39be",
+        "variation": "Quantity value returned as System.Int128",
+        "gap": "The frozen reference exercised only Int32 and Int64.",
+        "contract": {
+          "label": "Frozen task contract",
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/2b58a4652b576247d91ba01c6ce7a743ff703331/.github/evals/pester-return-contract/transfer/prompt.txt#L1-L7"
+        }
+      }
     },
     {
       "skill": "gh",
       "case": "gh-014",
-      "decision": "Keep the skill as-is pending stronger evidence.",
+      "decision": "Neither yet",
       "attribution": {
         "label": "Codex review · PR #147 evidence",
         "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/319240b46952f5c0596a13b56de4f156f30b1bb6/docs/evaluations/task-permission-v2/execution-auth-20261116-02/EXECUTION.md#L112-L120"
@@ -103,7 +106,7 @@
         }
       ],
       "next": {
-        "text": "If the permission difference matters for a future decision, repeat the matched case. One trial per arm leaves repeatability unknown.",
+        "text": "Keep the skill as-is. One matched pair gives insufficient evidence for a skill edit.",
         "source": {
           "label": "Pilot outcome",
           "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/319240b46952f5c0596a13b56de4f156f30b1bb6/docs/evaluations/task-permission-v2/execution-auth-20261116-02/EXECUTION.md#L46-L56"
@@ -114,7 +117,14 @@
           "label": "Permission pilot logs",
           "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43945876284"
         }
-      ]
+      ],
+      "reconsider": {
+        "text": "A repeatable authorization difference with correct output would justify investigating a skill change.",
+        "source": {
+          "label": "Pilot limits",
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/319240b46952f5c0596a13b56de4f156f30b1bb6/docs/evaluations/task-permission-v2/execution-auth-20261116-02/EXECUTION.md#L112-L120"
+        }
+      }
     }
   ]
 }

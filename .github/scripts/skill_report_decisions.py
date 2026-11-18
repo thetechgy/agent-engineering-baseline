@@ -24,9 +24,11 @@ padding:.85rem 1rem}
 .decision-card .table-scroll{margin:.6rem 0}
 .decision-card th,.decision-card td{padding:.35rem .5rem}
 .decision-card caption{margin-bottom:.25rem}
+.decision-card .finding-result{font-variant-numeric:tabular-nums}
 @media(min-width:50rem){header{display:grid;grid-template-columns:minmax(0,1fr) auto;
 align-items:baseline;column-gap:1rem}
-header .eyebrow{grid-column:1/-1;margin:.2rem 0}}
+header .eyebrow{grid-column:1/-1;margin:.2rem 0}
+.decision-cards:has(>.replay-card):has(>:nth-child(2):last-child){grid-template-columns:minmax(0,1.45fr) minmax(0,1fr)}}
 """.strip()
 GITHUB_EVIDENCE = re.compile(
     r'https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/'
@@ -105,16 +107,104 @@ def receipt_pair(receipt, metric):
     return values
 
 
-def decision_section(manifest, result, records, receipts):
+def replay_observations(spec, receipt):
+    """Count only qualified observations and reconcile them with the planned cohort."""
+    evidence.closed(spec, ('id', 'member', 'expected', 'controls', 'population', 'variation', 'gap', 'contract'))
+    evidence.token(spec['id'])
+    evidence.sha(spec['population'])
+    expected = spec['expected']
+    require(type(expected) is int and 0 < expected <= 256, 'Invalid replay population')
+    controls = spec['controls']
+    require(type(controls) is dict and 0 < len(controls) <= 16, 'Invalid replay controls')
+    for control, outcome in controls.items():
+        evidence.token(control)
+        evidence.enum(outcome, ('verified', 'accepted', 'rejected'))
+
+    counts = dict(accepted=0, rejected=0, unmeasured=expected)
+    if receipt is None:
+        return counts, 'Replay receipt missing.'
+    evidence.closed(receipt, ('schema_version', 'id', 'checks', 'observations', 'provenance'))
+    require(type(receipt['schema_version']) is int and receipt['schema_version'] == 1
+            and receipt['id'] == spec['id']
+            and receipt['provenance']['publication_sha256'] == spec['population'], 'Replay identity mismatch')
+    checks = {}
+    for check in receipt['checks']:
+        evidence.closed(check, ('id', 'expected', 'observed'))
+        identity = check['id']
+        require(identity in controls and identity not in checks and check['expected'] == controls[identity],
+                'Replay controls disagree with the reviewed plan')
+        evidence.enum(check['observed'], ('verified', 'accepted', 'rejected', 'unmeasured'))
+        checks[identity] = check['observed']
+    unqualified = [name for name, value in controls.items() if checks.get(name) != value]
+    rows = receipt['observations']
+    require(type(rows) is list and len(rows) <= expected, 'Unexpected replay population')
+    identities = set()
+    for row in rows:
+        evidence.token(row['id'])
+        evidence.sha(row['sha256'])
+        require(row['id'] not in identities, 'Duplicate replay observation')
+        evidence.enum(row['outcome'], counts)
+        identities.add(row['id'])
+        if not unqualified and row['outcome'] != 'unmeasured':
+            counts[row['outcome']] += 1
+            counts['unmeasured'] -= 1
+    if unqualified:
+        return counts, 'Unqualified controls: ' + ', '.join(unqualified) + '.'
+    if counts['unmeasured']:
+        return counts, 'A qualified result is missing for ' + report.count(counts['unmeasured'], 'saved submission') + '.'
+    if counts['accepted'] and counts['rejected']:
+        return counts, 'The saved suites gave mixed results.'
+    return counts, None
+
+
+def replay_finding(spec, receipt):
+    counts, unresolved = replay_observations(spec, receipt)
+    variation = label(spec['variation'])
+    if unresolved:
+        heading = 'Unresolved · Neither yet'
+        finding = report.safe(unresolved)
+        action = ('Inspect the acceptance and rejection split before changing coverage.'
+                  if not counts['unmeasured'] else 'Complete the missing replay evidence before changing coverage.')
+        change = 'A qualified result for every saved submission with consistent outcomes would resolve the finding.'
+    elif counts['rejected']:
+        heading = 'Confirmed · Evaluator coverage gap'
+        finding = 'The saved suites rejected a valid ' + variation + '. ' + label(spec['gap'])
+        action = 'Add a ' + variation + ' to the evaluator’s valid-reference coverage.'
+        change = 'If a qualified reproduction accepts the variant across the saved set, retire this finding.'
+    else:
+        heading = 'Disproved · Neither'
+        finding = 'The saved suites accepted the valid ' + variation + '.'
+        action = 'Retire this finding.'
+        change = 'A reproducible rejection with qualifying controls would reopen the finding.'
+    count_line = ' · '.join(f'{count} {status}' for status, count in counts.items())
+    parts = ['<p class="lead"><strong>' + heading + '</strong></p><p>' + finding + '</p>',
+             '<p class="finding-result"><strong>' + count_line + '</strong></p>',
+             '<p><strong>Next step</strong> · ' + action + '</p>',
+             '<p><strong>What would change it</strong> · ' + change + '</p>']
+    if receipt is not None:
+        target = report.anchor('replay', spec['id'])
+        controls = [[label(row['id']), label(row['expected']), label(row['observed'])] for row in receipt['checks']]
+        observations = [[label(row['id']), label(row['outcome'])] for row in receipt['observations']]
+        parts.append(f'<p><a href="#{target}">Replay evidence</a> · ' + source_link(spec['contract']) + '</p>'
+                     f'<details><summary>Replay controls, runs and provenance</summary><div id="{target}">' +
+                     report.table('Diagnostic controls', ('Control', 'Expected', 'Observed'), controls) +
+                     report.table('Receipt observations · subject to control qualification', ('Submission', 'Outcome'), observations) +
+                     report.disclosure('Exact replay receipt', receipt) + '</div></details>')
+    return ''.join(parts)
+
+
+def decision_section(manifest, result, records, receipts, replays):
     evidence.closed(manifest, ('schema_version', 'receipts', 'decisions'))
     require(type(manifest['schema_version']) is int and manifest['schema_version'] == 1, 'Decision schema')
     cards = manifest['decisions']
     require(type(cards) is list and 0 < len(cards) <= 16, 'Decision count')
     runs = {run['record_id']: run for skill in result['skills'] for run in skill['behavioral_results']}
+    summaries = {}
     parts = ['<section class="review-decisions" aria-labelledby="review-decisions">'
-             '<h2 id="review-decisions">Decisions from retained Codex runs</h2><div class="decision-cards">']
+             '<h2 id="review-decisions">Skill improvement findings</h2><div class="decision-cards">']
     for card in cards:
-        evidence.closed(card, ('skill', 'case', 'decision', 'attribution', 'caption', 'rows', 'notes', 'next', 'logs'))
+        extra = ('replay',) if 'replay' in card else ('next', 'reconsider')
+        evidence.closed(card, ('skill', 'case', 'decision', 'attribution', 'caption', 'rows', 'notes', 'logs') + extra)
         evidence.skill_id(card['skill'])
         evidence.token(card['case'])
         heading = '<h3>' + label(card['skill']) + '</h3>'
@@ -122,7 +212,7 @@ def decision_section(manifest, result, records, receipts):
         decision = label(card['decision'])
         require(type(card['notes']) is list and len(card['notes']) <= 4, 'Decision notes')
         notes = [cited_text(note) for note in card['notes']]
-        action = cited_text(card['next'])
+        replay = card.get('replay')
         require(type(card['logs']) is list and 0 < len(card['logs']) <= 4, 'Decision log links')
         logs = ' · '.join(source_link(log) for log in card['logs'])
         require(type(card['rows']) is list and 0 < len(card['rows']) <= 8, 'Decision row count')
@@ -153,16 +243,27 @@ def decision_section(manifest, result, records, receipts):
             else:
                 rows.append([support, *(report.outcome(passed) if total == 1 else f'{passed}/{total}'
                                         for passed, total in cells)])
-        parts.append('<article class="decision-card">' + heading + '<p class="muted">' + report.code(card['case']) +
-                     ' · ' + attribution + '</p><p class="lead"><strong>' +
-                     (decision if complete else 'Decision pending complete evidence') + '</strong></p>' +
-                     report.table(card['caption'], ('Result', 'With skill', 'Matched absent'), rows))
-        if complete:
-            parts.extend('<p>' + note + '</p>' for note in notes)
-            parts.append('<p><strong>Next step</strong> · ' + action + '</p>')
-        parts.append('<p>' + logs + '</p></article>')
+        summaries[card['skill']] = card['caption'] if complete else 'Incomplete matched evidence'
+        display_decision = decision if complete else 'Decision pending complete evidence'
+        scores = report.table(card['caption'], ('Result', 'With skill', 'Matched absent'), rows)
+        if replay is not None:
+            parts.append('<article class="decision-card replay-card">' + heading +
+                         replay_finding(replay, replays.get(replay['id'])) +
+                         '<p><strong>Transfer decision</strong> · ' + display_decision + ' ' + attribution + '</p>' +
+                         '<details><summary>Frozen transfer checks and logs</summary>' + scores +
+                         ''.join('<p>' + note + '</p>' for note in notes) + '<p>' + logs + '</p></details>')
+        else:
+            parts.append('<article class="decision-card">' + heading + '<p class="muted">' +
+                         report.code(card['case']) + ' · ' + attribution + '</p><p class="lead"><strong>' +
+                         display_decision + '</strong></p>' + scores)
+            if complete:
+                parts.extend('<p>' + note + '</p>' for note in notes)
+                parts.append('<p><strong>Next step</strong> · ' + cited_text(card['next']) + '</p>' +
+                             '<p><strong>What would change it</strong> · ' + cited_text(card['reconsider']) + '</p>')
+            parts.append('<p>' + logs + '</p>')
+        parts.append('</article>')
     parts.append('</div></section>')
-    return ''.join(parts).encode('utf-8')
+    return ''.join(parts).encode('utf-8'), summaries
 
 
 def replace_once(page, original, replacement):
@@ -170,7 +271,47 @@ def replace_once(page, original, replacement):
     return page.replace(original, replacement, 1)
 
 
-def add_decisions(page, section, records):
+def scope_coverage(page, result, records, summaries):
+    # The frozen analysis retains standard-score eligibility and original findings.
+    # Matched custom evidence has its own decision criteria in this presentation.
+    context_only = {'supply_two_intended_runs', 'supply_model_backed_public_report'}
+    view = {**result, 'findings': [f for f in result['findings']
+                                 if f['skill'] not in summaries or f['next_step'] not in context_only]}
+    summary = report.executive_summary(view, records)
+    start = summary.index('</p>') + len('</p>')
+    summary = ('<p class="lead">Matched-case results and diagnostic replays are reported above in their own units. '
+               'Configured coverage and standard-score comparisons are shown below.</p>' + summary[start:])
+    summary = replace_once(summary, 'Mandatory gates · Among recorded observations:',
+                           'Mandatory gates in analyzed bundles · Recorded observations:')
+    summary = summary.replace('No recorded gate outcomes supplied.',
+                              'No gate observations in the analyzed bundles. Attached receipts appear in their case cards.')
+    page = replace_once(page, report.executive_summary(result, records).encode(), summary.encode())
+    review = report.review_first(view, records, {})
+    for skill in result['skills']:
+        name = skill['skill']
+        if name not in summaries:
+            continue
+        coverage = report.safe(report.coverage_label(skill))
+        scoped = label(summaries[name])
+        cell = report.link('skill', (name,), name) + '</th><td>'
+        review = replace_once(review, cell + coverage, cell + scoped)
+        marker = f'<section class="skill" id="{report.anchor("skill", name)}">'.encode()
+        start = page.index(marker)
+        end = page.index(b'</section>', start)
+        details = page[start:end].decode()
+        details = replace_once(details, '<p>' + coverage + '</p>', '<p>' + scoped + '</p>')
+        details = details.replace(
+            '<p class="notice"><strong>Unmeasured.</strong> No supplied model-backed measurement. '
+            'Configuration and offline fixture replay do not establish skill benefit or harm.</p>', '')
+        if not skill['comparisons']:
+            details = details.replace(report.comparisons(skill),
+                '<h3>Cross-run comparisons</h3><p>Standard-score comparison unavailable for these inputs. '
+                'See the matched-case outcomes above.</p>')
+        page = page[:start] + details.encode() + page[end:]
+    return replace_once(page, report.review_first(result, records, {}).encode(), review.encode())
+
+
+def add_decisions(page, section, result, records, summaries):
     css = report.CSS + '\n' + DECISION_CSS
     page = replace_once(page, report.asset_hash(report.CSS).encode(), report.asset_hash(css).encode())
     page = replace_once(page, ('<style>' + report.CSS + '</style>').encode(), ('<style>' + css + '</style>').encode())
@@ -197,10 +338,11 @@ def add_decisions(page, section, records):
         run = run.replace(b'Raw upstream standard values \xc2\xb7 synthetic transport only',
                           b'Raw upstream standard values \xc2\xb7 custom-only mode')
         page = page[:start] + run + page[end:]
+    page = scope_coverage(page, result, records, summaries)
     return replace_once(page, OVERVIEW_START, section + OVERVIEW_START)
 
 
-def generate(inputs, saved_analysis, decisions_path, output=None):
+def generate(inputs, saved_analysis, decisions_path, output=None, *, replay_paths=()):
     captured = analysis.capture_inputs(inputs)
     directories = {}; states = {}; members = {}
     budget = evidence.ReadBudget()
@@ -223,13 +365,30 @@ def generate(inputs, saved_analysis, decisions_path, output=None):
         digest = evidence.digest_bytes(raw)
         require(digest == item['sha256'] and digest not in receipts, 'Decision receipt identity mismatch')
         receipts[digest] = (evidence.parse_json(raw, limit=SUPPLEMENT_LIMIT), item)
+    bindings = [card['replay'] for card in manifest['decisions'] if 'replay' in card]
+    replays = {}
+    for path in replay_paths:
+        receipt = evidence.parse_json(read(path, SUPPLEMENT_LIMIT), limit=SUPPLEMENT_LIMIT)
+        identity = receipt['id']
+        require(identity not in replays and any(b['id'] == identity for b in bindings), 'Unknown or duplicate replay')
+        evidence.reports.public_strings(receipt)
+        replays[identity] = receipt
+    for binding in bindings:
+        evidence.relative(binding['member'])
+        path = decisions_path.parent / binding['member']
+        if binding['id'] not in replays and path.exists():
+            receipt = evidence.parse_json(read(path, SUPPLEMENT_LIMIT), limit=SUPPLEMENT_LIMIT)
+            evidence.reports.public_strings(receipt)
+            replays[binding['id']] = receipt
     guard = evidence.input_guard(directories, states, members, budget)
     guard()
 
     page = report.render_report(result, captured)
-    page = add_decisions(page, decision_section(manifest, result, captured.records, receipts), captured.records)
+    section, summaries = decision_section(manifest, result, captured.records, receipts, replays)
+    page = add_decisions(page, section, result, captured.records, summaries)
     require(len(page) <= report.HTML_LIMIT, 'HTML report size exceeded')
-    return evidence.write_outputs({}, output, input_paths=(*captured.roots, saved_analysis.parent, decisions_path.parent),
+    return evidence.write_outputs({}, output, input_paths=(*captured.roots, saved_analysis.parent, decisions_path.parent,
+                                                          *(path.parent for path in replay_paths)),
                                   input_guards=(*captured.guards, guard, lambda: analysis.check_capture(captured)),
                                   rendered={'report.html': page})
 
@@ -239,10 +398,11 @@ def main(argv=None):
     parser.add_argument('--input', type=Path, action='append', required=True, help='Validated public bundle, repeatable')
     parser.add_argument('--analysis', type=Path, required=True, help='Saved analysis.json for exactly these bundles')
     parser.add_argument('--decisions', type=Path, required=True, help='Reviewer decisions and source bindings')
+    parser.add_argument('--replay', type=Path, action='append', default=[], help='Replacement diagnostic receipt, repeatable')
     parser.add_argument('--output', type=Path, help='New private directory outside checkout and inputs')
     args = parser.parse_args(argv)
     try:
-        print(generate(args.input, args.analysis, args.decisions, args.output))
+        print(generate(args.input, args.analysis, args.decisions, args.output, replay_paths=args.replay))
     except (*report.CONTRACT_ERRORS, AttributeError):
         parser.exit(1, 'Decision report inputs rejected. No HTML report is ready.\n')
 

@@ -24,33 +24,46 @@ class DecisionReportTests(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
 
-    def run_report(self, inputs, manifest=MANIFEST):
+    def run_report(self, inputs, manifest=MANIFEST, *, replay=None, name='html'):
         captured = analysis.capture_inputs(inputs)
         saved = self.root / 'analysis' / 'analysis.json'
-        saved.parent.mkdir()
+        saved.parent.mkdir(exist_ok=True)
         saved.write_bytes(evidence.encoded(analysis.build_analysis(captured)))
-        destination = self.root / 'html'
+        destination = self.root / name
         argv = [sys.executable, '-B', str(ROOT / '.github/scripts/skill_report_decisions.py'),
                 '--analysis', str(saved), '--decisions', str(manifest), '--output', str(destination)]
         for path in inputs:
             argv.extend(['--input', str(path)])
+        if replay is not None:
+            argv.extend(['--replay', str(replay)])
         process = subprocess.run(argv, capture_output=True, text=True, check=False)
         self.assertEqual(process.returncode, 0, process.stderr)
         return (destination / 'report.html').read_text()
 
     def test_retained_pairs_lead_and_link_to_their_evidence(self):
-        page = self.run_report([TRANSFER / 'current', TRANSFER / 'candidate'])
+        inputs = [TRANSFER / 'current', TRANSFER / 'candidate']
+        page = self.run_report(inputs)
         opening = page[:page.index(decisions.OVERVIEW_START.decode())]
         self.assertIn('Keep current guidance. Defer the 22-line revision.', opening)
         self.assertEqual(opening.count('>3/3<'), 4)
         self.assertIn('only Int32 and Int64', opening)
-        self.assertIn('same fixed list of Quantity types in all 12 submissions', opening)
-        self.assertIn('Keep the skill as-is pending stronger evidence.', opening)
+        self.assertIn('Confirmed · Evaluator coverage gap', opening)
+        self.assertIn('0 accepted · 12 rejected · 0 unmeasured', opening)
+        self.assertIn('Add a Quantity value returned as System.Int128', opening)
+        self.assertIn('One matched pair gives insufficient evidence for a skill edit.', opening)
         self.assertIn('identical correct output', opening)
         self.assertIn('>Passed</td><td>Failed</td>', opening)
         self.assertIn('unlisted_directory', opening)
         self.assertIn('one trial per arm', opening)
         self.assertNotIn('Synthetic candidate qualification', page)
+        self.assertNotIn('with measured results', page)
+        self.assertIn('Mandatory gates in analyzed bundles', page)
+        self.assertNotIn('No supplied model-backed measurement', page.split('Frozen primary success by matched pair</p>', 1)[1].split('</section>', 1)[0])
+        analysis_result = analysis.build_analysis(analysis.capture_inputs(inputs))
+        for finding in analysis_result['findings']:
+            if finding['skill'] in ('powershell-pester-6', 'gh') and finding['next_step'] in (
+                    'supply_two_intended_runs', 'supply_model_backed_public_report'):
+                self.assertNotIn(decisions.report.anchor('finding', finding['id']), page)
         document = Document(page)
         self.assertEqual(len(set(document.ids)), len(document.ids))
         for link in Document(opening).links:
@@ -58,6 +71,47 @@ class DecisionReportTests(unittest.TestCase):
                 self.assertIn(link[1:], document.ids)
             else:
                 self.assertIsNotNone(decisions.GITHUB_EVIDENCE.fullmatch(link))
+
+    def test_alternative_replay_outcomes_update_the_same_cli(self):
+        spec = evidence.read_json(MANIFEST)['decisions'][0]['replay']
+        receipt = evidence.read_json(DOCS / spec['member'])
+        for row in receipt['observations']:
+            variant = row['variation']
+            variant.update(passed=variant['total'], failed=0, assertion_failures=0)
+            row['outcome'] = 'accepted'
+        replay = self.root / 'replays' / 'alternative.json'
+        replay.parent.mkdir()
+        inputs = [TRANSFER / 'current', TRANSFER / 'candidate']
+
+        def opening(state):
+            replay.write_bytes(evidence.encoded(receipt))
+            page = self.run_report(inputs, replay=replay, name=state)
+            return page.split(decisions.OVERVIEW_START.decode(), 1)[0].split('Replay controls, runs and provenance')[0]
+
+        disproved = opening('disproved')
+        self.assertIn('Disproved · Neither', disproved)
+        self.assertIn('12 accepted · 0 rejected · 0 unmeasured', disproved)
+        self.assertIn('Retire this finding.', disproved)
+
+        row = receipt['observations'].pop()
+        unresolved = opening('incomplete')
+        self.assertIn('Unresolved · Neither yet', unresolved)
+        self.assertIn('11 accepted · 0 rejected · 1 unmeasured', unresolved)
+        self.assertIn('A qualified result is missing for 1 saved submission.', unresolved)
+        self.assertNotIn('Add a Quantity', unresolved)
+        self.assertNotIn('Retire this finding', unresolved)
+
+        receipt['observations'].append(row)
+        row['outcome'] = 'rejected'
+        row['variation'].update(passed=4, failed=1, assertion_failures=1)
+        mixed = opening('mixed')
+        self.assertIn('The saved suites gave mixed results.', mixed)
+        self.assertIn('11 accepted · 1 rejected · 0 unmeasured', mixed)
+
+        receipt['checks'][0]['observed'] = 'unmeasured'
+        failed = opening('failed-control')
+        self.assertIn('Unqualified controls: return-boundary.', failed)
+        self.assertIn('0 accepted · 0 rejected · 12 unmeasured', failed)
 
     def test_incomplete_pairs_suppress_recommendations_and_measured_status(self):
         staged = self.root / 'inputs'
@@ -87,5 +141,6 @@ class DecisionReportTests(unittest.TestCase):
         self.assertEqual(opening.count('Decision pending complete evidence'), 2)
         self.assertEqual(opening.count('>Unknown</td><td>Unknown</td>'), 3)
         self.assertEqual(opening.count('>3/3<'), 2)  # The other transfer pair remains measured.
-        for value in ('>Passed<', '>Failed<', 'Defer the 22-line revision', 'Keep the skill as-is', 'Next step'):
+        self.assertIn('Replay receipt missing.', opening)
+        for value in ('>Passed<', '>Failed<', 'Defer the 22-line revision', 'Keep the skill as-is'):
             self.assertNotIn(value, opening)

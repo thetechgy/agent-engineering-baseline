@@ -1382,8 +1382,9 @@ produces zero. Contextual links identify the skill and case where applicable.
 
 Use the same saved-analysis and consolidated renderer with the report-only
 decision entry point. The checked-in reviewer input selects the two matched
-Pester cohorts and the completed permission pilot. It identifies the sources
-for the decisions, the submission inspection and the permission event.
+Pester cohorts, their diagnostic replay and the completed permission pilot.
+The opening gives the finding, the action and the evidence that would change
+it. Follow the receipt and run links for scores, provenance and logs.
 
 With the data-only reporting interpreter configured above, choose a new
 persistent output directory outside the checkout.
@@ -1407,12 +1408,18 @@ pester_data="docs/evaluations/pester-transfer-decision/execution-v6/data"
 Open `"$report_parent/html/report.html"`. Follow the result links for scores,
 the receipt links for provenance, and the run links for logs.
 
-The decision input binds each transfer row to an admitted public record and
-the permission rows to the exact checked-in execution receipt. The historical
-permission bundle uses the campaign registry from its execution revision.
-This preview reads the verified receipt for that pair and links back to the
-recorded outcomes. Incomplete pairs show unknown and withhold the attributed
-recommendation. The decision section requires no model access.
+The decision input binds each frozen transfer row to an admitted public record
+and the permission rows to the exact checked-in execution receipt. The
+historical permission bundle uses the campaign registry from its execution
+revision. The report reads the verified receipt for that pair.
+
+The [transfer diagnostic](pester-return-contract/diagnostics/README.md) has its
+own receipt. The report evaluates control qualification and counts acceptance,
+rejection and unmeasured submissions from that receipt. Supply
+`--replay path/to/new-receipt.json` to use a later receipt for the same replay
+and saved population. The default reads the checked-in receipt. Incomplete or
+mixed replay evidence leaves attribution open. Frozen transfer grades and the
+attributed skill decision come from the original evaluation.
 
 ### Reproduce the offline demonstration
 
