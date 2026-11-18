@@ -35,6 +35,20 @@ def program(command):
 
 record = Path(sys.argv[1])
 scenario = sys.argv[2]
+priced = scenario == 'priced-success'
+compatibility = scenario == 'compatibility'
+if priced or compatibility:
+    scenario = 'success'
+
+
+def response_usage(request, *, deadline=False):
+    if priced:
+        # Distinct per-response counts check accumulation and cached reads.
+        input_tokens, cached, writes, output = (100, 40, 20, 10) if request == 1 else (200, 60, 30, 20)
+        return {'input_tokens': input_tokens, 'input_tokens_details': {'cached_tokens': cached, 'cache_write_tokens': writes},
+                'output_tokens': output, 'total_tokens': input_tokens + output}
+    return {'input_tokens': 7 if deadline else 0, 'output_tokens': 3 if deadline else 0,
+            'total_tokens': 10 if deadline else 0}
 
 
 class Refuse(BaseHTTPRequestHandler):
@@ -58,6 +72,11 @@ class Refuse(BaseHTTPRequestHandler):
         if scenario == 'native-deadline':
             value['simulated_response_usage'] = {'input_tokens': 7, 'output_tokens': 3, 'complete': False,
                 'provenance': 'non-forwarding fixture response; not provider usage or complete CLI accounting'}
+        if priced or compatibility:
+            observed = {k: value[k] for k in ('path', 'model', 'reasoning', 'authorization_matches_sentinel',
+                                             'request_keys', 'tools', 'service_tier')}
+            previous = json.loads(record.read_text())['request_observations'] if record.exists() else []
+            value['request_observations'] = [*previous, observed]
         record.write_text(json.dumps(value, indent=2) + '\n')
         if scenario == 'provider-timeout':
             time.sleep(120)
@@ -93,7 +112,7 @@ class Refuse(BaseHTTPRequestHandler):
                      {'type': 'custom_tool_call', 'call_id': 'pilot-tool-' + str(i), 'name': 'exec', 'input': code})}
                   for i, code in enumerate(programs)],
                 {'type': 'response.completed', 'response': {'id': 'pilot-fixture-1',
-                    'usage': {'input_tokens': 7 if scenario == 'native-deadline' else 0, 'output_tokens': 3 if scenario == 'native-deadline' else 0, 'total_tokens': 10 if scenario == 'native-deadline' else 0}}},
+                    'usage': response_usage(1, deadline=scenario == 'native-deadline')}},
             ]
             payload = ''.join('event: '+event['type']+'\ndata: '+json.dumps(event)+'\n\n' for event in events).encode()
             self.send_response(200)
@@ -112,7 +131,7 @@ class Refuse(BaseHTTPRequestHandler):
                 {'type': 'response.output_item.done', 'item': {'id': 'pilot-final', 'type': 'message', 'role': 'assistant',
                  'content': [{'type': 'output_text', 'text': 'Credential-free qualification complete.'}]}},
                 {'type': 'response.completed', 'response': {'id': 'pilot-fixture-2',
-                 'usage': {'input_tokens': 0, 'output_tokens': 0, 'total_tokens': 0}}},
+                 'usage': response_usage(2)}},
             ]
             payload = ''.join('event: '+e['type']+'\ndata: '+json.dumps(e)+'\n\n' for e in events).encode()
             self.send_response(200)

@@ -1,4 +1,18 @@
-# Pester clarification transfer decision
+# Evaluation checkpoint
+
+## Codex 0.169.1 proposed profile for issue #95
+
+The opt-in `gh-014` credential-free qualification uses Codex CLI 0.169.1 /
+`gpt-6.2-sol` / high with SkillEvaluator 0.9.0 / Harbor 0.25.0. It retains the
+`gh-task-permission-v2` grader, task and matched APM content. The draft PR's
+exact-source hosted receipt governs qualification. The held 0.155.1 /
+`gpt-5.6-sol` / high selection and replay profiles remain available.
+[Qualification and rollback](../../docs/evaluations/codex-1691/QUALIFICATION.md).
+
+**Codex next action** — Review the exact-source fixture receipt before deciding
+whether to authorize one bounded live Codex compatibility check.
+
+## Pester clarification transfer decision
 
 **DEFER** the exact 22-line `powershell-pester-6` clarification. Both v6 pairs
 completed at `2b58a4652b576247d91ba01c6ce7a743ff703331`. Current and its own absent arm

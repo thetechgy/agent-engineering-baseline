@@ -90,7 +90,7 @@ class StaticTemplates(unittest.TestCase):
 
     def test_historical_registry_is_byte_equivalent_after_projecting_successors(self):
         registry = json.loads((ROOT / evidence.CUSTOM_REGISTRY).read_bytes())
-        registry['profiles'] = {key: row for key, row in registry['profiles'].items() if '-source-v26-' not in key}
+        registry['profiles'] = {key: row for key, row in registry['profiles'].items() if '-source-v27-' not in key and '-source-v26-' not in key and key not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18')}
         raw = json.dumps(registry, sort_keys=True, separators=(',', ':')).encode()
         self.assertEqual(len(registry['profiles']), 874)
         self.assertEqual(hashlib.sha256(raw).hexdigest(),

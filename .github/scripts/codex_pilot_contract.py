@@ -45,13 +45,19 @@ def grader_bytes(workspace=ROOT):
 def configuration(base_url=None, *, runtime=None):
     """The endpoint is the only transport difference in credential-free probes."""
     selected = PROFILE if runtime is None else runtime
+    if selected['id'] == 'codex-1691-sol62-v1':
+        agent_settings = {'agents': {'enabled': False}, 'features': {
+            'multi_agent_v2': False, 'unified_exec': True, 'code_mode': False}}
+    elif selected['cli'] == '0.155.1':
+        agent_settings = {'features': {'multi_agent': False, 'unified_exec': True}}
+    else:
+        agent_settings = {'features': {'multi_agent': False, 'code_mode': True, 'code_mode_host': True}}
     return {
         'model': selected['model'], 'model_provider': 'pilot',
         'model_reasoning_effort': selected['reasoning_effort'],
         'approval_policy': 'never', 'sandbox_mode': 'danger-full-access',
         'web_search': 'disabled', 'check_for_update_on_startup': False,
-        'features': ({'multi_agent': False, 'unified_exec': True} if selected['cli'] == '0.155.1'
-                     else {'multi_agent': False, 'code_mode': True, 'code_mode_host': True}),
+        **agent_settings,
         'model_providers': {'pilot': {
             'name': 'OpenAI pilot', 'base_url': base_url or selected['base_url'],
             'env_key': 'OPENAI_API_KEY', 'wire_api': 'responses',
