@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Open the consolidated report with evidence-backed reviewer decisions."""
 
+import importlib.util
 from pathlib import Path
 import re
 import sys
@@ -16,6 +17,9 @@ evidence = report.evidence
 require = evidence.require
 OVERVIEW_START = b'<section class="overview" aria-labelledby="overview">'
 SUPPLEMENT_LIMIT = 64 * 1024
+QUALIFICATION_VALIDATORS = {
+    'pester-transfer-batch-v2': '.github/evals/pester-return-contract/grader-v2/verify_qualification.py',
+}
 DECISION_CSS = """
 .review-decisions{margin:0 0 1.5rem}
 .review-decisions>h2{margin:0 0 .75rem}
@@ -187,8 +191,9 @@ def replay_observations(spec, receipt, population):
     return counts, unresolved, checks, observations
 
 
-def replay_finding(spec, receipt, population):
-    counts, unresolved, checks, outcomes = replay_observations(spec, receipt, population)
+def replay_finding(spec, receipt, admitted, *, coverage_verified=False):
+    counts, unresolved, checks, outcomes = admitted
+    coverage_verified = coverage_verified and not unresolved and bool(counts['rejected'])
     variation = label(spec['variation'])
     if unresolved:
         heading = 'Unresolved · Neither yet'
@@ -197,7 +202,8 @@ def replay_finding(spec, receipt, population):
                   if not counts['unmeasured'] else 'Complete the missing replay evidence before changing coverage.')
         change = 'A qualified result for every saved submission with consistent outcomes would resolve the finding.'
     elif counts['rejected']:
-        heading = 'Confirmed · Evaluator coverage gap'
+        heading = ('Historical finding · Valid output rejected' if coverage_verified
+                   else 'Confirmed · Evaluator coverage gap')
         finding = 'The saved suites rejected a valid ' + variation + '. ' + label(spec['gap'])
         action = 'Add a ' + variation + ' to the evaluator’s valid-reference coverage.'
         change = 'If a qualified reproduction accepts the variant across the saved set, retire this finding.'
@@ -208,9 +214,10 @@ def replay_finding(spec, receipt, population):
         change = 'A reproducible rejection with qualifying controls would reopen the finding.'
     count_line = ' · '.join(f'{count} {status}' for status, count in counts.items())
     parts = ['<p class="lead"><strong>' + heading + '</strong></p><p>' + finding + '</p>',
-             '<p class="finding-result"><strong>' + count_line + '</strong></p>',
-             '<p><strong>Next step</strong> · ' + action + '</p>',
-             '<p><strong>What would change it</strong> · ' + change + '</p>']
+             '<p class="finding-result"><strong>' + count_line + '</strong></p>']
+    if not coverage_verified:
+        parts.extend(['<p><strong>Next step</strong> · ' + action + '</p>',
+                      '<p><strong>What would change it</strong> · ' + change + '</p>'])
     if receipt is not None:
         target = report.anchor('replay', spec['id'])
         controls = [[label(name), label(spec['controls'][name]), label(outcome)] for name, outcome in checks.items()]
@@ -223,7 +230,46 @@ def replay_finding(spec, receipt, population):
     return ''.join(parts)
 
 
-def decision_section(manifest, result, records, receipts, replays, population):
+def qualification_status(spec, receipt, replay_pair, *, replay_complete):
+    """Render the task-owned verifier's admission of the native evidence."""
+    evidence.closed(spec, ('id', 'member'))
+    version = spec['id']
+    require(version in QUALIFICATION_VALIDATORS, 'Unknown qualification evidence contract')
+    if receipt is None or replay_pair is None:
+        return False, '<p><strong>Evaluator status</strong> · Qualification receipt or historical replay missing.</p>'
+    replay, replay_digest = replay_pair
+    evidence.closed(receipt, ('schema_version', 'id', 'historical_replay', 'member_digests',
+                              'provenance', 'controls', 'observations'))
+    require(type(receipt['schema_version']) is int and receipt['schema_version'] == 1
+            and receipt['id'] == version, 'Qualification identity mismatch')
+    if receipt['historical_replay'] != replay_digest:
+        return False, '<p><strong>Evaluator status</strong> · Qualification covers a different replay.</p>'
+
+    if not replay_complete:
+        return False, '<p><strong>Evaluator status</strong> · Historical replay qualification incomplete.</p>'
+
+    validator_spec = importlib.util.spec_from_file_location(
+        '_task_qualification', evidence.ROOT / QUALIFICATION_VALIDATORS[version])
+    validator = importlib.util.module_from_spec(validator_spec)
+    validator_spec.loader.exec_module(validator)
+    observed = validator.verify(receipt, replay)
+    verified = observed['verified']
+    state = 'Coverage added and verified' if verified else 'Coverage qualification incomplete'
+    parts = ['<p class="lead"><strong>Evaluator status · ' + state + '</strong> · ' + label(version) + '</p>',
+             '<p class="finding-result">Native regrade · ' +
+             ' · '.join(f'{count} {name}' for name, count in observed['counts'].items()) + '</p>',
+             '<p>This regrade measures evaluator behavior on saved submissions.</p>']
+    target = report.anchor('qualification', version)
+    controls = [[label(name), label(status), 'Met' if passed else 'Unqualified']
+                for name, status, passed in observed['controls']]
+    parts.append(f'<p><a href="#{target}">Native qualification evidence</a></p>'
+                 f'<details><summary>Native controls, grades and provenance</summary><div id="{target}">' +
+                 report.table('Native controls', ('Control', 'Grade', 'Expected behavior'), controls) +
+                 report.disclosure('Exact native qualification receipt', receipt) + '</div></details>')
+    return verified, ''.join(parts)
+
+
+def decision_section(manifest, result, records, receipts, replays, population, qualifications):
     evidence.closed(manifest, ('schema_version', 'receipts', 'decisions'))
     require(type(manifest['schema_version']) is int and manifest['schema_version'] == 1, 'Decision schema')
     cards = manifest['decisions']
@@ -234,6 +280,9 @@ def decision_section(manifest, result, records, receipts, replays, population):
              '<h2 id="review-decisions">Skill improvement findings</h2><div class="decision-cards">']
     for card in cards:
         extra = ('replay',) if 'replay' in card else ('next', 'reconsider')
+        if 'qualification' in card:
+            require('replay' in card, 'Qualification requires a historical replay')
+            extra += ('qualification',)
         evidence.closed(card, ('skill', 'case', 'decision', 'attribution', 'caption', 'rows', 'notes', 'logs') + extra)
         evidence.skill_id(card['skill'])
         evidence.token(card['case'])
@@ -277,8 +326,18 @@ def decision_section(manifest, result, records, receipts, replays, population):
         display_decision = decision if complete else 'Decision pending complete evidence'
         scores = report.table(card['caption'], ('Result', 'With skill', 'Matched absent'), rows)
         if replay is not None:
+            historical = replays.get(replay['id'])
+            historical_receipt = historical[0] if historical else None
+            admitted = replay_observations(replay, historical_receipt, population)
+            verified, qualification_html = False, ''
+            if 'qualification' in card:
+                qualification = card['qualification']
+                verified, qualification_html = qualification_status(
+                    qualification, qualifications.get(qualification['id']), historical,
+                    replay_complete=admitted[0]['unmeasured'] == 0)
             parts.append('<article class="decision-card replay-card">' + heading +
-                         replay_finding(replay, replays.get(replay['id']), population) +
+                         replay_finding(replay, historical_receipt, admitted, coverage_verified=verified) +
+                         qualification_html +
                          '<p><strong>Transfer decision</strong> · ' + display_decision + ' ' + attribution + '</p>' +
                          '<details><summary>Frozen transfer checks and logs</summary>' + scores +
                          ''.join('<p>' + note + '</p>' for note in notes) + '<p>' + logs + '</p></details>')
@@ -402,23 +461,36 @@ def generate(inputs, saved_analysis, decisions_path, output=None, *, replay_path
         population = (evidence.digest_bytes(raw), submission_roster(evidence.parse_json(raw, limit=SUPPLEMENT_LIMIT)))
     replays = {}
     for path in replay_paths:
-        receipt = evidence.parse_json(read(path, SUPPLEMENT_LIMIT), limit=SUPPLEMENT_LIMIT)
+        raw = read(path, SUPPLEMENT_LIMIT)
+        receipt = evidence.parse_json(raw, limit=SUPPLEMENT_LIMIT)
         identity = receipt['id']
         require(identity not in replays and any(b['id'] == identity for b in bindings), 'Unknown or duplicate replay')
         evidence.reports.public_strings(receipt)
-        replays[identity] = receipt
+        replays[identity] = receipt, evidence.digest_bytes(raw)
     for binding in bindings:
         evidence.relative(binding['member'])
         path = decisions_path.parent / binding['member']
         if binding['id'] not in replays and path.exists():
+            raw = read(path, SUPPLEMENT_LIMIT)
+            receipt = evidence.parse_json(raw, limit=SUPPLEMENT_LIMIT)
+            evidence.reports.public_strings(receipt)
+            replays[binding['id']] = receipt, evidence.digest_bytes(raw)
+    qualifications = {}
+    for card in manifest['decisions']:
+        if 'qualification' not in card:
+            continue
+        binding = card['qualification']
+        evidence.relative(binding['member'])
+        path = decisions_path.parent / binding['member']
+        if path.exists():
             receipt = evidence.parse_json(read(path, SUPPLEMENT_LIMIT), limit=SUPPLEMENT_LIMIT)
             evidence.reports.public_strings(receipt)
-            replays[binding['id']] = receipt
+            qualifications[binding['id']] = receipt
     guard = evidence.input_guard(directories, states, members, budget)
     guard()
 
     page = report.render_report(result, captured)
-    section, summaries = decision_section(manifest, result, captured.records, receipts, replays, population)
+    section, summaries = decision_section(manifest, result, captured.records, receipts, replays, population, qualifications)
     page = add_decisions(page, section, result, captured.records, summaries)
     require(len(page) <= report.HTML_LIMIT, 'HTML report size exceeded')
     return evidence.write_outputs({}, output, input_paths=(*captured.roots, saved_analysis.parent, decisions_path.parent,

@@ -50,9 +50,14 @@ class DecisionReportTests(unittest.TestCase):
         self.assertIn('Keep current guidance. Defer the 22-line revision.', opening)
         self.assertEqual(opening.count('>3/3<'), 4)
         self.assertIn('only Int32 and Int64', opening)
-        self.assertIn('Confirmed · Evaluator coverage gap', opening)
+        self.assertIn('Historical finding · Valid output rejected', opening)
         self.assertIn('0 accepted · 12 rejected · 0 unmeasured', opening)
-        self.assertIn('Add a Quantity value returned as System.Int128', opening)
+        self.assertIn('Evaluator status · Coverage added and verified', opening)
+        self.assertIn('Native regrade · 0 passed · 12 failed · 0 unmeasured', opening)
+        for identity, status in (('contract-correct', 'passed'), ('type-restrictive', 'failed'),
+                                 ('missing-reference', 'unmeasured')):
+            self.assertIn(f'<th scope="row">{identity}</th><td>{status}</td><td>Met</td>', opening)
+        self.assertNotIn('Add a Quantity value returned as System.Int128', opening)
         self.assertIn('One matched pair gives insufficient evidence for a skill edit.', opening)
         self.assertIn('identical correct output', opening)
         self.assertIn('>Passed</td><td>Failed</td>', opening)
@@ -239,6 +244,68 @@ class DecisionReportTests(unittest.TestCase):
         manifest_path.write_bytes(evidence.encoded(manifest))
         self.assertIn(rejected, self.run_report(inputs, manifest_path, replay=replay,
                                                name='consistent-wrong-publication', expected_exit=1))
+
+    def test_coverage_closure_requires_the_native_control_and_complete_population(self):
+        manifest = evidence.read_json(MANIFEST)
+        card = manifest['decisions'][0]
+        staged = self.root / 'decision-inputs'
+        qualification = card['qualification']['member']
+        for member in (manifest['receipts'][0]['member'], card['replay']['member'], qualification):
+            path = staged / member
+            path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(DOCS / member, path)
+        manifest_path = staged / MANIFEST.name
+        shutil.copyfile(MANIFEST, manifest_path)
+        receipt = evidence.read_json(staged / qualification)
+        inputs = [TRANSFER / 'current', TRANSFER / 'candidate']
+
+        control = receipt['controls'][0]
+        self.assertEqual(control['id'], 'contract-correct')
+        for witness in ('reward', 'sidecar'):
+            detail = control['native'][witness]['details']['outcome']
+            detail['valid_references']['quantity-int128'] = 0
+        (staged / qualification).write_bytes(evidence.encoded(receipt))
+        page = self.run_report(inputs, manifest_path, name='unqualified-control')
+        self.assertIn('Evaluator status · Coverage qualification incomplete', page)
+        self.assertNotIn('Coverage added and verified', page)
+
+        receipt = evidence.read_json(DOCS / qualification)
+        receipt['observations'].pop()
+        (staged / qualification).write_bytes(evidence.encoded(receipt))
+        page = self.run_report(inputs, manifest_path, name='missing-native-observation')
+        self.assertIn('Native regrade · 0 passed · 11 failed · 1 unmeasured', page)
+        self.assertNotIn('Coverage added and verified', page)
+
+        receipt = evidence.read_json(DOCS / qualification)
+        receipt['observations'][0]['native']['error'] = 'native_deadline'
+        (staged / qualification).write_bytes(evidence.encoded(receipt))
+        page = self.run_report(inputs, manifest_path, name='native-timeout')
+        self.assertIn('Native regrade · 0 passed · 11 failed · 1 unmeasured', page)
+        self.assertNotIn('Coverage added and verified', page)
+
+        receipt = evidence.read_json(DOCS / qualification)
+        receipt['observations'][0]['arm'] = 'absent'
+        (staged / qualification).write_bytes(evidence.encoded(receipt))
+        self.assertIn('Decision report inputs rejected.',
+                      self.run_report(inputs, manifest_path, name='native-wrong-arm', expected_exit=1))
+
+        replay_path = staged / card['replay']['member']
+        for case in ('timeout', 'mismatched-submission'):
+            with self.subTest(case=case):
+                replay = evidence.read_json(DOCS / card['replay']['member'])
+                if case == 'timeout':
+                    replay['observations'][0]['variation'] = {'error': 'timeout'}
+                else:
+                    replay['observations'][0]['sha256'] = replay['observations'][1]['sha256']
+                raw = evidence.encoded(replay)
+                replay_path.write_bytes(raw)
+                receipt = evidence.read_json(DOCS / qualification)
+                receipt['historical_replay'] = evidence.digest_bytes(raw)
+                (staged / qualification).write_bytes(evidence.encoded(receipt))
+                page = self.run_report(inputs, manifest_path, name=f'bound-{case}')
+                self.assertIn('0 accepted · 11 rejected · 1 unmeasured', page)
+                self.assertIn('Historical replay qualification incomplete.', page)
+                self.assertNotIn('Coverage added and verified', page)
 
     def test_incomplete_pairs_suppress_recommendations_and_measured_status(self):
         staged = self.root / 'inputs'

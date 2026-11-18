@@ -1,0 +1,1270 @@
+{
+  "controls": [
+    {
+      "id": "contract-correct",
+      "native": {
+        "handoff": {
+          "bytes": 817,
+          "sha256": "afdc74102a275fb582a2891ddb814d2e4b1880ad1406649291e2c069e3fb0a10"
+        },
+        "reward": {
+          "custom_metrics": {
+            "pester_mutation_detection": 1.0,
+            "pester_reference_pass": 1.0,
+            "pester_test_quality": 1.0
+          },
+          "details": {
+            "outcome": {
+              "classification": "passed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 5,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 1,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 1
+              },
+              "variant_detections": [
+                1,
+                1,
+                1,
+                1,
+                1
+              ],
+              "variant_failure_kinds": [
+                "assertion",
+                "assertion",
+                "assertion",
+                "assertion",
+                "assertion"
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2"
+        },
+        "sidecar": {
+          "details": {
+            "outcome": {
+              "classification": "passed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 5,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 1,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 1
+              },
+              "variant_detections": [
+                1,
+                1,
+                1,
+                1,
+                1
+              ],
+              "variant_failure_kinds": [
+                "assertion",
+                "assertion",
+                "assertion",
+                "assertion",
+                "assertion"
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2",
+          "evaluation_status": "complete"
+        }
+      },
+      "outcome": "passed",
+      "sha256": "sha256:afdc74102a275fb582a2891ddb814d2e4b1880ad1406649291e2c069e3fb0a10"
+    },
+    {
+      "id": "type-restrictive",
+      "native": {
+        "handoff": {
+          "bytes": 275,
+          "sha256": "eb69a18ae452c6ae1aac293c024bbbd1196252d607b8708b0b730112414a072e"
+        },
+        "reward": {
+          "custom_metrics": {
+            "pester_mutation_detection": 0.0,
+            "pester_reference_pass": 0.0,
+            "pester_test_quality": 0.0
+          },
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 1,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2"
+        },
+        "sidecar": {
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 1,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2",
+          "evaluation_status": "complete"
+        }
+      },
+      "outcome": "failed",
+      "sha256": "sha256:eb69a18ae452c6ae1aac293c024bbbd1196252d607b8708b0b730112414a072e"
+    },
+    {
+      "id": "missing-reference",
+      "native": {
+        "handoff": {
+          "bytes": 817,
+          "sha256": "afdc74102a275fb582a2891ddb814d2e4b1880ad1406649291e2c069e3fb0a10"
+        },
+        "reward": {
+          "details": {
+            "outcome": {
+              "classification": "infrastructure_error",
+              "code": "verifier",
+              "grader_version": "pester-transfer-batch-v2"
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2"
+        },
+        "sidecar": {
+          "details": {
+            "outcome": {
+              "classification": "infrastructure_error",
+              "code": "verifier",
+              "grader_version": "pester-transfer-batch-v2"
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2",
+          "evaluation_errors": {
+            "applicability": "Unscoreable pilot trial: infrastructure_error"
+          },
+          "evaluation_status": "failed"
+        }
+      },
+      "outcome": "unmeasured",
+      "sha256": "sha256:afdc74102a275fb582a2891ddb814d2e4b1880ad1406649291e2c069e3fb0a10"
+    }
+  ],
+  "historical_replay": "sha256:da3244d03a74e63c33bd9d431f8c3d0b955b24ec9b853ebfa4d0cac1ba6f395a",
+  "id": "pester-transfer-batch-v2",
+  "member_digests": {
+    "environment/input/EXECUTION-PROFILE.md": "sha256:83ead3df0f95efcbf5e10a67fa923abd2422e710d30b57ebaa3e6bacf218c5d4",
+    "environment/input/README.md": "sha256:a81b3299a6090f80ddabcfacdd8094d0e724a17a61943e7cfc667ef4f4209702",
+    "environment/input/Subject.ps1": "sha256:6e4bd489ef16eddee84adb4291820a657a9181fa2696a8c85ec05845c5654be8",
+    "instruction.md": "sha256:01d19f14c9281d4cf4904d080d84872b417d27778e7ae578ce3c5c422034390c",
+    "tests/Runner.ps1": "sha256:260fd49e46f713c95dda58d6753df6b62e8ef72b296d66d159d2824fdc53ec54",
+    "tests/case/mutants/enabled-integer.ps1": "sha256:18388662ee77e38b6e3669136905999419eec9fec9bd4740955612b8ba8ecbe7",
+    "tests/case/mutants/enabled-zero.ps1": "sha256:d14303c856281a6e3d3167c0d1ea2047fd6cbf72b48a11f8c333795b19f12501",
+    "tests/case/mutants/quantity-above.ps1": "sha256:9d7ef475a9b1174b196c6cf9c8a4d1b10c4eee167d2baefd80e849d5867eb5c5",
+    "tests/case/mutants/quantity-below.ps1": "sha256:3a57997bd1efb82b9d3313342e0e57162b9e800e0a2bb134c1989c8e827ccced",
+    "tests/case/mutants/quantity-offset.ps1": "sha256:01f0d7c53bcbe58b824f6e22862633a60a3c62876fb8e96d40a561d8b37af961",
+    "tests/case/profile.json": "sha256:b7f1a6937ad4622665528a3057448c177488ae417d9d36c631442b70d6e0fbc1",
+    "tests/case/reference/Quantity.Int128.ps1": "sha256:8c86edfff064b0bfaa00af4360497dca0e7c63413c33add6adb9b77cda80c0c0",
+    "tests/case/reference/Subject.ps1": "sha256:6e4bd489ef16eddee84adb4291820a657a9181fa2696a8c85ec05845c5654be8",
+    "tests/entry.json": "sha256:8908ddeca34bcd2e1ffa9a843db808eb550fa5b23e036b8d9e79fdae10bd1784",
+    "tests/test.sh": "sha256:6a19331893b1839ac1b8cd41d9b57b2e3ef105cd1de1f1e472ee066e34328f85",
+    "tests/verifier/grader.py": "sha256:0c18ee511da55589c88b6021b5800194a2afe1066e61a89f3fa809cfed35407a"
+  },
+  "observations": [
+    {
+      "arm": "current",
+      "id": "current-1",
+      "native": {
+        "handoff": {
+          "bytes": 1643,
+          "sha256": "95730ffe4aa6e9e9e48d8e5cf87749417460a305d798b8b180b1e6bd07e91992"
+        },
+        "reward": {
+          "custom_metrics": {
+            "pester_mutation_detection": 0.0,
+            "pester_reference_pass": 0.0,
+            "pester_test_quality": 0.0
+          },
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2"
+        },
+        "sidecar": {
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2",
+          "evaluation_status": "complete"
+        }
+      },
+      "outcome": "failed",
+      "sha256": "sha256:95730ffe4aa6e9e9e48d8e5cf87749417460a305d798b8b180b1e6bd07e91992"
+    },
+    {
+      "arm": "absent",
+      "id": "current-2",
+      "native": {
+        "handoff": {
+          "bytes": 1562,
+          "sha256": "1150d8239fa305d3de44cb1ed12b0c163539079b39793906f0e9fde3f03538c6"
+        },
+        "reward": {
+          "custom_metrics": {
+            "pester_mutation_detection": 0.0,
+            "pester_reference_pass": 0.0,
+            "pester_test_quality": 0.0
+          },
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2"
+        },
+        "sidecar": {
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2",
+          "evaluation_status": "complete"
+        }
+      },
+      "outcome": "failed",
+      "sha256": "sha256:1150d8239fa305d3de44cb1ed12b0c163539079b39793906f0e9fde3f03538c6"
+    },
+    {
+      "arm": "absent",
+      "id": "current-3",
+      "native": {
+        "handoff": {
+          "bytes": 1450,
+          "sha256": "b1f26910857cf15589ea1e090b555e2c93c7844d073ceb4c77d9f954155f7e60"
+        },
+        "reward": {
+          "custom_metrics": {
+            "pester_mutation_detection": 0.0,
+            "pester_reference_pass": 0.0,
+            "pester_test_quality": 0.0
+          },
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2"
+        },
+        "sidecar": {
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2",
+          "evaluation_status": "complete"
+        }
+      },
+      "outcome": "failed",
+      "sha256": "sha256:b1f26910857cf15589ea1e090b555e2c93c7844d073ceb4c77d9f954155f7e60"
+    },
+    {
+      "arm": "current",
+      "id": "current-4",
+      "native": {
+        "handoff": {
+          "bytes": 1622,
+          "sha256": "e186c55fe566ded0be05f1c6ab6f6f4567b744abcdbfe9286f5fc150df39e272"
+        },
+        "reward": {
+          "custom_metrics": {
+            "pester_mutation_detection": 0.0,
+            "pester_reference_pass": 0.0,
+            "pester_test_quality": 0.0
+          },
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2"
+        },
+        "sidecar": {
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2",
+          "evaluation_status": "complete"
+        }
+      },
+      "outcome": "failed",
+      "sha256": "sha256:e186c55fe566ded0be05f1c6ab6f6f4567b744abcdbfe9286f5fc150df39e272"
+    },
+    {
+      "arm": "current",
+      "id": "current-5",
+      "native": {
+        "handoff": {
+          "bytes": 1589,
+          "sha256": "930312c9ab31f75d7b608dfad31380ed9e1eaa0d9caeddff324b3560f427e8a3"
+        },
+        "reward": {
+          "custom_metrics": {
+            "pester_mutation_detection": 0.0,
+            "pester_reference_pass": 0.0,
+            "pester_test_quality": 0.0
+          },
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2"
+        },
+        "sidecar": {
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2",
+          "evaluation_status": "complete"
+        }
+      },
+      "outcome": "failed",
+      "sha256": "sha256:930312c9ab31f75d7b608dfad31380ed9e1eaa0d9caeddff324b3560f427e8a3"
+    },
+    {
+      "arm": "absent",
+      "id": "current-6",
+      "native": {
+        "handoff": {
+          "bytes": 1631,
+          "sha256": "7137a3cbfcf59a1ea1703e0eddd38d89f274076027f96f3cf4827af05af94ca0"
+        },
+        "reward": {
+          "custom_metrics": {
+            "pester_mutation_detection": 0.0,
+            "pester_reference_pass": 0.0,
+            "pester_test_quality": 0.0
+          },
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2"
+        },
+        "sidecar": {
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2",
+          "evaluation_status": "complete"
+        }
+      },
+      "outcome": "failed",
+      "sha256": "sha256:7137a3cbfcf59a1ea1703e0eddd38d89f274076027f96f3cf4827af05af94ca0"
+    },
+    {
+      "arm": "candidate",
+      "id": "candidate-1",
+      "native": {
+        "handoff": {
+          "bytes": 1611,
+          "sha256": "2ffd481da79b5671e6e5ba68c58d37fa08c29b5ecee2a728c1350ddabac1955e"
+        },
+        "reward": {
+          "custom_metrics": {
+            "pester_mutation_detection": 0.0,
+            "pester_reference_pass": 0.0,
+            "pester_test_quality": 0.0
+          },
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2"
+        },
+        "sidecar": {
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2",
+          "evaluation_status": "complete"
+        }
+      },
+      "outcome": "failed",
+      "sha256": "sha256:2ffd481da79b5671e6e5ba68c58d37fa08c29b5ecee2a728c1350ddabac1955e"
+    },
+    {
+      "arm": "absent",
+      "id": "candidate-2",
+      "native": {
+        "handoff": {
+          "bytes": 1490,
+          "sha256": "201c4a05bf9f848bfb09d1cfdca27071a5f5c858fd611572991082ee5d67b625"
+        },
+        "reward": {
+          "custom_metrics": {
+            "pester_mutation_detection": 0.0,
+            "pester_reference_pass": 0.0,
+            "pester_test_quality": 0.0
+          },
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2"
+        },
+        "sidecar": {
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2",
+          "evaluation_status": "complete"
+        }
+      },
+      "outcome": "failed",
+      "sha256": "sha256:201c4a05bf9f848bfb09d1cfdca27071a5f5c858fd611572991082ee5d67b625"
+    },
+    {
+      "arm": "absent",
+      "id": "candidate-3",
+      "native": {
+        "handoff": {
+          "bytes": 1430,
+          "sha256": "e4e4f0b2613fbf4846f864f32c4891a18c6f75378dc0fde233d690f1e5e35c5f"
+        },
+        "reward": {
+          "custom_metrics": {
+            "pester_mutation_detection": 0.0,
+            "pester_reference_pass": 0.0,
+            "pester_test_quality": 0.0
+          },
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2"
+        },
+        "sidecar": {
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2",
+          "evaluation_status": "complete"
+        }
+      },
+      "outcome": "failed",
+      "sha256": "sha256:e4e4f0b2613fbf4846f864f32c4891a18c6f75378dc0fde233d690f1e5e35c5f"
+    },
+    {
+      "arm": "candidate",
+      "id": "candidate-4",
+      "native": {
+        "handoff": {
+          "bytes": 1630,
+          "sha256": "5cc1ae1ac99e87a455ff504ead95ad1fbcdc50873c17b156e16a3c8030be2333"
+        },
+        "reward": {
+          "custom_metrics": {
+            "pester_mutation_detection": 0.0,
+            "pester_reference_pass": 0.0,
+            "pester_test_quality": 0.0
+          },
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2"
+        },
+        "sidecar": {
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2",
+          "evaluation_status": "complete"
+        }
+      },
+      "outcome": "failed",
+      "sha256": "sha256:5cc1ae1ac99e87a455ff504ead95ad1fbcdc50873c17b156e16a3c8030be2333"
+    },
+    {
+      "arm": "candidate",
+      "id": "candidate-5",
+      "native": {
+        "handoff": {
+          "bytes": 1701,
+          "sha256": "96797355da914a0c1c4aeb7bd5c1ee44d4aa7baf3490f1e83420ec244069fb40"
+        },
+        "reward": {
+          "custom_metrics": {
+            "pester_mutation_detection": 0.0,
+            "pester_reference_pass": 0.0,
+            "pester_test_quality": 0.0
+          },
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2"
+        },
+        "sidecar": {
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2",
+          "evaluation_status": "complete"
+        }
+      },
+      "outcome": "failed",
+      "sha256": "sha256:96797355da914a0c1c4aeb7bd5c1ee44d4aa7baf3490f1e83420ec244069fb40"
+    },
+    {
+      "arm": "absent",
+      "id": "candidate-6",
+      "native": {
+        "handoff": {
+          "bytes": 1455,
+          "sha256": "88a26a4f88a87a210286cd5b143f4023f0e8b1742bbc2d80a8405c712ad793af"
+        },
+        "reward": {
+          "custom_metrics": {
+            "pester_mutation_detection": 0.0,
+            "pester_reference_pass": 0.0,
+            "pester_test_quality": 0.0
+          },
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2"
+        },
+        "sidecar": {
+          "details": {
+            "outcome": {
+              "classification": "failed",
+              "code": "evaluated",
+              "grader_version": "pester-transfer-batch-v2",
+              "mutants_detected": 0,
+              "mutants_executed": 5,
+              "pester_version": "6.2.0",
+              "powershell_version": "7.6.9",
+              "reference_pass": 0,
+              "tests_executed": 5,
+              "valid_references": {
+                "original": 1,
+                "quantity-int128": 0
+              },
+              "variant_detections": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "variant_failure_kinds": [
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "entry_id": "pester-transfer-batch-v2",
+          "evaluation_status": "complete"
+        }
+      },
+      "outcome": "failed",
+      "sha256": "sha256:88a26a4f88a87a210286cd5b143f4023f0e8b1742bbc2d80a8405c712ad793af"
+    }
+  ],
+  "provenance": {
+    "engine": "rootless Podman",
+    "image_id": "cffb4ffe4f5a1b7154d47ba512ed40d775565e296a4f30d8480895435792ab87",
+    "pester_manifest": "sha256:ea8445218d46eeb69dd08827d38222f1d23c592966722ecfd0bdc419bf045543",
+    "powershell": "sha256:c561baa659f1d0a5e9482684fc26e377b6fb8178b74f5e4fbb0ba0ea38f6a126"
+  },
+  "schema_version": 1
+}

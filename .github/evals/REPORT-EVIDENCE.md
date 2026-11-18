@@ -1421,6 +1421,12 @@ and saved population. The default reads the checked-in receipt. Incomplete or
 mixed replay evidence leaves attribution open. Frozen transfer grades and the
 attributed skill decision come from the original evaluation.
 
+The [native grader v2 qualification](pester-return-contract/grader-v2/README.md)
+adds a current evaluator status beside the historical diagnostic. The status
+requires the native controls, matching fixture and submission identities, and
+a complete measured regrade. A receipt for a different replay cannot verify
+coverage for the operator's selected inputs.
+
 ### Reproduce the offline demonstration
 
 This uses the existing ten-case/twenty-observation Podman measured extract,
