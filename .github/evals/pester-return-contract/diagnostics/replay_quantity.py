@@ -7,16 +7,20 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[3]
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(ROOT / '.github/scripts'))
+from quantity_replay_evidence import CONTROL_OUTCOMES, boundary_verified, paired_outcome
+
 TRANSFER = HERE.parent / 'transfer'
 EXECUTION = ROOT / 'docs/evaluations/pester-transfer-decision/execution-v6'
 AMEND = b'if ($Requested -eq 3) { $quantity = [long]$quantity }'
 SUBSTITUTE = b'if ($Requested -eq 3) { $quantity = [System.Int128]::Parse($quantity.ToString()) }'
 PLANNED = {(arm, slot) for arm in ('candidate', 'current') for slot in range(1, 7)}
-CASES = (-2, 0, 3, 8, 9)
 
 
 def digest(raw):
@@ -69,35 +73,6 @@ def container_runner(image_id, runtime, workspace, *, probe=False):
     return payload if type(payload) is dict else {'error': 'invalid_runtime_output'}
 
 
-def result_of(run):
-    count_fields = ('total', 'passed', 'failed', 'assertion_failures', 'skipped', 'not_run',
-                    'inconclusive', 'failed_blocks', 'failed_containers')
-    if ('error' in run or run.get('powershell') != '7.6.9' or run.get('pester') != '6.2.0'
-            or any(type(run.get(key)) is not int or run[key] < 0 for key in count_fields)
-            or any(run[key] for key in ('skipped', 'not_run', 'inconclusive', 'failed_blocks', 'failed_containers'))
-            or run['total'] <= 0 or run['passed'] + run['failed'] != run['total']
-            or run['failed'] != run['assertion_failures']):
-        return 'unmeasured'
-    return 'rejected' if run['failed'] else 'accepted'
-
-
-def boundary_verified(baseline, variation):
-    if not all(run.get('int128_is_numeric') is True and len(run.get('boundary', [])) == len(CASES)
-               for run in (baseline, variation)):
-        return False
-    for requested, before, after in zip(CASES, baseline['boundary'], variation['boundary'], strict=True):
-        expected = {
-            'requested': requested, 'returned': 1, 'object_type': 'System.Management.Automation.PSCustomObject',
-            'properties': ['Enabled', 'Quantity'], 'enabled': requested > 0,
-            'quantity': str(max(0, min(8, requested))),
-            'quantity_type': 'System.Int64' if requested == 3 else 'System.Int32',
-        }
-        variation_expected = {**expected, 'quantity_type': 'System.Int128'} if requested == 3 else expected
-        if before != expected or after != variation_expected:
-            return False
-    return True
-
-
 def replay(runtime, image_id):
     baseline = (TRANSFER / 'reference/Subject.ps1').read_bytes()
     if baseline.count(AMEND) != 1:
@@ -105,10 +80,10 @@ def replay(runtime, image_id):
     variation = baseline.replace(AMEND, SUBSTITUTE, 1)
     retained = list(subjects())
     runner = (HERE / 'Run-QuantityReplay.ps1').read_bytes()
-    controls = [(name, expected, (HERE / file).read_bytes()) for name, expected, file in (
-        ('permissive-suite', 'accepted', 'AcceptQuantity.Tests.ps1'),
-        ('restrictive-suite', 'rejected', 'RestrictQuantity.Tests.ps1'),
-    )]
+    controls = {
+        'permissive-suite': (HERE / 'AcceptQuantity.Tests.ps1').read_bytes(),
+        'restrictive-suite': (HERE / 'RestrictQuantity.Tests.ps1').read_bytes(),
+    }
     variants = {'reference': baseline, 'variation': variation}
 
     def evaluate(subject, suite=None):
@@ -124,20 +99,19 @@ def replay(runtime, image_id):
 
     boundary = {name: evaluate(raw) for name, raw in variants.items()}
     verified = boundary_verified(*boundary.values())
-    checks = [{'id': 'return-boundary', 'expected': 'verified',
+    checks = [{'id': 'return-boundary', 'expected': CONTROL_OUTCOMES['return-boundary'],
                'observed': 'verified' if verified else 'unmeasured'}]
 
     def compare(suite):
         runs = {name: evaluate(raw, suite) for name, raw in variants.items()}
-        reference, changed = runs.values()
-        measured = verified and result_of(reference) == 'accepted' and reference['total'] == changed.get('total')
-        return {**runs, 'outcome': result_of(changed) if measured else 'unmeasured'}
+        outcome = paired_outcome(runs['reference'], runs['variation']) if verified else 'unmeasured'
+        return {**runs, 'outcome': outcome}
 
     control_runs = {}
-    for name, expected, suite in controls:
+    for name, suite in controls.items():
         run = compare(suite)
         control_runs[name] = {'sha256': digest(suite), **run}
-        checks.append({'id': name, 'expected': expected, 'observed': run['outcome']})
+        checks.append({'id': name, 'expected': CONTROL_OUTCOMES[name], 'observed': run['outcome']})
     qualified = all(check['expected'] == check['observed'] for check in checks)
     rows = []
     for id_, arm, suite in retained:

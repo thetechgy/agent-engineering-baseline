@@ -113,6 +113,73 @@ class DecisionReportTests(unittest.TestCase):
         self.assertIn('Unqualified controls: return-boundary.', failed)
         self.assertIn('0 accepted · 0 rejected · 12 unmeasured', failed)
 
+    def test_replay_observations_require_matching_native_results(self):
+        spec = evidence.read_json(MANIFEST)['decisions'][0]['replay']
+        replay = self.root / 'replays' / 'alternative.json'
+        replay.parent.mkdir()
+        inputs = [TRANSFER / 'current', TRANSFER / 'candidate']
+        receipt = evidence.read_json(DOCS / spec['member'])
+        for row in receipt['observations']:
+            row.update(reference={'error': 'timeout'}, variation={'error': 'timeout'})
+        replay.write_bytes(evidence.encoded(receipt))
+        page = self.run_report(inputs, replay=replay, name='both-run-timeouts')
+        self.assertIn('Unresolved · Neither yet', page)
+        self.assertIn('0 accepted · 0 rejected · 12 unmeasured', page)
+
+        for name in ('reference-timeout', 'variation-timeout', 'missing-run', 'reference-failure',
+                     'count-mismatch', 'non-assertion-failure', 'runtime-mismatch', 'outcome-mismatch'):
+            with self.subTest(name=name):
+                receipt = evidence.read_json(DOCS / spec['member'])
+                row = receipt['observations'][0]
+                if name == 'reference-timeout':
+                    row['reference'] = {'error': 'timeout'}
+                elif name == 'variation-timeout':
+                    row['variation'] = {'error': 'timeout'}
+                elif name == 'missing-run':
+                    del row['variation']
+                elif name == 'reference-failure':
+                    row['reference'] = row['variation'].copy()
+                elif name == 'count-mismatch':
+                    row['variation'].update(total=6, passed=5)
+                elif name == 'non-assertion-failure':
+                    row['variation']['assertion_failures'] = 0
+                elif name == 'runtime-mismatch':
+                    row['variation']['pester'] = '6.1.0'
+                else:
+                    row['outcome'] = 'accepted'
+                replay.write_bytes(evidence.encoded(receipt))
+                page = self.run_report(inputs, replay=replay, name=name)
+                self.assertIn('Unresolved · Neither yet', page)
+                self.assertIn('0 accepted · 11 rejected · 1 unmeasured', page)
+                self.assertIn(f'<th scope="row">{row["id"]}</th><td>unmeasured</td>', page)
+                disclosure = page.split('Exact replay receipt</summary>', 1)[1]
+                self.assertIn(f'&quot;outcome&quot;: &quot;{row["outcome"]}&quot;', disclosure)
+
+    def test_replay_controls_require_native_evidence_despite_passing_labels(self):
+        spec = evidence.read_json(MANIFEST)['decisions'][0]['replay']
+        replay = self.root / 'replays' / 'alternative.json'
+        replay.parent.mkdir()
+        inputs = [TRANSFER / 'current', TRANSFER / 'candidate']
+        for name, expected in spec['controls'].items():
+            with self.subTest(control=name):
+                receipt = evidence.read_json(DOCS / spec['member'])
+                provenance = receipt['provenance']
+                if name == 'return-boundary':
+                    provenance['boundary']['variation']['boundary'][2]['quantity_type'] = 'System.Int64'
+                elif name == 'permissive-suite':
+                    provenance['control_runs'][name]['variation'] = {'error': 'timeout'}
+                else:
+                    provenance['control_runs'][name]['reference'] = {'error': 'timeout'}
+                replay.write_bytes(evidence.encoded(receipt))
+                page = self.run_report(inputs, replay=replay, name=name)
+                self.assertIn('Unresolved · Neither yet', page)
+                self.assertIn('0 accepted · 0 rejected · 12 unmeasured', page)
+                self.assertIn(f'Unqualified controls: {name}.', page)
+                self.assertIn(f'<th scope="row">{name}</th><td>{expected}</td><td>unmeasured</td>', page)
+                first = receipt['observations'][0]['id']
+                self.assertIn(f'<th scope="row">{first}</th><td>unmeasured</td>', page)
+                self.assertIn('Exact replay receipt', page)
+
     def test_incomplete_pairs_suppress_recommendations_and_measured_status(self):
         staged = self.root / 'inputs'
         current = staged / 'current'
