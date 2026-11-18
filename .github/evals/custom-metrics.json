@@ -58974,7 +58974,7 @@
         "environment_mode": "docker",
         "agent_import": "oracle",
         "trials": 1,
-        "adapter_sha256": "sha256:9a224104cc42dae2ab702a0c9704e0a6305c97095128125ff6d9aee184877cd6"
+        "adapter_sha256": "sha256:5b04a63f5c7b93967bf76b7c681f011d87f520f02794c2b97a2ac33647f13c7d"
       },
       "termination_evidence": "native-deadline-v1"
     },
@@ -59380,7 +59380,7 @@
         "environment_mode": "docker",
         "agent_import": "oracle",
         "trials": 1,
-        "adapter_sha256": "sha256:9a224104cc42dae2ab702a0c9704e0a6305c97095128125ff6d9aee184877cd6"
+        "adapter_sha256": "sha256:5b04a63f5c7b93967bf76b7c681f011d87f520f02794c2b97a2ac33647f13c7d"
       },
       "termination_evidence": "native-deadline-v1"
     },
