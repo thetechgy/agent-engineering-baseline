@@ -1,0 +1,10 @@
+{
+  "id": "codex-1691-sol62-v1",
+  "adapter": "codex",
+  "frozen_profile": ".github/evals/codex-execution-1691.json",
+  "frozen_profile_sha256": "6425c2e4f3fd80134b655b05a0b09157d51bbdce757ed4198f18e50c94388b66",
+  "capabilities": [
+    "non-forwarding-cli-probe"
+  ],
+  "inference_enabled": false
+}

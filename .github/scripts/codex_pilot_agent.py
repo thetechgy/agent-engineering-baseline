@@ -11,6 +11,8 @@ import tomllib
 
 from harbor.agents.installed.codex import Codex
 from codex_pilot_contract import PROFILE, ROOT, configuration
+from codex_pilot_runtime import usage_source
+from evaluation_runtime import CODEX_090_PROFILES, CODEX_FIXTURE_PROFILE
 
 BINARY = '/opt/codex/bin/codex'
 HOME = '/home/agent/.codex-pilot'
@@ -91,7 +93,10 @@ class PilotCodex(Codex):
         context.n_input_tokens = usage['input_tokens']
         context.n_cache_tokens = usage['cached_input_tokens']
         context.n_output_tokens = usage['output_tokens']
-        context.metadata = {'usage_source': ('codex-0.155.1-exec-json' if self.profile['cli'] == '0.155.1' else 'codex-0.167-exec-json'), 'billing_verified': False,
+        cache_write = ({'n_cache_write_input_tokens': usage.get('cache_write_input_tokens')}
+                       if self.profile['id'] == CODEX_FIXTURE_PROFILE else {})
+        context.metadata = {'usage_source': usage_source(self.profile), 'billing_verified': False,
+                            **cache_write,
                             **({'execution_complete': False} if interrupted else {})}
 
     async def run(self, instruction, environment, context):
@@ -109,7 +114,9 @@ class PilotCodex(Codex):
         probe = os.environ.get('AEB_PILOT_PROBE') == '1'
         if not probe and os.environ.get('OPENAI_BASE_URL'):
             raise ValueError('Pilot provider override refused')
-        environment._deny_provider = probe and self.profile['id'] == 'codex-090-diagnostic-v1'
+        if self.profile['id'] == CODEX_FIXTURE_PROFILE and not probe:
+            raise ValueError('Candidate requires the non-forwarding probe')
+        environment._deny_provider = probe and self.profile['id'] in CODEX_090_PROFILES
         from codex_pilot_boundary import observe, connectivity_baseline
         # Harbor has already applied the agent phase policy. Verify it outside the
         # container before the first exec that could carry a future real key.
@@ -160,6 +167,8 @@ class PilotCodex(Codex):
             payload = base64.b64encode(raw).decode()
             commands = base64.b64encode(json.dumps(self.fixture_commands(payload)).encode()).decode()
             await self.probe_preflight(environment, env)
+            if self.profile['id'] == CODEX_FIXTURE_PROFILE and scenario == 'success':
+                scenario = 'priced-success'
             # Server has no network forwarding and never authenticates to a provider.
             await self.exec_as_agent(environment, command=(
                 f'python3 /opt/pilot/codex_pilot_stub.py {logs}/probe.json {scenario} {shlex.quote(payload)} {shlex.quote(commands)} '

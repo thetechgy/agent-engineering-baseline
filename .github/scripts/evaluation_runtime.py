@@ -5,6 +5,11 @@ from pathlib import Path
 from evaluation_campaign_core import require
 
 ROOT = Path(__file__).resolve().parents[2]
+CODEX_FIXTURE_PROFILE = 'codex-1691-sol62-v1'
+CODEX_090_PROFILES = {
+    'codex-090-diagnostic-v1': '.github/evals/codex-execution-090.json',
+    CODEX_FIXTURE_PROFILE: '.github/evals/codex-execution-1691.json',
+}
 
 
 def read_profile(path, validators=None):
@@ -23,23 +28,24 @@ def validate_codex(value):
     from codex_pilot_contract import PROFILE
     require(set(value) == {'id', 'adapter', 'frozen_profile', 'frozen_profile_sha256', 'capabilities', 'inference_enabled'},
             'Unsupported Codex profile settings')
-    expected = ('.github/evals/codex-execution-090.json' if value['id'] == 'codex-090-diagnostic-v1'
-                else '.github/evals/codex-pilot.json')
+    expected = CODEX_090_PROFILES.get(value['id'], '.github/evals/codex-pilot.json')
     require(value['frozen_profile'] == expected and
             value['frozen_profile_sha256'] == hashlib.sha256((ROOT / value['frozen_profile']).read_bytes()).hexdigest(),
             'Qualified Codex profile drift')
     capabilities = (['non-forwarding-cli-probe', 'exact-authorized-live'] if value['id'] in ('codex-authorized-campaign-v1', 'codex-090-diagnostic-v1')
                     else ['oracle', 'non-forwarding-cli-probe'])
+    if value['id'] == CODEX_FIXTURE_PROFILE:
+        capabilities = ['non-forwarding-cli-probe']
     require(value['inference_enabled'] is False and value['capabilities'] == capabilities,
             'Unsupported Codex capabilities or inference setting')
-    selected = reports.read_json(ROOT / expected) if expected.endswith('codex-execution-090.json') else PROFILE
+    selected = reports.read_json(ROOT / expected) if value['id'] in CODEX_090_PROFILES else PROFILE
     return dict(selected, agent='codex')
 
 
 
 def evaluator(runtime):
     import evaluator_profiles as profiles
-    return profiles.NEXT if runtime['profile']['id'] == 'codex-090-diagnostic-v1' else profiles.CANDIDATE
+    return profiles.NEXT if runtime['profile']['id'] in CODEX_090_PROFILES else profiles.CANDIDATE
 
 
 def adapter_for(runtime):
@@ -57,9 +63,10 @@ def source_inputs(runtime, workspace):
     from codex_pilot_contract import pilot_inputs
     import skill_evidence as e
     extra = []
-    if runtime['profile']['id'] == 'codex-090-diagnostic-v1':
-        extra = [{'member': 'runtime/codex-execution-090.json',
-                  'digest': e.digest_bytes(e.read_bytes(workspace / '.github/evals/codex-execution-090.json'))}]
+    frozen = CODEX_090_PROFILES.get(runtime['profile']['id'])
+    if frozen:
+        extra = [{'member': 'runtime/' + Path(frozen).name,
+                  'digest': e.digest_bytes(e.read_bytes(workspace / frozen))}]
     return extra + pilot_inputs(workspace) + [{'member': 'runtime/evaluation_codex.py',
         'digest': e.digest_bytes(e.read_bytes(workspace / '.github/scripts/evaluation_codex.py'))}]
 

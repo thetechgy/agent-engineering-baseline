@@ -13,7 +13,7 @@ import tempfile
 from codex_pilot_agent import PilotCodex
 from codex_pilot_environment import PilotEnvironment
 from evaluation_campaign_core import require
-from evaluation_runtime import ROOT, read_profile, failure_reason
+from evaluation_runtime import ROOT, CODEX_090_PROFILES, CODEX_FIXTURE_PROFILE, read_profile, failure_reason
 
 
 class MissingCodexObservation(ValueError):
@@ -36,6 +36,9 @@ def exec_trajectory(raw, adapter, *, diagnostics=None):
     Every normalized action links to its exact raw trace and event line(s).
     """
     from harbor.agents.installed.codex import Agent, Trajectory
+    successor = adapter.profile.get('id') == CODEX_FIXTURE_PROFILE
+    protocol = 'codex-0.169.1-exec-json' if successor else 'codex-0.167-exec-json'
+    shells = ('/bin/sh', '/bin/bash') if successor else ('/bin/sh',)
     pending = {}; completed = set(); steps = []; notes = []; informational = []
     session = None; turns = 0; actions = 0; terminal = False
     trace = {'member':'agent/codex.txt', 'sha256':'sha256:' + hashlib.sha256(raw.encode()).hexdigest()}
@@ -60,7 +63,7 @@ def exec_trajectory(raw, adapter, *, diagnostics=None):
         if previous and previous['item']['type'] != item['type']:
             raise UnsupportedCodexProtocol('Native item type changed')
         completed.add(key)
-        return previous, {'protocol':'codex-0.167-exec-json', 'native_item_id':key,
+        return previous, {'protocol':protocol, 'native_item_id':key,
             'native_item_type':item['type'], 'raw_trace':trace,
             'raw_event_lines':[*previous['lines'],line] if previous else [line],
             'lifecycle':'started/completed' if previous else 'completion-only'}
@@ -149,7 +152,7 @@ def exec_trajectory(raw, adapter, *, diagnostics=None):
             try: wrapper = shlex.split(command)
             except ValueError as error:
                 raise UnsupportedCodexProtocol('Invalid native shell wrapper') from error
-            if len(wrapper) != 3 or wrapper[:2] != ['/bin/sh','-lc']:
+            if len(wrapper) != 3 or (wrapper[0] not in shells or wrapper[1] != '-lc'):
                 raise UnsupportedCodexProtocol('Unsupported native shell wrapper')
             metadata.update(native_command=command, exit_code=item['exit_code'])
             normalized = {'kind':'tool_call', 'call_id':key, 'tool_name':'exec_command',
@@ -184,7 +187,7 @@ def exec_trajectory(raw, adapter, *, diagnostics=None):
     return Trajectory(schema_version='ATIF-v1.7', session_id=session,
         agent=Agent(name='codex',version=adapter.profile['cli'],model_name=adapter.model_name),
         steps=steps, notes='\n'.join(notes) or None,
-        extra={'source':'codex-0.167-exec-json','inference':getattr(adapter,'live',False),
+        extra={'source':protocol,'inference':getattr(adapter,'live',False),
                'raw_trace':trace,'informational_events':informational,
                **({'diagnostic_trace':{'member':'agent/codex-stderr.txt',
                     'sha256':'sha256:'+hashlib.sha256(diagnostics.encode()).hexdigest()}} if diagnostics is not None else {})})
@@ -485,7 +488,7 @@ def prepare_task(native, mode, runtime):
     config = native / 'task.toml'
     text = config.read_text().replace('timeout_sec = 300.0', f'timeout_sec = {runtime["agent_seconds"]}.0').replace('memory_mb = 4096', f'memory_mb = {runtime["memory_mb"]}')
     if mode in ('probe', 'experiment-probe', 'live'):
-        host = 'localhost.invalid' if runtime['id'] == 'codex-090-diagnostic-v1' and mode != 'live' else 'api.openai.com'
+        host = 'localhost.invalid' if runtime['id'] in CODEX_090_PROFILES and mode != 'live' else 'api.openai.com'
         text = text.replace('network_mode = "public"', 'network_mode = "allowlist"\nallowed_hosts = ["' + host + '"]')
     config.write_text(text)
     if mode in ('probe', 'experiment-probe', 'live'):
@@ -540,7 +543,7 @@ def native_observation(trial, native, present, row, rows, *, output, live=False,
         from codex_pilot_contract import PROFILE
         require(probe.get('model') == selected['model'] and probe.get('reasoning', {}).get('effort') == selected['reasoning_effort']
                 and probe.get('requests') == 2, 'Observed CLI model/request drift')
-        if selected['cli'] == '0.155.1':
+        if selected['id'] in CODEX_090_PROFILES or selected['cli'] == '0.155.1':
             require(probe.get('authorization_matches_sentinel') is True and probe.get('path') == '/v1/responses',
                     'Observed CLI credential source or endpoint drift')
     from skill_evidence import read_bytes
@@ -553,7 +556,7 @@ def native_observation(trial, native, present, row, rows, *, output, live=False,
     from skillevaluator.utils.redaction import redact_sensitive_text
     require(redact_sensitive_text(submitted.decode()) == submitted.decode(), 'Submission needs protected retention')
     row['submission'] = dict(receipt, file=output)
-    row['skill_access'] = skill_access(trial, present, native)
+    row['skill_access'] = skill_access(trial, present, native, allow_bash=selected['id'] == CODEX_FIXTURE_PROFILE)
     row['agent_id'] = audit['boundary_before']['agent_id']
     require(not any(r is not row and r.get('agent_id') == row['agent_id'] for r in rows), 'Reused agent environment')
 
@@ -588,7 +591,7 @@ RETAINED_MEMBERS = ('pilot-lifecycle.json', 'pilot-observation.json', 'interrupt
                     'probe.json', 'codex-stderr.txt', 'native-file-edit-probe.json', 'observation-injection.json', 'codex.txt', 'trajectory.json', 'task-boundary.json', 'pilot-produced-submission.json')
 
 
-def skill_access(trial, present, native):
+def skill_access(trial, present, native, *, allow_bash=False):
     """Successful full SKILL.md output is access evidence only; absence is unknown.
 
     This conservative observation does not infer activation from command text.
@@ -634,7 +637,9 @@ def skill_access(trial, present, native):
     def reads_target(item):
         try:
             tokens = shlex.split(item.get('command', ''))
-            if len(tokens) == 3 and tokens[:2] == ['/bin/sh', '-lc']: tokens = shlex.split(tokens[2])
+            shells = ('/bin/sh', '/bin/bash') if allow_bash else ('/bin/sh',)
+            if len(tokens) == 3 and tokens[0] in shells and tokens[1] == '-lc':
+                tokens = shlex.split(tokens[2])
             paths = [p if p.startswith('/') else '/workspace/' + p.removeprefix('./') for p in tokens[1:]]
             return tokens[:1] == ['cat'] and bool(set(paths) & target_paths) and set(paths) <= readable_paths
         except ValueError: return False

@@ -127,7 +127,7 @@ class AccountingTests(unittest.TestCase):
         import hashlib
         import skill_evidence as evidence
         registry=reports.read_json(ROOT/evidence.CUSTOM_REGISTRY)
-        registry['profiles'] = {k:v for k,v in registry['profiles'].items() if '-source-v26-' not in k and '-source-v25-' not in k}
+        registry['profiles'] = {k:v for k,v in registry['profiles'].items() if '-source-v27-' not in k and '-source-v26-' not in k and k not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18') and '-source-v25-' not in k}
         added=[k for k in registry['profiles'] if '-source-v24-' in k or k=='pester-effectiveness-v29']
         self.assertEqual(len(added),36)
         for key in added:
@@ -138,9 +138,9 @@ class AccountingTests(unittest.TestCase):
             purpose=key if key.startswith('campaign-') else 'skill_effectiveness'
             # Source-v24 is historical after the judge adapter. Its exact bytes
             # remain protected by the registry snapshot; source-v25 owns current
-            # campaign implementation. The noncampaign profile is unchanged.
+            # campaign implementation at adoption. The noncampaign source also has a later successor.
             if not key.startswith('campaign-'):
-                self.assertEqual(current['runtime_digest'],evidence.custom_input_identities(ROOT,current['skill_id'],purpose=purpose)['runtime_digest'])
+                self.assertNotEqual(current['runtime_digest'], evidence.custom_input_identities(ROOT, current['skill_id'], purpose=purpose)['runtime_digest'])
             del registry['profiles'][key]
         self.assertEqual(len(registry['profiles']),803)
         self.assertEqual(hashlib.sha256(json.dumps(registry,sort_keys=True,separators=(',',':')).encode()).hexdigest(),

@@ -40,7 +40,7 @@ class Release090Contracts(unittest.TestCase):
         registry = evidence.custom_registry(ROOT)
         # These successors preserve this stopped source-v17 population unchanged.
         registry['profiles'] = {k:v for k,v in registry['profiles'].items()
-            if '-source-v18-' not in k and '-source-v19-' not in k and '-source-v20-' not in k and '-source-v21-' not in k and '-source-v22-' not in k and '-source-v23-' not in k and '-source-v24-' not in k and '-source-v26-' not in k and '-source-v25-' not in k and k not in ('pester-effectiveness-v27', 'pester-effectiveness-v28', 'pester-effectiveness-v29')}
+            if '-source-v18-' not in k and '-source-v19-' not in k and '-source-v20-' not in k and '-source-v21-' not in k and '-source-v22-' not in k and '-source-v23-' not in k and '-source-v24-' not in k and '-source-v27-' not in k and '-source-v26-' not in k and k not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18') and '-source-v25-' not in k and k not in ('pester-effectiveness-v27', 'pester-effectiveness-v28', 'pester-effectiveness-v29')}
         registry['metrics'].pop('gh.authorization.v2')
         old = copy.deepcopy(registry)
         added = [key for key in registry['profiles'] if '-source-v17-' in key]
@@ -61,7 +61,7 @@ class Release090Contracts(unittest.TestCase):
                              {k:v for k,v in previous.items() if k not in ('id', 'runtime_digest')})
             purpose = key if key.startswith('campaign-') else 'skill_effectiveness' if key.startswith('pester-effectiveness') else 'cli_pilot'
             current = evidence.custom_input_identities(ROOT, new['skill_id'], purpose=purpose)['runtime_digest']
-            if key.startswith('campaign-') or key == 'pester-effectiveness-v26':
+            if key.startswith('campaign-') or key in ('pester-effectiveness-v26', 'pester-cli-pilot-retained-v17'):
                 self.assertNotEqual(current, new['runtime_digest'])  # Superseded source; historical bytes stay bound below.
             else:
                 self.assertEqual(current, new['runtime_digest'])
