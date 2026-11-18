@@ -1,4 +1,5 @@
 """Manual human-reviewed observation of one repository case on the protected Codex runner."""
+import base64
 import hashlib
 import json
 import os
@@ -65,7 +66,7 @@ class CaseObservation(Task):
         # Always exercise the real CLI tool and its delayed network-policy check.
         command = argv + " && cat /home/agent/.agents/skills/" + skill + "/SKILL.md >/dev/null"
         if control == "active-configuration":
-            command += " && printf %s " + shlex.quote(__import__('base64').b64encode(CONFIG.encode()).decode()) + " | base64 -d > /workspace/traefik.yaml"
+            command += " && printf %s " + shlex.quote(base64.b64encode(CONFIG.encode()).decode()) + " | base64 -d > /workspace/traefik.yaml"
         return [command]
 
     def stage(self, root, deployed, mode, runtime):
@@ -144,8 +145,10 @@ def observation(trial, row, task, artifact, mode, secret):
     workspace = capture("operator/workspace-observation.json", 512*1024, structured=True) or {}
     answer = capture("agent/last-message.txt", 64*1024)
     trace = capture("agent/codex.txt", 1024*1024)
+    events = []
     try:
-        events = [json.loads(line) for line in (trace or "").splitlines()]
+        events = [json.loads(line) for line in (trace or "").splitlines()
+                  if line != "Reading additional input from stdin..."]
         terminal = [e for e in events if e["type"] == "turn.completed"]
         messages = [e["item"]["text"] for e in events if e["type"] == "item.completed" and e["item"]["type"] == "agent_message"]
         exact_answer = bool(answer and messages and messages[-1].strip() == answer.strip())
@@ -154,24 +157,38 @@ def observation(trial, row, task, artifact, mode, secret):
         exact_answer = trace_complete = False
     native_result = capture("result.json", 1024*1024, structured=True, retain=False) or {}
     no_verification = (native_result.get("verifier") is None and native_result.get("verifier_result") is None)
-    complete = (native_result.get("agent_execution") and native_result.get("finished_at") and no_verification and
-                row.get("returncode") == 0 and not row.get("native_exception") and
-                audit.get("returncode") == 0 and row.get("cleanup") and audit.get("cleanup") == "complete" and
-                any(s.get("stage") == "disposal_complete" for s in life.get("stages", [])))
-    if complete:
+    execution = (native_result.get("agent_execution") or {}).get("finished_at")
+    if execution and audit.get("returncode") == 0:
         record["execution"] = "completed"
-    verified = (complete and not record["missing"] and exact_answer and trace_complete and
+    elif audit.get("returncode") is None and not row.get("native_exception"):
+        record["execution"] = "unconfirmed"
+    disposed = (row.get("cleanup") and audit.get("cleanup") == "complete" and
+                any(s.get("stage") == "disposal_complete" for s in life.get("stages", [])))
+    verified = (record["execution"] == "completed" and row.get("returncode") == 0 and
+                not row.get("native_exception") and disposed and no_verification and
+                not record["missing"] and exact_answer and trace_complete and
                 audit.get("skill_deployed") is True and final.get("mounts") == [] and
                 audit.get("boundary_before", {}).get("agent_id") == final.get("agent_id") and
                 audit.get("prompt_sha256") == hashlib.sha256((task.entry["prompt"]+"\n").encode()).hexdigest() and
                 workspace.get("status") == "complete" and isinstance(workspace.get("changes"), list))
     if verified:
         record.update(evidence="complete", review="ready for human review", changed_paths=len(workspace["changes"]))
+    config = capture("config.json", 65536, structured=True, retain=False) or {}
+    if native_result and no_verification and config.get("verifier", {}).get("disable") is True:
+        record["model_judge_calls"] = 0
     if mode == "experiment-probe":
         probe = capture("agent/probe.json", 1024*1024, structured=True, retain=False) or {}
         record["responder_requests"] = probe.get("requests")
         record["responder_path"] = probe.get("path") if probe.get("path") == "/v1/responses" else None
-        record["verification_disabled"] = no_verification
+        tools = [e.get("item", {}) for e in events if e.get("type") == "item.completed"
+                 and e.get("item", {}).get("type") == "command_execution"]
+        record["probe_tool_completed"] = any(t.get("exit_code") == 0 and
+            "PILOT_BOUNDARY " in t.get("aggregated_output", "") for t in tools)
+        record["socket_mounts_absent"] = (final.get("mounts") == [] and
+                                          audit.get("boundary_before", {}).get("mounts") == [])
+    if record["missing"] or record.get("model_judge_calls") != 0:
+        record.update(evidence="incomplete", review="incomplete")
+        record.pop("changed_paths", None)
     record.update(usage=row.get("usage"), cleanup=row.get("cleanup"))
     reports.write_json(report, record)
     return record
@@ -191,7 +208,10 @@ def verify_qualification(root, task):
                      ledger["entries"][0]["case"] == task.definition["source_case"] and
                      record["execution"] == "completed" and record["quality"] == "ungraded" and
                      ledger["cleanup_complete"] and record["cleanup"] and record["responder_requests"] == 2 and
-                     record["verification_disabled"] and record["responder_path"] == "/v1/responses",
+                     record["model_judge_calls"] == 0 and record["probe_tool_completed"] and record["socket_mounts_absent"] and
+                     record["responder_path"] == "/v1/responses" and
+                     ledger["entries"][0]["usage"]["estimated_usd"] is not None and
+                     ledger["state"] == ("stopped" if name == "collection-interrupted" else "completed"),
                      "Incomplete single-case credential-free qualification: " + name)
         core.require(record["evidence"] == ("incomplete" if name == "collection-interrupted" else "complete")
                      and not record["missing"] and answer == ANSWER, "Unexpected observation state: " + name)
@@ -206,11 +226,17 @@ def verify_qualification(root, task):
             core.require(workspace["status"] == "complete" and len(changes) == 1 and
                          changes[0]["path"] == "traefik.yaml" and changes[0]["change"] == "added" and
                          changes[0]["text"] == CONFIG, "Active mount not retained")
+        selected_case = reports.read_json(artifact / "selected-case.json")
         receipts[name] = {"execution": record["execution"], "evidence": record["evidence"],
+                          "staged_inputs": selected_case["staged_inputs"], "socket_mounts_absent": True,
+                          "attempts": len(ledger["entries"]), "arm": "current", "model_judge_calls": record["model_judge_calls"],
                           "quality": record["quality"], "cleanup": True,
                           "answer_sha256": hashlib.sha256(answer.encode()).hexdigest(),
                           "changes": [c["path"] for c in workspace["changes"]] if "changes" in workspace else None}
     core.require(len(answers) == 1, "Fixture answers differ")
+    proof = root / "evidence/scheduler-qualification.json"
+    if proof.exists():
+        core.require(reports.read_json(proof)["scenarios"] == receipts, "Retained observation summary changed")
     return receipts
 
 
@@ -218,7 +244,8 @@ def qualify_observation(root, retained, task):
     from evaluation_campaign import run
     from evaluation_campaign_protocol import revision, digest
     for name in SCENARIOS:
-        run(root / "scenarios" / name, task, "experiment-probe", reference=retained, fixture=name)
+        ledger = run(root / "scenarios" / name, task, "experiment-probe", reference=retained, fixture=name)
+        core.require(ledger["cleanup_complete"] and "report_failure" not in ledger, "Stop after incomplete cleanup or reporting")
     observed = verify_qualification(root, task)
     receipt = {"complete": True, "inference": False, "revision": revision(),
                "protocol_digest": digest(ROOT / task.definition["protocol"])}

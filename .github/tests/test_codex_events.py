@@ -27,6 +27,15 @@ class ExecEvents(unittest.TestCase):
         from evaluation_codex import exec_trajectory
         return exec_trajectory('\n'.join(map(json.dumps,events)),self.adapter)
 
+    def test_consent_question_without_tools_is_a_complete_diagnostic_turn(self):
+        from evaluation_codex import MissingCodexObservation
+        events = self.stream({'type':'item.completed', 'item':{'id':'answer','type':'agent_message','text':'Do you accept socket access?'}})
+        with self.assertRaises(MissingCodexObservation):
+            self.parse(events)
+        self.adapter.task = SimpleNamespace(diagnostic_observation=True)
+        trajectory = self.parse(events)
+        self.assertEqual([step.message for step in trajectory.steps], ['Do you accept socket access?'])
+
     def edit(self,status='completed',identity='edit',kind='add'):
         return {'id':identity,'type':'file_change','changes':[{'path':'/workspace/output/result.txt','kind':kind}],'status':status}
 
