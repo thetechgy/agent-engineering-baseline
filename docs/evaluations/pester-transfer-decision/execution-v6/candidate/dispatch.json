@@ -1,0 +1,51 @@
+{
+  "run_id": 44205331725,
+  "attempt": 1,
+  "event": "workflow_dispatch",
+  "created_at": "2026-11-18T00:08:26Z",
+  "completed_by": "2026-11-18T00:22:57Z",
+  "head_ref": "prep/pester-final-transfer",
+  "execution_revision": "2b58a4652b576247d91ba01c6ce7a743ff703331",
+  "conclusion": "success",
+  "run_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/44205331725",
+  "gate": "skill-benchmark",
+  "approved": true,
+  "authentication_artifact": 14384070384,
+  "dispatch_authentication": {
+    "artifact": "14378270615",
+    "artifact_digest": "sha256:4df6da431798156f0e187127ac01ccf627c01544e4379dabdaec851d4359911f",
+    "producer_run": 44187112158,
+    "revision": "2b58a4652b576247d91ba01c6ce7a743ff703331",
+    "protocol_digest": "sha256:d6f38b1e0f4c1614ea4ca7dbf56a3e2727e6ae22c2348c69d29b1cf53645bc40",
+    "dispatch": "3040797ee0e26b08",
+    "run_id": "44205331725",
+    "allocation": "campaign-2b58a4652b576247d91ba01c6ce7a743ff703331-pester-return-transfer-candidate-v6-prep14378270615-usd8-3040797ee0e26b08",
+    "first_dispatch": true,
+    "authentication": "github-api-producer-and-digest",
+    "definition": ".github/evals/campaigns/pester-return-transfer-candidate-v6.json",
+    "definition_digest": "sha256:c41d83d4659c0f4ac73fab890cd71ed59ba508f9e73383b0e69cb41ed5feeb79",
+    "selection_digest": "sha256:abb67d79ccdb952fa1e1a50f0826058d7b51e3b3a6713214ef93b8439db1c42f",
+    "preparation_location": "preparation/evidence"
+  },
+  "preparation": {
+    "run": 44187112158,
+    "attempt": 1,
+    "artifact": 14378270615,
+    "archive_digest": "sha256:4df6da431798156f0e187127ac01ccf627c01544e4379dabdaec851d4359911f",
+    "expires_at": "2027-02-15T22:08:55Z",
+    "registered_location": "preparation/evidence"
+  },
+  "inspection": {
+    "run": 44193046605,
+    "artifact": 14376588618,
+    "archive_digest": "sha256:0b0c67d00fe07f97a1deb3c5f9d89f1305df34da50e65cba02fbc7f462a6cada",
+    "expires_at": "2027-02-15T22:45:01Z",
+    "report_sha256": "570726affdb7d8710b676dd9c3b2716319487c2890a1cd75a1bb20d287232e36"
+  },
+  "source_identities": {
+    "grader_digest": "sha256:bbd6b2c340dcbe4292267d4d49f3c6d4c2cb99d8d3038b5249ca279537cb52a4",
+    "fixture_digest": "sha256:9a8d599d4bb65adc64906e3e2ea5a2de80d55b5a49e6f76b9bc47a703e5af5e2",
+    "runtime_digest": "sha256:3b1b07ec45a0a9b447b7bac02b832a349612860efdc94dede0c72e95c9a729f9"
+  },
+  "protocol": "sha256:d6f38b1e0f4c1614ea4ca7dbf56a3e2727e6ae22c2348c69d29b1cf53645bc40"
+}

@@ -1,0 +1,38 @@
+{
+  "passed": true,
+  "recorded_at": "2026-11-18T00:08:10.806666+00:00",
+  "run": 44202925702,
+  "source": "2b58a4652b576247d91ba01c6ce7a743ff703331",
+  "allocation": "campaign-2b58a4652b576247d91ba01c6ce7a743ff703331-pester-return-transfer-current-v6-prep14378272338-usd8-1e0533f990901769",
+  "launches": 6,
+  "measured": 6,
+  "primary_success": {
+    "current": 3,
+    "own_absent": 3
+  },
+  "unlaunched_positions": [],
+  "operational_stop": null,
+  "cleanup_and_resource_return_verified": true,
+  "cumulative_estimated_usage_usd": 0.3389116,
+  "usage_complete_under_frozen_rules": true,
+  "scheduling_threshold_exhausted": false,
+  "billing_reconciled": false,
+  "candidate_dispatch_permitted": true,
+  "live_artifact": {
+    "id": 14382333232,
+    "digest": "sha256:e2b0aebd3c2884777bd4ca57c8ca48b1fd07a28a9a2f46a5a2568684d89779c1",
+    "expires_at": "2027-02-15T23:51:09Z",
+    "size_in_bytes": 546711,
+    "name": "campaign-live-1"
+  },
+  "audit_sha256": "sha256:9ad64b802ec7cfaddb124a2dc6efe0343b54b3d2523c5e562fd7b271669b37d8",
+  "native_projection_machine_and_html_verified": true,
+  "public_status": {
+    "provenance": "runtime_recorded",
+    "reasons": [
+      "execution_incomplete"
+    ],
+    "status": "incomplete"
+  },
+  "public_status_basis": "The live collector sets diagnostic_only for every selected campaign. Normalization maps the flag to execution_incomplete even though both arms have complete scored coverage, succeeded, and the native report is complete. This fixed label leaves all six custom outcomes intact."
+}

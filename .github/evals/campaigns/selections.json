@@ -125,6 +125,32 @@
           "location": "preparation/evidence"
         }
       ]
+    },
+    "pester-return-transfer-current-v6": {
+      "definition": ".github/evals/campaigns/pester-return-transfer-current-v6.json",
+      "controls": [
+        ".github/evals/campaigns/pester-return-transfer-current-controls-v6.json"
+      ],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "preparation/evidence"
+        }
+      ]
+    },
+    "pester-return-transfer-candidate-v6": {
+      "definition": ".github/evals/campaigns/pester-return-transfer-candidate-v6.json",
+      "controls": [
+        ".github/evals/campaigns/pester-return-transfer-candidate-controls-v6.json"
+      ],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "preparation/evidence"
+        }
+      ]
     }
   }
 }

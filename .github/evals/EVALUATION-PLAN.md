@@ -1,4 +1,29 @@
-# Completed PR #150 judge-only calibration
+# Pester clarification transfer decision
+
+**DEFER** the exact 22-line `powershell-pester-6` clarification. Both v6 pairs
+completed at `2b58a4652b576247d91ba01c6ce7a743ff703331`. Current and its own absent arm
+each had 3/3 primary successes. Candidate and its own absent arm also had 3/3
+each. All reference checks and five defect checks passed. The indirect
+comparison leaves a shared numeric restriction. Every submission used the same
+fixed numeric type list for `Quantity`, which excludes permitted numeric
+implementations such as `System.Int128`. The Int32/Int64 reference passed in
+all 12 slots. The shared restriction leaves the adoption criterion unmet and
+provides no evidence of a candidate-specific regression.
+[Execution receipt](../../docs/evaluations/pester-transfer-decision/execution-v6/EXECUTION.md),
+[current run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/44202925702),
+[candidate run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/44205331725).
+
+The mandatory current checkpoint passed before candidate dispatch. Estimates
+totaled $0.6775063 across 12 complete usage records. The live reports and native
+projections independently reproduced, and all cleanup and resource-return
+checks passed. Both allocations are closed, with zero unlaunched slots, retries,
+replacements or model judges. The earlier stopped transfer, development results
+and retrospective replay retain their original identities. The recommendation
+leaves the established skill in production.
+
+**Next action** — Keep the current `powershell-pester-6` guidance in place.
+
+## Completed PR #150 judge-only calibration, retained as history
 
 **Useful for narrow advisory use.** The single authorized
 [run 44152839720/A1](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/44152839720)

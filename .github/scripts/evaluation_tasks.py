@@ -24,6 +24,9 @@ def load(path):
     if definition.get('adapter') == 'gh-permission':
         from gh_permission_task import GhPermission
         adapters['gh-permission'] = GhPermission
+    if definition.get('adapter') == 'batch-summary-static-templates':
+        from pester_static_templates_task import StaticTemplateBatchSummary
+        adapters['batch-summary-static-templates'] = StaticTemplateBatchSummary
     require(definition.get('adapter') in adapters, 'Unsupported task adapter')
     for key in ('id', 'skill', 'source_case'):
         require(__import__('re').fullmatch('[a-z0-9-]+', definition[key]), 'Invalid task identity')

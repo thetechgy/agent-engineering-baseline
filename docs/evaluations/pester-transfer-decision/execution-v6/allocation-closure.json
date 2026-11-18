@@ -1,0 +1,68 @@
+{
+  "execution_revision": "2b58a4652b576247d91ba01c6ce7a743ff703331",
+  "closed_at": "2026-11-18T00:24:49.775902+00:00",
+  "authorization_consumed": true,
+  "retry_allowed": false,
+  "replacement_allowed": false,
+  "continuation_allowed": false,
+  "model_judges": 0,
+  "dispatch_records_checked": 83,
+  "allocations": [
+    {
+      "allocation": "campaign-2b58a4652b576247d91ba01c6ce7a743ff703331-pester-return-transfer-current-v6-prep14378272338-usd8-1e0533f990901769",
+      "run": 44202925702,
+      "run_attempt": 1,
+      "status": "closed",
+      "workflow_conclusion": "success",
+      "stop_reason": null,
+      "scheduled_slots": 6,
+      "attempted_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "measured_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "unlaunched_positions": [],
+      "exclusive_dispatch_count": 1,
+      "pending_gates": 0
+    },
+    {
+      "allocation": "campaign-2b58a4652b576247d91ba01c6ce7a743ff703331-pester-return-transfer-candidate-v6-prep14378270615-usd8-3040797ee0e26b08",
+      "run": 44205331725,
+      "run_attempt": 1,
+      "status": "closed",
+      "workflow_conclusion": "success",
+      "stop_reason": null,
+      "scheduled_slots": 6,
+      "attempted_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "measured_slots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "unlaunched_positions": [],
+      "exclusive_dispatch_count": 1,
+      "pending_gates": 0
+    }
+  ]
+}

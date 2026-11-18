@@ -84,7 +84,7 @@ class JudgeContracts(unittest.TestCase):
     def test_frozen_historical_profiles_are_preserved(self):
         import hashlib
         value = reports.read_json(ROOT / '.github/evals/custom-metrics.json')
-        original = {**value, 'profiles': {k:v for k,v in value['profiles'].items() if '-source-v25-' not in k}}
+        original = {**value, 'profiles': {k:v for k,v in value['profiles'].items() if '-source-v26-' not in k and '-source-v25-' not in k}}
         self.assertEqual(len(original['profiles']), 839)
         from evaluation_evidence import source_manifest
         import skill_evidence as evidence
@@ -95,7 +95,10 @@ class JudgeContracts(unittest.TestCase):
             old = value['profiles'][key.replace('-source-v25-', '-source-v24-')]
             self.assertEqual({k:v for k,v in row.items() if k not in ('id', 'runtime_digest')},
                              {k:v for k,v in old.items() if k not in ('id', 'runtime_digest')})
-            self.assertEqual(row['runtime_digest'], evidence.identity(source_manifest(ROOT, row['skill_id'], key)))
+            active = key.replace('-source-v25-', '-source-v26-')
+            successor = value['profiles'][active]
+            self.assertEqual(successor['runtime_digest'],
+                             evidence.identity(source_manifest(ROOT, successor['skill_id'], active)))
         self.assertEqual(hashlib.sha256(json.dumps(original, sort_keys=True, separators=(',', ':')).encode()).hexdigest(),
                          '81c8de65793bd75fe4b900b7213532ba3f27cb3f6a03936e51c59c00136b78af')
 
