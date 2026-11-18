@@ -50,6 +50,14 @@ jobs:
           echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
       - name: Check affected contracts in the owning pinned environment
         run: 'PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_native_deadline test_codex_events test_evaluation_campaign test_evaluation_protocol -q'
+      - name: Check pilot failure evidence and Pester preparation under the frozen owner
+        env:
+          PYTHONPATH: .github/scripts:.github/tests
+        run: |
+          "$SKILL_CURRENT_PYTHON" -B -m unittest -v \
+            test_codex_pilot.PilotContracts.test_post_command_audit_failure_precedence_and_collection \
+            test_codex_pilot.PilotContracts.test_preparation_consumption_uses_actual_staging_and_rejects_changed_or_missing_evidence \
+            test_codex_effectiveness.Protocol.test_actual_clean_staging_only_differs_by_target_skill_and_rejects_drift
       - name: Qualify actual native deadlines without inference
         run: |
           args=()

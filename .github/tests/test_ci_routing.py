@@ -24,8 +24,8 @@ class SelectionTests(unittest.TestCase):
 
     def test_skill_support_is_not_documentation(self):
         self.assertEqual(self.selected('.apm/skills/podman/references/quadlet.md'), {'contracts', 'quality'})
-        self.assertEqual(self.selected('.apm/skills/gh/scripts/helper.py'), {'contracts', 'quality', 'evaluator'})
-        self.assertIn('legacy', self.selected('.apm/skills/powershell-pester-6/references/execution.md'))
+        self.assertEqual(self.selected('.apm/skills/gh/scripts/helper.py'), {'contracts', 'quality'})
+        self.assertIn('pester', self.selected('.apm/skills/powershell-pester-6/references/execution.md'))
 
     def test_shared_dependencies_and_unknown_inputs_select_broadly(self):
         for path in ('apm.yml', 'apm.lock.yaml', '.apm/instructions/safety.instructions.md',
@@ -39,11 +39,24 @@ class SelectionTests(unittest.TestCase):
 
     def test_task_owned_and_workflow_boundaries(self):
         self.assertEqual(self.selected('.github/evals/powershell-pester-6/evals/grader.py'), routing.PESTER)
-        self.assertEqual(self.selected('.github/evals/pester-admission-v1/controls/good.Tests.ps1'), routing.PESTER)
+        self.assertEqual(self.selected('.github/evals/pester-admission-v1/controls/good.Tests.ps1'), {'contracts', 'admission'})
         self.assertEqual(self.selected('.github/evals/gh/evals/files/setup.py'), routing.GH)
-        self.assertEqual(self.selected('.github/workflows/current-evaluator.yml'), {'contracts', 'evaluator'})
+        self.assertEqual(self.selected('.github/workflows/current-evaluator.yml'), {'contracts'})
         self.assertEqual(self.selected('.github/workflows/evaluation-campaign.yml'), {'contracts'})
         self.assertEqual(self.selected('.github/scripts/qualify_scanners.py'), {'contracts', 'quality'})
+
+    def test_native_leaves_and_mixed_changes(self):
+        deadline = '.github/scripts/qualify_native_deadline.py'
+        replay = '.github/evals/campaigns/pester-transfer-retrospective-v1.json'
+        self.assertEqual(self.selected('.github/tests/test_ci_routing.py'), set())
+        self.assertEqual(self.selected('.github/tests/test_ci_routing.py', deadline), {'contracts', 'deadline'})
+        self.assertEqual(self.selected('.github/workflows/codex-pilot.yml'), {'contracts', 'deadline'})
+        self.assertIn('contracts', self.selected('.github/evaluator-backends/aeb_gh_fixture/initialize.py'))
+        self.assertIn('deadline', self.selected('.github/scripts/codex_pilot_agent.py'))
+        self.assertEqual(self.selected(deadline), {'contracts', 'deadline'})
+        self.assertEqual(self.selected(deadline, replay), {'contracts', 'deadline', 'admission'})
+        self.assertEqual(self.selected('.github/tests/test_campaign_authentication.py'), {'contracts'})
+        self.assertEqual(self.selected(replay, 'new-module.py'), set(routing.FLAGS))
 
     def test_main_keeps_the_existing_production_population(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -119,17 +132,17 @@ class GateTests(unittest.TestCase):
             bad = copy.deepcopy(needs); bad['plan']['result'] = status
             with self.assertRaises(ValueError): routing.gate(bad)
         for value in ('', 'TRUE', 'null', None):
-            bad = copy.deepcopy(needs); bad['plan']['outputs']['legacy'] = value
+            bad = copy.deepcopy(needs); bad['plan']['outputs']['admission'] = value
             with self.assertRaises(ValueError): routing.gate(bad)
-        needs['codex-pilot']['result'] = 'success'
+        needs['pester-admission']['result'] = 'success'
         with self.assertRaises(ValueError): routing.gate(needs)
 
     def test_actual_gate_process_cannot_pass_selected_failure(self):
-        needs = self.needs(True); needs['codex-pilot']['result'] = 'failure'
+        needs = self.needs(True); needs['pester-admission']['result'] = 'failure'
         result = subprocess.run(['python3', '-B', str(ROOT / '.github/scripts/ci_routing.py'), 'gate'],
                                 env={**os.environ, 'CI_NEEDS': json.dumps(needs)}, capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn('codex-pilot: expected success, received failure', result.stderr)
+        self.assertIn('pester-admission: expected success, received failure', result.stderr)
 
     def test_actual_plan_process_uses_fixed_outputs_and_falls_back_broadly(self):
         with tempfile.TemporaryDirectory() as directory:

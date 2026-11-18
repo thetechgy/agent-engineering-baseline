@@ -20,7 +20,7 @@ class CorpusTests(unittest.TestCase):
         for name in (*(name for name in qualification.SOURCES if not name.endswith('/judge_accounting.py')), '.github/evals/judge-calibration-090/corpus.json',
                      '.github/tests/test_standard_judges.py'):
             selected = ci_routing.select([name])
-            self.assertEqual({key for key,value in selected.items() if value}, {'contracts', 'evaluator'})
+            self.assertEqual({key for key,value in selected.items() if value}, {'contracts'})
 
     def test_frozen_sources_and_unrun_labels(self):
         value = qualification.corpus()

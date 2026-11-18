@@ -1,6 +1,73 @@
 # GitHub Actions routing
 
-Security review of the routing change:
+## Routine CI on main and pull requests
+
+Base `c688fc15`. Both strict required platform jobs run on every PR. The planner
+uses the complete Git comparison. The final gate requires success for every
+selected job and a skip for every omitted job. Shared code, unrecognized inputs
+and incomplete comparisons select every maintained PR check.
+
+| Check | Selection and purpose |
+| --- | --- |
+| Linux and Windows, planner and final gate | Always. The planner runs its own routing tests, including on routing-test-only edits. |
+| CI contracts, skill quality, retained Pester | Full contracts include the retained native gh Docker boundary, data host and behavioral evidence. Skill and dataset inputs select their scanner or native consumers. Main push keeps all three producers. |
+| Native deadlines | Shared runtime, Pester and unknown inputs retain native coverage. The deadline harness and its focused tests select contracts and deadline only. |
+| Pester admission and replay | Shared runtime, Pester and unknown inputs retain admission. The dedicated admission controls and the three original/control/replay campaign definitions select contracts and admission only. |
+| Codex 0.169.1 fixture | Existing separate PR path filter and manual workflow. Its three fixture inputs and workflow select only contracts inside Validate. The fresh runner consumes the producer's exact artifact ID. |
+| Current evaluator | Existing manual workflow for evaluator, backend, oracle/grader, judge/accounting or gh lifecycle qualification. Run with `candidate-next=true` for 0.9.0. Six shards, both oracle cohorts and the fresh report consumer run together. Validate owns the duplicate 0.9.0 Pages and orchestration tests. |
+| Historical pilot and prospective preparation | Existing manual pilot with empty allocation inputs for changes needing exact CLI/grading replay, scheduler or prospective Pester preparation and fresh consumption. The full historical experiment is outside routine PR feedback. |
+
+Validate on main still feeds the report publisher and orchestration planner.
+Benchmark dispatch/history, publisher recovery, scheduled dependency freshness
+and baseline refresh keep their existing triggers and permissions. Campaign,
+Pester return and candidate packaging remain manual. CLI observation comparison
+is called only through the explicit deadline diagnostic. PR calls receive no
+inherited secrets. The aggregate gate is separate from the two required checks.
+
+### What the automatic checks catch
+
+| Manual suite | Automatic regression check on affected PRs | Regression that can still reach main |
+| --- | --- | --- |
+| Six gh lifecycle shards | CI contracts uses the installed candidate backend to test rejection of a foreign socket, dead broker or reused PID. The retained Docker check exercises the production gh fixture. | Candidate container startup or teardown can fail only for one arm or shard, as in the first #153 attempt. The test supplies broker faults without starting all candidate containers. |
+| Candidate oracle cohorts and adoption | CI contracts exercises the 0.9 verifier and collector on an unscored trajectory. It fails if a secondary sidecar error hides a known security finding. Retained Pester and behavioral report controls still run on their selected inputs. | A candidate-only grading error on another oracle case, or a failure joining the complete 100 observations to the shard reports, needs the standalone run. |
+| Judge HTTP and accounting qualification | CI contracts checks that interrupted accounting keeps unknown usage and blocks admission, and that repeated attempts and duplicate receipts are handled. | The opt-in native judge can miscount schema fallbacks or provider retries, or fail fresh-runner reproduction. The manual local-responder qualification checks actual physical requests before use of that owner. |
+| Historical pilot preparation and replay | The selected deadline job exercises the 0.8 post-command audit failure path and consumes restaged pilot descriptors, including missing and altered evidence. | A real CLI/container command or verifier handoff specific to the historical pair can still fail. |
+| Prospective Pester preparation and cohort consumption | The same job stages the matched arms with pinned APM and rejects a changed instruction or runner. CI contracts checks missing boundary evidence and scheduler stop classification. | The full twelve-slot scheduler can still fail to capture the post-command boundary during actual execution, or fail to consume its hosted preparation. |
+
+Only the platform checks are required by the main ruleset. A failing selected
+contract appears in Validate and the final gate for review.
+
+### Recovery and timing
+
+After a failed evaluator shard, use **Re-run all jobs** on that standalone
+evaluator run (`gh run rerun <evaluator-run-id>`). This preserves its revision
+and dispatch inputs and produces every artifact in one new attempt. A failed-job
+rerun can diagnose a shard but cannot consolidate inputs left in an earlier
+attempt. The join checks run, attempt, producer revision, source hashes, shard
+identity and complete results before admitting the canonical report.
+
+| Validate workload | Executed jobs | Critical path | Aggregate elapsed job time |
+| --- | ---: | ---: | ---: |
+| PR #153 attempt 3, observed | 21 (six additional skips) | 57m32s | 358.1 min |
+| Same changed paths, projected | 9 | ~49 min | 120.3 min |
+| Deadline harness alone, projected | 6 | ~23 min | 46.5 min |
+
+Projections reuse the successful attempt's job durations and parallel starts,
+with a six-second final gate after the longest selected job. Admission/replay
+sets the broad critical path. The estimates exclude the time added by the new
+focused regression tests. Queue time can vary. These figures cover Validate
+only and measure elapsed job time rather than billing. In a local offline replay
+at the original producer revision, the 0.9.0 report consumer rejected missing,
+wrong-attempt and wrong-revision shards. With all seven original A3 inputs it
+reproduced the report and admitted all 48 lifecycle rows.
+[Attempt 3](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/44243001594/attempts/3)
+
+## Historical routing audit for PR #134
+
+The sections through the PR #134 observation follow-up describe that revision.
+The routing table above supersedes its selection and timing projections.
+
+Security review of the earlier routing change:
 
 | Critical | High | Medium | Low |
 | --- | --- | --- | --- |
@@ -224,6 +291,7 @@ branch protection; platform success is not all-selected success.
 Use the existing manual preparation paths when their coverage is needed:
 
 ```sh
+gh workflow run current-evaluator.yml --ref <reviewed-ref> -f candidate-next=true
 gh workflow run evaluation-campaign.yml --ref <reviewed-ref> -f campaign=boolean-effectiveness-v1
 gh workflow run pester-return-qualification.yml --ref <reviewed-ref>
 gh workflow run codex-pilot.yml --ref <reviewed-ref>

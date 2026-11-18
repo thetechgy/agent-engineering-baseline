@@ -178,18 +178,18 @@ class CIPowerShellTests(unittest.TestCase):
         self.assertEqual(workflow["jobs"]["linux"]["name"], "Full validation (PowerShell 7 and Bash)")
         self.assertEqual(workflow["jobs"]["windows-powershell"]["name"], "Pester and analyzer (latest stable PowerShell)")
 
-    def test_evaluator_concurrency_preserves_diagnostic_reruns(self):
+    def test_evaluator_recovery_uses_a_standalone_same_attempt_graph(self):
         import yaml
         workflow = yaml.safe_load((ROOT / ".github/workflows/current-evaluator.yml").read_text())
-        self.assertEqual(workflow["concurrency"], {
-            "group": "current-evaluator-${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}",
-            "cancel-in-progress": "${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}",
-        })
-        # Match the existing Validate policy: only initial PR runs supersede;
-        # manual runs and diagnostic reruns use their durable run identity.
-        validation = yaml.safe_load((ROOT / ".github/workflows/validate.yml").read_text())
-        self.assertEqual(workflow["concurrency"]["cancel-in-progress"],
-                         validation["concurrency"]["cancel-in-progress"])
+        self.assertEqual(set(workflow.get('on', workflow.get(True))), {'workflow_dispatch'})
+        report = workflow['jobs']['report']
+        self.assertEqual(set(report['needs']), {'cohorts', 'native-gh'})
+        downloads = [step['with'] for step in report['steps']
+                     if step.get('uses', '').startswith('actions/download-artifact@')]
+        self.assertEqual(len(downloads), 3)
+        for inputs in downloads:
+            self.assertNotIn('run-id', inputs)
+            self.assertIn('attempt-${{ github.run_attempt }}', inputs.get('pattern', inputs.get('name', '')))
 
     def test_selected_jobs_feed_an_always_running_gate_without_privileged_calls(self):
         import yaml
@@ -199,6 +199,21 @@ class CIPowerShellTests(unittest.TestCase):
         self.assertEqual(gate['if'], 'always()')
         self.assertEqual(set(gate['needs']), set(jobs) - {'validation'})
         self.assertEqual(jobs['plan']['steps'][0]['with']['fetch-depth'], 0)
+        self.assertTrue(any(step.get('working-directory') == '.github/tests'
+                            and 'unittest test_ci_routing' in step.get('run', '')
+                            for step in jobs['plan']['steps']))
+        spec = importlib.util.spec_from_file_location('ci_routing', ROOT / '.github/scripts/ci_routing.py')
+        ci_routing = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ci_routing)
+        self.assertEqual(set(jobs['plan']['outputs']), set(ci_routing.FLAGS))
+        for flag, job in ci_routing.JOBS.items():
+            self.assertIn(f"needs.plan.outputs.{flag} == 'true'", jobs[job]['if'])
+        fixture = yaml.safe_load((ROOT / '.github/workflows/codex-1691-qualification.yml').read_text())
+        fixture_paths = fixture.get('on', fixture.get(True))['pull_request']['paths']
+        for path in ('.github/evals/campaigns/codex-1691.json', '.github/evals/campaigns/gh-codex-1691.json',
+                     '.github/evals/codex-execution-1691.json', '.github/workflows/codex-1691-qualification.yml'):
+            self.assertIn(path, fixture_paths)
+            self.assertEqual({k for k, v in ci_routing.select([path]).items() if v}, {'contracts'})
         self.assertNotIn('needs', jobs['linux'])
         self.assertNotIn('if', jobs['linux'])
         self.assertNotIn('if', jobs['windows-powershell'])
@@ -211,8 +226,8 @@ class CIPowerShellTests(unittest.TestCase):
                 self.assertIn('workflow_call', triggers)
                 self.assertIn('workflow_dispatch', triggers)
                 self.assertNotIn('pull_request', triggers)
-        pilot_call = jobs['codex-pilot']
-        self.assertNotIn('runs-on', pilot_call)
+        self.assertNotIn('current-evaluator', jobs)
+        self.assertNotIn('codex-pilot', jobs)
         pilot = yaml.safe_load((ROOT / '.github/workflows/codex-pilot.yml').read_text())
         for name, job in pilot['jobs'].items():
             if job['permissions'].get('actions'):
