@@ -36,7 +36,7 @@ class Codex1691Tests(unittest.TestCase):
         registry = skill_evidence.custom_registry(ROOT)
         original = {**registry, 'profiles': {
             key: row for key, row in registry['profiles'].items()
-            if '-source-v27-' not in key and key not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18')}}
+            if '-source-v28-' not in key and '-source-v27-' not in key and key not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18', 'pester-effectiveness-v31', 'pester-cli-pilot-retained-v19')}}
         self.assertEqual(hashlib.sha256(json.dumps(original, sort_keys=True, separators=(',', ':')).encode()).hexdigest(),
                          '6528c9bf763bec8056c8cfd57273cab9a2caf875d52584852496e34725b3252e')
         task = load(ROOT / '.github/evals/campaigns/gh-codex-1691.json')

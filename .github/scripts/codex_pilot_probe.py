@@ -51,8 +51,9 @@ if sys.argv[1:] == ['--late-network']:
         time.sleep(.25)
     sys.exit(1)
 
-skill = sys.argv[1] if len(sys.argv) == 2 else 'powershell-pester-6'
-assert skill in ('powershell-pester-6', 'gh')
+observation = len(sys.argv) == 3 and sys.argv[1] == '--observation'
+skill = sys.argv[2] if observation else sys.argv[1] if len(sys.argv) == 2 else 'powershell-pester-6'
+assert __import__('re').fullmatch('[a-z0-9-]+', skill) if observation else skill in ('powershell-pester-6', 'gh')
 result = {}
 status = dict(line.split(':', 1) for line in Path('/proc/self/status').read_text().splitlines() if ':' in line)
 assert os.getuid() == 1000 and int(status['CapEff'].strip(), 16) == 0
@@ -63,9 +64,11 @@ paths = ('/tests', '/solution', '/opt/pester-runtime', '/var/run/docker.sock',
 for path in paths:
     assert not os.access(path, os.R_OK), path
 result['protected_paths_unreadable'] = list(paths)
+if observation:
+    assert not any(Path(p).exists() for p in ('/run/podman/podman.sock', '/run/user/1000/podman/podman.sock'))
 inputs = {p.relative_to('/workspace/input').as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
           for p in sorted(Path('/workspace/input').rglob('*')) if p.is_file()}
-assert inputs and all(rejected_write(p) for p in Path('/workspace/input').rglob('*') if p.is_file())
+assert (observation or inputs) and all(rejected_write(p) for p in Path('/workspace/input').rglob('*') if p.is_file())
 assert rejected_write('/workspace/input/injected')
 result['immutable_inputs'] = inputs
 result['skill_files'] = {}

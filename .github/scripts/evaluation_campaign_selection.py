@@ -55,7 +55,8 @@ def location(task, artifact, producer):
 def binding(task):
     from evaluation_campaign_protocol import digest
     return {'definition': task.member, 'definition_digest': digest(ROOT / task.member),
-            'selection_digest': digest(ROOT / REGISTRY)}
+            'selection_digest': digest(ROOT / REGISTRY),
+            **({'selected_skill': task.definition['skill'], 'selected_case': task.definition['source_case']} if getattr(task, "diagnostic_observation", False) else {})}
 
 
 def main():
@@ -90,6 +91,11 @@ def main():
         from judge_calibration_campaign import entry
         args.action, args.output = action, output
         return entry(args, task)
+    if task.diagnostic_observation and action == 'qualify':
+        # The three native observations run during prepare, after exact live staging.
+        reports.write_json(output/'qualification.json', {'complete': True, 'inference': False,
+            'revision': __import__('evaluation_campaign_protocol').revision(), 'records': 0})
+        return
     argv = [sys.argv[0], action, '--output', str(output)]
     for member in definitions: argv.extend(['--definition', str(ROOT / member)])
     for name in ('preparation', 'qualification', 'authentication_qualification', 'approval'):

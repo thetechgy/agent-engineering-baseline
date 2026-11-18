@@ -20,6 +20,10 @@ def load(path):
     if definition.get('type') == 'judge-only':
         from judge_calibration_inputs import load as load_judges
         return load_judges(path, definition)
+    if definition.get('type') == 'case-observation':
+        from case_observation import CaseObservation
+        require(path == ROOT / '.github/evals/campaigns/case-observation.json', 'Unregistered observation')
+        return CaseObservation(definition, path.relative_to(ROOT).as_posix())
     adapters = {'boolean-contract': BooleanContract, 'gh-fixture': GhFixture, 'batch-summary': BatchSummary}
     if definition.get('adapter') == 'gh-permission':
         from gh_permission_task import GhPermission
@@ -45,6 +49,7 @@ def load(path):
 
 
 class Task:
+    diagnostic_observation = False
     probe_origin = 'tool'
     native_file_edit_probe = False
     trusted_launch_metadata = False

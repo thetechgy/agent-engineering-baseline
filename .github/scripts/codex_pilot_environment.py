@@ -248,6 +248,8 @@ class PilotEnvironment(SkillEvaluatorSecureDockerEnvironment):
                 final['late_cli_child'] = late
             target = Path(self.trial_paths.trial_dir) / 'operator/pilot-final-policy.json'
             target.write_text(json.dumps(final, indent=2) + '\n')
+            if hasattr(self, 'before_agent_disposal'):
+                await self.before_agent_disposal(final)
         except BaseException as error:
             primary = error
             self._stage('final_observation_failed', error=type(error).__name__)

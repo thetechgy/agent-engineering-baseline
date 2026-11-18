@@ -154,6 +154,7 @@ def qualify(output, task, reference):
     home = output / 'empty-home'; home.mkdir(mode=0o700)
     base = {k:v for k,v in os.environ.items() if k in
             ('PATH', 'TMPDIR', 'TMP', 'TEMP', 'SYSTEMROOT', 'WINDIR', 'PATHEXT', 'LANG', 'LC_ALL')}
+    base.update(getattr(task, 'selector', {}))
     base['HOME'] = str(home)
     base.update(GITHUB_ACTIONS='true', GITHUB_REPOSITORY=protocol.REPO, GITHUB_JOB='live',
         GITHUB_EVENT_NAME='workflow_dispatch', GITHUB_RUN_ATTEMPT='1', GITHUB_RUN_ID='7000003', RUNNER_TEMP=str(output),
@@ -283,7 +284,7 @@ def validate(proof, task):
             and proof.get('probe_flags_on_valid_path') is False and proof.get('provider_requests') == 0
             and proof.get('workload_launches') == 0 and proof.get('cleanup_complete') is True
             and proof.get('deployment_equal') is True
-            and proof.get('descriptor_comparison') == {'algorithm': 'sha256-typed-toml-v1', 'configurations_equal': True, 'descriptors': 2},
+            and proof.get('descriptor_comparison') == {'algorithm': 'sha256-typed-toml-v1', 'configurations_equal': True, 'descriptors': len(task.definition['variants'])},
             'Unqualified live launch construction')
     manifest = task.trusted_launch_metadata
     cases = {'valid', 'unexpected-aeb', 'probe', 'control', 'provider', 'authorization', 'replay'}

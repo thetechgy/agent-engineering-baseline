@@ -160,6 +160,8 @@ class PilotCodex(Codex):
         audit_path = self.logs_dir.parent / 'operator/pilot-runtime.json'
         audit_path.parent.mkdir(exist_ok=True)
         audit_path.write_text(json.dumps(audit, indent=2) + '\n')
+        if hasattr(environment, 'start_observation'):
+            await environment.start_observation(boundary_before['agent_id'])
         if probe:
             # Keep qualification answers on the trusted host, out of all images.
             # Only the credential-free probe receives this transient payload.
@@ -169,6 +171,8 @@ class PilotCodex(Codex):
             await self.probe_preflight(environment, env)
             if self.profile['id'] == CODEX_FIXTURE_PROFILE and scenario == 'success':
                 scenario = 'priced-success'
+            if getattr(self, 'observation_fixture', False):
+                scenario = 'case-observation'
             # Server has no network forwarding and never authenticates to a provider.
             await self.exec_as_agent(environment, command=(
                 f'python3 /opt/pilot/codex_pilot_stub.py {logs}/probe.json {scenario} {shlex.quote(payload)} {shlex.quote(commands)} '

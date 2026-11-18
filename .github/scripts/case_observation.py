@@ -1,0 +1,226 @@
+"""Manual human-reviewed observation of one repository case on the protected Codex runner."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shlex
+
+import evaluation_campaign_core as core
+from evaluation_runtime import ROOT
+from evaluation_tasks import Task
+import skill_evidence as evidence
+import skill_reports as reports
+
+SCENARIOS = ("no-change", "active-configuration", "collection-interrupted")
+ANSWER = ("Socket access grants the authority of the Podman service user. Traefik can use "
+          "file-based discovery. Do you accept granting socket access?")
+CONFIG = """services:
+  traefik:
+    image: traefik
+    command: [--providers.docker=true]
+    volumes:
+      - /run/user/1000/podman/podman.sock:/var/run/docker.sock:ro
+"""
+
+
+def selected(skill, case):
+    for identifier in (skill, case):
+        core.require(re.fullmatch(r"[a-z0-9][a-z0-9-]{0,79}", identifier), "Invalid repository identifier")
+    source = reports.benchmark_skill(ROOT, skill)
+    entries = reports.read_json(source / "evals/evals.json")["evals"]
+    matches = [entry for entry in entries if str(entry["id"]) == case]
+    core.require(len(matches) == 1, "Unknown or ambiguous case in selected skill")
+    return source, matches[0]
+
+
+class CaseObservation(Task):
+    diagnostic_observation = True
+    output = "unused-observation-submission"
+    retained_members = ()
+
+    def __init__(self, definition, member):
+        skill, case = os.environ.get("OBSERVATION_SKILL", ""), os.environ.get("OBSERVATION_CASE", "")
+        self.source, self.entry = selected(skill, case)
+        self.selector = {"OBSERVATION_SKILL": skill, "OBSERVATION_CASE": case}
+        super().__init__({**definition, "skill": skill, "source_case": case,
+                          "source": str((ROOT / ".agents/skills" / skill).relative_to(ROOT))}, member)
+
+    def cases(self, mode):
+        return {self.definition["source_case"]: None}
+
+    def schedule(self):
+        return [{"position": 1, "case": self.definition["source_case"], "trial": 1, "variant": "current"}]
+
+    def fixture_control(self, fixture, row):
+        core.require(fixture in SCENARIOS, "Unknown workspace fixture")
+        return fixture
+
+    def payload(self, control):
+        return ANSWER.encode()
+
+    def probe_commands(self, control, payload, present):
+        skill = self.definition["skill"]
+        argv = "python3 /opt/pilot/codex_pilot_probe.py --observation " + shlex.quote(skill)
+        # Always exercise the real CLI tool and its delayed network-policy check.
+        command = argv + " && cat /home/agent/.agents/skills/" + skill + "/SKILL.md >/dev/null"
+        if control == "active-configuration":
+            command += " && printf %s " + shlex.quote(__import__('base64').b64encode(CONFIG.encode()).decode()) + " | base64 -d > /workspace/traefik.yaml"
+        return [command]
+
+    def stage(self, root, deployed, mode, runtime):
+        from codex_pilot_descriptors import retain_descriptors
+        import evaluation_codex as codex
+        from gh_evaluations import APT_SOURCES
+        from harbor.models.task.task import Task as NativeTask
+        from skillevaluator.tier3.harbor.adapter import generate_harbor_tasks, private_evaluator_skill_snapshot
+        skill, case = self.definition["skill"], self.definition["source_case"]
+        # BYOT overlays own their task-specific initializer. Never silently convert
+        # them into a generated task and lose their broker, inputs or tools.
+        core.require(self.source == ROOT / ".apm/skills" / skill and not (self.source / "evals/harbor").exists(),
+                     "Native overlay requires its registered task environment")
+        with private_evaluator_skill_snapshot(self.source, task_source="evals_json") as snapshot:
+            dataset = snapshot / "evals/evals.json"
+            value = reports.read_json(dataset)
+            core.require([e for e in value["evals"] if str(e["id"]) == case] == [self.entry],
+                         "Selected case changed during preparation")
+            reports.write_json(dataset, {**value, "evals": [self.entry]})
+            paths = generate_harbor_tasks(deployed, root / "generated", with_skill=True,
+                        evaluator_skill_path=snapshot, base_image=reports.GH_TASK_BUILD["base_image"],
+                        agent_workdir="/workspace", task_resources={"cpus": runtime["cpus"], "memory_mb": runtime["memory_mb"]})
+        core.require(len(paths) == 1 and paths[0].name == case, "Selected native population changed")
+        native = paths[0]
+        core.require((native / "instruction.md").read_bytes() == (self.entry["prompt"] + "\n").encode(),
+                     "Selected prompt changed")
+        projected = native / "environment/skills" / skill
+        core.require(codex.manifest(projected) == codex.manifest(deployed), "Staged skill differs from APM")
+        dockerfile = native / "environment/Dockerfile"
+        sources = " ".join(shlex.quote(s) for s in APT_SOURCES)
+        with dockerfile.open("a") as stream:
+            stream.write("RUN rm -f /etc/apt/sources.list.d/* && printf '%s\\n' " + sources +
+                         " > /etc/apt/sources.list\nRUN useradd --create-home --uid 1000 agent && "
+                         "mkdir -p /workspace/input /workspace/output && chmod -R a+rX /workspace/skills /workspace/input && chmod 1777 /workspace /workspace/output\n"
+                         "WORKDIR /workspace\n")
+        codex.prepare_task(native, mode, runtime)
+        members = {p.relative_to(native).as_posix(): evidence.digest_bytes(evidence.read_bytes(p))
+                   for p in reports.regular_tree(native)}
+        captured = [{"case_id": case, "arm": "with_skill", "members": members, "task_checksum": NativeTask(native).checksum}]
+        reports.write_json(root / "evidence/staging.json", captured)
+        retain_descriptors(root / "evidence", {"with_skill": [native]}, captured)
+        inputs = native / "environment/input"
+        actual_inputs = sorted(p.relative_to(inputs).as_posix() for p in reports.regular_tree(inputs)) if inputs.exists() else []
+        core.require(self.entry.get("files") or not actual_inputs, "Unexpected inputs for empty case")
+        reports.write_json(root / "evidence/selected-case.json", {"skill": skill, "case": case,
+            "prompt_sha256": hashlib.sha256((native / "instruction.md").read_bytes()).hexdigest(),
+            "declared_files": self.entry.get("files", []), "staged_inputs": actual_inputs, "arm": "current",
+            "trials": 1, "verifier_enabled": False})
+        return self.source, {"current": {case: native}}, captured, {}
+
+
+def observation(trial, row, task, artifact, mode, secret):
+    """Retain fixed native members only. Every missing member remains visible."""
+    from skillevaluator.utils.redaction import redact_printable_text
+    record = {"kind": "diagnostic observation", "execution": "failed", "quality": "ungraded",
+              "evidence": "incomplete", "review": "incomplete", "missing": [],
+              "skill": task.definition["skill"], "case": row["case"], "arm": "current"}
+    report = artifact / "observation.json"
+    reports.write_json(report, record)
+    def capture(member, limit, *, structured=False, retain=True):
+        try:
+            raw = evidence.read_bytes(trial / member, limit=limit).decode()
+            value = json.loads(raw) if structured else raw
+            from skillevaluator.tier3.harbor.secure_docker_environment import _redact
+            cleaned = _redact(redact_printable_text(raw), {secret} if secret else set(), include_short=True)
+            if retain:
+                target = artifact / "retained" / member
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(cleaned)
+            return value
+        except (OSError, ValueError, TypeError):
+            record["missing"].append(member)
+    audit = capture("operator/pilot-runtime.json", 65536, structured=True) or {}
+    final = capture("operator/pilot-final-policy.json", 65536, structured=True) or {}
+    life = capture("operator/pilot-lifecycle.json", 65536, structured=True) or {}
+    workspace = capture("operator/workspace-observation.json", 512*1024, structured=True) or {}
+    answer = capture("agent/last-message.txt", 64*1024)
+    trace = capture("agent/codex.txt", 1024*1024)
+    try:
+        events = [json.loads(line) for line in (trace or "").splitlines()]
+        terminal = [e for e in events if e["type"] == "turn.completed"]
+        messages = [e["item"]["text"] for e in events if e["type"] == "item.completed" and e["item"]["type"] == "agent_message"]
+        exact_answer = bool(answer and messages and messages[-1].strip() == answer.strip())
+        trace_complete = bool(len(terminal) == 1 and terminal[0] == events[-1])
+    except (ValueError, KeyError, TypeError):
+        exact_answer = trace_complete = False
+    native_result = capture("result.json", 1024*1024, structured=True, retain=False) or {}
+    no_verification = (native_result.get("verifier") is None and native_result.get("verifier_result") is None)
+    complete = (native_result.get("agent_execution") and native_result.get("finished_at") and no_verification and
+                row.get("returncode") == 0 and not row.get("native_exception") and
+                audit.get("returncode") == 0 and row.get("cleanup") and audit.get("cleanup") == "complete" and
+                any(s.get("stage") == "disposal_complete" for s in life.get("stages", [])))
+    if complete:
+        record["execution"] = "completed"
+    verified = (complete and not record["missing"] and exact_answer and trace_complete and
+                audit.get("skill_deployed") is True and final.get("mounts") == [] and
+                audit.get("boundary_before", {}).get("agent_id") == final.get("agent_id") and
+                audit.get("prompt_sha256") == hashlib.sha256((task.entry["prompt"]+"\n").encode()).hexdigest() and
+                workspace.get("status") == "complete" and isinstance(workspace.get("changes"), list))
+    if verified:
+        record.update(evidence="complete", review="ready for human review", changed_paths=len(workspace["changes"]))
+    if mode == "experiment-probe":
+        probe = capture("agent/probe.json", 1024*1024, structured=True, retain=False) or {}
+        record["responder_requests"] = probe.get("requests")
+        record["responder_path"] = probe.get("path") if probe.get("path") == "/v1/responses" else None
+        record["verification_disabled"] = no_verification
+    record.update(usage=row.get("usage"), cleanup=row.get("cleanup"))
+    reports.write_json(report, record)
+    return record
+
+
+def verify_qualification(root, task):
+    answers = set()
+    receipts = {}
+    for name in SCENARIOS:
+        artifact = root / "scenarios" / name / "evidence"
+        record = reports.read_json(artifact / "observation.json")
+        native = artifact / "retained"
+        answer = evidence.read_bytes(native / "agent/last-message.txt", limit=65536).decode().strip()
+        workspace = reports.read_json(native / "operator/workspace-observation.json")
+        ledger = reports.read_json(artifact / "attempt-ledger.json")
+        core.require(len(ledger["entries"]) == 1 and ledger["entries"][0]["variant"] == "current" and
+                     ledger["entries"][0]["case"] == task.definition["source_case"] and
+                     record["execution"] == "completed" and record["quality"] == "ungraded" and
+                     ledger["cleanup_complete"] and record["cleanup"] and record["responder_requests"] == 2 and
+                     record["verification_disabled"] and record["responder_path"] == "/v1/responses",
+                     "Incomplete single-case credential-free qualification: " + name)
+        core.require(record["evidence"] == ("incomplete" if name == "collection-interrupted" else "complete")
+                     and not record["missing"] and answer == ANSWER, "Unexpected observation state: " + name)
+        answers.add(answer)
+        if name == "collection-interrupted":
+            core.require(workspace.get("status") == "incomplete" and "changes" not in workspace and
+                         ledger.get("stop_reason") == "missing_usable_evidence", "Missing comparison appeared complete")
+        elif name == "no-change":
+            core.require(workspace["status"] == "complete" and workspace["changes"] == [], "Unobserved empty workspace")
+        else:
+            changes = workspace["changes"]
+            core.require(workspace["status"] == "complete" and len(changes) == 1 and
+                         changes[0]["path"] == "traefik.yaml" and changes[0]["change"] == "added" and
+                         changes[0]["text"] == CONFIG, "Active mount not retained")
+        receipts[name] = {"execution": record["execution"], "evidence": record["evidence"],
+                          "quality": record["quality"], "cleanup": True,
+                          "answer_sha256": hashlib.sha256(answer.encode()).hexdigest(),
+                          "changes": [c["path"] for c in workspace["changes"]] if "changes" in workspace else None}
+    core.require(len(answers) == 1, "Fixture answers differ")
+    return receipts
+
+
+def qualify_observation(root, retained, task):
+    from evaluation_campaign import run
+    from evaluation_campaign_protocol import revision, digest
+    for name in SCENARIOS:
+        run(root / "scenarios" / name, task, "experiment-probe", reference=retained, fixture=name)
+    observed = verify_qualification(root, task)
+    receipt = {"complete": True, "inference": False, "revision": revision(),
+               "protocol_digest": digest(ROOT / task.definition["protocol"])}
+    reports.write_json(retained / "scheduler-qualification.json", {**receipt, "scenarios": observed})
+    reports.write_json(retained / "preparation.json", {**receipt, "authorized_live_attempts": 0})

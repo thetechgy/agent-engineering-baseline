@@ -185,6 +185,7 @@ def fixture(root, task, name, preparation=None):
     reports.write_json(root/'api.json', {'repos/' + protocol.REPO + '/' + k: v for k,v in data.items()})
     (root/'gh').write_text(GH); (root/'gh').chmod(0o700)
     env = {k: os.environ[k] for k in ('PATH', 'TMPDIR', 'LANG', 'SYSTEMROOT') if k in os.environ}
+    env.update(getattr(task, 'selector', {}))
     env.update(PATH=str(root) + os.pathsep + env.get('PATH', '/usr/bin:/bin'),
         HOME=str(root), GITHUB_ACTIONS='true', GITHUB_REPOSITORY=protocol.REPO,
         GITHUB_EVENT_NAME='workflow_dispatch', GITHUB_RUN_ATTEMPT='2' if name == 'replayed-dispatch' else '1',
