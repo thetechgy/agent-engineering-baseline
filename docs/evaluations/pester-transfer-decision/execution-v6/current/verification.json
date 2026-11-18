@@ -1,0 +1,627 @@
+{
+  "source": "2b58a4652b576247d91ba01c6ce7a743ff703331",
+  "campaign": "pester-return-transfer-current-v6",
+  "run": 44202925702,
+  "run_attempt": 1,
+  "allocation": "campaign-2b58a4652b576247d91ba01c6ce7a743ff703331-pester-return-transfer-current-v6-prep14378272338-usd8-1e0533f990901769",
+  "workflow_conclusion": "success",
+  "job_conclusion": "success",
+  "entries": [
+    {
+      "position": 1,
+      "variant": "current",
+      "trial": 1,
+      "state": "completed",
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "usage": {
+        "trial": "campaign-pester-transfer-batch-v1-attempt1__slot1",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 114168,
+        "n_cache_tokens": 95192,
+        "n_output_tokens": 2114,
+        "estimated_usd": 0.0686112,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 196.548,
+      "native_exception": null,
+      "cleanup": true,
+      "submission": {
+        "sha256": "95730ffe4aa6e9e9e48d8e5cf87749417460a305d798b8b180b1e6bd07e91992",
+        "bytes": 1643,
+        "file": "Subject.Tests.ps1"
+      },
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": true,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "task_checksum": "1271c1892ac157e42382e811eed045c506baa409c68850968098b4fc5f6e049c",
+      "measured": true,
+      "reference_correct": true,
+      "defects": {
+        "enabled-integer": 1,
+        "enabled-zero": 1,
+        "quantity-above": 1,
+        "quantity-below": 1,
+        "quantity-offset": 1
+      },
+      "primary_success": true,
+      "cli_usage_counters_verified": true,
+      "grade_sha256": "sha256:f852e3f1b7655bdcdfada5845661a46f64d50dba5c58c48d11b633e718170853",
+      "retained_outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "submission_receipt": {
+        "bytes": 1643,
+        "sha256": "95730ffe4aa6e9e9e48d8e5cf87749417460a305d798b8b180b1e6bd07e91992",
+        "copies_match": true
+      },
+      "runtime_sha256": "sha256:574e45f8b0625ef4443a21ce04ae0cb4f0e8b33ebbfe3e12346c86e3fb237291",
+      "final_policy_sha256": "sha256:f9da223064044e01988cfcab7b4099d21e1951c2bb9117a96fe5506d495b7385",
+      "lifecycle_sha256": "sha256:f88ce45e616878598cb71e36e4b0f309e5b5c515b58d416040fed6f61fcfec50"
+    },
+    {
+      "position": 2,
+      "variant": "absent",
+      "trial": 1,
+      "state": "completed",
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "usage": {
+        "trial": "campaign-pester-transfer-batch-v1-attempt1__slot2",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 76930,
+        "n_cache_tokens": 62446,
+        "n_output_tokens": 1478,
+        "estimated_usd": 0.0499926,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 134.509,
+      "native_exception": null,
+      "cleanup": true,
+      "submission": {
+        "sha256": "1150d8239fa305d3de44cb1ed12b0c163539079b39793906f0e9fde3f03538c6",
+        "bytes": 1562,
+        "file": "Subject.Tests.ps1"
+      },
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": false,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "task_checksum": "184a71b9b8c2a7a15a195472dd6f6f6de6bbfc6aa0b398d8a8f7eaff773cb427",
+      "measured": true,
+      "reference_correct": true,
+      "defects": {
+        "enabled-integer": 1,
+        "enabled-zero": 1,
+        "quantity-above": 1,
+        "quantity-below": 1,
+        "quantity-offset": 1
+      },
+      "primary_success": true,
+      "cli_usage_counters_verified": true,
+      "grade_sha256": "sha256:f852e3f1b7655bdcdfada5845661a46f64d50dba5c58c48d11b633e718170853",
+      "retained_outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "submission_receipt": {
+        "bytes": 1562,
+        "sha256": "1150d8239fa305d3de44cb1ed12b0c163539079b39793906f0e9fde3f03538c6",
+        "copies_match": true
+      },
+      "runtime_sha256": "sha256:4d9b47459b2c007595614712def621d034ed62d9bce831312a10c316622ec6cb",
+      "final_policy_sha256": "sha256:726c123eb68b0109c64c302711ef00645b71b46d94e32e68d025b306e195f62a",
+      "lifecycle_sha256": "sha256:6a4d4f421f05d5cbd7e84e1830f2265fc3dac5feaa537a34ab5072a803bc88cd"
+    },
+    {
+      "position": 3,
+      "variant": "absent",
+      "trial": 2,
+      "state": "completed",
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "usage": {
+        "trial": "campaign-pester-transfer-batch-v1-attempt2__slot3",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 62028,
+        "n_cache_tokens": 47865,
+        "n_output_tokens": 1263,
+        "estimated_usd": 0.0457425,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 99.279,
+      "native_exception": null,
+      "cleanup": true,
+      "submission": {
+        "sha256": "b1f26910857cf15589ea1e090b555e2c93c7844d073ceb4c77d9f954155f7e60",
+        "bytes": 1450,
+        "file": "Subject.Tests.ps1"
+      },
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": false,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "task_checksum": "184a71b9b8c2a7a15a195472dd6f6f6de6bbfc6aa0b398d8a8f7eaff773cb427",
+      "measured": true,
+      "reference_correct": true,
+      "defects": {
+        "enabled-integer": 1,
+        "enabled-zero": 1,
+        "quantity-above": 1,
+        "quantity-below": 1,
+        "quantity-offset": 1
+      },
+      "primary_success": true,
+      "cli_usage_counters_verified": true,
+      "grade_sha256": "sha256:f852e3f1b7655bdcdfada5845661a46f64d50dba5c58c48d11b633e718170853",
+      "retained_outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "submission_receipt": {
+        "bytes": 1450,
+        "sha256": "b1f26910857cf15589ea1e090b555e2c93c7844d073ceb4c77d9f954155f7e60",
+        "copies_match": true
+      },
+      "runtime_sha256": "sha256:423b0dd3a8d6baddac011803ec87d2179fafc88395ac839a0a9e8a3376392520",
+      "final_policy_sha256": "sha256:ca6fa125716b31c43829cf7a9c4d3d220745c4d296fef476d6bfc2d478f4a0b7",
+      "lifecycle_sha256": "sha256:c542e1963402a5f315f91fc4b65f626e509411c691a997f73e192519a72d9af7"
+    },
+    {
+      "position": 4,
+      "variant": "current",
+      "trial": 2,
+      "state": "completed",
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "usage": {
+        "trial": "campaign-pester-transfer-batch-v1-attempt2__slot4",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 94399,
+        "n_cache_tokens": 76178,
+        "n_output_tokens": 1796,
+        "estimated_usd": 0.0620198,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 116.92,
+      "native_exception": null,
+      "cleanup": true,
+      "submission": {
+        "sha256": "e186c55fe566ded0be05f1c6ab6f6f4567b744abcdbfe9286f5fc150df39e272",
+        "bytes": 1622,
+        "file": "Subject.Tests.ps1"
+      },
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": true,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "task_checksum": "1271c1892ac157e42382e811eed045c506baa409c68850968098b4fc5f6e049c",
+      "measured": true,
+      "reference_correct": true,
+      "defects": {
+        "enabled-integer": 1,
+        "enabled-zero": 1,
+        "quantity-above": 1,
+        "quantity-below": 1,
+        "quantity-offset": 1
+      },
+      "primary_success": true,
+      "cli_usage_counters_verified": true,
+      "grade_sha256": "sha256:f852e3f1b7655bdcdfada5845661a46f64d50dba5c58c48d11b633e718170853",
+      "retained_outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "submission_receipt": {
+        "bytes": 1622,
+        "sha256": "e186c55fe566ded0be05f1c6ab6f6f4567b744abcdbfe9286f5fc150df39e272",
+        "copies_match": true
+      },
+      "runtime_sha256": "sha256:301f41e71b4a994c861faf4e5e5bf56fbd0248ab5dce46138dab2937065e7b9a",
+      "final_policy_sha256": "sha256:c239edc97bed4503596e487ee9f7bbb8b5228b6b831627e4cd8fa2a92f11db37",
+      "lifecycle_sha256": "sha256:0ad732e74f5a31e13a86991034a7125e16807da9e49b94c43bceac11507baf93"
+    },
+    {
+      "position": 5,
+      "variant": "current",
+      "trial": 3,
+      "state": "completed",
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "usage": {
+        "trial": "campaign-pester-transfer-batch-v1-attempt3__slot5",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 76381,
+        "n_cache_tokens": 58718,
+        "n_output_tokens": 1708,
+        "estimated_usd": 0.058277800000000005,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 112.706,
+      "native_exception": null,
+      "cleanup": true,
+      "submission": {
+        "sha256": "930312c9ab31f75d7b608dfad31380ed9e1eaa0d9caeddff324b3560f427e8a3",
+        "bytes": 1589,
+        "file": "Subject.Tests.ps1"
+      },
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": true,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "task_checksum": "1271c1892ac157e42382e811eed045c506baa409c68850968098b4fc5f6e049c",
+      "measured": true,
+      "reference_correct": true,
+      "defects": {
+        "enabled-integer": 1,
+        "enabled-zero": 1,
+        "quantity-above": 1,
+        "quantity-below": 1,
+        "quantity-offset": 1
+      },
+      "primary_success": true,
+      "cli_usage_counters_verified": true,
+      "grade_sha256": "sha256:f852e3f1b7655bdcdfada5845661a46f64d50dba5c58c48d11b633e718170853",
+      "retained_outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "submission_receipt": {
+        "bytes": 1589,
+        "sha256": "930312c9ab31f75d7b608dfad31380ed9e1eaa0d9caeddff324b3560f427e8a3",
+        "copies_match": true
+      },
+      "runtime_sha256": "sha256:744f3dd83dfafc96c3d042020b6ddadfa541b2dcd3fefc23d59ebe739e8f5813",
+      "final_policy_sha256": "sha256:b85180b308ce52b7532adc4046e931bdfce5685233f32028f7810a8a19e50044",
+      "lifecycle_sha256": "sha256:34430957b8f6ff30a6ec750c18e4a014da39d03b7dae9934ccc89953d0a5f413"
+    },
+    {
+      "position": 6,
+      "variant": "absent",
+      "trial": 3,
+      "state": "completed",
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "usage": {
+        "trial": "campaign-pester-transfer-batch-v1-attempt3__slot6",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.167-exec-json",
+        "n_input_tokens": 80551,
+        "n_cache_tokens": 65097,
+        "n_output_tokens": 1685,
+        "estimated_usd": 0.054267699999999995,
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "elapsed_seconds": 111.755,
+      "native_exception": null,
+      "cleanup": true,
+      "submission": {
+        "sha256": "7137a3cbfcf59a1ea1703e0eddd38d89f274076027f96f3cf4827af05af94ca0",
+        "bytes": 1631,
+        "file": "Subject.Tests.ps1"
+      },
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": false,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "task_checksum": "184a71b9b8c2a7a15a195472dd6f6f6de6bbfc6aa0b398d8a8f7eaff773cb427",
+      "measured": true,
+      "reference_correct": true,
+      "defects": {
+        "enabled-integer": 1,
+        "enabled-zero": 1,
+        "quantity-above": 1,
+        "quantity-below": 1,
+        "quantity-offset": 1
+      },
+      "primary_success": true,
+      "cli_usage_counters_verified": true,
+      "grade_sha256": "sha256:f852e3f1b7655bdcdfada5845661a46f64d50dba5c58c48d11b633e718170853",
+      "retained_outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 5,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      },
+      "submission_receipt": {
+        "bytes": 1631,
+        "sha256": "7137a3cbfcf59a1ea1703e0eddd38d89f274076027f96f3cf4827af05af94ca0",
+        "copies_match": true
+      },
+      "runtime_sha256": "sha256:285d4697d1e223a9a5d8d177db0cdf4271a37a5e86c61c62765146981029ab53",
+      "final_policy_sha256": "sha256:43c8170ee7d273568d414b102dc88028ca0f623fbc777783ebb002b6ac85dad9",
+      "lifecycle_sha256": "sha256:6a656ce76725adb06a21ec099de6e9d0452603a2e208f0f4bc25b9ebd1a798c3"
+    }
+  ],
+  "unlaunched_positions": [],
+  "issues": [],
+  "primary_stop": null,
+  "report_reproduced": true,
+  "native_projection_reproduced": true,
+  "live_artifact": {
+    "id": 14382333232,
+    "digest": "sha256:e2b0aebd3c2884777bd4ca57c8ca48b1fd07a28a9a2f46a5a2568684d89779c1",
+    "expires_at": "2027-02-15T23:51:09Z",
+    "size_in_bytes": 546711,
+    "name": "campaign-live-1"
+  },
+  "evidence_location": "campaign-live/evidence",
+  "ledger_sha256": "sha256:5531478e599ee452db13e685a46f14e79e43a845090efee75f44410677f23995",
+  "ledger_state": "completed",
+  "report_failure": null,
+  "cleanup_complete": true,
+  "serial_order_verified": true,
+  "transitions_sha256": "sha256:fc7e2902a3c2156c50ab5904b6894b144b81679e4546c7bb387ba57dffb35c0e",
+  "usage_complete": true,
+  "known_estimated_usd": 0.3389116,
+  "campaign_estimated_usd": 0.3389116,
+  "machine_sha256": "sha256:526ac0aef98f50529d9b9d89a3ce6bcb6bc2a14bbd63d9e38a3a9ebbbb07fd73",
+  "html_sha256": "sha256:70cb177c83409378cfbb60e2b9cc685facd587fa64e7b76b6eee27fc38c87432",
+  "launched": 6,
+  "measured": 6,
+  "time": "2026-11-18T00:07:17.920992+00:00",
+  "passed": true
+}

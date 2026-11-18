@@ -1,0 +1,110 @@
+{
+  "campaigns": [
+    {
+      "campaign": "pester-return-transfer-current-v6",
+      "run": 44202925702,
+      "known_usd": 0.3389116,
+      "accounting_complete": true,
+      "arms": {
+        "current": {
+          "completed": 3,
+          "launched": 3,
+          "measured": 3,
+          "reference": 3,
+          "defects": {
+            "enabled-integer": 3,
+            "enabled-zero": 3,
+            "quantity-offset": 3,
+            "quantity-below": 3,
+            "quantity-above": 3
+          },
+          "primary_success": 3,
+          "usage_records": 3,
+          "input_tokens": 284948,
+          "cached_input_tokens": 230088,
+          "output_tokens": 5618,
+          "estimated_usd": 0.1889088,
+          "launch_seconds": 426.174,
+          "full_skill_reads_observed": 0
+        },
+        "absent": {
+          "completed": 3,
+          "launched": 3,
+          "measured": 3,
+          "reference": 3,
+          "defects": {
+            "enabled-integer": 3,
+            "enabled-zero": 3,
+            "quantity-offset": 3,
+            "quantity-below": 3,
+            "quantity-above": 3
+          },
+          "primary_success": 3,
+          "usage_records": 3,
+          "input_tokens": 219509,
+          "cached_input_tokens": 175408,
+          "output_tokens": 4426,
+          "estimated_usd": 0.1500028,
+          "launch_seconds": 345.543,
+          "full_skill_reads_observed": 0
+        }
+      }
+    },
+    {
+      "campaign": "pester-return-transfer-candidate-v6",
+      "run": 44205331725,
+      "known_usd": 0.33859469999999997,
+      "accounting_complete": true,
+      "arms": {
+        "candidate": {
+          "completed": 3,
+          "launched": 3,
+          "measured": 3,
+          "reference": 3,
+          "defects": {
+            "enabled-integer": 3,
+            "enabled-zero": 3,
+            "quantity-offset": 3,
+            "quantity-below": 3,
+            "quantity-above": 3
+          },
+          "primary_success": 3,
+          "usage_records": 3,
+          "input_tokens": 265616,
+          "cached_input_tokens": 211337,
+          "output_tokens": 5536,
+          "estimated_usd": 0.1850517,
+          "launch_seconds": 409.551,
+          "full_skill_reads_observed": 0
+        },
+        "absent": {
+          "completed": 3,
+          "launched": 3,
+          "measured": 3,
+          "reference": 3,
+          "defects": {
+            "enabled-integer": 3,
+            "enabled-zero": 3,
+            "quantity-offset": 3,
+            "quantity-below": 3,
+            "quantity-above": 3
+          },
+          "primary_success": 3,
+          "usage_records": 3,
+          "input_tokens": 231651,
+          "cached_input_tokens": 187710,
+          "output_tokens": 4689,
+          "estimated_usd": 0.153543,
+          "launch_seconds": 349.353,
+          "full_skill_reads_observed": 0
+        }
+      }
+    }
+  ],
+  "known_total_usd": 0.6775063,
+  "accounting_complete": true,
+  "billing_reconciled": false,
+  "estimate_excludes_cache_writes": true,
+  "ci_cost_included": false,
+  "report_sha256": "7376ff2d76f210e3cf534bd23249d95a7f1866ac9c9a2bfde0da8587b463e7ba"
+}

@@ -1,0 +1,51 @@
+{
+  "run_id": 44202925702,
+  "attempt": 1,
+  "event": "workflow_dispatch",
+  "created_at": "2026-11-17T23:51:08Z",
+  "completed_by": "2026-11-18T00:06:20Z",
+  "head_ref": "prep/pester-final-transfer",
+  "execution_revision": "2b58a4652b576247d91ba01c6ce7a743ff703331",
+  "conclusion": "success",
+  "run_url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/44202925702",
+  "gate": "skill-benchmark",
+  "approved": true,
+  "authentication_artifact": 14383080141,
+  "dispatch_authentication": {
+    "artifact": "14378272338",
+    "artifact_digest": "sha256:672b4d116f0914ea89f35a85fd9cfb9c3fe7e2e87c6ac5edabc0370852cf0038",
+    "producer_run": 44187111680,
+    "revision": "2b58a4652b576247d91ba01c6ce7a743ff703331",
+    "protocol_digest": "sha256:0d6db8b374eec3aae64e0c43ab21ee818c7d71fe3030e819bcc263290dc7db58",
+    "dispatch": "1e0533f990901769",
+    "run_id": "44202925702",
+    "allocation": "campaign-2b58a4652b576247d91ba01c6ce7a743ff703331-pester-return-transfer-current-v6-prep14378272338-usd8-1e0533f990901769",
+    "first_dispatch": true,
+    "authentication": "github-api-producer-and-digest",
+    "definition": ".github/evals/campaigns/pester-return-transfer-current-v6.json",
+    "definition_digest": "sha256:3506bd45f25d0b6d5c8dfdc177f8a56a4139421fc3ab78070b3162913dbe0760",
+    "selection_digest": "sha256:abb67d79ccdb952fa1e1a50f0826058d7b51e3b3a6713214ef93b8439db1c42f",
+    "preparation_location": "preparation/evidence"
+  },
+  "preparation": {
+    "run": 44187111680,
+    "attempt": 1,
+    "artifact": 14378272338,
+    "archive_digest": "sha256:672b4d116f0914ea89f35a85fd9cfb9c3fe7e2e87c6ac5edabc0370852cf0038",
+    "expires_at": "2027-02-15T22:08:55Z",
+    "registered_location": "preparation/evidence"
+  },
+  "inspection": {
+    "run": 44194708571,
+    "artifact": 14377304384,
+    "archive_digest": "sha256:834bb5acc3d9d3b89cf076158fab5f2faa5bb73a206bdd2e1b8e4ba3c42b2157",
+    "expires_at": "2027-02-15T22:55:40Z",
+    "report_sha256": "d0df74e45b9f9d8e3591794745aa2d313116158cb13f4c842b3d604104092357"
+  },
+  "source_identities": {
+    "grader_digest": "sha256:bbd6b2c340dcbe4292267d4d49f3c6d4c2cb99d8d3038b5249ca279537cb52a4",
+    "fixture_digest": "sha256:9a8d599d4bb65adc64906e3e2ea5a2de80d55b5a49e6f76b9bc47a703e5af5e2",
+    "runtime_digest": "sha256:0d521e5e537d009f12ad45f94b2905a9f86b7c48aaf9108578751bf54ae62228"
+  },
+  "protocol": "sha256:0d6db8b374eec3aae64e0c43ab21ee818c7d71fe3030e819bcc263290dc7db58"
+}

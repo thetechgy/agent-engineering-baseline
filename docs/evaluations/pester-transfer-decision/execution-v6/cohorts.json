@@ -1,0 +1,55 @@
+{
+  "execution_revision": "2b58a4652b576247d91ba01c6ce7a743ff703331",
+  "source_ci": 44187105820,
+  "inputs": [
+    {
+      "bundle": "current",
+      "campaign": "pester-return-transfer-current-v6",
+      "run": 44202925702,
+      "source_artifact": {
+        "id": 14382333232,
+        "digest": "sha256:e2b0aebd3c2884777bd4ca57c8ca48b1fd07a28a9a2f46a5a2568684d89779c1",
+        "expires_at": "2027-02-15T23:51:09Z",
+        "size_in_bytes": 546711,
+        "name": "campaign-live-1"
+      },
+      "report_availability": {
+        "provenance": "runtime_recorded",
+        "reasons": [
+          "execution_incomplete"
+        ],
+        "status": "incomplete"
+      },
+      "live_report_sha256": "sha256:70cb177c83409378cfbb60e2b9cc685facd587fa64e7b76b6eee27fc38c87432",
+      "members": {
+        "inventory.json": "18dc2125e23900fc043413c8fd77bc83b98bca3af36e66dcd78c76ef7674ac0f",
+        "public-report.json": "67e1dd9d7588cd42644fc6863540093369cea32e6cd1eb829064446b1cada79d"
+      }
+    },
+    {
+      "bundle": "candidate",
+      "campaign": "pester-return-transfer-candidate-v6",
+      "run": 44205331725,
+      "source_artifact": {
+        "id": 14384421602,
+        "digest": "sha256:e04608899baba25d0a3c1832accb1272768ba50f4df9b180f82bc4ec84cb47cf",
+        "expires_at": "2027-02-16T00:08:27Z",
+        "size_in_bytes": 549799,
+        "name": "campaign-live-1"
+      },
+      "report_availability": {
+        "provenance": "runtime_recorded",
+        "reasons": [
+          "execution_incomplete"
+        ],
+        "status": "incomplete"
+      },
+      "live_report_sha256": "sha256:dbe1622a4f8f31070c68d495d2899e275666a93b517d9393690a67c9e8a08e3e",
+      "members": {
+        "inventory.json": "18dc2125e23900fc043413c8fd77bc83b98bca3af36e66dcd78c76ef7674ac0f",
+        "public-report.json": "678abdaae40f610c4933e97e25bd553c37057ce9118c39e1012ead3c5a5d1e6a"
+      }
+    }
+  ],
+  "comparison": "Each present arm is paired with its own absent arm. The comparison between present arms is indirect."
+}
