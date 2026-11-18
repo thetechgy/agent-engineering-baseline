@@ -66,6 +66,10 @@
           "label": "Frozen task contract",
           "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/2b58a4652b576247d91ba01c6ce7a743ff703331/.github/evals/pester-return-contract/transfer/prompt.txt#L1-L7"
         }
+      },
+      "qualification": {
+        "id": "pester-transfer-batch-v2",
+        "member": "pester-transfer-decision/diagnostics/quantity-int128-native-v2.json"
       }
     },
     {
