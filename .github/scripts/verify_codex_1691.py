@@ -133,12 +133,24 @@ def verify_preparation(reference, output):
             and refusal['entries'][0]['usage']['estimated_usd'] is None
             and receipt['requests'] == 1 and receipt['cli_returncode'] != 0,
             'Provider refusal did not stop with unknown cost and no second launch')
+    missing = scenarios / 'unknown-usage/evidence'
+    missing_ledger = read_json(missing / 'attempt-ledger.json')
+    first, second = missing_ledger['entries']
+    missing_native = missing / 'retained' / first['native_trial'].removeprefix('jobs/')
+    missing_request = read_json(next(missing_native.rglob('probe.json')))
+    require(missing_ledger['cleanup_complete'] and missing_ledger['stop_reason'] == 'unknown_usage'
+            and first['state'] == 'failed' and first['grading_present'] and first['cleanup']
+            and first['usage']['completeness'] == 'unavailable' and first['usage']['estimated_usd'] is None
+            and 'observation_injection' not in first and second['state'] == 'unlaunched'
+            and missing_request['provider_usage_supplied'] is False and missing_request['requests'] == 2,
+            'Native missing usage was priced or allowed another launch')
     with tempfile.TemporaryDirectory(prefix='codex-1691-preparation-auth-') as directory:
         result = run_case(Path(directory) / 'actual-preparation', task, 'accepted', preparation=reference)
         require(result['receipt_present'], 'Actual preparation did not reach the receipt validator')
     write_json(output, {'revision': revision(), 'complete': True, 'inference': False,
                         'fixture_authentication': True, 'fixture_receipts_retained': False,
                         'paired_slots': len(rows), 'refusal_requests': receipt['requests'],
+                        'native_missing_usage_stop': True,
                         'reproduced_report_digest': digest(reference / 'consolidated/report.html')})
 
 

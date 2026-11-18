@@ -90,12 +90,20 @@ class PilotCodex(Codex):
                 context.metadata['usage_observation_failure'] = 'invalid_or_contradictory_usage'
                 return
             raise ValueError('Invalid or contradictory CLI usage protocol')
+        written = usage.get('cache_write_input_tokens')
+        if (self.profile['id'] == CODEX_LIVE_PROFILE and all(usage[key] == 0 for key in keys)
+                and (written is None or type(written) is int and written == 0)):
+            # A terminal turn with no provider usage is serialized as an all-zero
+            # record by 0.169.1. This task necessarily has a nonempty input.
+            context.n_input_tokens = context.n_cache_tokens = context.n_output_tokens = None
+            context.metadata = {'usage_observation_failure': 'empty_cumulative_usage',
+                                'execution_complete': not interrupted}
+            return
         context.n_input_tokens = usage['input_tokens']
         context.n_cache_tokens = usage['cached_input_tokens']
         context.n_output_tokens = usage['output_tokens']
         cache_write = {}
         if self.profile['cli'] == '0.169.1':
-            written = usage.get('cache_write_input_tokens')
             if self.profile['id'] == CODEX_LIVE_PROFILE:
                 # Carry only a numeric count through native credential redaction.
                 cache_write['cache_write_input_count'] = written if type(written) is int and written >= 0 else None

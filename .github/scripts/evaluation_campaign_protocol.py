@@ -386,7 +386,7 @@ def prepare(root, task, qualification, authentication_qualification=None):
         'protocol_digest':digest(ROOT/task.definition['protocol']),'scenarios':summaries,
         'limits':['non-forwarding CLI responses do not establish authentication or arbitrary live event compatibility',
                   'missing/unsupported observations are declared adapter injections after real CLI execution',
-                  'threshold/unknown usage are declared host injections; native records remain intact']})
+                  'threshold and simulated unknown usage are declared host injections; native records remain intact']})
     reports.write_json(retained/'preparation.json',{'complete':True,'inference':False,'revision':revision(),
         'protocol_digest':digest(ROOT/task.definition['protocol']),'authorized_live_attempts':0})
 

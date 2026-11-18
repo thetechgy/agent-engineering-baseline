@@ -157,7 +157,7 @@ def construct_launch(root, task, mode, native, present, trial_name, job, extra, 
     if mode in ('probe', 'experiment-probe'):
         env['AEB_PILOT_PROBE'] = '1'
     if mode == 'experiment-probe':
-        env.update(adapter.fixture_environment(task, fixture, row))
+        env.update(adapter.fixture_environment(task, fixture, row, runtime=selected['resolved']))
     if mode == 'live':
         # Last operation: no rejected metadata/authentication can receive the key.
         env.update(OPENAI_API_KEY=live_key or '', AEB_CAMPAIGN_APPROVAL=os.environ['AEB_CAMPAIGN_APPROVAL'],
@@ -303,7 +303,7 @@ def run(root, task, mode, *, reference=None, fixture=None):
                     reason = stop_reason(row)
             # Explicit host accounting observations exercise scheduling stop rules.
             # Original native usage/grades remain unchanged and retained.
-            if fixture in ('threshold', 'unknown-usage'):
+            if not reason and fixture in ('threshold', 'unknown-usage'):
                 row['native_usage'] = row['usage']
                 row['usage'] = dict(row['usage'], estimated_usd=5 if fixture == 'threshold' else None)
                 row['observation_injection'] = fixture

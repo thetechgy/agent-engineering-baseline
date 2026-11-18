@@ -13,7 +13,7 @@ import tempfile
 from codex_pilot_agent import PilotCodex
 from codex_pilot_environment import PilotEnvironment
 from evaluation_campaign_core import require
-from evaluation_runtime import ROOT, CODEX_090_PROFILES, read_profile, failure_reason
+from evaluation_runtime import ROOT, CODEX_090_PROFILES, CODEX_LIVE_PROFILE, read_profile, failure_reason
 
 
 class MissingCodexObservation(ValueError):
@@ -652,9 +652,11 @@ def skill_access(trial, present, native, *, allow_bash=False):
             'interpretation': 'access only; no task quality or benefit implied'}
 
 
-def fixture_environment(task, fixture, row):
+def fixture_environment(task, fixture, row, *, runtime):
     control = task.fixture_control(fixture, row)
     result = {'AEB_CAMPAIGN_CONTROL':control, 'AEB_PILOT_SCENARIO':fixture if fixture in ('interruption', 'provider-refusal', 'malformed-response', 'provider-timeout') else 'success'}
+    if fixture == 'unknown-usage' and runtime['id'] == CODEX_LIVE_PROFILE:
+        result['AEB_PILOT_SCENARIO'] = 'missing-usage'
     if fixture in ('missing-evidence', 'unsupported-runtime'):
         result['AEB_CAMPAIGN_OBSERVATION_FIXTURE'] = fixture
     return result
