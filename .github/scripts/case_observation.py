@@ -217,7 +217,8 @@ def verify_qualification(root, task):
                      and not record["missing"] and answer == ANSWER, "Unexpected observation state: " + name)
         answers.add(answer)
         if name == "collection-interrupted":
-            core.require(workspace.get("status") == "incomplete" and "changes" not in workspace and
+            core.require(workspace == {"status": "incomplete", "reason": "operator_command_failed",
+                                       "operation": "exec", "returncode": os.EX_DATAERR} and
                          ledger.get("stop_reason") == "missing_usable_evidence", "Missing comparison appeared complete")
         elif name == "no-change":
             core.require(workspace["status"] == "complete" and workspace["changes"] == [], "Unobserved empty workspace")
@@ -232,7 +233,8 @@ def verify_qualification(root, task):
                           "attempts": len(ledger["entries"]), "arm": "current", "model_judge_calls": record["model_judge_calls"],
                           "quality": record["quality"], "cleanup": True,
                           "answer_sha256": hashlib.sha256(answer.encode()).hexdigest(),
-                          "changes": [c["path"] for c in workspace["changes"]] if "changes" in workspace else None}
+                          "changes": [c["path"] for c in workspace["changes"]] if "changes" in workspace else None,
+                          **({"scanner_exit": workspace["returncode"]} if name == "collection-interrupted" else {})}
     core.require(len(answers) == 1, "Fixture answers differ")
     proof = root / "evidence/scheduler-qualification.json"
     if proof.exists():

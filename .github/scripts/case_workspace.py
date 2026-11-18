@@ -90,7 +90,11 @@ def walk(rootfd, baseline):
 
 if __name__ == "__main__":
     try:
-        result = compare("/workspace", json.load(sys.stdin))
+        baseline = json.load(sys.stdin)
+    except (OSError, ValueError):
+        sys.exit(os.EX_DATAERR)
+    try:
+        result = compare("/workspace", baseline)
         print(json.dumps(result, sort_keys=True, separators=(",", ":")))
     except (OSError, ValueError, UnicodeError):
         sys.exit(1)

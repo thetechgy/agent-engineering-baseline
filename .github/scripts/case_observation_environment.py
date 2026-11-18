@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 from pathlib import Path
 
 from codex_pilot_environment import PilotEnvironment
@@ -31,8 +32,9 @@ class ObservationEnvironment(PilotEnvironment):
                     chunks.extend(chunk)
                     if len(chunks) > MAX_RECORD:
                         raise ValueError("Workspace observation size limit")
-                if await proc.wait():
-                    raise ValueError("Workspace observation unavailable")
+                status = await proc.wait()
+                if status:
+                    raise subprocess.CalledProcessError(status, argv[0])
                 return bytes(chunks)
         finally:
             if proc.returncode is None:
@@ -61,10 +63,15 @@ class ObservationEnvironment(PilotEnvironment):
     async def _scan(self, container, baseline):
         # Direct exec of the image interpreter. Isolated mode ignores the task's
         # Python environment, site packages and current directory.
+        payload = json.dumps(baseline).encode()
+        if baseline is not None and getattr(self, "interrupt_observation", False):
+            # Close the real Docker stdin stream before the final JSON byte.
+            # The trusted scanner must report the interrupted input itself.
+            payload = payload[:-1]
         value = await self._operator("exec", "-i", "--user", "agent", "--workdir", "/",
                                      container, "/usr/local/bin/python3", "-I", "-S",
                                      "-c", read_bytes(SCANNER, limit=16384).decode(),
-                                     payload=json.dumps(baseline).encode())
+                                     payload=payload)
         return json.loads(value)
 
     async def start_observation(self, container):
@@ -102,8 +109,6 @@ class ObservationEnvironment(PilotEnvironment):
             result = await self._scan(cid, baseline)
             if await self._idle(cid) != self._case_idle:
                 raise ValueError("Workload started during collection")
-            if getattr(self, "interrupt_observation", False):
-                raise InterruptedError("Qualification interruption before publication")
             from base64 import b64decode
             from skillevaluator.utils.redaction import is_sensitive_key, redact_printable_text
             from skillevaluator.tier3.harbor.secure_docker_environment import _redact
@@ -131,5 +136,8 @@ class ObservationEnvironment(PilotEnvironment):
                                "baseline_input_files": self._case_input_count,
                                "baseline_sha256": hashlib.sha256(json.dumps(baseline, sort_keys=True).encode()).hexdigest()})
             os.replace(ready, dest)
+        except subprocess.CalledProcessError as error:
+            write_json(dest, {"status": "incomplete", "reason": "operator_command_failed",
+                              "operation": error.cmd, "returncode": error.returncode})
         except (AttributeError, KeyError, OSError, TimeoutError, ValueError) as error:
             write_json(dest, {"status": "incomplete", "reason": type(error).__name__})
