@@ -106,8 +106,10 @@ def verify_preparation(reference, output):
         require(reward['custom_metrics'] == row['custom_metrics']
                 and reward['details']['outcome'] == row['outcome'], 'Independent verifier handoff drift')
         submitted = [path for path in native.rglob(task.output) if 'submitted' in path.parts]
-        require(len(submitted) == 1 and submitted[0].read_bytes() == task.payload(control),
-                'Retained submission bytes differ from fixture output')
+        # The CLI's tool writes the result JSON. Use its producer receipt for
+        # exact bytes and the fixture payload for the expected content.
+        require(len(submitted) == 1 and read_json(submitted[0]) == json.loads(task.payload(control)),
+                'Unexpected fixture submission content')
         receipt = {'sha256': digest(submitted[0]).removeprefix('sha256:'), 'bytes': submitted[0].stat().st_size}
         require(read_json(next(native.rglob('pilot-produced-submission.json'))) == receipt
                 and row['submission'] == {**receipt, 'file': task.output}, 'Producer submission handoff drift')
