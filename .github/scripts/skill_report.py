@@ -561,11 +561,17 @@ def custom_measurements(run, record):
               'Unavailable' if defect['detected'] is None else 'Detected' if defect['detected'] else 'Missed', text(defect.get('basis')),
               link('observation', (rid, obs['id']), 'Trial and evidence')]
              for obs in record['observations'] for defect in obs['custom']['defects']]))
+    usage_columns = [('Input tokens', 'n_input_tokens'), ('Cache tokens', 'n_cache_tokens'),
+                     ('Output tokens', 'n_output_tokens'), ('Agent seconds', 'agent_execution_seconds'),
+                     ('Verifier seconds', 'verifier_seconds')]
+    if any('cache_write_input_count' in obs['custom']['usage'] for obs in record['observations']):
+        usage_columns[1:2] = [('Cache-read tokens', 'n_cache_tokens'), ('Cache-write tokens', 'cache_write_input_count')]
     parts.append('<details><summary>Native token and phase-runtime observations</summary><p>Missing values stay unknown. '
         'Input tokens include cache tokens; phase durations are derived only from recorded start/finish times. '
         'These observations do not establish total model/judge usage.</p>' + table('Per-trial reported usage',
-        ('Case / arm', 'Input tokens', 'Cache tokens', 'Output tokens', 'Agent seconds', 'Verifier seconds'),
-        [[code(obs['case_id']) + ' / ' + safe(ARM[obs['arm']]), *[text(obs['custom']['usage'][key]) for key in ('n_input_tokens', 'n_cache_tokens', 'n_output_tokens', 'agent_execution_seconds', 'verifier_seconds')]]
+        ('Case / arm', *(label for label, key in usage_columns)),
+        [[code(obs['case_id']) + ' / ' + safe(ARM[obs['arm']]),
+          *[text(obs['custom']['usage'][key]) for label, key in usage_columns]]
          for obs in record['observations']]) + '</details>')
     parts.append('<p>Custom cross-run numeric comparisons and custom-metric history publication are disabled. '
                  'Incomplete required populations retain trial measurements but no aggregate comparison.</p>')

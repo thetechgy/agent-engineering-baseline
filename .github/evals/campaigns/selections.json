@@ -113,6 +113,19 @@
         }
       ]
     },
+    "gh-codex-1691-live": {
+      "definition": ".github/evals/campaigns/gh-codex-1691-live.json",
+      "controls": [
+        ".github/evals/campaigns/gh-codex-1691.json"
+      ],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "preparation/evidence"
+        }
+      ]
+    },
     "gh-task-permission-v2": {
       "definition": ".github/evals/campaigns/gh-task-permission-v2-live.json",
       "controls": [

@@ -43,7 +43,7 @@ def usage_record(value, *, probe=False, runtime=None):
     counts = {key: agent.get(key) for key in ('n_input_tokens', 'n_cache_tokens', 'n_output_tokens')}
     metadata = agent.get('metadata') or {}
     candidate = selected['cli'] == '0.169.1'
-    writes = metadata.get('n_cache_write_input_tokens') if candidate else 0
+    writes = metadata.get('cache_write_input_count', metadata.get('n_cache_write_input_tokens')) if candidate else 0
     if candidate:
         counts['n_cache_write_input_tokens'] = writes
     valid = all(type(v) is int and v >= 0 for v in counts.values())
