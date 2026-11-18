@@ -1378,6 +1378,42 @@ explained in the report. Recorded rubric and gate outcomes display as â€œPassedâ
 remain signed to four decimal places, with direction visible even when rounding
 produces zero. Contextual links identify the skill and case where applicable.
 
+### Review the retained Codex decisions
+
+Use the same saved-analysis and consolidated renderer with the report-only
+decision entry point. The checked-in reviewer input selects the two matched
+Pester cohorts and the completed permission pilot. It identifies the sources
+for the decisions, the submission inspection and the permission event.
+
+With the data-only reporting interpreter configured above, choose a new
+persistent output directory outside the checkout.
+
+```bash
+report_parent="$HOME/worktrees/skill-decision-review"
+mkdir -m 700 "$report_parent"
+pester_data="docs/evaluations/pester-transfer-decision/execution-v6/data"
+
+"$SKILL_NEXT_PYTHON" -B .github/scripts/skill_analysis.py \
+  --input "$pester_data/current" --input "$pester_data/candidate" \
+  --output "$report_parent/analysis"
+
+"$SKILL_NEXT_PYTHON" -B .github/scripts/skill_report_decisions.py \
+  --input "$pester_data/current" --input "$pester_data/candidate" \
+  --analysis "$report_parent/analysis/analysis.json" \
+  --decisions docs/evaluations/report-decisions.json \
+  --output "$report_parent/html"
+```
+
+Open `"$report_parent/html/report.html"`. Follow the result links for scores,
+the receipt links for provenance, and the run links for logs.
+
+The decision input binds each transfer row to an admitted public record and
+the permission rows to the exact checked-in execution receipt. The historical
+permission bundle uses the campaign registry from its execution revision.
+This preview reads the verified receipt for that pair and links back to the
+recorded outcomes. Incomplete pairs show unknown and withhold the attributed
+recommendation. The decision section requires no model access.
+
 ### Reproduce the offline demonstration
 
 This uses the existing ten-case/twenty-observation Podman measured extract,
