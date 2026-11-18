@@ -127,7 +127,7 @@ class AccountingTests(unittest.TestCase):
         import hashlib
         import skill_evidence as evidence
         registry=reports.read_json(ROOT/evidence.CUSTOM_REGISTRY)
-        registry['profiles'] = {k:v for k,v in registry['profiles'].items() if '-source-v27-' not in k and '-source-v26-' not in k and k not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18') and '-source-v25-' not in k}
+        registry['profiles'] = {k:v for k,v in registry['profiles'].items() if '-source-v28-' not in k and k not in ('pester-effectiveness-v31', 'pester-cli-pilot-retained-v19') and '-source-v27-' not in k and '-source-v26-' not in k and k not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18') and '-source-v25-' not in k}
         added=[k for k in registry['profiles'] if '-source-v24-' in k or k=='pester-effectiveness-v29']
         self.assertEqual(len(added),36)
         for key in added:

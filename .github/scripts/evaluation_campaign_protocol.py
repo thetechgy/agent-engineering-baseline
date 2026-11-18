@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from evaluation_campaign_selection import binding, location, registration
 
 from evaluation_campaign_core import require, schedule
-from evaluation_runtime import ROOT, read_profile
+from evaluation_runtime import CODEX_090_PROFILES, ROOT, read_profile
 import evaluator_profiles as profiles
 import skill_evidence as evidence
 import skill_reports as reports
@@ -33,7 +33,7 @@ def scenarios(task):
     if declared is not None:
         require(type(declared) is list and len(set(declared)) == len(declared)
                 and set(SCENARIOS) - {'invalid'} <= set(declared)
-                and set(declared) <= set(SCENARIOS) | {'verifier-failure', 'cleanup-failure'}, 'Unregistered qualification scenario')
+                and set(declared) <= set(SCENARIOS) | {'verifier-failure', 'cleanup-failure', 'provider-refusal'}, 'Unregistered qualification scenario')
         return tuple(declared)
     if task.definition['id'] == 'gh-runtime-090-v1':
         return ('complete', 'interruption', 'missing-evidence', 'unsupported-runtime',
@@ -114,7 +114,7 @@ def check(reference, staging, task, *, qualified=True):
         return {(r['arm'],r['case_id']):{k:v for k,v in r['members'].items() if k != 'task.toml'}
                 for r in reports.read_json(directory / 'staging.json')}
     require(members(reference) == members(staging), 'Complete staged-member drift')
-    if not qualified and read_profile(ROOT / task.definition['runtime_profile'])['profile']['id'] == 'codex-090-diagnostic-v1':
+    if not qualified and read_profile(ROOT / task.definition['runtime_profile'])['profile']['id'] in CODEX_090_PROFILES:
         from evaluation_codex import compare_probe_descriptors
         result = compare_probe_descriptors(reference, staging)
     else:

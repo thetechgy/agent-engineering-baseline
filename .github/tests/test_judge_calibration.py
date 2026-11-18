@@ -84,7 +84,7 @@ class JudgeContracts(unittest.TestCase):
     def test_frozen_historical_profiles_are_preserved(self):
         import hashlib
         value = reports.read_json(ROOT / '.github/evals/custom-metrics.json')
-        original = {**value, 'profiles': {k:v for k,v in value['profiles'].items() if '-source-v27-' not in k and '-source-v26-' not in k and k not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18') and '-source-v25-' not in k}}
+        original = {**value, 'profiles': {k:v for k,v in value['profiles'].items() if '-source-v28-' not in k and k not in ('pester-effectiveness-v31', 'pester-cli-pilot-retained-v19') and '-source-v27-' not in k and '-source-v26-' not in k and k not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18') and '-source-v25-' not in k}}
         self.assertEqual(len(original['profiles']), 839)
         from evaluation_evidence import source_manifest
         import skill_evidence as evidence
@@ -95,7 +95,7 @@ class JudgeContracts(unittest.TestCase):
             old = value['profiles'][key.replace('-source-v25-', '-source-v24-')]
             self.assertEqual({k:v for k,v in row.items() if k not in ('id', 'runtime_digest')},
                              {k:v for k,v in old.items() if k not in ('id', 'runtime_digest')})
-            active = key.replace('-source-v25-', '-source-v27-')
+            active = key.replace('-source-v25-', '-source-v28-')
             successor = value['profiles'][active]
             self.assertEqual(successor['runtime_digest'],
                              evidence.identity(source_manifest(ROOT, successor['skill_id'], active)))

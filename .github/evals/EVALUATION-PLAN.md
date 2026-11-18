@@ -2,15 +2,18 @@
 
 ## Codex 0.169.1 proposed profile for issue #95
 
-The opt-in `gh-014` credential-free qualification uses Codex CLI 0.169.1 /
-`gpt-6.2-sol` / high with SkillEvaluator 0.9.0 / Harbor 0.25.0. It retains the
-`gh-task-permission-v2` grader, task and matched APM content. The draft PR's
-exact-source hosted receipt governs qualification. The held 0.155.1 /
-`gpt-5.6-sol` / high selection and replay profiles remain available.
-[Qualification and rollback](../../docs/evaluations/codex-1691/QUALIFICATION.md).
+PR #152 qualified the non-forwarding `gh-014` selector at Codex CLI 0.169.1 /
+`gpt-6.2-sol` / high. `gh-codex-1691-live` registers a separate opt-in protocol
+with the same CLI and model settings, SkillEvaluator 0.9.0, Harbor 0.25.0, the
+`gh-task-permission-v2` grader and matched APM deployments. The paired report
+requires one current attempt followed by one absent attempt, with at most one
+deterministic verifier per submission and zero model judges. This checks
+operational compatibility. The held 0.155.1 selection and replay remain available.
+[Fixture qualification and rollback](../../docs/evaluations/codex-1691/QUALIFICATION.md).
 
-**Codex next action** — Review the exact-source fixture receipt before deciding
-whether to authorize one bounded live Codex compatibility check.
+**Codex next action** — Review the exact-source preparation receipt in the draft
+PR before deciding on one dispatch and its matching `skill-benchmark` approval.
+Live execution is UNRUN.
 
 ## Pester clarification transfer decision
 

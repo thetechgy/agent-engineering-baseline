@@ -1,0 +1,27 @@
+{
+  "id": "gh-codex-1691-live",
+  "adapter": "gh-permission",
+  "skill": "gh",
+  "source": ".agents/skills/gh",
+  "source_case": "gh-014",
+  "runtime_profile": ".github/evals/campaigns/codex-1691-live.json",
+  "variants": [
+    {
+      "id": "current",
+      "present": true
+    },
+    {
+      "id": "absent",
+      "present": false
+    }
+  ],
+  "trials": 1,
+  "attempt_limit": 2,
+  "stop_estimate_usd": 1,
+  "authorized_live_attempts": 0,
+  "controls": [
+    "good",
+    "unauthorized"
+  ],
+  "protocol": ".github/evals/campaigns/gh-codex-1691-live-protocol.json"
+}

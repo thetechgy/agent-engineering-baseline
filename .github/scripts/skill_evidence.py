@@ -3515,9 +3515,9 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v30'
+        profile_id = 'pester-effectiveness-v31'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-cli-pilot-retained-v18'
+        profile_id = 'pester-cli-pilot-retained-v19'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
         profile_id = 'gh-native-oracle-v1'
     profile_id = registry['active_profiles'].get(name) if profile_id is None else profile_id
@@ -4345,7 +4345,8 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                 observation['raw_deterministic_scores'] = dict.fromkeys(GATE_FIELDS)
             observation['custom'] = {'outcome': outcome, 'measurements': custom_measurements(definitions,
                 profile['cases'][mapping[case_id]], outcome, {} if execution_terminated else values, detail, obs_refs),
-                'usage': custom_usage(trial, redacted_counts=profiles.candidate_revision(capture['evaluator_revision'])), 'references': obs_refs}
+                'usage': custom_usage(trial, redacted_counts=profiles.candidate_revision(capture['evaluator_revision']),
+                                      cache_writes=profile.get('cache_write_usage', False)), 'references': obs_refs}
             if profile_family(profile) in ('pester-cli-pilot-v1', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-retained-v3', 'pester-cli-pilot-retained-v4', 'pester-cli-pilot-retained-v5', 'pester-cli-pilot-retained-v6', 'pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6'):
                 observation['custom']['admission_reason'] = None if execution_terminated else detail.get('code')
             if profile_family(profile) in ('pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6'):
@@ -4458,13 +4459,28 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
     return _BehavioralEvidence(data, behavioral_claim_identity(data), input_guards=(guard, *record_guards(standard or {})))
 
 
-def custom_usage(trial, *, redacted_counts=False):
+def validate_custom_usage(usage, *, cache_writes=False):
+    keys = ('n_input_tokens', 'n_cache_tokens', 'n_output_tokens', 'agent_execution_seconds', 'verifier_seconds')
+    closed(usage, keys + (('cache_write_input_count',) if cache_writes else ()))
+    for key in ('n_input_tokens', 'n_cache_tokens', 'n_output_tokens', 'cache_write_input_count'):
+        optional(usage.get(key), lambda v: count(v, 10**12))
+    for key in ('agent_execution_seconds', 'verifier_seconds'):
+        optional(usage[key], lambda v: number(v, 0, 10**12))
+    if usage['n_input_tokens'] is not None:
+        observed_cache = (usage['n_cache_tokens'], usage.get('cache_write_input_count'))
+        require(sum(v for v in observed_cache if v is not None) <= usage['n_input_tokens'],
+                'Contradictory cache-token observation')
+
+
+def custom_usage(trial, *, redacted_counts=False, cache_writes=False):
     context = trial.get('agent_result') or {}
     result = {key: context.get(key) for key in ('n_input_tokens', 'n_cache_tokens', 'n_output_tokens')}
     # The frozen 0.8.0 collector redacts these keys even when their value is null.
     # A removed count is unavailable; it cannot be reconstructed as zero.
     if redacted_counts:
         result = {key: None if value == '<redacted>' else value for key, value in result.items()}
+    if cache_writes:
+        result['cache_write_input_count'] = (context.get('metadata') or {}).get('cache_write_input_count')
     for key in ('agent_execution', 'verifier'):
         phase = trial.get(key) or {}
         start, finish = phase.get('started_at'), phase.get('finished_at')
@@ -4473,11 +4489,7 @@ def custom_usage(trial, *, redacted_counts=False):
             try: value = (datetime.fromisoformat(finish) - datetime.fromisoformat(start)).total_seconds()
             except (ValueError, TypeError): raise ValueError('Invalid native timing') from None
         result[key + '_seconds'] = value
-    for key, value in result.items():
-        if key.startswith('n_'): optional(value, lambda v: count(v, 10**12))
-        else: optional(value, lambda v: number(v, 0, 10**12))
-    if result['n_input_tokens'] is not None and result['n_cache_tokens'] is not None:
-        require(result['n_cache_tokens'] <= result['n_input_tokens'], 'Contradictory cache-token observation')
+    validate_custom_usage(result, cache_writes=cache_writes)
     return result
 
 
@@ -4684,12 +4696,7 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
                 else:
                     require(vals['gh_gate'] == obs['deterministic_gate']
                             and all(vals['gh_' + key] == obs['deterministic_scores'][key] for key in GATE_FIELDS), 'Custom gh gate drift')
-        closed(detail['usage'], ('n_input_tokens', 'n_cache_tokens', 'n_output_tokens', 'agent_execution_seconds', 'verifier_seconds'))
-        for key, value in detail['usage'].items():
-            if key.startswith('n_'): optional(value, lambda v: count(v, 10**12))
-            else: optional(value, lambda v: number(v, 0, 10**12))
-        if detail['usage']['n_input_tokens'] is not None and detail['usage']['n_cache_tokens'] is not None:
-            require(detail['usage']['n_cache_tokens'] <= detail['usage']['n_input_tokens'], 'Contradictory public cache tokens')
+        validate_custom_usage(detail['usage'], cache_writes=profile.get('cache_write_usage', False))
     require(type(data['arms']) is list and sorted(row['name'] for row in data['arms']) == ['with_skill', 'without_skill'], 'Custom paired arms')
     maximum = data['policy']['attempts']['maximum']; require(maximum is not None, 'Unknown planned custom denominator')
     for arm in data['arms']:

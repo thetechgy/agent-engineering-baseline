@@ -12,7 +12,7 @@ import tomllib
 from harbor.agents.installed.codex import Codex
 from codex_pilot_contract import PROFILE, ROOT, configuration
 from codex_pilot_runtime import usage_source
-from evaluation_runtime import CODEX_090_PROFILES, CODEX_FIXTURE_PROFILE
+from evaluation_runtime import CODEX_090_PROFILES, CODEX_FIXTURE_PROFILE, CODEX_LIVE_PROFILE
 
 BINARY = '/opt/codex/bin/codex'
 HOME = '/home/agent/.codex-pilot'
@@ -93,8 +93,14 @@ class PilotCodex(Codex):
         context.n_input_tokens = usage['input_tokens']
         context.n_cache_tokens = usage['cached_input_tokens']
         context.n_output_tokens = usage['output_tokens']
-        cache_write = ({'n_cache_write_input_tokens': usage.get('cache_write_input_tokens')}
-                       if self.profile['id'] == CODEX_FIXTURE_PROFILE else {})
+        cache_write = {}
+        if self.profile['cli'] == '0.169.1':
+            written = usage.get('cache_write_input_tokens')
+            if self.profile['id'] == CODEX_LIVE_PROFILE:
+                # Carry only a numeric count through native credential redaction.
+                cache_write['cache_write_input_count'] = written if type(written) is int and written >= 0 else None
+            else:
+                cache_write['n_cache_write_input_tokens'] = written
         context.metadata = {'usage_source': usage_source(self.profile), 'billing_verified': False,
                             **cache_write,
                             **({'execution_complete': False} if interrupted else {})}
@@ -167,7 +173,7 @@ class PilotCodex(Codex):
             payload = base64.b64encode(raw).decode()
             commands = base64.b64encode(json.dumps(self.fixture_commands(payload)).encode()).decode()
             await self.probe_preflight(environment, env)
-            if self.profile['id'] == CODEX_FIXTURE_PROFILE and scenario == 'success':
+            if self.profile['cli'] == '0.169.1' and scenario == 'success':
                 scenario = 'priced-success'
             # Server has no network forwarding and never authenticates to a provider.
             await self.exec_as_agent(environment, command=(

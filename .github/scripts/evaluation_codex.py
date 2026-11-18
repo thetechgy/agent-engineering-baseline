@@ -13,7 +13,7 @@ import tempfile
 from codex_pilot_agent import PilotCodex
 from codex_pilot_environment import PilotEnvironment
 from evaluation_campaign_core import require
-from evaluation_runtime import ROOT, CODEX_090_PROFILES, CODEX_FIXTURE_PROFILE, read_profile, failure_reason
+from evaluation_runtime import ROOT, CODEX_090_PROFILES, read_profile, failure_reason
 
 
 class MissingCodexObservation(ValueError):
@@ -36,7 +36,7 @@ def exec_trajectory(raw, adapter, *, diagnostics=None):
     Every normalized action links to its exact raw trace and event line(s).
     """
     from harbor.agents.installed.codex import Agent, Trajectory
-    successor = adapter.profile.get('id') == CODEX_FIXTURE_PROFILE
+    successor = adapter.profile.get('cli') == '0.169.1'
     protocol = 'codex-0.169.1-exec-json' if successor else 'codex-0.167-exec-json'
     shells = ('/bin/sh', '/bin/bash') if successor else ('/bin/sh',)
     pending = {}; completed = set(); steps = []; notes = []; informational = []
@@ -556,7 +556,7 @@ def native_observation(trial, native, present, row, rows, *, output, live=False,
     from skillevaluator.utils.redaction import redact_sensitive_text
     require(redact_sensitive_text(submitted.decode()) == submitted.decode(), 'Submission needs protected retention')
     row['submission'] = dict(receipt, file=output)
-    row['skill_access'] = skill_access(trial, present, native, allow_bash=selected['id'] == CODEX_FIXTURE_PROFILE)
+    row['skill_access'] = skill_access(trial, present, native, allow_bash=selected['cli'] == '0.169.1')
     row['agent_id'] = audit['boundary_before']['agent_id']
     require(not any(r is not row and r.get('agent_id') == row['agent_id'] for r in rows), 'Reused agent environment')
 

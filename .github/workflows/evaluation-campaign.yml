@@ -11,6 +11,7 @@ on:
           - boolean-effectiveness-v1
           - gh-runtime-090-v1
           - gh-task-permission-v2
+          - gh-codex-1691-live
           - judge-calibration-090-v1
           - pester-return-development-current-v1
           - pester-return-development-candidate-v1
@@ -29,7 +30,6 @@ on:
 permissions: {}
 env:
   CAMPAIGN_ID: ${{ inputs.campaign || 'boolean-effectiveness-v1' }}
-  CAMPAIGN_SETUP: ${{ inputs.campaign == 'judge-calibration-090-v1' && 'candidate-accounting' || (inputs.campaign == 'gh-runtime-090-v1' || inputs.campaign == 'gh-task-permission-v2') && 'candidate-next' || 'candidate-current' }}
 concurrency:
   group: reusable-evaluation-${{ inputs.allocation != '' && format('live-{0}', github.ref) || format('diagnostic-{0}', github.run_id) }}
   cancel-in-progress: false
@@ -56,9 +56,6 @@ jobs:
       - name: Acquire pinned credential-free tools
         run: |
           bash .github/scripts/setup-campaign-authentication.sh "$CAMPAIGN_ID"
-          if [ "$CAMPAIGN_SETUP" = candidate-next ]; then
-            echo "SKILL_CURRENT_PYTHON=$RUNNER_TEMP/next-evaluator/.venv/bin/python" >> "$GITHUB_ENV"
-          fi
           if [ "$CAMPAIGN_ID" != judge-calibration-090-v1 ]; then
             bash .github/scripts/setup-compose.sh
             APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
@@ -146,9 +143,6 @@ jobs:
       - name: Acquire pinned credential-free replay tools
         run: |
           bash .github/scripts/setup-campaign-authentication.sh "$CAMPAIGN_ID"
-          if [ "$CAMPAIGN_SETUP" = candidate-next ]; then
-            echo "SKILL_CURRENT_PYTHON=$RUNNER_TEMP/next-evaluator/.venv/bin/python" >> "$GITHUB_ENV"
-          fi
           if [ "$CAMPAIGN_ID" != judge-calibration-090-v1 ]; then bash .github/scripts/setup-compose.sh; fi
           if [ "$CAMPAIGN_ID" != judge-calibration-090-v1 ]; then
             APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
@@ -190,9 +184,6 @@ jobs:
       - name: Acquire frozen credential-free consumption tools
         run: |
           bash .github/scripts/setup-campaign-authentication.sh "$CAMPAIGN_ID"
-          if [ "$CAMPAIGN_SETUP" = candidate-next ]; then
-            echo "SKILL_CURRENT_PYTHON=$RUNNER_TEMP/next-evaluator/.venv/bin/python" >> "$GITHUB_ENV"
-          fi
           if [ "$CAMPAIGN_ID" != judge-calibration-090-v1 ]; then
             APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
             echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
@@ -238,9 +229,6 @@ jobs:
       - name: Acquire frozen credential-free consumption tools
         run: |
           bash .github/scripts/setup-campaign-authentication.sh "$CAMPAIGN_ID"
-          if [ "$CAMPAIGN_SETUP" = candidate-next ]; then
-            echo "SKILL_CURRENT_PYTHON=$RUNNER_TEMP/next-evaluator/.venv/bin/python" >> "$GITHUB_ENV"
-          fi
           if [ "$CAMPAIGN_ID" != judge-calibration-090-v1 ]; then
             APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
             echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
@@ -253,6 +241,12 @@ jobs:
           "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign_selection.py inspect \
             --campaign "$CAMPAIGN_ID" --artifact "$PREPARATION_ARTIFACT" \
             --output "$RUNNER_TEMP/inspection"
+      - name: Verify exact Codex fixture outcomes and authenticate the prepared bytes with fixture GitHub IO
+        if: inputs.campaign == 'gh-codex-1691-live'
+        run: |
+          "$SKILL_AUTHENTICATION_PYTHON" -B .github/scripts/verify_codex_1691.py preparation \
+            "$RUNNER_TEMP/inspection/downloaded/preparation/evidence" \
+            "$RUNNER_TEMP/inspection/consumption/evidence/codex-1691-verification.json"
       - name: Retain sanitized admission and fresh-consumption diagnostics
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -337,9 +331,6 @@ jobs:
       - name: Prepare pinned tools without model credentials
         run: |
           bash .github/scripts/setup-campaign-authentication.sh "$CAMPAIGN_ID"
-          if [ "$CAMPAIGN_SETUP" = candidate-next ]; then
-            echo "SKILL_CURRENT_PYTHON=$RUNNER_TEMP/next-evaluator/.venv/bin/python" >> "$GITHUB_ENV"
-          fi
           if [ "$CAMPAIGN_ID" != judge-calibration-090-v1 ]; then bash .github/scripts/setup-compose.sh; fi
           if [ "$CAMPAIGN_ID" != judge-calibration-090-v1 ]; then
             APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
