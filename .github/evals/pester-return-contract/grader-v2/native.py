@@ -14,6 +14,7 @@ ROOT = HERE.parents[3]
 sys.path.insert(0, str(ROOT / '.github/scripts'))
 sys.path.insert(0, str(HERE.parent / 'diagnostics'))
 from evaluation_tasks import load
+from quantity_replay_evidence import PUBLICATION_MEMBER, submission_roster
 from replay_quantity import AMEND, SUBSTITUTE, digest, subjects
 
 VERSION = 'pester-transfer-batch-v2'
@@ -151,16 +152,20 @@ def qualify(image, runtime):
     if (digest(restrictive) != historical_controls['restrictive-suite']['sha256']
             or digest(historical_accept) != historical_controls['permissive-suite']['sha256']):
         raise ValueError('Control changed since diagnostic replay')
-    retained = list(subjects())
-    if {row['id']: row['sha256'] for row in history['observations']} != {
-            identity: digest(payload) for identity, _, payload in retained}:
+    publication = (ROOT / PUBLICATION_MEMBER).read_bytes()
+    retained = list(subjects(submission_roster(json.loads(publication))))
+    history_rows = history['observations']
+    if (history['provenance']['publication_sha256'] != digest(publication)
+            or len(history_rows) != len(retained)
+            or {row['id']: (row['arm'], row['sha256']) for row in history_rows} != {
+                identity: (arm, suite_digest) for identity, arm, suite_digest, _ in retained}):
         raise ValueError('Historical submission population mismatch')
     controls = [grade_row(image, runtime, members, 'contract-correct', permissive),
                 grade_row(image, runtime, members, 'type-restrictive', restrictive)]
     missing = {path: payload for path, payload in members.items() if path != EXTRA_REFERENCE}
     controls.append(grade_row(image, runtime, missing, 'missing-reference', permissive))
     observations = [dict(grade_row(image, runtime, members, identity, payload), arm=arm)
-                    for identity, arm, payload in retained]
+                    for identity, arm, _, payload in retained]
     return {
         'schema_version': 1, 'id': VERSION, 'historical_replay': digest(history_raw),
         'member_digests': {member: digest(raw) for member, raw in members.items()},

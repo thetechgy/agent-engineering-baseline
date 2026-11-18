@@ -8,6 +8,9 @@ import sys
 
 sys.dont_write_bytecode = True
 import skill_report as report
+from quantity_replay_evidence import (
+    CONTROL_OUTCOMES, PUBLICATION_MEMBER, boundary_verified, paired_outcome, submission_roster,
+)
 
 analysis = report.analysis
 evidence = report.evidence
@@ -111,58 +114,86 @@ def receipt_pair(receipt, metric):
     return values
 
 
-def replay_observations(spec, receipt):
+def recorded_pair_outcome(runs):
+    if type(runs) is not dict:
+        return 'unmeasured'
+    outcome = paired_outcome(runs.get('reference'), runs.get('variation'))
+    return outcome if outcome == runs.get('outcome') else 'unmeasured'
+
+
+def replay_observations(spec, receipt, population):
     """Count only qualified observations and reconcile them with the planned cohort."""
     evidence.closed(spec, ('id', 'member', 'expected', 'controls', 'population', 'variation', 'gap', 'contract'))
     evidence.token(spec['id'])
     evidence.sha(spec['population'])
-    expected = spec['expected']
-    require(type(expected) is int and 0 < expected <= 256, 'Invalid replay population')
+    publication_digest, roster = population
+    expected = len(roster)
+    require(spec['population'] == publication_digest and type(spec['expected']) is int
+            and spec['expected'] == expected, 'Replay population binding mismatch')
     controls = spec['controls']
-    require(type(controls) is dict and 0 < len(controls) <= 16, 'Invalid replay controls')
-    for control, outcome in controls.items():
-        evidence.token(control)
-        evidence.enum(outcome, ('verified', 'accepted', 'rejected'))
+    require(controls == CONTROL_OUTCOMES, 'Invalid replay controls')
 
     counts = dict(accepted=0, rejected=0, unmeasured=expected)
     if receipt is None:
-        return counts, 'Replay receipt missing.'
+        return counts, 'Replay receipt missing.', {}, {}
     evidence.closed(receipt, ('schema_version', 'id', 'checks', 'observations', 'provenance'))
+    provenance = receipt['provenance']
     require(type(receipt['schema_version']) is int and receipt['schema_version'] == 1
             and receipt['id'] == spec['id']
-            and receipt['provenance']['publication_sha256'] == spec['population'], 'Replay identity mismatch')
-    checks = {}
+            and type(provenance) is dict
+            and provenance.get('publication_sha256') == publication_digest, 'Replay identity mismatch')
+    recorded_checks = {}
     for check in receipt['checks']:
         evidence.closed(check, ('id', 'expected', 'observed'))
         identity = check['id']
-        require(identity in controls and identity not in checks and check['expected'] == controls[identity],
+        require(identity in controls and identity not in recorded_checks and check['expected'] == controls[identity],
                 'Replay controls disagree with the reviewed plan')
         evidence.enum(check['observed'], ('verified', 'accepted', 'rejected', 'unmeasured'))
-        checks[identity] = check['observed']
+        recorded_checks[identity] = check['observed']
+
+    boundary = provenance.get('boundary')
+    control_runs = provenance.get('control_runs')
+    verified = type(boundary) is dict and boundary_verified(boundary.get('reference'), boundary.get('variation'))
+    checks = {'return-boundary': 'verified' if verified else 'unmeasured'}
+    for name in ('permissive-suite', 'restrictive-suite'):
+        runs = control_runs.get(name) if type(control_runs) is dict else None
+        checks[name] = recorded_pair_outcome(runs)
+    for name, outcome in checks.items():
+        if recorded_checks.get(name) != outcome:
+            checks[name] = 'unmeasured'
     unqualified = [name for name, value in controls.items() if checks.get(name) != value]
     rows = receipt['observations']
     require(type(rows) is list and len(rows) <= expected, 'Unexpected replay population')
-    identities = set()
+    submitted = {}
     for row in rows:
-        evidence.token(row['id'])
+        identity = row['id']
+        evidence.token(identity)
         evidence.sha(row['sha256'])
-        require(row['id'] not in identities, 'Duplicate replay observation')
+        require(identity not in submitted, 'Duplicate replay observation')
         evidence.enum(row['outcome'], counts)
-        identities.add(row['id'])
-        if not unqualified and row['outcome'] != 'unmeasured':
-            counts[row['outcome']] += 1
+        submitted[identity] = row
+    observations = {}
+    for identity, (_, _, arm, digest) in roster.items():
+        row = submitted.get(identity)
+        matches = row is not None and (row.get('arm'), row['sha256']) == (arm, digest)
+        outcome = recorded_pair_outcome(row) if matches and not unqualified else 'unmeasured'
+        observations[identity] = outcome
+        if outcome != 'unmeasured':
+            counts[outcome] += 1
             counts['unmeasured'] -= 1
+    unresolved = None
     if unqualified:
-        return counts, 'Unqualified controls: ' + ', '.join(unqualified) + '.'
-    if counts['unmeasured']:
-        return counts, 'A qualified result is missing for ' + report.count(counts['unmeasured'], 'saved submission') + '.'
-    if counts['accepted'] and counts['rejected']:
-        return counts, 'The saved suites gave mixed results.'
-    return counts, None
+        unresolved = 'Unqualified controls: ' + ', '.join(unqualified) + '.'
+    elif counts['unmeasured']:
+        unresolved = 'A qualified result is missing for ' + report.count(counts['unmeasured'], 'saved submission') + '.'
+    elif counts['accepted'] and counts['rejected']:
+        unresolved = 'The saved suites gave mixed results.'
+    return counts, unresolved, checks, observations
 
 
-def replay_finding(spec, receipt, *, coverage_verified=False):
-    counts, unresolved = replay_observations(spec, receipt)
+def replay_finding(spec, receipt, admitted, *, coverage_verified=False):
+    counts, unresolved, checks, outcomes = admitted
+    coverage_verified = coverage_verified and not unresolved and bool(counts['rejected'])
     variation = label(spec['variation'])
     if unresolved:
         heading = 'Unresolved · Neither yet'
@@ -189,17 +220,17 @@ def replay_finding(spec, receipt, *, coverage_verified=False):
                       '<p><strong>What would change it</strong> · ' + change + '</p>'])
     if receipt is not None:
         target = report.anchor('replay', spec['id'])
-        controls = [[label(row['id']), label(row['expected']), label(row['observed'])] for row in receipt['checks']]
-        observations = [[label(row['id']), label(row['outcome'])] for row in receipt['observations']]
+        controls = [[label(name), label(spec['controls'][name]), label(outcome)] for name, outcome in checks.items()]
+        observations = [[label(identity), label(outcome)] for identity, outcome in outcomes.items()]
         parts.append(f'<p><a href="#{target}">Replay evidence</a> · ' + source_link(spec['contract']) + '</p>'
                      f'<details><summary>Replay controls, runs and provenance</summary><div id="{target}">' +
                      report.table('Diagnostic controls', ('Control', 'Expected', 'Observed'), controls) +
-                     report.table('Receipt observations · subject to control qualification', ('Submission', 'Outcome'), observations) +
+                     report.table('Replay observation outcomes', ('Submission', 'Outcome'), observations) +
                      report.disclosure('Exact replay receipt', receipt) + '</div></details>')
     return ''.join(parts)
 
 
-def qualification_status(spec, receipt, replay_pair):
+def qualification_status(spec, receipt, replay_pair, *, replay_complete):
     """Render the task-owned verifier's admission of the native evidence."""
     evidence.closed(spec, ('id', 'member'))
     version = spec['id']
@@ -213,6 +244,9 @@ def qualification_status(spec, receipt, replay_pair):
             and receipt['id'] == version, 'Qualification identity mismatch')
     if receipt['historical_replay'] != replay_digest:
         return False, '<p><strong>Evaluator status</strong> · Qualification covers a different replay.</p>'
+
+    if not replay_complete:
+        return False, '<p><strong>Evaluator status</strong> · Historical replay qualification incomplete.</p>'
 
     validator_spec = importlib.util.spec_from_file_location(
         '_task_qualification', evidence.ROOT / QUALIFICATION_VALIDATORS[version])
@@ -235,7 +269,7 @@ def qualification_status(spec, receipt, replay_pair):
     return verified, ''.join(parts)
 
 
-def decision_section(manifest, result, records, receipts, replays, qualifications):
+def decision_section(manifest, result, records, receipts, replays, population, qualifications):
     evidence.closed(manifest, ('schema_version', 'receipts', 'decisions'))
     require(type(manifest['schema_version']) is int and manifest['schema_version'] == 1, 'Decision schema')
     cards = manifest['decisions']
@@ -293,13 +327,16 @@ def decision_section(manifest, result, records, receipts, replays, qualification
         scores = report.table(card['caption'], ('Result', 'With skill', 'Matched absent'), rows)
         if replay is not None:
             historical = replays.get(replay['id'])
+            historical_receipt = historical[0] if historical else None
+            admitted = replay_observations(replay, historical_receipt, population)
             verified, qualification_html = False, ''
             if 'qualification' in card:
                 qualification = card['qualification']
                 verified, qualification_html = qualification_status(
-                    qualification, qualifications.get(qualification['id']), historical)
+                    qualification, qualifications.get(qualification['id']), historical,
+                    replay_complete=admitted[0]['unmeasured'] == 0)
             parts.append('<article class="decision-card replay-card">' + heading +
-                         replay_finding(replay, historical[0] if historical else None, coverage_verified=verified) +
+                         replay_finding(replay, historical_receipt, admitted, coverage_verified=verified) +
                          qualification_html +
                          '<p><strong>Transfer decision</strong> · ' + display_decision + ' ' + attribution + '</p>' +
                          '<details><summary>Frozen transfer checks and logs</summary>' + scores +
@@ -418,6 +455,10 @@ def generate(inputs, saved_analysis, decisions_path, output=None, *, replay_path
         require(digest == item['sha256'] and digest not in receipts, 'Decision receipt identity mismatch')
         receipts[digest] = (evidence.parse_json(raw, limit=SUPPLEMENT_LIMIT), item)
     bindings = [card['replay'] for card in manifest['decisions'] if 'replay' in card]
+    population = None
+    if bindings:
+        raw = read(evidence.ROOT / PUBLICATION_MEMBER, SUPPLEMENT_LIMIT)
+        population = (evidence.digest_bytes(raw), submission_roster(evidence.parse_json(raw, limit=SUPPLEMENT_LIMIT)))
     replays = {}
     for path in replay_paths:
         raw = read(path, SUPPLEMENT_LIMIT)
@@ -449,7 +490,7 @@ def generate(inputs, saved_analysis, decisions_path, output=None, *, replay_path
     guard()
 
     page = report.render_report(result, captured)
-    section, summaries = decision_section(manifest, result, captured.records, receipts, replays, qualifications)
+    section, summaries = decision_section(manifest, result, captured.records, receipts, replays, population, qualifications)
     page = add_decisions(page, section, result, captured.records, summaries)
     require(len(page) <= report.HTML_LIMIT, 'HTML report size exceeded')
     return evidence.write_outputs({}, output, input_paths=(*captured.roots, saved_analysis.parent, decisions_path.parent,

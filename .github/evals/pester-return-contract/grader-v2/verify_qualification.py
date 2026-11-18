@@ -8,6 +8,8 @@ CONTROLS = ('contract-correct', 'type-restrictive', 'missing-reference')
 
 def native_observation(row):
     native = row.get('native', {})
+    if type(native) is not dict or 'error' in native:
+        return 'unmeasured', {}
     reward = native.get('reward', {})
     sidecar = native.get('sidecar', {})
     detail = sidecar.get('details', {}).get('outcome', {})
@@ -17,6 +19,8 @@ def native_observation(row):
             or reward.get('details') != sidecar.get('details') or detail.get('grader_version') != VERSION):
         return 'unmeasured', {}
     classification = detail.get('classification')
+    if row.get('outcome') != (classification if classification in ('passed', 'failed') else 'unmeasured'):
+        return 'unmeasured', {}
     if (classification not in ('passed', 'failed') or sidecar.get('evaluation_status') != 'complete'):
         return 'unmeasured', detail if metrics is None and sidecar.get('evaluation_status') == 'failed' else {}
 
@@ -74,7 +78,7 @@ def verify(receipt, replay):
     fixtures = replay['provenance']['fixtures']
     if (members.get('tests/case/reference/Subject.ps1') != fixtures['reference']
             or members.get('tests/case/reference/Quantity.Int128.ps1') != fixtures['variation']
-            or any(key not in history or row['sha256'] != history[key]['sha256']
+            or any(key not in history or (row.get('arm'), row['sha256']) != (history[key]['arm'], history[key]['sha256'])
                    for key, row in observations.items())):
         raise ValueError('Qualification fixture or submission identity mismatch')
     counts = dict.fromkeys(OUTCOMES, 0)
