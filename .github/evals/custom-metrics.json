@@ -61708,7 +61708,7 @@
       "skill_id": "gh",
       "grader_digest": "sha256:b5bc7155d8f9bffa47a32c39004032e7159cc0e1d417b4e4d12e90774f72d5a0",
       "fixture_digest": "sha256:0788710cc641cd5158667df99387e95505cd1df3eb2c62d0a8db7210e40f8baa",
-      "runtime_digest": "sha256:0af43688c29e1e3da390e687360f02143d69c1fdbb5dc029c45deff8762f7db7",
+      "runtime_digest": "sha256:70e4c480e7e5f35225ef5c608778bd1ec7a7878fe0b6146f46c885c70aceb39c",
       "dataset_digest": "sha256:7da7fa863ddc768c34bb423b4667cfe43e8d714697c4e217e4a27d789028f598",
       "semantics": "gh-native-oracle-v1",
       "campaign": {

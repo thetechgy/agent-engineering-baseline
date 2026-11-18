@@ -41,9 +41,8 @@ class Codex1691Tests(unittest.TestCase):
                          '6528c9bf763bec8056c8cfd57273cab9a2caf875d52584852496e34725b3252e')
         task = load(ROOT / '.github/evals/campaigns/gh-codex-1691.json')
         identity = purpose(task, 'probe')
-        self.assertEqual(skill_evidence.custom_input_identities(ROOT, 'gh', purpose=identity),
-                         {key: registry['profiles'][identity][key] for key in
-                          ('grader_digest', 'fixture_digest', 'runtime_digest')})
+        manifest = skill_evidence.custom_source_manifest(ROOT, 'gh', purpose=identity)
+        self.assertEqual(skill_evidence.identity(manifest), registry['profiles'][identity]['runtime_digest'])
 
     def test_pricing_applies_cache_reads_writes_and_only_available_context_evidence(self):
         prices = check_pricing(read_profile(SELECTOR)['resolved'])

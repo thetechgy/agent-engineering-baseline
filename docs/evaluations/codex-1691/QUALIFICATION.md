@@ -23,9 +23,13 @@ The 0.155.1 / `gpt-5.6-sol` / high reference is the retained
 [permission qualification](../task-permission-v2/QUALIFICATION.md) and
 [shared-path smoke receipt](../task-permission-v2/execution-auth-20261116-02/EXECUTION.md).
 Against the loopback fixture, the 0.169.1 executable with those same model and
-reasoning settings emitted the subagent-setting deprecation warning, a
-`/bin/bash -lc` command wrapper on the local shell and a
-`cache_write_input_tokens` turn counter. The candidate sets
+reasoning settings emitted the subagent-setting deprecation warning. The last
+request's keys and the five usage fields match the retained 0.155.1 fixture.
+That earlier turn already emitted a zero-valued cache-write field. The new
+profile carries the counter into accounting and verifies it with a nonzero
+fixture. The local 0.169.1 probe emitted `/bin/bash -lc`; the retained 0.155.1
+container trace emitted `/bin/sh -lc`. This comparison spans different shells.
+The candidate sets
 `[agents].enabled = false` and disables multi-agent v2 and code mode. It accepts
 the observed bash wrapper alongside the existing sh wrapper and continues to
 require native command start and completion evidence. The comparison retains
