@@ -26,17 +26,16 @@ jobs:
       contracts: ${{ steps.impact.outputs.contracts }}
       quality: ${{ steps.impact.outputs.quality }}
       pester: ${{ steps.impact.outputs.pester }}
-      evaluator: ${{ steps.impact.outputs.evaluator }}
       deadline: ${{ steps.impact.outputs.deadline }}
       admission: ${{ steps.impact.outputs.admission }}
-      legacy: ${{ steps.impact.outputs.legacy }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
       - name: Verify selection and failure propagation controls
-        run: python3 -B -m unittest discover -s .github/tests -p test_ci_routing.py -v
+        working-directory: .github/tests
+        run: python3 -B -m unittest test_ci_routing -v
       - name: Select from the complete Git comparison
         id: impact
         run: python3 -B .github/scripts/ci_routing.py plan
@@ -181,6 +180,16 @@ jobs:
           "$SKILL_NEXT_PYTHON" -m unittest discover -s .github/tests -p test_skill_pages.py -v
           "$SKILL_NEXT_PYTHON" -m unittest discover -s .github/tests -p test_skill_orchestration.py -v
           PYTHONPATH=.github/tests "$SKILL_NEXT_PYTHON" -m unittest -v test_evaluator_adoption.AdoptionTests.test_released_status_keeps_confirmed_failure_and_missing_coverage test_evaluator_adoption.AdoptionTests.test_held_consumers_refuse_candidate_before_execution
+
+      - name: Check candidate broker identity and unscored verifier findings
+        env:
+          CANDIDATE_EVIDENCE_CHILD: '1'
+          EVALUATOR_ADOPTION_CONTROLS: '1'
+          PYTHONPATH: .github/scripts:.github/tests
+        run: |
+          "$SKILL_NEXT_PYTHON" -B -m unittest -v \
+            test_gh_initializer.InitializerTests.test_root_probe_rejects_foreign_stale_dead_and_pid_reused_brokers \
+            test_evaluator_adoption.AdoptionTests.test_actual_native_verifier_and_unscored_collection_visibility
 
       - name: Qualify versioned behavioral benchmark evidence without inference
         run: '"$SKILL_NEXT_PYTHON" -B .github/scripts/qualify_benchmark_evidence.py --output "$RUNNER_TEMP/behavioral-evidence-090"'
@@ -457,13 +466,6 @@ jobs:
           python tests/bootstrap_lifecycle.py --apm $executables[0].FullName
           if ($LASTEXITCODE -ne 0) { throw 'Native scoped lifecycle validation failed.' }
 
-  current-evaluator:
-    needs: plan
-    if: github.event_name == 'pull_request' && needs.plan.outputs.evaluator == 'true'
-    uses: ./.github/workflows/current-evaluator.yml
-    with:
-      candidate-next: true
-
   native-deadline:
     needs: plan
     if: github.event_name == 'pull_request' && needs.plan.outputs.deadline == 'true'
@@ -474,20 +476,10 @@ jobs:
     if: github.event_name == 'pull_request' && needs.plan.outputs.admission == 'true'
     uses: ./.github/workflows/pester-admission-qualification.yml
 
-  codex-pilot:
-    # GitHub validates the dispatch-only preflight's read scope even on PR calls.
-    # This call has no runner/token; all runnable PR child jobs stay contents: read.
-    permissions:
-      contents: read
-      actions: read
-    needs: plan
-    if: github.event_name == 'pull_request' && needs.plan.outputs.legacy == 'true'
-    uses: ./.github/workflows/codex-pilot.yml
-
   validation:
     name: Selected validation results
     if: always()
-    needs: [plan, ci-contracts, linux, windows-powershell, skill-quality, pester-eval-feasibility, current-evaluator, native-deadline, pester-admission, codex-pilot]
+    needs: [plan, ci-contracts, linux, windows-powershell, skill-quality, pester-eval-feasibility, native-deadline, pester-admission]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

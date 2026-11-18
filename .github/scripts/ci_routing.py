@@ -10,17 +10,20 @@ from pathlib import Path, PurePosixPath
 import re
 import subprocess
 
-FLAGS = ('contracts', 'quality', 'pester', 'evaluator', 'deadline', 'admission', 'legacy')
-JOBS = dict(zip(FLAGS, ('ci-contracts', 'skill-quality', 'pester-eval-feasibility',
-                       'current-evaluator', 'native-deadline', 'pester-admission', 'codex-pilot')))
+JOBS = {'contracts': 'ci-contracts', 'quality': 'skill-quality',
+        'pester': 'pester-eval-feasibility', 'deadline': 'native-deadline',
+        'admission': 'pester-admission'}
+FLAGS = tuple(JOBS)
 ROOT = Path(__file__).resolve().parents[2]
-PESTER = {'contracts', 'pester', 'evaluator', 'deadline', 'admission', 'legacy'}
-GH = {'contracts', 'quality', 'evaluator'}
+PESTER = {'contracts', 'pester', 'deadline', 'admission'}
+GH = {'contracts', 'quality'}
 WORKFLOWS = {
-    'current-evaluator.yml': {'contracts', 'evaluator'},
+    'current-evaluator.yml': {'contracts'},
+    'cli-observation-comparison.yml': {'contracts'},  # Explicit diagnostic mode.
     'native-deadline.yml': {'contracts', 'deadline'},
     'pester-admission-qualification.yml': {'contracts', 'admission'},
-    'codex-pilot.yml': {'contracts', 'legacy'},
+    'codex-pilot.yml': {'contracts', 'deadline'},  # Pilot preparation binds its workflow bytes.
+    'codex-1691-qualification.yml': {'contracts'},  # Own PR trigger.
     # Full experiment preparation / migration remain operator-dispatched.
     'evaluation-campaign.yml': {'contracts'},
     'pester-return-qualification.yml': {'contracts'},
@@ -46,26 +49,39 @@ def select(paths, *, complete=True):
             selected.update(('contracts', 'quality'))
             skill = parts[2] if len(parts) > 2 else ''
             if skill == 'powershell-pester-6':
-                selected.update(('pester', 'evaluator', 'admission', 'legacy', 'deadline'))
-            if skill == 'gh':
-                selected.add('evaluator')
+                selected.update(PESTER)
+        elif path == '.github/tests/test_ci_routing.py':
+            # The planner executes this entire stdlib suite on every PR.
+            continue
         elif path == 'README.md':
             # The maintained external-action allowlist contract reads this file.
             selected.add('contracts')
         elif path.startswith(('docs/',)) or path in ('CONTRIBUTING.md', 'LICENSE',
                 '.github/evals/EVALUATION-PLAN.md', '.github/evals/CI-ROUTING.md'):
             continue
-        elif path.startswith('.github/workflows/') and parts[-1] in WORKFLOWS:
+        elif len(parts) == 3 and parts[:2] == ('.github', 'workflows') and parts[-1] in WORKFLOWS:
             selected.update(WORKFLOWS[parts[-1]])
         elif path.startswith('.github/evals/gh/') or path.startswith('.github/scripts/gh_'):
             selected.update(GH)
+        elif path.startswith('.github/evals/pester-admission-v1/') or path in (
+                '.github/evals/campaigns/pester-admission-controls-v2.json',
+                '.github/evals/campaigns/pester-transfer-original-v1.json',
+                '.github/evals/campaigns/pester-transfer-retrospective-v1.json'):
+            selected.update(('contracts', 'admission'))
+        elif path in ('.github/scripts/qualify_native_deadline.py', '.github/tests/test_native_deadline.py'):
+            selected.update(('contracts', 'deadline'))
+        elif path in ('.github/tests/test_ci_routing_profiles.py', '.github/tests/test_campaign_authentication.py',
+                      '.github/evals/campaigns/codex-1691.json', '.github/evals/campaigns/gh-codex-1691.json',
+                      '.github/evals/codex-execution-1691.json'):
+            # The isolated 0.169.1 fixture workflow owns the three profile/definition paths.
+            selected.add('contracts')
         elif path.startswith(('.github/evals/powershell-pester-6/', '.github/evals/pester-')):
             selected.update(PESTER)
         elif path.startswith('.github/evals/judge-calibration-090/') or path in (
                 '.github/scripts/judge_transport_090.py', '.github/scripts/qualify_standard_judges.py',
                 '.github/scripts/qualify_benchmark_evidence.py', '.github/tests/test_standard_judges.py'):
             # Qualification-only leaves; no production task/runtime or scoring consumer.
-            selected.update(('contracts', 'evaluator'))
+            selected.add('contracts')
         elif path.startswith('.github/scripts/qualify_scanner') or path in (
                 '.github/scripts/skill_review.py', '.github/scripts/skill_report_reviews.py',
                 '.github/scripts/skill_pages.py', '.github/scripts/skill_history.py',
@@ -123,9 +139,6 @@ def gate(needs):
         if result != required:
             failures.append(f'{job}: expected {required}, received {result}')
     summary = '| Check | Selection | Result |\n| --- | --- | --- |\n' + '\n'.join(rows) + '\n'
-    summary += ('\nLegacy Codex/Pester cohort qualification retains the documented missing '
-                'post-command audit / stop-classification failure. A routing result is not '
-                'scheduler readiness; see `.github/evals/CI-ROUTING.md`.\n')
     if failures:
         raise ValueError(summary + '\n' + '\n'.join(failures))
     return summary
@@ -144,7 +157,7 @@ def main():
         selected = select(paths, complete=complete)
         if os.environ.get('GITHUB_EVENT_NAME') == 'push':
             # Preserve main's production producer population and downstream chains.
-            selected.update(dict.fromkeys(('evaluator', 'deadline', 'admission', 'legacy'), False))
+            selected.update(dict.fromkeys(('deadline', 'admission'), False))
         # Only constant output names and literal booleans cross the job boundary.
         output = ''.join(f'{key}={str(value).lower()}\n' for key, value in selected.items())
         with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:

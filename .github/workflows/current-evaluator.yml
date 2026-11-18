@@ -1,14 +1,6 @@
 name: Current evaluator report qualification
 
 on:
-  workflow_call:
-    inputs:
-      candidate-next:
-        type: boolean
-        default: false
-      startup-only:
-        type: boolean
-        default: false
   workflow_dispatch:
     inputs:
       candidate-next:
@@ -25,11 +17,6 @@ permissions:
 
 env:
   CANDIDATE_SETUP_KIND: ${{ inputs.candidate-next && 'candidate-next' || 'candidate-current' }}
-
-# Preserve diagnostic reruns when a later documentation update starts PR CI.
-concurrency:
-  group: current-evaluator-${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
 
 jobs:
   cohorts:
@@ -117,8 +104,6 @@ jobs:
             --tools "$RUNNER_TEMP/skill-evaluation-tools" --evaluator-next --output "$RUNNER_TEMP/adoption-scanner-controls"
           EVALUATOR_ADOPTION_SCAN_OUTPUT="$RUNNER_TEMP/adoption-scanner-controls" \
             "$SKILL_QUALIFICATION_PYTHON" -B -m unittest discover -s .github/tests -p test_evaluator_adoption.py -v
-          "$SKILL_QUALIFICATION_PYTHON" -B -m unittest discover -s .github/tests -p test_skill_pages.py -v
-          "$SKILL_QUALIFICATION_PYTHON" -B -m unittest discover -s .github/tests -p test_skill_orchestration.py -v
       - name: Retain static adoption controls
         if: always() && inputs.candidate-next
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -249,6 +234,9 @@ jobs:
       - name: Reproduce the admitted accounting report on this fresh runner
         if: inputs.candidate-next
         run: '"$SKILL_ACCOUNTING_PYTHON" -B .github/scripts/qualify_standard_judges.py reproduce --output "$RUNNER_TEMP/standard-judge-accounting"'
+      - name: Explain recovery for incomplete qualification
+        if: failure()
+        run: echo 'Re-run all jobs of this evaluator run to regenerate every input at the same revision and attempt.' >> "$GITHUB_STEP_SUMMARY"
       - name: Retain the consolidated report and complete bounded evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
