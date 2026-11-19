@@ -11,8 +11,15 @@ import skill_reports as reports
 REGISTRY = '.github/evals/campaigns/selections.json'
 
 
+def registry_path(identity):
+    # Historical dispatch receipts bind every byte of the scored registry.
+    if identity == 'case-observation':
+        return ROOT / '.github/evals/campaigns/observation-selections.json'
+    return ROOT / REGISTRY
+
+
 def selection(identity):
-    registry = reports.read_json(ROOT / REGISTRY)
+    registry = reports.read_json(registry_path(identity))
     require(registry['version'] == 1 and identity in registry['campaigns'], 'Unregistered campaign selection')
     return registry['campaigns'][identity]
 
@@ -55,7 +62,7 @@ def location(task, artifact, producer):
 def binding(task):
     from evaluation_campaign_protocol import digest
     return {'definition': task.member, 'definition_digest': digest(ROOT / task.member),
-            'selection_digest': digest(ROOT / REGISTRY),
+            'selection_digest': digest(registry_path(task.definition['id'])),
             **({'selected_skill': task.definition['skill'], 'selected_case': task.definition['source_case']} if getattr(task, "diagnostic_observation", False) else {})}
 
 

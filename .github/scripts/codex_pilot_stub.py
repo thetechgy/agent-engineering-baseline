@@ -145,4 +145,7 @@ class Refuse(BaseHTTPRequestHandler):
         self.wfile.write(payload)
 
 
-HTTPServer(('127.0.0.1', 8765), Refuse).serve_forever()
+with HTTPServer(('127.0.0.1', 8765), Refuse) as server:
+    if sys.argv[2] == 'case-observation':
+        record.with_suffix('.ready').touch()
+    server.serve_forever()
