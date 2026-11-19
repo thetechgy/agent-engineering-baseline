@@ -9,6 +9,7 @@ on:
         default: boolean-effectiveness-v1
         options:
           - boolean-effectiveness-v1
+          - case-observation
           - gh-runtime-090-v1
           - gh-task-permission-v2
           - judge-calibration-090-v1
@@ -18,6 +19,12 @@ on:
           - pester-return-transfer-candidate-v3
           - pester-return-transfer-current-v6
           - pester-return-transfer-candidate-v6
+      skill:
+        description: Repository skill for a case observation
+        type: string
+      case:
+        description: Original case ID for a case observation
+        type: string
       preparation_artifact:
         description: 'Credential-free fresh admission of an existing preparation artifact ID; allocation must be empty.'
         type: string
@@ -28,8 +35,10 @@ on:
         default: ''
 permissions: {}
 env:
+  OBSERVATION_SKILL: ${{ inputs.skill }}
+  OBSERVATION_CASE: ${{ inputs.case }}
   CAMPAIGN_ID: ${{ inputs.campaign || 'boolean-effectiveness-v1' }}
-  CAMPAIGN_SETUP: ${{ inputs.campaign == 'judge-calibration-090-v1' && 'candidate-accounting' || (inputs.campaign == 'gh-runtime-090-v1' || inputs.campaign == 'gh-task-permission-v2') && 'candidate-next' || 'candidate-current' }}
+  CAMPAIGN_SETUP: ${{ inputs.campaign == 'judge-calibration-090-v1' && 'candidate-accounting' || (inputs.campaign == 'case-observation' || inputs.campaign == 'gh-runtime-090-v1' || inputs.campaign == 'gh-task-permission-v2') && 'candidate-next' || 'candidate-current' }}
 concurrency:
   group: reusable-evaluation-${{ inputs.allocation != '' && format('live-{0}', github.ref) || format('diagnostic-{0}', github.run_id) }}
   cancel-in-progress: false

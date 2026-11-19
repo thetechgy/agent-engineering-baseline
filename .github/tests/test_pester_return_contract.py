@@ -53,6 +53,11 @@ class ReturnContract(unittest.TestCase):
                         "if definition.get('adapter') == 'gh-permission':\n"
                         "        from gh_permission_task import GhPermission\n"
                         "        adapters['gh-permission'] = GhPermission",
+                    "definition.get('type') == 'case-observation'":
+                        "if definition.get('type') == 'case-observation':\n"
+                        "        from case_observation import CaseObservation\n"
+                        "        require(path == ROOT / '.github/evals/campaigns/case-observation.json', 'Unregistered observation')\n"
+                        "        return CaseObservation(definition, path.relative_to(ROOT).as_posix())",
                     "definition.get('type') == 'judge-only'":
                         "if definition.get('type') == 'judge-only':\n"
                         "        from judge_calibration_inputs import load as load_judges\n"
@@ -66,7 +71,8 @@ class ReturnContract(unittest.TestCase):
                 for node in sorted(hooks, key=lambda n:n.lineno, reverse=True):
                     del lines[node.lineno - 1:node.end_lineno]
                 raw = b''.join(lines)
-                for default in (b'    trusted_launch_metadata = False\n', b'    trusted_launch_metadata = True\n'):
+                for default in (b'    trusted_launch_metadata = False\n', b'    trusted_launch_metadata = True\n',
+                                b'    diagnostic_observation = False\n'):
                     self.assertEqual(raw.count(default), 1)
                     raw = raw.replace(default, b'')
             self.assertEqual(hashlib.sha256(raw).hexdigest(), digest, member)
@@ -82,6 +88,7 @@ class ReturnContract(unittest.TestCase):
             for variant in ('current', 'candidate'):
                 task=load(ROOT / ('.github/evals/campaigns/pester-return-'+case+'-'+variant+'-'+version+'.json'))
                 definitions.append(task.definition)
+                self.assertFalse(task.diagnostic_observation)
                 self.assertEqual(task.public_policy_fields(), {})
                 # The generic hooks add validation, not task metadata or a new
                 # Pester execution policy. Both frozen arms retain empty metadata.

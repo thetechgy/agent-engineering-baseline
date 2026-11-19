@@ -37,6 +37,10 @@ record = Path(sys.argv[1])
 scenario = sys.argv[2]
 priced = scenario == 'priced-success'
 compatibility = scenario == 'compatibility'
+answer = 'Credential-free qualification complete.'
+if scenario == 'case-observation':
+    answer = base64.b64decode(fixture, validate=True).decode()
+    scenario = 'success'
 if priced or compatibility:
     scenario = 'success'
 
@@ -129,7 +133,7 @@ class Refuse(BaseHTTPRequestHandler):
             events = [
                 {'type': 'response.created', 'response': {'id': 'pilot-fixture-2'}},
                 {'type': 'response.output_item.done', 'item': {'id': 'pilot-final', 'type': 'message', 'role': 'assistant',
-                 'content': [{'type': 'output_text', 'text': 'Credential-free qualification complete.'}]}},
+                 'content': [{'type': 'output_text', 'text': answer}]}},
                 {'type': 'response.completed', 'response': {'id': 'pilot-fixture-2',
                  'usage': response_usage(2)}},
             ]
@@ -141,4 +145,7 @@ class Refuse(BaseHTTPRequestHandler):
         self.wfile.write(payload)
 
 
-HTTPServer(('127.0.0.1', 8765), Refuse).serve_forever()
+with HTTPServer(('127.0.0.1', 8765), Refuse) as server:
+    if sys.argv[2] == 'case-observation':
+        record.with_suffix('.ready').touch()
+    server.serve_forever()

@@ -53,7 +53,7 @@ class AuthenticationContracts(unittest.TestCase):
     def test_source_successors_preserve_complete_pre_repair_registry(self):
         registry=json.loads((ROOT/'.github/evals/custom-metrics.json').read_text())
         registry['profiles']={k:v for k,v in registry['profiles'].items()
-            if '-source-v24-' not in k and '-source-v27-' not in k and '-source-v26-' not in k and k not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18') and '-source-v25-' not in k and k != 'pester-effectiveness-v29'}
+            if '-source-v24-' not in k and '-source-v28-' not in k and '-source-v27-' not in k and '-source-v26-' not in k and k not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18', 'pester-effectiveness-v31', 'pester-cli-pilot-retained-v19') and '-source-v25-' not in k and k != 'pester-effectiveness-v29'}
         added=[k for k in registry['profiles'] if any(f'-source-v{v}-' in k for v in (21,22,23))]
         self.assertEqual(len(added), 105)
         for key in added:

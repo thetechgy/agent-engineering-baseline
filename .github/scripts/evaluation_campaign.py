@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Bounded skill campaigns through pinned Harbor and consolidated reporting."""
 import argparse
+from contextlib import contextmanager
 import hashlib
 import json
 import os
@@ -23,7 +24,7 @@ import skill_reports as reports
 
 def purpose(task, mode):
     identity = {'boolean-contract-v1':'boolean-contract-v4', 'gh-read-v1':'gh-read-v4', 'boolean-effectiveness-v1':'boolean-effectiveness-v3', 'boolean-retained-v1':'boolean-retained-v2'}.get(task.definition['id'], task.definition['id'])
-    source_version = '-lifecycle-v1-source-v27-'
+    source_version = '-lifecycle-v1-source-v28-'
     return 'campaign-' + identity + source_version + mode
 
 
@@ -42,6 +43,8 @@ def stage(root, task, mode):
     (root / 'evidence').mkdir(exist_ok=True)
     deployed = adapter.deploy(root, task.definition)
     shutil.copyfile(root / 'deployment.json', root / 'evidence/deployment.json')
+    if task.diagnostic_observation:
+        return task.stage(root, deployed, mode, runtime)
     bundle = task.bundle(root, mode)
     variants = task.definition['variants']
     core.require(len(variants) == 2 and {r['present'] for r in variants} == {True, False}
@@ -145,12 +148,17 @@ def construct_launch(root, task, mode, native, present, trial_name, job, extra, 
         core.require(root == Path(os.environ['RUNNER_TEMP']) / 'campaign-live', 'Fixed live launch root required')
         context = task.launch_context(root, native, present, extra)
         core.require(extra == task.validate_launch_context(root, context, present, extra), 'Unverified task-owned environment')
-    profile, _, _ = evidence.custom_contract(task.definition['skill'], purpose=purpose(task, mode))
+    if task.diagnostic_observation:
+        environment_import = 'case_observation_environment:ObservationEnvironment'
+    else:
+        profile, _, _ = evidence.custom_contract(task.definition['skill'], purpose=purpose(task, mode))
+        environment_import = profile['campaign']['environment_import']
     config = TrialConfig.model_validate({'task': {'path': str(native)}, 'trial_name': trial_name, 'trials_dir': str(job),
         'agent': adapter.agent_config(task, mode, control, selected['resolved'], present,
             **({'launch_context': context} if mode == 'live' else {}),
             **({'deadline_fixture': 'cancelled'} if fixture == 'native-cancellation' else {})),
-        'environment': {'import_path': profile['campaign']['environment_import']}, 'timeout_multiplier': 1.0})
+        'environment': {'import_path': environment_import}, 'timeout_multiplier': 1.0,
+        **({'verifier': {'disable': True}} if task.diagnostic_observation else {})})
     env = {k:v for k,v in os.environ.items() if not re.search('TOKEN|SECRET|API_KEY|PASSWORD', k)
            and not k.startswith(('CODEX_', 'AEB_', 'SKILL_EVAL_'))}
     env.update(extra, PYTHONPATH=str(ROOT / '.github/scripts'), PYTHON_DOTENV_DISABLED='1', HARBOR_TELEMETRY='0')
@@ -165,6 +173,19 @@ def construct_launch(root, task, mode, native, present, trial_name, job, extra, 
     return config, env
 
 
+@contextmanager
+def preserve_interruption(task, record, field):
+    """A diagnostic write or cleanup probe cannot replace a handled signal."""
+    primary = sys.exception()
+    try:
+        yield
+    except Exception as error:
+        if not task.diagnostic_observation or not isinstance(primary, KeyboardInterrupt):
+            raise
+        record[field] = type(error).__name__
+        primary.add_note(f"{field}: {type(error).__name__}")
+
+
 def run(root, task, mode, *, reference=None, fixture=None):
     from harbor.models.task.task import Task
     from qualify_evaluator_candidate import run_native
@@ -177,7 +198,7 @@ def run(root, task, mode, *, reference=None, fixture=None):
     profiles.runtime(profiles.candidate_versions(runtime_adapter.evaluator(selected)), owning=True)
     root.mkdir(parents=True, exist_ok=False); artifact = root / 'evidence'; artifact.mkdir()
     definition = task.definition; variants = {v['id']:v for v in definition['variants']}
-    rows = [{**r, 'state':'unlaunched'} for r in core.schedule(tuple(task.cases(mode)), tuple(variants), definition['trials'])]
+    rows = [{**r, 'state':'unlaunched'} for r in (task.schedule() if task.diagnostic_observation else core.schedule(tuple(task.cases(mode)), tuple(variants), definition['trials']))]
     replaying = mode == 'replay'
     if replaying:
         core.require('retrospective' in definition and definition['attempt_limit']==1,'Unqualified replay population')
@@ -196,6 +217,9 @@ def run(root, task, mode, *, reference=None, fixture=None):
         core.require(len(rows) <= definition['attempt_limit'] and definition['trials'] == 1 and 'protocol' not in definition, 'Unqualified campaign population')
     ledger = {'definition': definition, 'runtime': read_profile(ROOT / definition['runtime_profile']), 'revision': revision(),
         'mode': mode, 'inference': mode == 'live', 'fixture': fixture, 'entries': rows, 'state':'preparing', 'authorized_live_attempts':len(rows) if mode == 'live' else 0}
+    if task.diagnostic_observation:
+        reports.write_json(artifact / 'observation.json', {'kind':'diagnostic observation','execution':'unconfirmed',
+            'evidence':'incomplete','quality':'ungraded','review':'incomplete'})
     if experiment:
         from evaluation_campaign_protocol import digest
         ledger.update(protocol=protocol(task), authorization=authorization,
@@ -204,6 +228,7 @@ def run(root, task, mode, *, reference=None, fixture=None):
         from codex_pilot_replay import retain_campaign_originals
         replay_profile,_,_ = evidence.custom_contract(definition['skill'],purpose=purpose(task,mode))
         ledger['retrospective'] = retain_campaign_originals(artifact,task,replay_profile)
+    @preserve_interruption(task, ledger, 'ledger_retention_failure')
     def save():
         target = artifact / 'attempt-ledger.json'; temporary = target.with_suffix('.new')
         with temporary.open('w') as stream:
@@ -253,14 +278,26 @@ def run(root, task, mode, *, reference=None, fixture=None):
                     code = run_native([str(Path(sys.executable).parent / 'harbor'), 'trials','start','--config',str(path)], env=env, log=log, timeout=1200)
             finally:
                 from skillevaluator.utils.redaction import redact_sensitive_text
-                diagnostic = path.with_suffix('.log').read_text(errors='replace')[-32768:]
-                (artifact / ('launch-' + str(row['position']) + '.log')).write_text(
-                    redact_sensitive_text(diagnostic).replace(str(root), '<campaign>').replace(str(ROOT), '<checkout>'))
+                with preserve_interruption(task, row, 'launch_log_retention_failure'):
+                    diagnostic = path.with_suffix('.log').read_text(errors='replace')[-32768:]
+                    (artifact / ('launch-' + str(row['position']) + '.log')).write_text(
+                        redact_sensitive_text(diagnostic).replace(str(root), '<campaign>').replace(str(ROOT), '<checkout>'))
             row.update(returncode=code, cleanup=adapter.resources()==before, usage=adapter.usage(trial, mode, runtime=ledger['runtime']['resolved']),
                        elapsed_seconds=round(time.monotonic()-started, 3))
             core.require(Task(native).checksum == expected['task_checksum'], 'Task checksum drift across launch')
             native_result = reports.read_json(trial / 'result.json') if (trial / 'result.json').exists() else {}
             row['native_exception'] = (native_result.get('exception_info') or {}).get('exception_type')
+            if task.diagnostic_observation:
+                from case_observation import observation
+                core.require(not native_result.get('verifier') and not native_result.get('verifier_result'),
+                             'Unexpected verification on observation')
+                observed = observation(trial, row, task, artifact, mode, live_key)
+                row.update(state='completed' if observed['execution'] == 'completed' else 'failed',
+                           evidence=observed['evidence'], quality='ungraded')
+                if not row['cleanup']: return 'cleanup_failure'
+                if row['state'] != 'completed': return 'execution_infrastructure_failure'
+                if row['usage'].get('estimated_usd') is None: return 'unknown_usage'
+                return None if observed['evidence'] == 'complete' else 'missing_usable_evidence'
             rewards = list(trial.glob('verifier/skill_evaluator_reward.json'))
             row['grading_present'] = len(rewards) == 1
             reward = reports.read_json(rewards[0]) if row['grading_present'] else {}
@@ -318,7 +355,7 @@ def run(root, task, mode, *, reference=None, fixture=None):
     finally:
         try:
             # Keep native logs, submissions and partial grades even on interruption.
-            if (root / 'jobs').exists():
+            if (root / 'jobs').exists() and not task.diagnostic_observation:
                 from skillevaluator.utils.redaction import redact_sensitive_text
                 for path in sorted((root / 'jobs').rglob('*')):
                     if path.is_file() and not path.is_symlink() and (path.name in (*adapter.RETAINED_MEMBERS, *task.retained_members) or path.name==task.output and ('artifacts' in path.parts or 'interrupted-submission' in path.parts)):
@@ -336,10 +373,21 @@ def run(root, task, mode, *, reference=None, fixture=None):
                     except Exception as error:
                         ledger['report_failure']=type(error).__name__ + ': ' + str(error)[:500]
         finally:
-            ledger['cleanup_complete']=adapter.resources()==before
-            reports.write_json(artifact / 'cleanup.json', {'complete':ledger['cleanup_complete'], 'unlaunched_positions':[r['position'] for r in rows if r['state']=='unlaunched']})
-            save()
-            for sig, handler in old.items(): signal.signal(sig,handler)
+            try:
+                ledger['cleanup_complete'] = None
+                with preserve_interruption(task, ledger, 'cleanup_observation_failure'):
+                    ledger['cleanup_complete'] = adapter.resources() == before
+                if task.diagnostic_observation and ledger.get('stop_reason') == 'interrupted' and rows[0].get('native_trial'):
+                    from case_observation import observation
+                    row = rows[0]
+                    row['cleanup'] = ledger['cleanup_complete']
+                    with preserve_interruption(task, row, 'observation_retention_failure'):
+                        observation(root / row['native_trial'], row, task, artifact, mode, live_key, interrupted=True)
+                with preserve_interruption(task, ledger, 'cleanup_retention_failure'):
+                    reports.write_json(artifact / 'cleanup.json', {'complete':ledger['cleanup_complete'], 'unlaunched_positions':[r['position'] for r in rows if r['state']=='unlaunched']})
+                save()
+            finally:
+                for sig, handler in old.items(): signal.signal(sig, handler)
     if experiment:
         return ledger
     core.require(ledger['state']=='completed' and ledger['cleanup_complete'] and 'report_failure' not in ledger, 'Campaign incomplete: ' + str(ledger.get('stop_reason')) + ('; report: ' + ledger['report_failure'] if 'report_failure' in ledger else ''))

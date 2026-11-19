@@ -26,6 +26,9 @@ SCENARIOS = ('complete', 'interruption', 'missing-evidence', 'unsupported-runtim
 
 
 def scenarios(task):
+    if getattr(task, 'diagnostic_observation', False):
+        from case_observation import SCENARIOS as observation_scenarios
+        return observation_scenarios
     if task.definition.get('type') == 'judge-only':
         from judge_calibration_campaign import SCENARIOS as judge_scenarios
         return judge_scenarios
@@ -56,7 +59,7 @@ def protocol(task):
         return judge_protocol(task)
     require('protocol' in task.definition, 'Qualification definition cannot authorize inference')
     value = reports.read_json(ROOT / task.definition['protocol'])
-    rows = schedule(tuple(task.cases('live')), tuple(v['id'] for v in task.definition['variants']), task.definition['trials'])
+    rows = task.schedule() if task.diagnostic_observation else schedule(tuple(task.cases('live')), tuple(v['id'] for v in task.definition['variants']), task.definition['trials'])
     require(value['definition'] == task.member and value['id'] == task.definition['id']
             and value['authorized_live_attempts'] == task.definition['authorized_live_attempts'] == 0
             and value['version'] == 1 and value['attempt_slots'] == len(rows) == task.definition['attempt_limit']
@@ -79,8 +82,8 @@ def frozen(task):
     return {'revision': revision(), 'protocol': protocol(task), 'protocol_digest': digest(ROOT / task.definition['protocol']),
             'definition': task.definition, 'runtime': read_profile(ROOT / task.definition['runtime_profile']),
             'evaluator': __import__('evaluation_runtime').evaluator(read_profile(ROOT / task.definition['runtime_profile'])), 'authorized_live_attempts': 0,
-            'schedule': schedule(tuple(task.cases('live')), tuple(v['id'] for v in task.definition['variants']), task.definition['trials']),
-            'source_identities': {mode: evidence.custom_input_identities(ROOT, task.definition['skill'], purpose=purpose(task, mode))
+            'schedule': task.schedule() if task.diagnostic_observation else schedule(tuple(task.cases('live')), tuple(v['id'] for v in task.definition['variants']), task.definition['trials']),
+            'source_identities': {'live': {'case': task.entry, 'selector': task.selector}} if task.diagnostic_observation else {mode: evidence.custom_input_identities(ROOT, task.definition['skill'], purpose=purpose(task, mode))
                                   for mode in ('live', 'experiment-probe')}}
 
 
@@ -104,11 +107,15 @@ def check(reference, staging, task, *, qualified=True):
         require(proof.get('complete') is True and proof.get('revision') == revision()
                 and proof.get('protocol_digest') == expected['protocol_digest'] and proof.get('inference') is False
                 and set(proof.get('scenarios',{})) == set(scenarios(task)), 'Unqualified scheduler')
-        from skill_report import generate
-        inputs = [reference.parent / 'scenarios' / name / 'evidence/public' for name in scenarios(task)]
-        generate(inputs, reference / 'analysis/analysis.json', staging / 'report-reproduction')
-        require(digest(staging / 'report-reproduction/report.html') == digest(reference / 'consolidated/report.html')
-                == digest(reference / 'reproduced/report.html'), 'Consumed public-only report reproduction failed')
+        if task.diagnostic_observation:
+            from case_observation import verify_qualification
+            verify_qualification(reference.parent, task)
+        else:
+            from skill_report import generate
+            inputs = [reference.parent / 'scenarios' / name / 'evidence/public' for name in scenarios(task)]
+            generate(inputs, reference / 'analysis/analysis.json', staging / 'report-reproduction')
+            require(digest(staging / 'report-reproduction/report.html') == digest(reference / 'consolidated/report.html')
+                    == digest(reference / 'reproduced/report.html'), 'Consumed public-only report reproduction failed')
     require(reports.read_json(reference / 'deployment.json') == reports.read_json(staging / 'deployment.json'), 'Deployment drift')
     def members(directory):
         return {(r['arm'],r['case_id']):{k:v for k,v in r['members'].items() if k != 'task.toml'}
@@ -159,6 +166,8 @@ def validate_receipt(receipt, approval, task):
     required = {'artifact', 'artifact_digest', 'producer_run', 'revision', 'protocol_digest', 'dispatch',
                 'run_id', 'allocation', 'first_dispatch', 'authentication', 'definition',
                 'definition_digest', 'selection_digest', 'preparation_location'}
+    if getattr(task, 'diagnostic_observation', False):
+        required.update(('selected_skill', 'selected_case'))
     if task.definition.get('type') == 'judge-only':
         required.add('artifact_expires_at')
         expires = receipt.get('artifact_expires_at')
@@ -352,6 +361,9 @@ def prepare(root, task, qualification, authentication_qualification=None):
     stage(root, task, 'live') # Preparation only: no inference path is invoked.
     qualify_launch(root, task)
     reports.write_json(retained/'control-qualification.json',ready)
+    if task.diagnostic_observation:
+        from case_observation import qualify_observation
+        return qualify_observation(root, retained, task)
     expected={'interruption':'execution_infrastructure_failure', 'missing-evidence':'missing_native_observation',
               'unsupported-runtime':'unsupported_runtime_protocol', 'invalid':'missing_usable_evidence',
               'unsupported-grading':'unsupported_grading', 'threshold':'estimated_usage_threshold','unknown-usage':'unknown_usage', 'provider-refusal':'execution_infrastructure_failure',

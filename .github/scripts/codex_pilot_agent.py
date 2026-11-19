@@ -160,6 +160,8 @@ class PilotCodex(Codex):
         audit_path = self.logs_dir.parent / 'operator/pilot-runtime.json'
         audit_path.parent.mkdir(exist_ok=True)
         audit_path.write_text(json.dumps(audit, indent=2) + '\n')
+        if hasattr(environment, 'start_observation'):
+            await environment.start_observation(boundary_before['agent_id'])
         if probe:
             # Keep qualification answers on the trusted host, out of all images.
             # Only the credential-free probe receives this transient payload.
@@ -169,10 +171,16 @@ class PilotCodex(Codex):
             await self.probe_preflight(environment, env)
             if self.profile['id'] == CODEX_FIXTURE_PROFILE and scenario == 'success':
                 scenario = 'priced-success'
+            if getattr(self, 'observation_fixture', False):
+                scenario = 'case-observation'
             # Server has no network forwarding and never authenticates to a provider.
             await self.exec_as_agent(environment, command=(
                 f'python3 /opt/pilot/codex_pilot_stub.py {logs}/probe.json {scenario} {shlex.quote(payload)} {shlex.quote(commands)} '
                 f'>{logs}/stub.log 2>&1 & echo $! >{HOME}/stub.pid'))
+            if scenario == 'case-observation':
+                # A startup reconnect is a terminal error in the existing trace contract.
+                await self.exec_as_agent(environment, command=(
+                    f"timeout 5 sh -c 'until test -f {logs}/probe.ready; do sleep 0.05; done'"))
         command = (f'{BINARY} exec --strict-config --sandbox danger-full-access --skip-git-repo-check '
                    f'--cd /workspace --model {self.profile["model"]} --json '
                    f'--output-last-message {logs}/last-message.txt -- {shlex.quote(instruction)} '

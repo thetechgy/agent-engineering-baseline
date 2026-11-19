@@ -182,7 +182,7 @@ def exec_trajectory(raw, adapter, *, diagnostics=None):
             raise UnsupportedCodexProtocol('Unsupported native event: ' + str(kind) + '/' + str(item_type))
         step = adapter._convert_event_to_step(normalized, len(steps)+1)
         steps.append(step.model_copy(update={'llm_call_count':None}))
-    if pending or turns != 1 or not session or not actions:
+    if pending or turns != 1 or not session or (not actions and not getattr(getattr(adapter, 'task', None), 'diagnostic_observation', False)):
         raise MissingCodexObservation('Incomplete native trajectory')
     return Trajectory(schema_version='ATIF-v1.7', session_id=session,
         agent=Agent(name='codex',version=adapter.profile['cli'],model_name=adapter.model_name),
@@ -215,6 +215,7 @@ class CampaignCodex(PilotCodex):
     def __init__(self, *args, campaign_definition, control, present, live=False, deadline_fixture=None, launch_context=None, **kwargs):
         from evaluation_tasks import load
         self.task = load(ROOT / campaign_definition)
+        self.observation_fixture = self.task.diagnostic_observation and not live
         self.control = control
         self.expected_present = present
         self.profile = read_profile(ROOT / self.task.definition['runtime_profile'])['resolved']
@@ -246,6 +247,8 @@ class CampaignCodex(PilotCodex):
         return super()._build_register_skills_command()
 
     async def run(self, instruction, environment, context):
+        if self.observation_fixture:
+            environment.interrupt_observation = os.environ.get('AEB_CAMPAIGN_CONTROL') == 'collection-interrupted'
         if self.deadline_fixture:
             from codex_pilot_deadline_fixture import run
             return await run(self, instruction, environment, context, super().run)
@@ -327,7 +330,7 @@ class CampaignCodex(PilotCodex):
             from codex_pilot_deadline_fixture import commands
             return commands(self.output, payload)
         control = os.environ.get('AEB_CAMPAIGN_CONTROL', self.control)
-        if self.task.probe_origin == 'operator':
+        if self.task.probe_origin == 'operator' or self.observation_fixture:
             return self.task.probe_commands(control, payload, self.expected_present)
         read = ['cat /home/agent/.agents/skills/' + self.skill + '/SKILL.md'] if self.expected_present else []
         commands = ['python3 /opt/pilot/codex_pilot_probe.py ' + self.skill, *read]
