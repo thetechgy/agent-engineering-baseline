@@ -35,10 +35,10 @@ def program(command):
 
 record = Path(sys.argv[1])
 scenario = sys.argv[2]
-priced = scenario == 'priced-success'
+priced = scenario in ('priced-success', 'case-observation-priced')
 compatibility = scenario == 'compatibility'
 answer = 'Credential-free qualification complete.'
-if scenario == 'case-observation':
+if scenario in ('case-observation', 'case-observation-priced'):
     answer = base64.b64decode(fixture, validate=True).decode()
     scenario = 'success'
 if priced or compatibility:
@@ -146,6 +146,6 @@ class Refuse(BaseHTTPRequestHandler):
 
 
 with HTTPServer(('127.0.0.1', 8765), Refuse) as server:
-    if sys.argv[2] == 'case-observation':
+    if sys.argv[2] in ('case-observation', 'case-observation-priced'):
         record.with_suffix('.ready').touch()
     server.serve_forever()

@@ -1,6 +1,7 @@
 """Pinned Codex image preparation shared by historical and campaign entry points."""
 import shutil
 from codex_pilot_contract import ROOT, PROFILE as P
+from evaluation_runtime import CODEX_OBSERVATION_PROFILE
 
 
 def prepare_cli(task, runtime=None):
@@ -43,7 +44,9 @@ def usage_record(value, *, probe=False, runtime=None):
     counts = {key: agent.get(key) for key in ('n_input_tokens', 'n_cache_tokens', 'n_output_tokens')}
     metadata = agent.get('metadata') or {}
     candidate = selected['cli'] == '0.169.1'
-    writes = metadata.get('n_cache_write_input_tokens') if candidate else 0
+    write_key = ('cache_write_input_count' if selected['id'] == CODEX_OBSERVATION_PROFILE
+                 else 'n_cache_write_input_tokens')
+    writes = metadata.get(write_key) if candidate else 0
     if candidate:
         counts['n_cache_write_input_tokens'] = writes
     valid = all(type(v) is int and v >= 0 for v in counts.values())

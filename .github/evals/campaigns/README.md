@@ -7,6 +7,11 @@ job runs one current-skill trial with verification disabled. Generated cases
 use their declared inputs and APM deployment. Native overlays that require a
 different task environment fail during credential-free preparation.
 
+The observation uses the pinned Codex CLI 0.169.1 / GPT-6.2 Sol / High
+profile. The 0.155.1 selector remains available for replay. Prepare the
+selection at the exact intended revision. The earlier preparation and
+allocation are bound to their original revision and runtime.
+
 For Podman case 4, dispatch the following command after separate approval of
 the source revision, preparation artifact and allocation. Set `EVALUATED_REF`
 to the branch at that revision and `APPROVED_ALLOCATION` to
