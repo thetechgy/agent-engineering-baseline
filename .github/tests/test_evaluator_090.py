@@ -40,7 +40,7 @@ class Release090Contracts(unittest.TestCase):
         registry = evidence.custom_registry(ROOT)
         # These successors preserve this stopped source-v17 population unchanged.
         registry['profiles'] = {k:v for k,v in registry['profiles'].items()
-            if '-source-v18-' not in k and '-source-v19-' not in k and '-source-v20-' not in k and '-source-v21-' not in k and '-source-v22-' not in k and '-source-v23-' not in k and '-source-v24-' not in k and '-source-v29-' not in k and '-source-v28-' not in k and '-source-v27-' not in k and '-source-v26-' not in k and k not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18', 'pester-effectiveness-v31', 'pester-cli-pilot-retained-v19', 'pester-effectiveness-v32', 'pester-cli-pilot-retained-v20') and '-source-v25-' not in k and k not in ('pester-effectiveness-v27', 'pester-effectiveness-v28', 'pester-effectiveness-v29')}
+            if '-source-v18-' not in k and '-source-v19-' not in k and '-source-v20-' not in k and '-source-v21-' not in k and '-source-v22-' not in k and '-source-v23-' not in k and '-source-v24-' not in k and '-source-v30-' not in k and '-source-v29-' not in k and '-source-v28-' not in k and '-source-v27-' not in k and '-source-v26-' not in k and k not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18', 'pester-effectiveness-v31', 'pester-cli-pilot-retained-v19', 'pester-effectiveness-v32', 'pester-effectiveness-v33', 'pester-cli-pilot-retained-v20') and '-source-v25-' not in k and k not in ('pester-effectiveness-v27', 'pester-effectiveness-v28', 'pester-effectiveness-v29')}
         registry['metrics'].pop('gh.authorization.v2')
         old = copy.deepcopy(registry)
         added = [key for key in registry['profiles'] if '-source-v17-' in key]
