@@ -1382,9 +1382,10 @@ produces zero. Contextual links identify the skill and case where applicable.
 
 Use the same saved-analysis and consolidated renderer with the report-only
 decision entry point. The checked-in reviewer input selects the two matched
-Pester cohorts, their diagnostic replay and the completed permission pilot.
-The opening gives the finding, the action and the evidence that would change
-it. Follow the receipt and run links for scores, provenance and logs.
+Pester cohorts, their diagnostic replay, the completed permission pilot and
+the human-reviewed Podman case 4 observation. The opening gives the finding,
+the action and the evidence that would change it. Follow the receipt and run
+links for evidence, provenance and logs.
 
 With the data-only reporting interpreter configured above, choose a new
 persistent output directory outside the checkout.
@@ -1412,6 +1413,13 @@ The decision input binds each frozen transfer row to an admitted public record
 and the permission rows to the exact checked-in execution receipt. The
 historical permission bundle uses the campaign registry from its execution
 revision. The report reads the verified receipt for that pair.
+
+The Podman entry binds the [sanitized observation receipt](../../docs/evaluations/podman-case-observation/case-4/receipt.json)
+and its [operator workspace comparison](../../docs/evaluations/podman-case-observation/case-4/workspace-observation.json)
+by digest. These files reproduce the entry offline after the Actions artifact
+expires. If the comparison is missing, the decision remains pending and the
+change count is unavailable. The observation contributes no paired score or
+skill-benefit measurement.
 
 The [transfer diagnostic](pester-return-contract/diagnostics/README.md) has its
 own receipt. The report evaluates control qualification and counts acceptance,

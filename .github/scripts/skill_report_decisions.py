@@ -23,7 +23,7 @@ QUALIFICATION_VALIDATORS = {
 DECISION_CSS = """
 .review-decisions{margin:0 0 1.5rem}
 .review-decisions>h2{margin:0 0 .75rem}
-.decision-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,26rem),1fr));gap:1rem}
+.decision-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,23rem),1fr));gap:1rem}
 .decision-card{min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:.4rem;
 padding:.85rem 1rem}
 .decision-card h3{margin:0;font-size:1.15rem}
@@ -269,7 +269,92 @@ def qualification_status(spec, receipt, replay_pair, *, replay_complete):
     return verified, ''.join(parts)
 
 
-def decision_section(manifest, result, records, receipts, replays, population, qualifications):
+def observation_card(card, receipt, workspace):
+    """Admit the retained evidence for one human-reviewed, ungraded observation."""
+    evidence.closed(card, ('skill', 'case', 'decision', 'attribution', 'notes', 'logs', 'reconsider', 'observation'))
+    evidence.skill_id(card['skill'])
+    evidence.token(card['case'])
+    decision = label(card['decision'])
+    expected = card['observation']['changed_paths']
+    require(type(expected) is int and expected >= 0, 'Invalid reviewed workspace change count')
+    require(type(card['notes']) is list and len(card['notes']) <= 4, 'Decision notes')
+    require(type(card['logs']) is list and 0 < len(card['logs']) <= 4, 'Decision log links')
+    links = ' · '.join(source_link(item) for item in [card['attribution'], *card['logs']])
+    history = ''.join('<p>' + cited_text(note) + '</p>' for note in card['notes'])
+    reconsider = cited_text(card['reconsider'])
+    runtime_label = ''
+    if receipt is not None:
+        evidence.closed(receipt, ('schema_version', 'source', 'runtime', 'observation', 'answer', 'trace'))
+        require(type(receipt['schema_version']) is int and receipt['schema_version'] == 1, 'Observation schema')
+        source = receipt['source']
+        evidence.closed(source, ('run_id', 'revision', 'artifact_id', 'artifact_sha256'))
+        evidence.revision(source['revision'])
+        evidence.sha(source['artifact_sha256'])
+        require(all(type(source[key]) is int and source[key] > 0 for key in ('run_id', 'artifact_id')),
+                'Invalid observation source')
+        require(card['attribution']['url'].endswith(f"/actions/runs/{source['run_id']}/artifacts/{source['artifact_id']}"),
+                'Observation artifact link mismatch')
+        recorded = receipt['observation']
+        evidence.closed(recorded, ('skill', 'case', 'arm', 'execution', 'quality', 'evidence', 'cleanup', 'model_judge_calls'))
+        require((recorded['skill'], recorded['case'], recorded['arm']) == (card['skill'], card['case'], 'current')
+                and recorded['quality'] == 'ungraded', 'Observation skill, case or grading mismatch')
+        runtime = receipt['runtime']
+        evidence.closed(runtime, ('agent', 'cli', 'model', 'reasoning_effort'))
+        runtime_label = label(runtime['agent']) + ' ' + ' / '.join(
+            label(runtime[key]) for key in ('cli', 'model', 'reasoning_effort'))
+        answer, trace = receipt['answer'], receipt['trace']
+        evidence.closed(trace, ('source_sha256', 'terminal_event', 'final_message_sha256', 'actions'))
+        evidence.sha(trace['source_sha256'])
+        evidence.sha(trace['final_message_sha256'])
+        require(type(trace['actions']) is list and all(type(action) is dict and action for action in trace['actions']),
+                'Invalid retained action trace')
+        complete = (recorded['execution'] == 'completed' and recorded['evidence'] == 'complete'
+                    and recorded['cleanup'] is True and type(recorded['model_judge_calls']) is int
+                    and recorded['model_judge_calls'] == 0 and type(answer) is str and bool(answer.strip())
+                    and evidence.digest_bytes(answer.encode('utf-8')) == trace['final_message_sha256']
+                    and trace['terminal_event'] == 'turn.completed')
+    else:
+        complete = False
+
+    changes = None
+    if workspace is not None and workspace.get('status') == 'complete':
+        evidence.closed(workspace, ('status', 'root', 'changes', 'baseline_input_files', 'baseline_sha256'))
+        evidence.sha('sha256:' + workspace['baseline_sha256'])
+        changes = workspace['changes']
+        require(type(changes) is list and all(type(change) is dict for change in changes), 'Invalid workspace changes')
+    workspace_reviewed = changes is not None and len(changes) == expected
+    complete = complete and workspace_reviewed
+    heading = '<h3>' + label(card['skill']) + '</h3><p class="muted">Case ' + report.code(card['case']) + '</p>'
+    if complete:
+        finding = ('<p class="lead"><strong>' + decision + '</strong></p>'
+                   '<p>One human-reviewed, current-skill observation · ' + runtime_label + '. Skill benefit remains unmeasured.</p>')
+    else:
+        missing = ('Completed workspace comparison unavailable for this decision.' if not workspace_reviewed
+                   else 'Retained final answer or completed action trace unavailable.')
+        finding = '<p class="lead"><strong>Decision pending complete evidence</strong></p><p>' + missing + '</p>'
+    details = report.disclosure('Retained answer, action trace and workspace evidence',
+                                {'receipt': receipt, 'workspace': workspace}) if receipt or workspace else ''
+    reopen = '<p>' + reconsider + '</p>' if complete else ''
+    return ('<article class="decision-card">' + heading + finding + reopen + '<p>' + links + '</p>' + details +
+            ('<details><summary>Historical context</summary>' + history + '</details>' if history else '') + '</article>')
+
+
+def bound_observation_member(base, binding, read):
+    evidence.closed(binding, ('member', 'sha256'))
+    evidence.relative(binding['member'])
+    evidence.sha(binding['sha256'])
+    path = base / binding['member']
+    if not path.exists():
+        return None
+    raw = read(path, SUPPLEMENT_LIMIT)
+    require(evidence.digest_bytes(raw) == binding['sha256'], 'Observation member digest mismatch')
+    value = evidence.parse_json(raw, limit=SUPPLEMENT_LIMIT)
+    require(type(value) is dict, 'Invalid observation member')
+    evidence.reports.public_strings(value)
+    return value
+
+
+def decision_section(manifest, result, records, receipts, replays, population, qualifications, observations):
     evidence.closed(manifest, ('schema_version', 'receipts', 'decisions'))
     require(type(manifest['schema_version']) is int and manifest['schema_version'] == 1, 'Decision schema')
     cards = manifest['decisions']
@@ -279,6 +364,9 @@ def decision_section(manifest, result, records, receipts, replays, population, q
     parts = ['<section class="review-decisions" aria-labelledby="review-decisions">'
              '<h2 id="review-decisions">Skill improvement findings</h2><div class="decision-cards">']
     for card in cards:
+        if 'observation' in card:
+            parts.append(observation_card(card, *observations[card['skill'], card['case']]))
+            continue
         extra = ('replay',) if 'replay' in card else ('next', 'reconsider')
         if 'qualification' in card:
             require('replay' in card, 'Qualification requires a historical replay')
@@ -368,7 +456,7 @@ def scope_coverage(page, result, records, summaries):
                                  if f['skill'] not in summaries or f['next_step'] not in context_only]}
     summary = report.executive_summary(view, records)
     start = summary.index('</p>') + len('</p>')
-    summary = ('<p class="lead">Matched-case results and diagnostic replays are reported above in their own units. '
+    summary = ('<p class="lead">Matched results, diagnostic replays and human-reviewed observations appear above in their own units. '
                'Configured coverage and standard-score comparisons are shown below.</p>' + summary[start:])
     summary = replace_once(summary, 'Mandatory gates · Among recorded observations:',
                            'Mandatory gates in analyzed bundles · Recorded observations:')
@@ -486,11 +574,22 @@ def generate(inputs, saved_analysis, decisions_path, output=None, *, replay_path
             receipt = evidence.parse_json(read(path, SUPPLEMENT_LIMIT), limit=SUPPLEMENT_LIMIT)
             evidence.reports.public_strings(receipt)
             qualifications[binding['id']] = receipt
+    observations = {}
+    for card in manifest['decisions']:
+        if 'observation' not in card:
+            continue
+        spec = card['observation']
+        evidence.closed(spec, ('receipt', 'workspace', 'changed_paths'))
+        key = card['skill'], card['case']
+        require(key not in observations, 'Duplicate observation decision')
+        observations[key] = tuple(bound_observation_member(decisions_path.parent, spec[role], read)
+                                  for role in ('receipt', 'workspace'))
     guard = evidence.input_guard(directories, states, members, budget)
     guard()
 
     page = report.render_report(result, captured)
-    section, summaries = decision_section(manifest, result, captured.records, receipts, replays, population, qualifications)
+    section, summaries = decision_section(
+        manifest, result, captured.records, receipts, replays, population, qualifications, observations)
     page = add_decisions(page, section, result, captured.records, summaries)
     require(len(page) <= report.HTML_LIMIT, 'HTML report size exceeded')
     return evidence.write_outputs({}, output, input_paths=(*captured.roots, saved_analysis.parent, decisions_path.parent,
