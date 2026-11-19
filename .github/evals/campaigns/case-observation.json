@@ -1,7 +1,7 @@
 {
   "id": "case-observation",
   "type": "case-observation",
-  "runtime_profile": ".github/evals/campaigns/codex-090.json",
+  "runtime_profile": ".github/evals/campaigns/codex-1691-observation.json",
   "variants": [
     {
       "id": "current",

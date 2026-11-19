@@ -13,7 +13,8 @@ import tempfile
 from codex_pilot_agent import PilotCodex
 from codex_pilot_environment import PilotEnvironment
 from evaluation_campaign_core import require
-from evaluation_runtime import ROOT, CODEX_090_PROFILES, CODEX_FIXTURE_PROFILE, read_profile, failure_reason
+from evaluation_runtime import (CODEX_090_PROFILES, CODEX_FIXTURE_PROFILE, CODEX_OBSERVATION_PROFILE,
+                                ROOT, failure_reason, read_profile)
 
 
 class MissingCodexObservation(ValueError):
@@ -36,7 +37,9 @@ def exec_trajectory(raw, adapter, *, diagnostics=None):
     Every normalized action links to its exact raw trace and event line(s).
     """
     from harbor.agents.installed.codex import Agent, Trajectory
-    successor = adapter.profile.get('id') == CODEX_FIXTURE_PROFILE
+    successor = adapter.profile.get('id') in (CODEX_FIXTURE_PROFILE, CODEX_OBSERVATION_PROFILE)
+    observation = (adapter.profile.get('id') == CODEX_OBSERVATION_PROFILE
+                   and getattr(getattr(adapter, 'task', None), 'diagnostic_observation', False))
     protocol = 'codex-0.169.1-exec-json' if successor else 'codex-0.167-exec-json'
     shells = ('/bin/sh', '/bin/bash') if successor else ('/bin/sh',)
     pending = {}; completed = set(); steps = []; notes = []; informational = []
@@ -152,7 +155,8 @@ def exec_trajectory(raw, adapter, *, diagnostics=None):
             try: wrapper = shlex.split(command)
             except ValueError as error:
                 raise UnsupportedCodexProtocol('Invalid native shell wrapper') from error
-            if len(wrapper) != 3 or (wrapper[0] not in shells or wrapper[1] != '-lc'):
+            accepted_shell = wrapper[:2] == ['/bin/sh', '-c'] and observation
+            if len(wrapper) != 3 or not (accepted_shell or wrapper[0] in shells and wrapper[1] == '-lc'):
                 raise UnsupportedCodexProtocol('Unsupported native shell wrapper')
             metadata.update(native_command=command, exit_code=item['exit_code'])
             normalized = {'kind':'tool_call', 'call_id':key, 'tool_name':'exec_command',
@@ -219,6 +223,8 @@ class CampaignCodex(PilotCodex):
         self.control = control
         self.expected_present = present
         self.profile = read_profile(ROOT / self.task.definition['runtime_profile'])['resolved']
+        require(self.profile['id'] != CODEX_OBSERVATION_PROFILE or self.task.diagnostic_observation,
+                'Observation runtime requires the single-case diagnostic')
         self.skill = self.task.definition['skill']
         self.output = '/workspace/output/' + self.task.output
         self.live = live

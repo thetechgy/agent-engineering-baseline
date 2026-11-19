@@ -36,6 +36,30 @@ class ExecEvents(unittest.TestCase):
         trajectory = self.parse(events)
         self.assertEqual([step.message for step in trajectory.steps], ['Do you accept socket access?'])
 
+    def test_observation_preserves_non_login_sh_action_and_original_trace(self):
+        from evaluation_codex import UnsupportedCodexProtocol, exec_trajectory
+        from evaluation_runtime import CODEX_FIXTURE_PROFILE, CODEX_OBSERVATION_PROFILE
+
+        action = {"id": "read", "type": "command_execution", "command": "/bin/sh -c 'cat SKILL.md'"}
+        raw = "\n".join(map(json.dumps, self.stream(
+            {"type": "item.started", "item": {**action, "status": "in_progress"}},
+            {"type": "item.completed", "item": {**action, "status": "completed",
+                                                "exit_code": 0, "aggregated_output": "skill"}})))
+        self.adapter.task = SimpleNamespace(diagnostic_observation=True)
+        self.adapter.profile = {**self.adapter.profile, "id": CODEX_FIXTURE_PROFILE}
+        with self.assertRaisesRegex(UnsupportedCodexProtocol, "Unsupported native shell wrapper"):
+            exec_trajectory(raw, self.adapter)
+        self.adapter.profile = {**self.adapter.profile, "id": CODEX_OBSERVATION_PROFILE}
+        trajectory = exec_trajectory(raw, self.adapter)
+        step, = trajectory.steps
+        self.assertEqual(step.tool_calls[0].arguments, {"command": "cat SKILL.md"})
+        self.assertEqual(step.extra["tool_metadata"]["native_command"], action["command"])
+        self.assertEqual(step.extra["tool_metadata"]["raw_event_lines"], [2, 3])
+        self.assertEqual(trajectory.extra["raw_trace"]["sha256"], "sha256:" + hashlib.sha256(raw.encode()).hexdigest())
+        self.adapter.task.diagnostic_observation = False
+        with self.assertRaisesRegex(UnsupportedCodexProtocol, "Unsupported native shell wrapper"):
+            exec_trajectory(raw, self.adapter)
+
     def edit(self,status='completed',identity='edit',kind='add'):
         return {'id':identity,'type':'file_change','changes':[{'path':'/workspace/output/result.txt','kind':kind}],'status':status}
 

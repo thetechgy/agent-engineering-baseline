@@ -112,9 +112,13 @@ class CaseObservationTests(unittest.TestCase):
     def test_successors_change_only_producer_identity(self):
         registry = json.loads((SCRIPTS.parent / "evals/custom-metrics.json").read_bytes())
         profiles = registry["profiles"]
-        previous = {k.replace("-source-v27-", "-source-v28-"): k for k in profiles if "-source-v27-" in k}
-        previous.update({"pester-effectiveness-v31": "pester-effectiveness-v30",
-                         "pester-cli-pilot-retained-v19": "pester-cli-pilot-retained-v18"})
+        original = {k: v for k, v in profiles.items() if "-source-v29-" not in k
+                    and k not in ("pester-effectiveness-v32", "pester-cli-pilot-retained-v20")}
+        self.assertEqual(hashlib.sha256((json.dumps({**registry, "profiles": original}, indent=2) + "\n").encode()).hexdigest(),
+                         "e2421338db925697590201424cb8453bc7e44b555701dddf985047a4809dde13")
+        previous = {k.replace("-source-v28-", "-source-v29-"): k for k in profiles if "-source-v28-" in k}
+        previous.update({"pester-effectiveness-v32": "pester-effectiveness-v31",
+                         "pester-cli-pilot-retained-v20": "pester-cli-pilot-retained-v19"})
         for new, old in previous.items():
             successor = profiles.pop(new)
             predecessor = profiles[old]
@@ -123,5 +127,3 @@ class CaseObservationTests(unittest.TestCase):
             if "adapter_sha256" in successor.get("campaign", {}):
                 successor["campaign"]["adapter_sha256"] = predecessor["campaign"]["adapter_sha256"]
             self.assertEqual(successor, predecessor)
-        self.assertEqual(hashlib.sha256((json.dumps(registry, indent=2) + "\n").encode()).hexdigest(),
-                         "f59f8715f00cf22035f1a32c4bc0d1f4f53bdbea6668e902942e9144ae0a887a")
