@@ -2,10 +2,12 @@
 import base64
 import hashlib
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
@@ -20,6 +22,52 @@ class CaseObservationTests(unittest.TestCase):
         for skill, case in (("podman", "404"), ("../podman", "4"), ("gh", "4")):
             with self.assertRaises(ValueError):
                 selected(skill, case)
+
+    @unittest.skipUnless(os.environ.get("APM_EXECUTABLE"), "Pinned APM required for native staging")
+    def test_case9_staging_checks_declared_input_before_launch(self):
+        import evaluation_campaign as campaign
+        from evaluation_campaign_selection import selected_task
+        from skillevaluator.tier3.harbor import adapter
+
+        generate = adapter.generate_harbor_tasks
+        with patch.dict(os.environ, OBSERVATION_SKILL="podman", OBSERVATION_CASE="9"):
+            task = selected_task("case-observation")
+        declared = "evals/files/postgres.container"
+        self.assertEqual(task.entry["files"], [declared])
+        original = (task.source / declared).read_bytes()
+
+        for fault in (None, "missing", "substituted", "extra"):
+            with self.subTest(fault=fault), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+
+                def generate_case(*args, **kwargs):
+                    paths = generate(*args, **kwargs)
+                    native, = paths
+                    member = native / "environment/input/postgres.container"
+                    self.assertEqual(member.read_bytes(), original)
+                    if fault == "missing":
+                        member.unlink()
+                    elif fault == "substituted":
+                        member.write_bytes(b"X" * len(original))
+                    elif fault == "extra":
+                        member.with_name("extra.container").write_bytes(original)
+                    return paths
+
+                with patch.object(adapter, "generate_harbor_tasks", generate_case):
+                    if fault:
+                        with self.assertRaisesRegex(ValueError, "Staged inputs differ from declared case files"):
+                            campaign.stage(root, task, "live")
+                        self.assertFalse((root / "evidence/staging.json").exists())
+                    else:
+                        _, tasks, captured, _ = campaign.stage(root, task, "live")
+                        native = tasks["current"]["9"]
+                        member = "environment/input/postgres.container"
+                        dockerfile = (native / "environment/Dockerfile").read_text().splitlines()
+                        self.assertIn("COPY input/ /workspace/input/", dockerfile)
+                        self.assertEqual((native / member).read_bytes(), original)
+                        self.assertEqual(captured[0]["members"][member], "sha256:" + hashlib.sha256(original).hexdigest())
+                        receipt = json.loads((root / "evidence/selected-case.json").read_bytes())
+                        self.assertEqual(receipt["staged_inputs"], ["postgres.container"])
 
     def test_missing_oversized_and_linked_members_cannot_attest_zero(self):
         with tempfile.TemporaryDirectory() as tmp:

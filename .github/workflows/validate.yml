@@ -191,6 +191,12 @@ jobs:
             test_gh_initializer.InitializerTests.test_root_probe_rejects_foreign_stale_dead_and_pid_reused_brokers \
             test_evaluator_adoption.AdoptionTests.test_actual_native_verifier_and_unscored_collection_visibility
 
+      - name: Check single-case staging with the pinned evaluator and APM
+        run: |
+          APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
+          APM_EXECUTABLE="$RUNNER_TEMP/apm/bin/apm" PYTHONPATH=.github/scripts:.github/tests \
+            "$SKILL_NEXT_PYTHON" -B -m unittest -v test_case_observation.CaseObservationTests.test_case9_staging_checks_declared_input_before_launch
+
       - name: Qualify versioned behavioral benchmark evidence without inference
         run: '"$SKILL_NEXT_PYTHON" -B .github/scripts/qualify_benchmark_evidence.py --output "$RUNNER_TEMP/behavioral-evidence-090"'
 

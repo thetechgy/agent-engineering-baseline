@@ -74,7 +74,9 @@ class CaseObservation(Task):
         import evaluation_codex as codex
         from gh_evaluations import APT_SOURCES
         from harbor.models.task.task import Task as NativeTask
-        from skillevaluator.tier3.harbor.adapter import generate_harbor_tasks, private_evaluator_skill_snapshot
+        from skillevaluator.tier3.harbor.adapter import (
+            _entry_file_refs, _resolve_entry_file_ref, generate_harbor_tasks, private_evaluator_skill_snapshot,
+        )
         skill, case = self.definition["skill"], self.definition["source_case"]
         # BYOT overlays own their task-specific initializer. Never silently convert
         # them into a generated task and lose their broker, inputs or tools.
@@ -105,15 +107,24 @@ class CaseObservation(Task):
         codex.prepare_task(native, mode, runtime)
         members = {p.relative_to(native).as_posix(): evidence.digest_bytes(evidence.read_bytes(p))
                    for p in reports.regular_tree(native)}
+        prefix = "environment/input/"
+        actual_inputs = {path.removeprefix(prefix): digest for path, digest in members.items() if path.startswith(prefix)}
+        expected_inputs = {}
+        for ref in _entry_file_refs(self.entry):
+            source, relative = _resolve_entry_file_ref(ref, skill_path=self.source, evals_dir=self.source / "evals",
+                                                       input_files_dir=self.source / "evals/files")
+            for path in (reports.regular_tree(source) if source.is_dir() else [source]):
+                target = (relative / path.relative_to(source)).as_posix()
+                digest = evidence.digest_bytes(evidence.read_bytes(path))
+                core.require(expected_inputs.setdefault(target, digest) == digest, "Conflicting declared case files")
+        core.require("environment/input" not in members and actual_inputs == expected_inputs,
+                     "Staged inputs differ from declared case files")
         captured = [{"case_id": case, "arm": "with_skill", "members": members, "task_checksum": NativeTask(native).checksum}]
         reports.write_json(root / "evidence/staging.json", captured)
         retain_descriptors(root / "evidence", {"with_skill": [native]}, captured)
-        inputs = native / "environment/input"
-        actual_inputs = sorted(p.relative_to(inputs).as_posix() for p in reports.regular_tree(inputs)) if inputs.exists() else []
-        core.require(self.entry.get("files") or not actual_inputs, "Unexpected inputs for empty case")
         reports.write_json(root / "evidence/selected-case.json", {"skill": skill, "case": case,
             "prompt_sha256": hashlib.sha256((native / "instruction.md").read_bytes()).hexdigest(),
-            "declared_files": self.entry.get("files", []), "staged_inputs": actual_inputs, "arm": "current",
+            "declared_files": self.entry.get("files", []), "staged_inputs": sorted(actual_inputs), "arm": "current",
             "trials": 1, "verifier_enabled": False})
         return self.source, {"current": {case: native}}, captured, {}
 
