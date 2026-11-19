@@ -129,17 +129,25 @@ class CaseObservation(Task):
         return self.source, {"current": {case: native}}, captured, {}
 
 
-def observation(trial, row, task, artifact, mode, secret):
+def observation(trial, row, task, artifact, mode, secret, *, interrupted=False):
     """Retain fixed native members only. Every missing member remains visible."""
     from skillevaluator.utils.redaction import redact_printable_text
     record = {"kind": "diagnostic observation", "execution": "failed", "quality": "ungraded",
               "evidence": "incomplete", "review": "incomplete", "missing": [],
               "skill": task.definition["skill"], "case": row["case"], "arm": "current"}
+    if interrupted:
+        record.update(execution="interrupted", cleanup=row.get("cleanup"), usage=row.get("usage"))
     report = artifact / "observation.json"
     reports.write_json(report, record)
     def capture(member, limit, *, structured=False, retain=True):
         try:
-            raw = evidence.read_bytes(trial / member, limit=limit).decode()
+            source = trial / member
+            try:
+                source.lstat()
+            except FileNotFoundError:
+                record["missing"].append(member)
+                return
+            raw = evidence.read_bytes(source, limit=limit).decode()
             value = json.loads(raw) if structured else raw
             from skillevaluator.tier3.harbor.secure_docker_environment import _redact
             cleaned = _redact(redact_printable_text(raw), {secret} if secret else set(), include_short=True)
@@ -148,14 +156,18 @@ def observation(trial, row, task, artifact, mode, secret):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(cleaned)
             return value
-        except (OSError, ValueError, TypeError):
+        except (OSError, ValueError, TypeError) as error:
             record["missing"].append(member)
+            record.setdefault("retention_failures", {})[member] = type(error).__name__
     audit = capture("operator/pilot-runtime.json", 65536, structured=True) or {}
     final = capture("operator/pilot-final-policy.json", 65536, structured=True) or {}
     life = capture("operator/pilot-lifecycle.json", 65536, structured=True) or {}
     workspace = capture("operator/workspace-observation.json", 512*1024, structured=True) or {}
     answer = capture("agent/last-message.txt", 64*1024)
     trace = capture("agent/codex.txt", 1024*1024)
+    if interrupted:
+        reports.write_json(report, record)
+        return record
     events = []
     try:
         events = [json.loads(line) for line in (trace or "").splitlines()

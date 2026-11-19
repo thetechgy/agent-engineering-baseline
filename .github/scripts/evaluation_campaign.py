@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Bounded skill campaigns through pinned Harbor and consolidated reporting."""
 import argparse
+from contextlib import contextmanager
 import hashlib
 import json
 import os
@@ -172,6 +173,19 @@ def construct_launch(root, task, mode, native, present, trial_name, job, extra, 
     return config, env
 
 
+@contextmanager
+def preserve_interruption(task, record, field):
+    """A diagnostic write or cleanup probe cannot replace a handled signal."""
+    primary = sys.exception()
+    try:
+        yield
+    except Exception as error:
+        if not task.diagnostic_observation or not isinstance(primary, KeyboardInterrupt):
+            raise
+        record[field] = type(error).__name__
+        primary.add_note(f"{field}: {type(error).__name__}")
+
+
 def run(root, task, mode, *, reference=None, fixture=None):
     from harbor.models.task.task import Task
     from qualify_evaluator_candidate import run_native
@@ -214,6 +228,7 @@ def run(root, task, mode, *, reference=None, fixture=None):
         from codex_pilot_replay import retain_campaign_originals
         replay_profile,_,_ = evidence.custom_contract(definition['skill'],purpose=purpose(task,mode))
         ledger['retrospective'] = retain_campaign_originals(artifact,task,replay_profile)
+    @preserve_interruption(task, ledger, 'ledger_retention_failure')
     def save():
         target = artifact / 'attempt-ledger.json'; temporary = target.with_suffix('.new')
         with temporary.open('w') as stream:
@@ -263,9 +278,10 @@ def run(root, task, mode, *, reference=None, fixture=None):
                     code = run_native([str(Path(sys.executable).parent / 'harbor'), 'trials','start','--config',str(path)], env=env, log=log, timeout=1200)
             finally:
                 from skillevaluator.utils.redaction import redact_sensitive_text
-                diagnostic = path.with_suffix('.log').read_text(errors='replace')[-32768:]
-                (artifact / ('launch-' + str(row['position']) + '.log')).write_text(
-                    redact_sensitive_text(diagnostic).replace(str(root), '<campaign>').replace(str(ROOT), '<checkout>'))
+                with preserve_interruption(task, row, 'launch_log_retention_failure'):
+                    diagnostic = path.with_suffix('.log').read_text(errors='replace')[-32768:]
+                    (artifact / ('launch-' + str(row['position']) + '.log')).write_text(
+                        redact_sensitive_text(diagnostic).replace(str(root), '<campaign>').replace(str(ROOT), '<checkout>'))
             row.update(returncode=code, cleanup=adapter.resources()==before, usage=adapter.usage(trial, mode, runtime=ledger['runtime']['resolved']),
                        elapsed_seconds=round(time.monotonic()-started, 3))
             core.require(Task(native).checksum == expected['task_checksum'], 'Task checksum drift across launch')
@@ -357,10 +373,21 @@ def run(root, task, mode, *, reference=None, fixture=None):
                     except Exception as error:
                         ledger['report_failure']=type(error).__name__ + ': ' + str(error)[:500]
         finally:
-            ledger['cleanup_complete']=adapter.resources()==before
-            reports.write_json(artifact / 'cleanup.json', {'complete':ledger['cleanup_complete'], 'unlaunched_positions':[r['position'] for r in rows if r['state']=='unlaunched']})
-            save()
-            for sig, handler in old.items(): signal.signal(sig,handler)
+            try:
+                ledger['cleanup_complete'] = None
+                with preserve_interruption(task, ledger, 'cleanup_observation_failure'):
+                    ledger['cleanup_complete'] = adapter.resources() == before
+                if task.diagnostic_observation and ledger.get('stop_reason') == 'interrupted' and rows[0].get('native_trial'):
+                    from case_observation import observation
+                    row = rows[0]
+                    row['cleanup'] = ledger['cleanup_complete']
+                    with preserve_interruption(task, row, 'observation_retention_failure'):
+                        observation(root / row['native_trial'], row, task, artifact, mode, live_key, interrupted=True)
+                with preserve_interruption(task, ledger, 'cleanup_retention_failure'):
+                    reports.write_json(artifact / 'cleanup.json', {'complete':ledger['cleanup_complete'], 'unlaunched_positions':[r['position'] for r in rows if r['state']=='unlaunched']})
+                save()
+            finally:
+                for sig, handler in old.items(): signal.signal(sig, handler)
     if experiment:
         return ledger
     core.require(ledger['state']=='completed' and ledger['cleanup_complete'] and 'report_failure' not in ledger, 'Campaign incomplete: ' + str(ledger.get('stop_reason')) + ('; report: ' + ledger['report_failure'] if 'report_failure' in ledger else ''))

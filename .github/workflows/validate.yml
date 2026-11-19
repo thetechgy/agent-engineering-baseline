@@ -197,6 +197,21 @@ jobs:
           APM_EXECUTABLE="$RUNNER_TEMP/apm/bin/apm" PYTHONPATH=.github/scripts:.github/tests \
             "$SKILL_NEXT_PYTHON" -B -m unittest -v test_case_observation.CaseObservationTests.test_case9_staging_checks_declared_input_before_launch
 
+      - name: Qualify diagnostic evidence retention on handled SIGTERM
+        env:
+          PYTHONPATH: .github/scripts
+          APM_EXECUTABLE: ${{ runner.temp }}/apm/bin/apm
+        run: '"$SKILL_NEXT_PYTHON" -B .github/tests/qualify_case_interruption.py "$RUNNER_TEMP/case-interruption"'
+
+      - name: Retain interrupted diagnostic fixture evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: case-interruption-evidence-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/case-interruption/campaign/evidence/
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Qualify versioned behavioral benchmark evidence without inference
         run: '"$SKILL_NEXT_PYTHON" -B .github/scripts/qualify_benchmark_evidence.py --output "$RUNNER_TEMP/behavioral-evidence-090"'
 

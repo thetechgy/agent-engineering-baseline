@@ -16,6 +16,24 @@ from case_workspace import MAX_FILE, compare
 
 
 class CaseObservationTests(unittest.TestCase):
+    def test_retention_error_preserves_only_the_diagnostic_interruption(self):
+        from evaluation_campaign import preserve_interruption
+        from types import SimpleNamespace
+
+        for diagnostic in (True, False):
+            task = SimpleNamespace(diagnostic_observation=diagnostic)
+            row = {}
+            with self.subTest(diagnostic=diagnostic):
+                with self.assertRaises(KeyboardInterrupt if diagnostic else OSError):
+                    try:
+                        raise KeyboardInterrupt
+                    finally:
+                        with preserve_interruption(task, row, "observation_retention_failure"):
+                            raise OSError("fixture write failed")
+                self.assertEqual(row, {"observation_retention_failure": "OSError"} if diagnostic else {})
+                with self.assertRaises(OSError), preserve_interruption(task, row, "observation_retention_failure"):
+                    raise OSError("ordinary error")
+
     def test_original_ids_resolve_without_runtime_or_credentials(self):
         self.assertEqual(selected("podman", "4")[1]["files"], [])
         self.assertEqual(selected("gh", "gh-014")[1]["id"], "gh-014")
