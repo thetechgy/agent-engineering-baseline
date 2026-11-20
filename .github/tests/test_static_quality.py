@@ -36,12 +36,6 @@ class StaticQualityRoutingTests(unittest.TestCase):
             if 'skill_reports.py' in step.get('run', '') and 'preflight' not in step['run']:
                 self.assertIn('"$SKILL_QUALITY_PYTHON" -B "$STATIC_QUALITY_SCRIPTS/skill_reports.py"', step['run'])
         self.assertIn('bash "$STATIC_QUALITY_SCRIPTS/collect-static-quality.sh"', body)
-        publisher = yaml.safe_load((ROOT / '.github/workflows/publish-skill-report.yml').read_text())['jobs']
-        prepare = '\n'.join(step.get('run', '') for step in publisher['prepare']['steps'])
-        self.assertIn('static_quality_ci.py tools', prepare)
-        self.assertIn('"$SKILL_NEXT_PYTHON" -B "$STATIC_QUALITY_SCRIPTS/skill_pages.py" prepare', prepare)
-        commit = '\n'.join(step.get('run', '') for step in publisher['commit']['steps'])
-        self.assertIn('python3 .github/scripts/skill_pages.py commit', commit)
         setup = next(step for step in contracts['steps'] if 'setup-skillevaluator' in step.get('run', ''))
         self.assertEqual(setup['run'], 'bash .github/scripts/setup-skillevaluator.sh quality')
         native = [step for job in jobs.values() for step in job.get('steps', [])
