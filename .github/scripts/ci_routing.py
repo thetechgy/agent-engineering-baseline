@@ -27,7 +27,6 @@ WORKFLOWS = {
     # Full experiment preparation / migration remain operator-dispatched.
     'evaluation-campaign.yml': {'contracts'},
     'pester-return-qualification.yml': {'contracts'},
-    'pester-candidate.yml': {'contracts'},
     'dependency-freshness.yml': {'contracts'},
     'update-baseline.yml': {'contracts'},
     'benchmark-skills.yml': {'contracts', 'quality'},

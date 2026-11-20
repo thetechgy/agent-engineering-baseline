@@ -5,11 +5,10 @@
 > Numerical equality with the historical policy is no longer required.
 > Production remains on its reviewed runtime. Fixtures are not model measurements.
 
-This is an opt-in grading and collector port for SkillEvaluator 0.7.2 at
+This records the grading and collector port for SkillEvaluator 0.7.2 at
 `f878f99a9cd4a85dd04043feb43e5bd6a777f64b`, with its owning Harbor 0.24.0 lock.
-It does not select this runtime for production. Setup, workflows, Codex pins,
-current and historical review environments, saved reports and reference
-registrations retain their existing identities.
+The port was for qualification. Saved reports and reference registrations
+retain their original identities.
 
 ## Evidence contract
 
@@ -50,24 +49,44 @@ original revisions. Production promotion remains gated.
 
 ## Reproduction
 
-Use a separate clean checkout and the pinned uv 0.13.7. Keep the checkout and
-retained evidence under persistent workspaces; disposable tests honor `TMPDIR`.
+The manual workflow and `candidate` setup mode were retired from main. Use
+baseline revision `849e901299bd428045666bd371695b05c496c1a7` with uv 0.13.9
+and a working Docker Compose CLI for the benchmark setup version check. This
+is the last main revision with the
+[original workflow](https://github.com/thetechgy/agent-engineering-baseline/blob/849e901299bd428045666bd371695b05c496c1a7/.github/workflows/pester-candidate.yml).
 
 ```bash
-candidate_source="$HOME/worktrees/skillevaluator-0.7.2-qualification"
-git clone https://github.com/NVIDIA/SkillEvaluator.git "$candidate_source"
-git -C "$candidate_source" checkout --detach f878f99a9cd4a85dd04043feb43e5bd6a777f64b
-uv sync --project "$candidate_source" --python 3.13 --frozen --no-dev --extra tier3
-uv pip check --python "$candidate_source/.venv/bin/python"
-"$candidate_source/.venv/bin/python" .github/evaluator-backends/build_wheel.py \
-  "$HOME/worktrees/evaluator-95-backend-wheel"
-uv pip install --python "$candidate_source/.venv/bin/python" --no-deps --no-index \
-  --link-mode copy --require-hashes --only-binary :all: \
-  --requirement "$HOME/worktrees/evaluator-95-backend-wheel/requirements.txt"
-"$candidate_source/.venv/bin/python" .github/scripts/qualify_evaluator_candidate.py \
-  --source "$candidate_source" \
-  --output "$HOME/worktrees/evaluator-95-evidence"
+qualifier="$HOME/worktrees/aeb-evaluator-072-reproduction"
+git worktree add --detach "$qualifier" 849e901299bd428045666bd371695b05c496c1a7
+cd "$qualifier"
+export GITHUB_WORKSPACE="$PWD"
+export RUNNER_TEMP="$HOME/worktrees/aeb-evaluator-072-reproduction-evidence"
+mkdir -m 700 "$RUNNER_TEMP"
+export GITHUB_ENV="$RUNNER_TEMP/github-env" GITHUB_PATH="$RUNNER_TEMP/github-path"
+
+bash .github/scripts/setup-skillevaluator.sh benchmark
+bash .github/scripts/setup-skillevaluator.sh candidate
+while IFS= read -r binding; do export "$binding"; done < "$GITHUB_ENV"
+
+status=0
+"$SKILL_CANDIDATE_PYTHON" -B .github/scripts/qualify_evaluator_candidate.py \
+  --source "$SKILL_CANDIDATE_SOURCE" \
+  --output "$RUNNER_TEMP/score-preservation" --scoring-compatibility || status=$?
+test "$status" -eq 1
 ```
+
+The expected result is `standard_score_policy_changed` in
+`scoring-compatibility.json`, with 56 differences across 73 fixture vectors.
+Omit `--scoring-compatibility` and use a fresh output directory for just the
+evidence controls. For native Pester or gh, follow the preparation, verified
+Compose setup, shard and cleanup commands in the original workflow.
+
+For an existing scoring receipt, use `evaluator_scoring_compatibility.compare`
+on the two saved probes to validate their identities and reproduce the refusal.
+For a retained Pester HTML diagnostic, use the original SkillEvaluator
+0.7.2/Harbor 0.24.0 reader `render_agent_eval_html_report` with the matching
+skill bundle and saved run directory, `use_llm_judge=False`, and a fresh output
+path. Keep these diagnostics under their recorded policy and provenance.
 
 The command requires the exact source revision, unchanged source and lock, and
 the selected locked package versions. It extracts a bounded regular-file source
@@ -166,7 +185,7 @@ Every classification, applicable metric and measured runtime must match.
 The candidate retains native collection and HTML diagnostics only. It cannot
 create a production custom capture, public benchmark or history record.
 
-The separate `Candidate Pester packaging` workflow uses the pinned owning lock,
+The historical `Candidate Pester packaging` workflow used the pinned owning lock,
 uv, actions and verified Compose with read-only permissions and no credentials.
 Its artifact contains bounded sanitized diagnostics and control metadata, without
 source snapshots, protected fixtures or raw verifier logs. Production qualification

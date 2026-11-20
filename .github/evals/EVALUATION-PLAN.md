@@ -12,6 +12,15 @@ exact-source hosted receipt governs qualification. The held 0.155.1 /
 **Codex next action** — Review the exact-source fixture receipt before deciding
 whether to authorize one bounded live Codex compatibility check.
 
+## SkillEvaluator 0.7.2 qualifier retirement
+
+The 0.7.2 manual migration workflow and its dedicated setup mode are retired.
+Use the maintained `current-evaluator.yml` for versioned score policy,
+Pester and gh qualification. Backend 1.0.0 remains part of the frozen 0.8.0
+setup. The [ownership decision](EVALUATOR-090-95.md#072-qualifier-retirement)
+and [historical command](EVALUATOR-CANDIDATE-95.md#reproduction) record how to
+read saved diagnostics and reproduce the old qualifier.
+
 ## Pester clarification transfer decision
 
 **DEFER** the exact 22-line `powershell-pester-6` clarification. Both v6 pairs

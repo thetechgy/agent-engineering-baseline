@@ -49,7 +49,7 @@ and the preserved [static receipt](../../docs/evaluations/static-quality-090.md)
 | Private reviews and analyst attachments | Exact retained 0.3 review profiles/overlays | No successor validator/request profile |
 | Native history/replay | Exact original producer and interpreter | Immutable evidence; data-only rendering does not renormalize/rescore |
 | Maintained frozen pilot/campaign/admission | 0.8.0 / Harbor 0.24.0 | Closed experiments stay closed; original replay owners retained |
-| Manual Pester qualifier | 0.7.2 | Still maintained; retirement remains separate |
+| Retained migration diagnostics | 0.7.2 / Harbor 0.24.0 | Manual CI retired. Read saved diagnostics with their original reader or [reproduce from Git](EVALUATOR-CANDIDATE-95.md#reproduction). |
 | Offline-v2 and older overlays | Original exact identities | Historical replay where no active caller remains; never relabel |
 
 The same evaluator revision/version can have different patch identities.
@@ -59,6 +59,30 @@ the producer identity. The active static owner adds only the already locked
 `security` extra for Bandit/pip-audit. Semgrep and SkillSpector retain Python 3.13
 and their independent locks. No declaration that every dependency is current is
 made.
+
+## 0.7.2 qualifier retirement
+
+The manual workflow was the sole exact `candidate` setup caller. The current
+evaluator workflow selects only `candidate-current` or `candidate-next`.
+Campaign authentication maps registered producer profiles to those modes or
+`candidate-accounting`. The 0.8.0 setup still builds backend 1.0.0, whose
+runtime guard and wheel bytes also belong to the historical 0.7.2 recipe.
+
+The [maintained evaluator qualification](../workflows/current-evaluator.yml)
+checks historical scoring and policy/provenance refusal. Its versioned policy
+uses the same 73 fixture inputs. Both native oracle cohorts cover 52 Pester and
+48 gh observations, and six gh shards cover initialization, audit continuity,
+faults and teardown. Validate also exercises retained Pester packaging and
+production gh. The 0.7.2 score refusal and native diagnostics remain evidence
+specific to their original runtime.
+
+The [historical command](EVALUATOR-CANDIDATE-95.md#reproduction) pins the last
+main revision with the workflow and setup entry. Use that checkout for the
+old qualifier or revert this cleanup as a unit to restore its CI entry. The
+historical patch and result readers stay available. The shared native harness
+still serves current qualification, image preparation, pilots and campaigns.
+0.7.2 diagnostics retain their original scoring and remain outside production
+benchmark and history admission.
 
 ## PR #137 assessment, retained as history
 
@@ -100,7 +124,7 @@ a migration recommendation, not selectors changed by this PR.
 | [Plan/dispatch orchestration](../workflows/orchestrate-skill-evaluations.yml): scheduled/manual/Validate(main) → public history/authenticated intents → `gh` dispatch → protected Benchmark | Maintained production `reporting` host 0.3.0; both paid streams disabled in [policy](orchestration.json) | **0.9.0 data-only host**, alongside reporting | Same nonce/ancestry/eligibility/stop policy; dispatch still targets the retained benchmark owner | 34 plan/context/guard/dispatch controls under 0.9 with synthetic Actions API; original authenticated GitHub command boundary unchanged | No provider dependency in planner. Disabled streams do not qualify their downstream paid route | Restore host selector; leave streams disabled |
 | [Current evaluator qualification](../workflows/current-evaluator.yml): explicit `candidate-next` → native cohorts/lifecycle → owning collection → same-run report join | Opt-in 0.9.0 / Harbor 0.25.0; manual default still 0.8.0, selected Validate explicitly requests next | Keep 0.9.0 opt-in owner | Custom task outcomes, startup faults and unavailable standard judgments remain distinct | #136: 52 Pester + 48 gh oracle observations, six lifecycle shards, 14 startup faults; additional native no-judge controls here | Fixture qualification does not establish live-provider routing | `candidate-current` for new diagnostic work; preserve original receipts |
 | [Pilot](../workflows/codex-pilot.yml), deadline/admission, [campaign](../workflows/evaluation-campaign.yml), return-contract preparation and historical replay | Maintained credential-free paths and immutable experiments use retained 0.8.0 / Harbor 0.24.0, original CLI/model/locks | Keep 0.8.0 | Execution identity is part of evidence; new source-only identities cannot reopen an allocation or reinterpret an old grade | Original receipts, #136 retained admission, unchanged frozen selections | Frozen provenance, not package age. Inactive paid branches remain unqualified for any different owner | Original checkout/profile/lock and raw evidence |
-| [Candidate Pester packaging](../workflows/pester-candidate.yml): explicit `candidate` 0.7.2 → historical score refusal and native fixtures | Disabled automatic triggering; manually executable migration qualifier | Retire routine/manual qualification entry after review; preserve replay tooling | 0.9 selected cohorts cover the same task families and lifecycle; versioned-policy refusal replaces numerical-equivalence as adoption policy | #136 native cohorts/shards; retained 0.3 historical scoring and cross-policy controls | No unique current adoption coverage identified; this does not obsolete its historical receipts | Restore workflow/setup entry from reviewed Git revision |
+| [Candidate Pester packaging](EVALUATOR-CANDIDATE-95.md#reproduction): explicit `candidate` 0.7.2 → historical score refusal and native fixtures | Disabled automatic triggering; manually executable migration qualifier | Retire routine/manual qualification entry after review; preserve replay tooling | 0.9 selected cohorts cover the same task families and lifecycle; versioned-policy refusal replaces numerical-equivalence as adoption policy | #136 native cohorts/shards; retained 0.3 historical scoring and cross-policy controls | No unique current adoption coverage identified; this does not obsolete its historical receipts | Restore workflow/setup entry from reviewed Git revision |
 
 Required Linux and PowerShell checks do not use the evaluator. Their names and
 semantics, and the `Selected validation results` gate, remain unchanged. Protected

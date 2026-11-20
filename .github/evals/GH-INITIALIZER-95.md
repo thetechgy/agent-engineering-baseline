@@ -1,11 +1,11 @@
 # Trusted gh initialization qualification
 
-The candidate backend uses SkillEvaluator's installed environment-plugin API at
+This records the 0.7.2 migration qualifier. The candidate backend used
+SkillEvaluator's installed environment-plugin API at
 `f878f99a9cd4a85dd04043feb43e5bd6a777f64b` (0.7.2), under its owning Harbor
-0.24.0 lock. Production remains on SkillEvaluator 0.3.0 and Harbor 0.13.2 until
-all adoption gates pass. Codex remains explicitly pinned to 0.155.1. No model
-inference, remote judge, real-provider smoke or benchmark dispatch is authorized
-or performed by these qualification commands.
+0.24.0 lock. The qualifier held production at SkillEvaluator 0.3.0 and
+Harbor 0.13.2 and pinned Codex 0.155.1. The commands exercise credential-free
+fixtures.
 
 ## Initialization boundary
 
@@ -53,18 +53,11 @@ healthchecks and unsafe Compose overrides as before.
 
 ## Reproduction and evidence labels
 
-Use the pinned uv 0.13.7 and a new persistent `RUNNER_TEMP` outside the checkout.
-Setup requires the usual `GITHUB_WORKSPACE`, `GITHUB_ENV` and `GITHUB_PATH` files.
+Use the [pinned historical checkout and setup](EVALUATOR-CANDIDATE-95.md#reproduction)
+for these 0.7.2 controls. For current qualification use
+`gh workflow run current-evaluator.yml --ref <reviewed-ref> -f candidate-next=true`.
 
-```bash
-bash .github/scripts/setup-skillevaluator.sh candidate
-"$SKILL_CANDIDATE_PYTHON" .github/scripts/qualify_evaluator_candidate.py \
-  --source "$SKILL_CANDIDATE_SOURCE" \
-  --output "$HOME/worktrees/gh-initializer-controls"
-```
-
-Source the setup outputs through the CI runner or explicitly export their values
-in an operator shell. The local wheel uses only stdlib build inputs. Two builds
+The historical wheel build uses only stdlib inputs. Two builds
 must match byte for byte; installation uses a generated hash-bound requirements
 file with `--require-hashes --only-binary :all: --no-deps --no-index --link-mode copy`.
 Candidate dependencies retain the frozen upstream lock. Current and historical

@@ -3,8 +3,8 @@
 set -euo pipefail
 umask 077
 
-kind=${1:?usage: setup-skillevaluator.sh quality|quality-next|benchmark|reporting|candidate|candidate-current|candidate-next|candidate-accounting}
-case "$kind" in quality-next|quality|benchmark|reporting|candidate|candidate-current|candidate-next|candidate-accounting) ;; *) exit 2 ;; esac
+kind=${1:?usage: setup-skillevaluator.sh quality|quality-next|benchmark|reporting|candidate-current|candidate-next|candidate-accounting}
+case "$kind" in quality-next|quality|benchmark|reporting|candidate-current|candidate-next|candidate-accounting) ;; *) exit 2 ;; esac
 : "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}" "${GITHUB_ENV:?}" "${GITHUB_PATH:?}"
 repository_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 tool_root="$RUNNER_TEMP/skill-evaluation-tools"
@@ -26,8 +26,8 @@ export XDG_CACHE_HOME="$tool_root/cache"
 export XDG_STATE_HOME="$tool_root/state"
 
 # uv's managed-build catalog can change without changing a Python version.
-# Preserve the reviewed 0.13.7 download identities for frozen evaluator recipes.
-if [ "$kind" = candidate ] || [ "$kind" = candidate-current ]; then
+# Preserve the reviewed 0.13.7 download identities for the frozen 0.8.0 recipe.
+if [ "$kind" = candidate-current ]; then
   frozen_python_catalog="$tool_root/frozen-python-downloads.json"
   curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' \
     --output "$frozen_python_catalog" \
@@ -122,35 +122,6 @@ if [ "$kind" = candidate-current ]; then
     --requirement "$current_root/backend-wheel/requirements.txt"
   uv pip check --python "$current_root/.venv/bin/python"
   printf 'SKILL_CURRENT_PYTHON=%s/.venv/bin/python\nSKILL_CURRENT_SOURCE=%s\nSKILL_QUALIFICATION_PYTHON=%s/.venv/bin/python\n' "$current_root" "$current_root" "$current_root" >> "$GITHUB_ENV"
-  exit 0
-fi
-
-# Qualification owns a separate pristine source/lock and installed local wheel.
-# Production and both historical/current review environments retain their pins.
-if [ "$kind" = candidate ]; then
-  candidate_revision=f878f99a9cd4a85dd04043feb43e5bd6a777f64b # v0.7.2
-  candidate_root="$RUNNER_TEMP/candidate-evaluation-tools"
-  export UV_PYTHON_INSTALL_DIR="$candidate_root/python"
-  git init --quiet "$candidate_root/evaluator"
-  git -C "$candidate_root/evaluator" fetch --quiet --depth=1 \
-    https://github.com/NVIDIA/SkillEvaluator.git "$candidate_revision"
-  git -C "$candidate_root/evaluator" checkout --quiet --detach FETCH_HEAD
-  test "$(git -C "$candidate_root/evaluator" rev-parse HEAD)" = "$candidate_revision"
-  uv sync --project "$candidate_root/evaluator" --python 3.13 --managed-python \
-    --frozen --no-dev --extra tier3
-  candidate_python="$candidate_root/evaluator/.venv/bin/python"
-  "$candidate_python" "$repository_root/.github/evaluator-backends/build_wheel.py" "$candidate_root/wheel"
-  "$candidate_python" "$repository_root/.github/evaluator-backends/build_wheel.py" "$candidate_root/wheel-repeat"
-  cmp "$candidate_root/wheel/aeb_gh_fixture-1.0.0-py3-none-any.whl" \
-    "$candidate_root/wheel-repeat/aeb_gh_fixture-1.0.0-py3-none-any.whl"
-  uv pip install --python "$candidate_python" --no-deps --no-index --link-mode copy --require-hashes --only-binary :all: \
-    --requirement "$candidate_root/wheel/requirements.txt"
-  uv pip check --python "$candidate_python"
-  git -C "$candidate_root/evaluator" diff --exit-code
-  {
-    printf 'SKILL_CANDIDATE_PYTHON=%s\n' "$candidate_python"
-    printf 'SKILL_CANDIDATE_SOURCE=%s/evaluator\n' "$candidate_root"
-  } >> "$GITHUB_ENV"
   exit 0
 fi
 
