@@ -3,11 +3,12 @@
 set -euo pipefail
 umask 077
 
-kind=${1:?usage: setup-skillevaluator.sh quality|quality-next|benchmark|reporting|candidate-current|candidate-next|candidate-accounting}
-case "$kind" in quality-next|quality|benchmark|reporting|candidate-current|candidate-next|candidate-accounting) ;; *) exit 2 ;; esac
+kind=${1:?usage: setup-skillevaluator.sh quality|quality-next|quality-candidate|benchmark|reporting|candidate-current|candidate-next|candidate-accounting}
+case "$kind" in quality-next|quality-candidate|quality|benchmark|reporting|candidate-current|candidate-next|candidate-accounting) ;; *) exit 2 ;; esac
 : "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}" "${GITHUB_ENV:?}" "${GITHUB_PATH:?}"
 repository_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 tool_root="$RUNNER_TEMP/skill-evaluation-tools"
+if [ "$kind" = quality-candidate ]; then tool_root="$RUNNER_TEMP/skill-static-candidate-tools"; fi
 case "$(realpath -m "$tool_root")/" in
   "$(realpath "$GITHUB_WORKSPACE")/"*|"$repository_root/"*) echo 'Tools must be outside the checkout.' >&2; exit 1 ;;
 esac
@@ -34,6 +35,73 @@ if [ "$kind" = candidate-current ]; then
     https://raw.githubusercontent.com/astral-sh/uv/316c827e058c16b71d5c507a20729c2995a7bcce/crates/uv-python-managed/download-metadata.json
   printf '%s  %s\n' 81372e1cbff3dd87a786674ef00e01b3743638e3d8e58117d73e32a8e11eae05 "$frozen_python_catalog" | sha256sum --check --strict
   export UV_PYTHON_DOWNLOADS_JSON_URL="$frozen_python_catalog"
+fi
+
+write_static_versions() {
+  uv pip list --python "$1" --format json > "$tool_root/dependencies/evaluator.json"
+  "$1" -B - "$repository_root" "$tool_root" "$2" <<'PYSTATIC' > "$tool_root/versions.json"
+import json, subprocess, sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / '.github/scripts'))
+import evaluator_profiles as profiles
+import skill_evidence as evidence
+import static_evaluator
+root = Path(sys.argv[2])
+if sys.argv[3] == 'candidate':
+    runtime = evidence.SCANNER_RUNTIME_STATIC_CANDIDATE
+    owner = static_evaluator.VERSIONS
+else:
+    runtime = evidence.SCANNER_RUNTIME_NEXT
+    owner = profiles.candidate_versions(profiles.NEXT)
+versions = dict(owner, scanners=runtime['versions'],
+                skillspector_revision=runtime['skillspector_revision'], scanner_runtime=runtime)
+for name in ('semgrep', 'skillspector', 'bandit', 'pip-audit'):
+    owner = 'evaluator' if name in ('bandit', 'pip-audit') else name
+    actual = next(p['version'] for p in json.loads((root / 'dependencies' / (owner + '.json')).read_text()) if p['name'] == name)
+    assert actual == versions['scanners'][name], (name, actual)
+assert subprocess.check_output([root / 'bin/gitleaks', 'version'], text=True).strip() == versions['scanners']['gitleaks']
+assert evidence.digest_bytes((root / 'skillspector/uv.lock').read_bytes()) == versions['scanner_runtime']['skillspector_lock']
+assert evidence.digest_bytes((Path(sys.argv[1]) / '.github/requirements/semgrep.txt').read_bytes()) == versions['scanner_runtime']['semgrep_lock']
+evidence.validate_runtime_versions(versions)
+print(json.dumps(versions, indent=2))
+PYSTATIC
+}
+
+# Compare against the existing static installation with identical external scanners.
+if [ "$kind" = quality-candidate ]; then
+  : "${SKILL_QUALITY_PYTHON:?Install quality-next first}" "${SKILL_QUALITY_TOOLS:?Install quality-next first}"
+  candidate_root="$tool_root/evaluator"
+  mapfile -t pin < <("$SKILL_QUALITY_PYTHON" -B - "$repository_root" "$SKILL_QUALITY_TOOLS" <<'PYPIN'
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / '.github/scripts'))
+import skill_evidence as evidence
+import static_evaluator
+baseline = evidence.read_json(Path(sys.argv[2]) / 'versions.json')
+evidence.validate_runtime_versions(baseline)
+evidence.require(baseline.get('scanner_runtime') == evidence.SCANNER_RUNTIME_NEXT,
+                 'Install the current static baseline first')
+print(static_evaluator.REVISION, static_evaluator.LOCK, static_evaluator.VERSIONS['python'], sep='\n')
+PYPIN
+  )
+  test "${#pin[@]}" -eq 3
+  git init --quiet "$candidate_root"
+  git -C "$candidate_root" fetch --quiet --depth=1 https://github.com/NVIDIA/SkillEvaluator.git "${pin[0]}"
+  git -C "$candidate_root" checkout --quiet --detach FETCH_HEAD
+  test "$(git -C "$candidate_root" rev-parse HEAD)" = "${pin[0]}"
+  printf '%s  %s\n' "${pin[1]}" "$candidate_root/uv.lock" | sha256sum --check --strict
+  # The offline strict dataset command imports Tier 3 and its Harbor dependency.
+  uv sync --project "$candidate_root" --python "${pin[2]}" --managed-python --frozen --no-dev --extra security --extra tier3
+  uv pip check --python "$candidate_root/.venv/bin/python"
+  ln -s "$SKILL_QUALITY_TOOLS/skillspector" "$tool_root/skillspector"
+  for tool in gitleaks skillspector semgrep; do
+    ln -s "$SKILL_QUALITY_TOOLS/bin/$tool" "$tool_root/bin/$tool"
+  done
+  cp "$SKILL_QUALITY_TOOLS/dependencies/"{skillspector,semgrep}.json "$tool_root/dependencies/"
+  write_static_versions "$candidate_root/.venv/bin/python" candidate
+  printf 'SKILL_STATIC_CANDIDATE_PYTHON=%s/.venv/bin/python\nSKILL_STATIC_CANDIDATE_TOOLS=%s\n' \
+    "$candidate_root" "$tool_root" >> "$GITHUB_ENV"
+  exit 0
 fi
 
 # Current opt-in replacement. Historical recipes below retain their original bytes.
@@ -75,28 +143,7 @@ if [ "$kind" = candidate-next ] || [ "$kind" = quality-next ] || [ "$kind" = can
     # shellcheck source=setup-skill-scanners.sh
     source "$repository_root/.github/scripts/setup-skill-scanners.sh"
     install_skill_scanners "$tool_root" "$current_root/.venv/bin" "$repository_root"
-    uv pip list --python "$current_root/.venv/bin/python" --format json > "$tool_root/dependencies/evaluator.json"
-    "$current_root/.venv/bin/python" -B - "$repository_root" "$tool_root" <<'PYSTATIC' > "$tool_root/versions.json"
-import json, subprocess, sys
-from pathlib import Path
-sys.path.insert(0, str(Path(sys.argv[1]) / '.github/scripts'))
-import evaluator_profiles as profiles
-import skill_evidence as evidence
-root = Path(sys.argv[2])
-versions = dict(profiles.candidate_versions(profiles.NEXT),
-                scanners=evidence.SCANNER_RUNTIME_NEXT['versions'],
-                skillspector_revision=evidence.SCANNER_RUNTIME_NEXT['skillspector_revision'],
-                scanner_runtime=evidence.SCANNER_RUNTIME_NEXT)
-for name in ('semgrep', 'skillspector', 'bandit', 'pip-audit'):
-    owner = 'evaluator' if name in ('bandit', 'pip-audit') else name
-    actual = next(p['version'] for p in json.loads((root / 'dependencies' / (owner + '.json')).read_text()) if p['name'] == name)
-    assert actual == versions['scanners'][name], (name, actual)
-assert subprocess.check_output([root / 'bin/gitleaks', 'version'], text=True).strip() == versions['scanners']['gitleaks']
-assert evidence.digest_bytes((root / 'skillspector/uv.lock').read_bytes()) == versions['scanner_runtime']['skillspector_lock']
-assert evidence.digest_bytes((Path(sys.argv[1]) / '.github/requirements/semgrep.txt').read_bytes()) == versions['scanner_runtime']['semgrep_lock']
-evidence.validate_runtime_versions(versions)
-print(json.dumps(versions, indent=2))
-PYSTATIC
+    write_static_versions "$current_root/.venv/bin/python" next
     printf 'SKILL_QUALITY_PYTHON=%s/.venv/bin/python\nSKILL_QUALITY_TOOLS=%s\n' "$current_root" "$tool_root" >> "$GITHUB_ENV"
     printf 'XDG_CACHE_HOME=%s\nXDG_STATE_HOME=%s\nSKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE=%s/static-quality-provenance.key\n' \
       "$XDG_CACHE_HOME" "$XDG_STATE_HOME" "$RUNNER_TEMP" >> "$GITHUB_ENV"

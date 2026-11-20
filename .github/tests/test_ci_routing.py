@@ -151,7 +151,7 @@ class GateTests(unittest.TestCase):
             subprocess.run(['python3', '-B', str(ROOT / '.github/scripts/ci_routing.py'), 'plan'], check=True,
                 env={**os.environ, 'GITHUB_EVENT_NAME': 'pull_request', 'GITHUB_EVENT_PATH': str(event),
                      'GITHUB_OUTPUT': str(output)}, capture_output=True)
-            self.assertEqual(output.read_text(), ''.join(f'{flag}=true\n' for flag in routing.FLAGS))
+            self.assertEqual(output.read_text(), ''.join(f'{flag}=true\n' for flag in routing.FLAGS) + 'static_candidate=false\n')
 
 
 if __name__ == '__main__':

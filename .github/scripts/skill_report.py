@@ -704,6 +704,10 @@ def static_result(run, records):
     parts = [f'<article class="run" id="{anchor("record", rid)}"><h3>Static checks</h3><p>Evidence ' +
         text(run['availability']['status']) + '. Static checks are not behavioral performance.</p>' + disclosure('Exact record identity', rid),
         '<p>Limitations: ' + limitations(run['availability']) + '</p>']
+    policy = records[rid]['policy']
+    producer = policy.get('producer_profile') or policy.get('published_id')
+    if producer:
+        parts.append('<p>Producer: ' + code(producer) + '.</p>')
     runtime = run.get('scanner_runtime')
     if runtime:
         parts.append('<p>Recorded scanner versions: ' + safe(', '.join(

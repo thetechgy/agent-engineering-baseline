@@ -21,6 +21,8 @@ class StaticQualityRoutingTests(unittest.TestCase):
         contracts = jobs['ci-contracts']
         body = '\n'.join(step.get('run', '') for step in quality['steps'])
         self.assertIn('setup-skillevaluator.sh quality-next', body)
+        candidate = next(step for step in quality['steps'] if 'setup-skillevaluator.sh quality-candidate' in step.get('run', ''))
+        self.assertEqual(candidate['if'], "needs.plan.outputs.static_candidate == 'true'")
         self.assertNotIn('SKILL_EVALUATOR_PYTHON', body)
         self.assertNotIn('gh_container_validation', body)
         for step in quality['steps']:

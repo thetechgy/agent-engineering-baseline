@@ -1,0 +1,81 @@
+# SkillEvaluator 1.0.1 static qualification
+
+Compared with the production 0.9.0 owner on main
+`a6d860186a9e7683f9e42c7627a150baff8fe23e` after #164. The scope follows the
+[November 19 dependency checkpoint](dependency-qualification-20261119.md).
+
+## Decision evidence
+
+| Same-input check | 0.9.0 offline-v3 | 1.0.1 static-v1 |
+| --- | --- | --- |
+| Clean control | 0 secrets, complete Gitleaks coverage | 0 secrets, complete Gitleaks coverage |
+| Top-level marker | 1 at `input.txt:1`, complete | 1 at `input.txt:1`, complete |
+| Authored evaluation marker | 0 secrets, reported complete | 1 at `evals/files/input.txt:1`, complete |
+| Repository dataset | Podman admitted, 10 cases | Podman admitted, 10 cases |
+| Repository static findings | 88 counted, including 11 SECURITY | 89 counted, including 11 SECURITY |
+| Incomplete SkillSpector coverage | 4 of 6 skills | Same 4 of 6 skills |
+| Native catalog headlines | 6 failed | 3 failed, 2 incomplete, 1 passed |
+
+Both controls use Gitleaks 8.30.1 from the same binary. The authored marker is
+in an input declared by a committed `evals/evals.json` in a disposable skill
+checkout. Each case uses the same committed bytes for both producers. The
+candidate retains the authored location in native evidence, public JSON and
+consolidated HTML. The upload gate checks that the marker value is absent
+from every staged file, including the native JSON, HTML, Markdown and
+strict-dataset diagnostics. Fixture source and raw scanner streams stay in
+scratch. This is a synthetic detection and redaction result. [Upstream fix](https://github.com/NVIDIA/SkillEvaluator/pull/552).
+
+The six skills retain the same two PII-failing skills, 11 SECURITY findings
+and four SkillSpector incompleteness markers. The missing-reference counts
+remain 3 for a11y, 1 for ansible, 3 for Podman and 6 for
+powershell-pester-6. Podman retains its confirmed findings and incomplete
+coverage together. Gitleaks reports zero catalog findings on this snapshot.
+
+All six missing-author findings move from high to low under the default
+author policy. Six low description-trigger findings appear and six medium
+`quality_correctness` findings disappear. The candidate adds 26 advisory
+Harness Compatibility findings, one low `OW-READ-BUDGET` for a11y and 25
+informational findings, outside the critical/high/medium/low total.
+The a11y and powershell-pester-6 headlines become incomplete and
+powershell-module-engineering passes. Agent-safety, ansible and Podman still
+fail. The release also makes unverified hook payloads a critical gate. The
+catalog has no such gate finding and this comparison does not exercise a hook.
+[Release notes](https://github.com/NVIDIA/SkillEvaluator/releases/tag/v1.0.1).
+
+| Native Tier 1 heuristic | 0.9.0 | 1.0.1 |
+| --- | ---: | ---: |
+| a11y | 83.8 | 85.5 |
+| agent-safety | 88.5 | 90.2 |
+| ansible | 86.8 | 88.5 |
+| podman | 88.5 | 90.2 |
+| powershell-module-engineering | 88.5 | 90.2 |
+| powershell-pester-6 | 85.8 | 87.5 |
+
+Each score rises 1.7 points under the candidate's native heuristic. Treat
+the score as release-specific and review decisions against the findings and
+coverage. There is no behavioral measurement in this qualification.
+
+## Setup, reporting and rollback
+
+The PR opts in when the complete PR comparison includes the qualification
+script. The standard job uses `quality-next`. The opt-in step installs 1.0.1
+from commit `914c15cb3f31562ccffdc9a7166002a87ed2ce1e` with its frozen
+upstream lock and checks the owning source, Python 3.14.10 and scanner versions.
+The strict dataset CLI imports the Tier 3 extra. The qualification invokes
+only Tier 1 collection and offline strict validation. External scanners are
+shared directly with the baseline.
+
+The candidate's strict dataset CLI initially passed for Podman while inventory
+generation rejected the gh overlay. Upstream 1.0.1 uses a filesystem-only
+config reader. The repository now invokes its bounded YAML parser and schema
+on the captured bytes, preserving the existing link and race checks. The
+candidate public bundle retains the catalog and inventory. The shared renderer
+shows producer identity and coverage for both releases. Retained 0.9.0 evidence
+from #141 renders under its original producer identity.
+
+The opt-in attachment contains the matched receipt, both public bundles,
+consolidated reports and verified native diagnostics. Candidate evidence uses
+`skillevaluator-1.0.1-static-v1`. The tested rollback is the `quality-next`
+setup and the same collection, admission and projection commands under
+`skillevaluator-0.9.0-offline-v3`. No replay, benchmark or judge selection is
+required to use that path.
