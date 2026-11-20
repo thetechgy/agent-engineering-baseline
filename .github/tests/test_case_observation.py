@@ -111,9 +111,12 @@ class CaseObservationTests(unittest.TestCase):
 
     def test_successors_change_only_producer_identity(self):
         registry = json.loads((SCRIPTS.parent / "evals/custom-metrics.json").read_bytes())
+        registry['profiles'].pop('gh-deterministic-gate-v6')
+        registry['profiles'].pop('gh-native-oracle-v2')
+        registry['active_profiles']['gh'] = 'gh-deterministic-gate-v5'
         profiles = registry["profiles"]
-        original = {k: v for k, v in profiles.items() if "-source-v30-" not in k and "-source-v29-" not in k
-                    and k not in ("pester-effectiveness-v32", "pester-effectiveness-v33", "pester-cli-pilot-retained-v20")}
+        original = {k: v for k, v in profiles.items() if "-source-v31-" not in k and "-source-v30-" not in k and "-source-v29-" not in k
+                    and k not in ("pester-effectiveness-v32", "pester-effectiveness-v33", "pester-effectiveness-v34", "pester-cli-pilot-retained-v20")}
         self.assertEqual(hashlib.sha256((json.dumps({**registry, "profiles": original}, indent=2) + "\n").encode()).hexdigest(),
                          "e2421338db925697590201424cb8453bc7e44b555701dddf985047a4809dde13")
         previous = {k.replace("-source-v28-", "-source-v29-"): k for k in profiles if "-source-v28-" in k}

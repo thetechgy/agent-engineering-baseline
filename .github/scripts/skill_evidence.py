@@ -1123,7 +1123,7 @@ def validate_captured_gh(workspace, owner, actual, owners, competing_files, entr
     import gh_evaluations as gh
     require(owner['repo_url'] == 'cli/cli' and owner['virtual_path'] == 'skills/gh'
             and owner['resolved_commit'] == gh.UPSTREAM, 'Unreviewed gh upstream ownership or revision')
-    require(set(actual) == {(gh.DEPLOYED / 'SKILL.md').as_posix()}, 'Unreviewed upstream gh file set')
+    require(set(actual) == {(gh.DEPLOYED / name).as_posix() for name in gh.SKILL_FILES}, 'Unreviewed upstream gh file set')
     competing = owners.get(gh.COMPETING, [])
     require(len(competing) == 1 and competing[0]['repo_url'] == 'github/awesome-copilot'
             and competing[0]['resolved_commit'] == reports.benchmark_policy('gh')['competing_revision'],
@@ -3515,11 +3515,11 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v33'
+        profile_id = 'pester-effectiveness-v34'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v20'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
-        profile_id = 'gh-native-oracle-v1'
+        profile_id = 'gh-native-oracle-v2'
     profile_id = registry['active_profiles'].get(name) if profile_id is None else profile_id
     require(profile_id in registry['profiles'], 'Unknown custom metric namespace or profile')
     registered = registry['profiles'][profile_id]

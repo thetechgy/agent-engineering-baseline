@@ -1,6 +1,6 @@
 lockfile_version: '1'
-generated_at: '2026-11-19T23:40:03.238952+00:00'
-apm_version: 0.35.1
+generated_at: '2026-11-20T00:00:02.006237+00:00'
+apm_version: 0.36.1
 dependencies:
 - repo_url: addyosmani/agent-skills
   name: code-simplification
@@ -13,10 +13,16 @@ dependencies:
   package_type: claude_skill
   deployed_files:
   - .agents/skills/code-simplification
+  - .agents/skills/code-simplification/LICENSE
   - .agents/skills/code-simplification/SKILL.md
   deployed_file_hashes:
+    .agents/skills/code-simplification/LICENSE: sha256:6f202f8bd568cd730dbb2b0d1f8e243bc74c2fa1f64dbce9b2c7ea08bd5c9fd7
     .agents/skills/code-simplification/SKILL.md: sha256:e13b433345e6bf425c3625442ac1b3507b371c18d7ea3e3db822da7a7f742a29
   content_hash: sha256:e4c1f0c12274be9981e1301bfbb9b3112b63e2209413071728b132c9b4ee2f5b
+  carried_licenses:
+  - path: LICENSE
+    source: LICENSE
+    hash: sha256:6f202f8bd568cd730dbb2b0d1f8e243bc74c2fa1f64dbce9b2c7ea08bd5c9fd7
 - repo_url: cli/cli
   name: gh
   host: github.com
@@ -28,10 +34,16 @@ dependencies:
   package_type: claude_skill
   deployed_files:
   - .agents/skills/gh
+  - .agents/skills/gh/LICENSE
   - .agents/skills/gh/SKILL.md
   deployed_file_hashes:
+    .agents/skills/gh/LICENSE: sha256:6da4adc42392c8485e40b4251c7e332fc3352df1947c9ffade71dd60b14a7a4f
     .agents/skills/gh/SKILL.md: sha256:b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b
   content_hash: sha256:79aa63cc988ba7de21886fd25377656a5b671a01ee107db9a4ca5b951550074b
+  carried_licenses:
+  - path: LICENSE
+    source: LICENSE
+    hash: sha256:6da4adc42392c8485e40b4251c7e332fc3352df1947c9ffade71dd60b14a7a4f
 - repo_url: github/awesome-copilot
   name: dependabot
   host: github.com
@@ -43,16 +55,22 @@ dependencies:
   package_type: claude_skill
   deployed_files:
   - .agents/skills/dependabot
+  - .agents/skills/dependabot/LICENSE
   - .agents/skills/dependabot/SKILL.md
   - .agents/skills/dependabot/references/dependabot-yml-reference.md
   - .agents/skills/dependabot/references/example-configs.md
   - .agents/skills/dependabot/references/pr-commands.md
   deployed_file_hashes:
+    .agents/skills/dependabot/LICENSE: sha256:e32449d23085399adc1222f7a17408b730550258e51627c153cb108ca9955823
     .agents/skills/dependabot/SKILL.md: sha256:82ed5de6cf667e52a33994b4612e288a633dbebed3c3e11ec8760377457d0e95
     .agents/skills/dependabot/references/dependabot-yml-reference.md: sha256:c3b101d7e200a215211c9e23157ddfb1c051e437815b4d5a3d9bc13e504d6ed6
     .agents/skills/dependabot/references/example-configs.md: sha256:35375699cfbaa372b68a232a2704f88a190e1267f937e1f1921e8d83c97485ca
     .agents/skills/dependabot/references/pr-commands.md: sha256:7d25bdfce5693c94a8095c10ab032736f8995ffa58752466700672fbdc1a8518
   content_hash: sha256:82c119f15388c371195ed3b25254e4b48e576995c6885f8a27792d271d85e4c8
+  carried_licenses:
+  - path: LICENSE
+    source: LICENSE
+    hash: sha256:e32449d23085399adc1222f7a17408b730550258e51627c153cb108ca9955823
 - repo_url: github/awesome-copilot
   name: git-commit
   host: github.com
@@ -64,10 +82,16 @@ dependencies:
   package_type: claude_skill
   deployed_files:
   - .agents/skills/git-commit
+  - .agents/skills/git-commit/LICENSE
   - .agents/skills/git-commit/SKILL.md
   deployed_file_hashes:
+    .agents/skills/git-commit/LICENSE: sha256:e32449d23085399adc1222f7a17408b730550258e51627c153cb108ca9955823
     .agents/skills/git-commit/SKILL.md: sha256:554d1a3c6d95f15bc1170160659ecdc9a9958b64f377f3988941b672c249b13f
   content_hash: sha256:2607fc60629b82b257136dd2a7a373f0a4466c0b49df7746d845d59313c99b21
+  carried_licenses:
+  - path: LICENSE
+    source: LICENSE
+    hash: sha256:e32449d23085399adc1222f7a17408b730550258e51627c153cb108ca9955823
 - repo_url: github/awesome-copilot
   name: github-actions-hardening
   host: github.com
@@ -79,6 +103,7 @@ dependencies:
   package_type: claude_skill
   deployed_files:
   - .agents/skills/github-actions-hardening
+  - .agents/skills/github-actions-hardening/LICENSE
   - .agents/skills/github-actions-hardening/SKILL.md
   - .agents/skills/github-actions-hardening/references/injection.md
   - .agents/skills/github-actions-hardening/references/permissions-and-tokens.md
@@ -86,6 +111,7 @@ dependencies:
   - .agents/skills/github-actions-hardening/references/supply-chain.md
   - .agents/skills/github-actions-hardening/references/triggers-and-privilege.md
   deployed_file_hashes:
+    .agents/skills/github-actions-hardening/LICENSE: sha256:e32449d23085399adc1222f7a17408b730550258e51627c153cb108ca9955823
     .agents/skills/github-actions-hardening/SKILL.md: sha256:31a8e7483d978e6267941edefebbe42aaa946bb3d43c9095aa3db343d4a8ff06
     .agents/skills/github-actions-hardening/references/injection.md: sha256:ebd6ef8d39ba6f1cd3dc13051e6ed4163d1d2ba36518cf0f7393836a211e58ff
     .agents/skills/github-actions-hardening/references/permissions-and-tokens.md: sha256:7272d00b20cf99c6fcbf34346f76730907c00701aef44bb9cfb7ab3eecac336b
@@ -93,6 +119,10 @@ dependencies:
     .agents/skills/github-actions-hardening/references/supply-chain.md: sha256:f66f613dbd732ce87c1e76b88208efde8feae3ffe5a3ab405cde4ce3df66f605
     .agents/skills/github-actions-hardening/references/triggers-and-privilege.md: sha256:465f3f76517e9f5374a73e30f46cb47e1fe62ce9fd81f782808a3abbb2df2756
   content_hash: sha256:d826005e7e1f7792531836c747c78df9e9caac534dd027b8ad872725340e5df2
+  carried_licenses:
+  - path: LICENSE
+    source: LICENSE
+    hash: sha256:e32449d23085399adc1222f7a17408b730550258e51627c153cb108ca9955823
 - repo_url: github/awesome-copilot
   name: microsoft-code-reference
   host: github.com
@@ -104,10 +134,16 @@ dependencies:
   package_type: claude_skill
   deployed_files:
   - .agents/skills/microsoft-code-reference
+  - .agents/skills/microsoft-code-reference/LICENSE
   - .agents/skills/microsoft-code-reference/SKILL.md
   deployed_file_hashes:
+    .agents/skills/microsoft-code-reference/LICENSE: sha256:e32449d23085399adc1222f7a17408b730550258e51627c153cb108ca9955823
     .agents/skills/microsoft-code-reference/SKILL.md: sha256:19f13822dd8674ac0a24787ac15472c9137d0db5b03750ba43ee9dcdac8ddd03
   content_hash: sha256:2a86c1b1a876f777a8f99e0e27a9b2d5fa360352bd2dd396102e3110212dd296
+  carried_licenses:
+  - path: LICENSE
+    source: LICENSE
+    hash: sha256:e32449d23085399adc1222f7a17408b730550258e51627c153cb108ca9955823
 - repo_url: merill/msgraph
   name: msgraph
   host: github.com
@@ -120,6 +156,7 @@ dependencies:
   deployed_files:
   - .agents/skills/msgraph
   - .agents/skills/msgraph/CONTRIBUTING.md
+  - .agents/skills/msgraph/LICENSE
   - .agents/skills/msgraph/SKILL.md
   - .agents/skills/msgraph/references/REFERENCE.md
   - .agents/skills/msgraph/references/api-docs-index.db
@@ -146,6 +183,7 @@ dependencies:
   - .agents/skills/msgraph/scripts/run.sh
   deployed_file_hashes:
     .agents/skills/msgraph/CONTRIBUTING.md: sha256:60dc9074eedcb06cb29845a4ab6d41866f357be6b8d810e8c84408788e2babf0
+    .agents/skills/msgraph/LICENSE: sha256:9e3c08a7c8fe1c8d9a7181d38506a1e798c7a056797fcdec6780d22b88a31a52
     .agents/skills/msgraph/SKILL.md: sha256:b4763f6ae89a4e2843ca5bfe15fddf49f5924e20054ff5d7fb7e43a2df3df67e
     .agents/skills/msgraph/references/REFERENCE.md: sha256:61639bb509391df6e65762355c87ef53c98f544d04e4455fd17f571c6732b5d7
     .agents/skills/msgraph/references/api-docs-index.db: sha256:50e08de8727e8fcc54cc51e81dedf6644b832ec8e4ec6f5c71e3b7e9a13d302d
@@ -171,6 +209,10 @@ dependencies:
     .agents/skills/msgraph/scripts/run.ps1: sha256:208a0323c85c94c8b8f23d974a92fb37dab77c44de5638fb3e7688e00d761cbb
     .agents/skills/msgraph/scripts/run.sh: sha256:ef3545fee5e2f2654cedf32ed543ba2e496109c1eb90ea6f915fd9bcf4abd51b
   content_hash: sha256:9bda5077ed019684159223c69a35f415541fb0f98e675979bdbf4b368ab907c2
+  carried_licenses:
+  - path: LICENSE
+    source: LICENSE
+    hash: sha256:9e3c08a7c8fe1c8d9a7181d38506a1e798c7a056797fcdec6780d22b88a31a52
 deployments:
 - kind: project-relative
   target: codex
@@ -237,6 +279,15 @@ deployments:
   content_hash: null
 - kind: project-relative
   target: codex
+  value: .agents/skills/code-simplification/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - addyosmani/agent-skills/skills/code-simplification
+  active_owner: addyosmani/agent-skills/skills/code-simplification
+  content_hash: sha256:6f202f8bd568cd730dbb2b0d1f8e243bc74c2fa1f64dbce9b2c7ea08bd5c9fd7
+- kind: project-relative
+  target: codex
   value: .agents/skills/code-simplification/SKILL.md
   runtime: null
   scope: project
@@ -253,6 +304,15 @@ deployments:
   - github/awesome-copilot/skills/dependabot
   active_owner: github/awesome-copilot/skills/dependabot
   content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/dependabot/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/skills/dependabot
+  active_owner: github/awesome-copilot/skills/dependabot
+  content_hash: sha256:e32449d23085399adc1222f7a17408b730550258e51627c153cb108ca9955823
 - kind: project-relative
   target: codex
   value: .agents/skills/dependabot/SKILL.md
@@ -300,6 +360,15 @@ deployments:
   content_hash: null
 - kind: project-relative
   target: codex
+  value: .agents/skills/gh/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - cli/cli/skills/gh
+  active_owner: cli/cli/skills/gh
+  content_hash: sha256:6da4adc42392c8485e40b4251c7e332fc3352df1947c9ffade71dd60b14a7a4f
+- kind: project-relative
+  target: codex
   value: .agents/skills/gh/SKILL.md
   runtime: null
   scope: project
@@ -318,6 +387,15 @@ deployments:
   content_hash: null
 - kind: project-relative
   target: codex
+  value: .agents/skills/git-commit/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/skills/git-commit
+  active_owner: github/awesome-copilot/skills/git-commit
+  content_hash: sha256:e32449d23085399adc1222f7a17408b730550258e51627c153cb108ca9955823
+- kind: project-relative
+  target: codex
   value: .agents/skills/git-commit/SKILL.md
   runtime: null
   scope: project
@@ -334,6 +412,15 @@ deployments:
   - github/awesome-copilot/skills/github-actions-hardening
   active_owner: github/awesome-copilot/skills/github-actions-hardening
   content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/github-actions-hardening/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/skills/github-actions-hardening
+  active_owner: github/awesome-copilot/skills/github-actions-hardening
+  content_hash: sha256:e32449d23085399adc1222f7a17408b730550258e51627c153cb108ca9955823
 - kind: project-relative
   target: codex
   value: .agents/skills/github-actions-hardening/SKILL.md
@@ -399,6 +486,15 @@ deployments:
   content_hash: null
 - kind: project-relative
   target: codex
+  value: .agents/skills/microsoft-code-reference/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/skills/microsoft-code-reference
+  active_owner: github/awesome-copilot/skills/microsoft-code-reference
+  content_hash: sha256:e32449d23085399adc1222f7a17408b730550258e51627c153cb108ca9955823
+- kind: project-relative
+  target: codex
   value: .agents/skills/microsoft-code-reference/SKILL.md
   runtime: null
   scope: project
@@ -424,6 +520,15 @@ deployments:
   - merill/msgraph/skills/msgraph
   active_owner: merill/msgraph/skills/msgraph
   content_hash: sha256:60dc9074eedcb06cb29845a4ab6d41866f357be6b8d810e8c84408788e2babf0
+- kind: project-relative
+  target: codex
+  value: .agents/skills/msgraph/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - merill/msgraph/skills/msgraph
+  active_owner: merill/msgraph/skills/msgraph
+  content_hash: sha256:9e3c08a7c8fe1c8d9a7181d38506a1e798c7a056797fcdec6780d22b88a31a52
 - kind: project-relative
   target: codex
   value: .agents/skills/msgraph/SKILL.md
@@ -846,7 +951,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: null
+  content_hash: sha256:c99988390cd73dfd8b30849dadb158911a8d2760d1eeded2c74eb065bff4ad91
 - kind: uri
   target: mcp
   value: microsoft-learn
@@ -855,7 +960,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: null
+  content_hash: sha256:cbe129ae4b938c508877792d743d4d5a493445cbd1d4b9e1bca7863dd11964c5
 mcp_servers:
 - microsoft-learn
 mcp_configs:
@@ -863,12 +968,15 @@ mcp_configs:
     name: microsoft-learn
     transport: http
     registry: false
-    tools: &id001
+    tools:
     - microsoft_docs_search
     - microsoft_docs_fetch
     - microsoft_code_sample_search
     url: https://learn.microsoft.com/api/mcp
-    enabled_tools: *id001
+    enabled_tools:
+    - microsoft_docs_search
+    - microsoft_docs_fetch
+    - microsoft_code_sample_search
 mcp_target_servers:
   codex:
   - microsoft-learn

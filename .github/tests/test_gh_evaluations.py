@@ -43,6 +43,7 @@ class GhOfflineTests(unittest.TestCase):
         source = (gh.ROOT / gh.DEPLOYED / "SKILL.md").read_bytes()
         staged = gh.stage(gh.ROOT, self.root / "bundle/gh", ["gh-002"])
         self.assertEqual((staged / "SKILL.md").read_bytes(), source)
+        self.assertEqual((staged / "LICENSE").read_bytes(), (gh.ROOT / gh.DEPLOYED / "LICENSE").read_bytes())
         self.assertFalse((staged / "PROVENANCE.md").exists())
         data = reports.read_json(staged / "evals/evals.json")
         self.assertEqual([entry["id"] for entry in data["evals"]], ["gh-002"])

@@ -165,8 +165,9 @@ def benchmark_skill(workspace, name, root=None):
     if root is not None and (root / "bundle/gh").exists():
         staged = root / "bundle/gh"
         regular_tree(staged)
-        require((staged / "SKILL.md").read_bytes() == (workspace / gh.DEPLOYED / "SKILL.md").read_bytes(),
-                "Staged upstream skill drift")
+        for member in gh.SKILL_FILES:
+            require((staged / member).read_bytes() == (workspace / gh.DEPLOYED / member).read_bytes(),
+                    "Staged upstream skill drift")
         return staged
     return workspace / gh.OVERLAY
 
