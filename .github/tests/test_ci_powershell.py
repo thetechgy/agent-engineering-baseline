@@ -205,7 +205,8 @@ class CIPowerShellTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('ci_routing', ROOT / '.github/scripts/ci_routing.py')
         ci_routing = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(ci_routing)
-        self.assertEqual(set(jobs['plan']['outputs']), set(ci_routing.FLAGS))
+        self.assertEqual(set(jobs['plan']['outputs']), {*ci_routing.FLAGS, 'static_candidate'})
+        self.assertEqual(jobs['plan']['outputs']['static_candidate'], '${{ steps.impact.outputs.static_candidate }}')
         for flag, job in ci_routing.JOBS.items():
             self.assertIn(f"needs.plan.outputs.{flag} == 'true'", jobs[job]['if'])
         fixture = yaml.safe_load((ROOT / '.github/workflows/codex-1691-qualification.yml').read_text())
