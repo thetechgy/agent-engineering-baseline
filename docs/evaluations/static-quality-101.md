@@ -18,8 +18,8 @@ Compared with the production 0.9.0 owner on main
 
 Both controls use Gitleaks 8.30.1 from the same binary. The authored marker is
 in an input declared by a committed `evals/evals.json` in a disposable skill
-checkout. Each case uses the same committed bytes for both producers. The
-candidate retains the authored location in native evidence, public JSON and
+checkout. Each case uses the same committed bytes for both producers. Coverage in the control rows refers
+to Gitleaks. The fixture also has independent schema findings. The candidate retains the authored location in native evidence, public JSON and
 consolidated HTML. The upload gate checks that the marker value is absent
 from every staged file, including the native JSON, HTML, Markdown and
 strict-dataset diagnostics. Fixture source and raw scanner streams stay in
@@ -58,7 +58,7 @@ coverage. There is no behavioral measurement in this qualification.
 ## Setup, reporting and rollback
 
 The PR opts in when the complete PR comparison includes the qualification
-script. The standard job uses `quality-next`. The opt-in step installs 1.0.1
+script, static producer profile, or reporting patch. The standard job uses `quality-next`. The opt-in step installs 1.0.1
 from commit `914c15cb3f31562ccffdc9a7166002a87ed2ce1e` with its frozen
 upstream lock and checks the owning source, Python 3.14.10 and scanner versions.
 The strict dataset CLI imports the Tier 3 extra. The qualification invokes
@@ -67,11 +67,15 @@ shared directly with the baseline.
 
 The candidate's strict dataset CLI initially passed for Podman while inventory
 generation rejected the gh overlay. Upstream 1.0.1 uses a filesystem-only
-config reader. The repository now invokes its bounded YAML parser and schema
-on the captured bytes, preserving the existing link and race checks. The
-candidate public bundle retains the catalog and inventory. The shared renderer
-shows producer identity and coverage for both releases. Retained 0.9.0 evidence
-from #141 renders under its original producer identity.
+config reader. The compatibility patch invokes its bounded YAML parser and
+schema on the captured bytes, preserving the existing link and race checks.
+It adds candidate admission and producer identity to the repository's normal
+collection and reporting commands in a disposable copy of the checked-in
+tools. That copy scans the same repository inputs. The copy preserves the
+byte-bound campaign and replay sources on the checkout. The candidate public
+bundle retains the catalog and inventory. Retained 0.9.0 evidence from #141
+renders under its original producer identity. A static switch should carry
+the isolated reporting compatibility with it.
 
 The opt-in attachment contains the matched receipt, both public bundles,
 consolidated reports and verified native diagnostics. Candidate evidence uses

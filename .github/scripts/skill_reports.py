@@ -203,15 +203,12 @@ def benchmark_policy(name):
             "competing_revision": "1683f50e94c9fd489191f73d7c8f7e2bd871bd0c"} if name == "gh" else POLICY
 
 
-RELEASED_STATIC_VERSIONS = ('0.9.0', '1.0.1')
-
-
 def released_static_results(payload):
-    """Validate a released static contract in its exact owning runtime."""
+    """Validate the released 0.9 static contract in its exact owning runtime."""
     import importlib.metadata
-    require(payload.get('version') in RELEASED_STATIC_VERSIONS
-            and importlib.metadata.version('skillevaluator') == payload['version'],
-            'Static report requires its owning runtime')
+    require(payload.get('version') == '0.9.0'
+            and importlib.metadata.version('skillevaluator') == '0.9.0',
+            'Static report requires its 0.9.0 owning runtime')
     from skillevaluator.reporting.retained import retained_results
     return retained_results(payload, allowed_tiers={1})
 
@@ -253,7 +250,7 @@ def catalog_report(workspace, root):
             require(isinstance(report["incomplete_scans"], list), "Missing evidence status")
             require(all(isinstance(name, str) and name for name in report["incomplete_scans"]),
                     "Invalid incomplete scanner names")
-            if report.get("version") in RELEASED_STATIC_VERSIONS:
+            if report.get("version") == "0.9.0":
                 released_static_results(report)
             else:
                 expected_status = "incomplete" if report["incomplete_scans"] else (

@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """Compare the released static owners through collection, projection and rendering."""
 import argparse
+import io
 import os
 from pathlib import Path
 import shutil
 import subprocess
+import tarfile
 import tempfile
 
 import skill_evidence as evidence
 import static_evaluator
 
 ROOT = evidence.ROOT
-SCRIPTS = ROOT / '.github/scripts'
+REPORTING_PATCH = ROOT / '.github/patches/static-evaluator-1.0.1-reporting.patch'
 CONTROL = 'static-secret-control'
 CONTROL_REPOSITORY = 'fixture/static-quality'
 TOP = 'input.txt'
@@ -31,6 +33,24 @@ def run(command, env, *, cwd, diagnostic):
     evidence.require(MARKER not in output, 'Synthetic marker escaped process output')
     evidence.require(process.returncode == 0, diagnostic)
     return process.stdout
+
+
+def reporting_tools(scratch, env):
+    # Campaign and replay contracts bind the checked-in shared reporting bytes.
+    # Qualify the candidate in a separate copy of those same tracked entry points.
+    archive = run(['git', 'archive', 'HEAD', '.github/scripts', '.github/evals'],
+                  env, cwd=ROOT, diagnostic='Could not capture tracked reporting tools')
+    tooling = scratch / 'reporting-tools'
+    tooling.mkdir()
+    with tarfile.open(fileobj=io.BytesIO(archive), mode='r:') as bundle:
+        evidence.require(all(member.isfile() or member.isdir() for member in bundle),
+                         'Reporting tools archive contains special files')
+        bundle.extractall(tooling, filter='data')
+    run(['git', 'apply', '--check', REPORTING_PATCH], env, cwd=tooling,
+        diagnostic='Static reporting compatibility patch no longer applies')
+    run(['git', 'apply', REPORTING_PATCH], env, cwd=tooling,
+        diagnostic='Could not install static reporting compatibility')
+    return tooling / '.github/scripts'
 
 
 def fixture(workspace, env):
@@ -53,26 +73,26 @@ def fixture(workspace, env):
     return name
 
 
-def report(owner, workspace, native, published, env):
+def report(scripts, owner, workspace, native, published, env):
     python, _ = owner
     command = [python, '-B']
     env = dict(env, GITHUB_WORKSPACE=str(workspace))
-    run([*command, SCRIPTS / 'skill_reports.py', 'catalog', native], env,
+    run([*command, scripts / 'skill_reports.py', 'catalog', native], env,
         cwd=ROOT, diagnostic='Native static catalog or strict dataset admission failed')
     published.mkdir(parents=True)
     public = published / 'public'
-    run([*command, SCRIPTS / 'skill_reports.py', 'public-quality', native, public], env,
+    run([*command, scripts / 'skill_reports.py', 'public-quality', native, public], env,
         cwd=ROOT, diagnostic='Static public projection failed')
     analysis = published / 'analysis'
-    run([*command, SCRIPTS / 'skill_analysis.py', '--input', public, '--output', analysis],
+    run([*command, scripts / 'skill_analysis.py', '--input', public, '--output', analysis],
         env, cwd=ROOT, diagnostic='Static analysis failed')
     rendered = published / 'consolidated'
-    run([*command, SCRIPTS / 'skill_report.py', '--input', public, '--analysis', analysis / 'analysis.json',
+    run([*command, scripts / 'skill_report.py', '--input', public, '--analysis', analysis / 'analysis.json',
          '--output', rendered], env, cwd=ROOT, diagnostic='Consolidated static rendering failed')
     return public, rendered / 'report.html'
 
 
-def collect(owner, workspace, runner, repository, env):
+def collect(scripts, owner, workspace, runner, repository, env):
     python, tools = owner
     runner.mkdir()
     native = runner / 'skill-quality'
@@ -80,7 +100,7 @@ def collect(owner, workspace, runner, repository, env):
                GITHUB_REPOSITORY=repository, SKILL_QUALITY_PYTHON=str(python),
                SKILL_QUALITY_TOOLS=str(tools), XDG_CACHE_HOME=str(runner / 'cache'),
                XDG_STATE_HOME=str(runner / 'state'), SKILLEVALUATOR_RESULTS_DIR=str(native / 'results'))
-    run(['bash', SCRIPTS / 'collect-static-quality.sh'], env,
+    run(['bash', scripts / 'collect-static-quality.sh'], env,
         cwd=ROOT, diagnostic='Static collection failed before contract validation')
     return native
 
@@ -145,7 +165,8 @@ def main():
     leaks = (owners['0.9.0'][1] / 'bin/gitleaks').resolve(strict=True)
     evidence.require(leaks == (owners['1.0.1'][1] / 'bin/gitleaks').resolve(strict=True),
                      'Qualification requires the same pinned Gitleaks executable')
-    observed = {'controls': {}, 'catalog': {}, 'gitleaks_sha256': evidence.digest_bytes(leaks.read_bytes())}
+    observed = {'controls': {}, 'catalog': {}, 'gitleaks_sha256': evidence.digest_bytes(leaks.read_bytes()),
+                'reporting_patch_sha256': evidence.digest_bytes(REPORTING_PATCH.read_bytes())}
     runner = Path(os.environ['RUNNER_TEMP'])
     repository = os.environ['GITHUB_REPOSITORY']
     with tempfile.TemporaryDirectory(prefix='static-qualification-', dir=runner) as temporary:
@@ -154,6 +175,7 @@ def main():
         home = scratch / 'home'
         home.mkdir()
         env['HOME'] = str(home)
+        scripts = reporting_tools(scratch, env)
         workspace = scratch / 'workspace'
         skill = fixture(workspace, env)
         for case, target in (('clean', None), ('top-level', TOP), ('authored-evaluation', AUTHORED)):
@@ -166,11 +188,11 @@ def main():
                            diagnostic='Control source revision unavailable').decode().strip()
             observed['controls'][case] = {'revision': revision}
             for version, owner in owners.items():
-                native = collect(owner, workspace, scratch / f'{case}-{version}', CONTROL_REPOSITORY, env)
+                native = collect(scripts, owner, workspace, scratch / f'{case}-{version}', CONTROL_REPOSITORY, env)
                 path = native / 'versions.json'
                 path.write_bytes(evidence.encoded(dict(evidence.read_json(path), fixture='synthetic')))
                 published = staged / 'controls' / case / version
-                public, page = report(owner, workspace, native, published, env)
+                public, page = report(scripts, owner, workspace, native, published, env)
                 result = observe(native, public, page.read_text())[CONTROL]
                 expect_finding = case == 'top-level' or case == 'authored-evaluation' and version == '1.0.1'
                 evidence.require(result['secret_locations'] == ([(target, 1)] if expect_finding else [])
@@ -184,9 +206,9 @@ def main():
                                  'Static qualification mutated its control input')
         for version, owner in owners.items():
             native = (runner / 'skill-quality' if version == '0.9.0' else
-                      collect(owner, ROOT, scratch / 'catalog-candidate', repository, env))
+                      collect(scripts, owner, ROOT, scratch / 'catalog-candidate', repository, env))
             published = staged / 'catalog' / version
-            public, page = report(owner, ROOT, native, published, env)
+            public, page = report(scripts, owner, ROOT, native, published, env)
             observed['catalog'][version] = observe(native, public, page.read_text())
             evidence.require(any(result['incomplete_scans'] for result in observed['catalog'][version].values()),
                              'Catalog supplied no incomplete-scan control')

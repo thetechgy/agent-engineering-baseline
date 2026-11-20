@@ -24,7 +24,6 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import skill_reports as reports
 import evaluator_profiles as profiles
-import static_evaluator
 import unscored_security
 
 # Frozen static admission identity, not a freshness inventory. Retain this profile
@@ -65,10 +64,7 @@ def scanner_adapters(patched):
 
 SCANNER_2134_UNPATCHED, SCANNER_2134_NEXT = scanner_adapters(SCANNER_RUNTIME_2134)
 SCANNER_RUNTIME_CURRENT_UNPATCHED, SCANNER_RUNTIME_NEXT = scanner_adapters(SCANNER_RUNTIME)
-SCANNER_RUNTIME_STATIC_CANDIDATE = {
-    **SCANNER_RUNTIME_CURRENT_UNPATCHED, 'evaluator_revision': static_evaluator.REVISION
-}
-RELEASED_SCANNER_RUNTIMES = (SCANNER_2134_NEXT, SCANNER_RUNTIME_NEXT, SCANNER_RUNTIME_STATIC_CANDIDATE)
+RELEASED_SCANNER_RUNTIMES = (SCANNER_2134_NEXT, SCANNER_RUNTIME_NEXT)
 CAVEAT_SCANNER_RUNTIMES = (SCANNER_RUNTIME_PREVIOUS, SCANNER_RUNTIME_2134, SCANNER_RUNTIME,
                            *RELEASED_SCANNER_RUNTIMES)
 SCANNER_RUNTIMES = (SCANNER_RUNTIME_UNPATCHED, SCANNER_2134_UNPATCHED,
@@ -1098,13 +1094,7 @@ def strict_dataset(path, name, *, reader=None, directory_identities=None, direct
         if target in tree_entries:
             # Capture before invoking validators that may catch parse/read errors.
             optional_reader(target)
-            if (spec.rel_path in ('evals/config.yml', 'evals/config.yaml')
-                    and static_evaluator.is_owner()):
-                # 1.0.1 opens configs through SecureRoot. Keep the released
-                # parser and its filename precedence on our captured bytes.
-                static_evaluator.validate_captured_config(captured_tree)
-            else:
-                native_spec._run_file_checks(captured_tree.at(target), spec, checks)
+            native_spec._run_file_checks(captured_tree.at(target), spec, checks)
     native_spec._check_unrecognised(captured_tree, checks)
     require(all(row.status == 'ok' for row in checks), 'Strict dataset contract failed')
     for entry in entries:
@@ -1354,7 +1344,7 @@ def policy_fields(value):
     return {key: copy.deepcopy(value.get(key)) for key in POLICY_FIELDS}
 
 
-def validate_policy(value, *, custom_only=False, static=False):
+def validate_policy(value, *, custom_only=False):
     require(type(value) is dict, 'Invalid policy')
     require(type(value.get('fields')) is dict, 'Invalid policy fields')
     candidate = profiles.candidate_revision(value['fields'].get('evaluator_revision'),
@@ -1385,12 +1375,7 @@ def validate_policy(value, *, custom_only=False, static=False):
             validate_build(val)
         else:
             token(val)
-    if fields['evaluator_revision'] == static_evaluator.REVISION and static:
-        require(value['published_id'] == static_evaluator.PRODUCER and value['patch_digest'] is None
-                and value['judge'] == {'model': None, 'provider': None, 'enabled': False}
-                and all(fields[key] == static_evaluator.VERSIONS[key] for key in ('python', 'harbor')),
-                'Contradictory static candidate policy')
-    elif fields['evaluator_revision'] is not None:
+    if fields['evaluator_revision'] is not None:
         profiles.by_revision(fields['evaluator_revision'])
     judge = value['judge']; closed(judge, ('model', 'provider', 'enabled'))
     optional(judge['model'], token); optional(judge['provider'], token); optional(judge['enabled'], boolean)
@@ -1549,12 +1534,10 @@ def validate_evidence(data, *, public=False, _observed_at=None):
     if 'scanner_runtime' in data:
         require(data.get('kind') == 'static' and data['scanner_runtime'] in SCANNER_RUNTIMES,
                 'Unsupported or contradictory scanner runtime')
-        require(scanner_owner_matches(data['scanner_runtime'], data['policy']['fields']['evaluator_revision']),
+        require((data['scanner_runtime'] in RELEASED_SCANNER_RUNTIMES) ==
+                (data['policy']['fields']['evaluator_revision'] == profiles.NEXT['revision']),
                 'Scanner adapter and public producer differ')
         fields += ('scanner_runtime',)
-    if data['policy']['fields']['evaluator_revision'] == static_evaluator.REVISION:
-        require(data.get('scanner_runtime') == SCANNER_RUNTIME_STATIC_CANDIDATE,
-                'Missing static candidate scanner provenance')
     if 'coverage_caveats' in data:
         require(data.get('kind') == 'static' and data.get('scanner_runtime') in CAVEAT_SCANNER_RUNTIMES,
                 'Caveats require the qualified adapter')
@@ -1587,7 +1570,7 @@ def validate_evidence(data, *, public=False, _observed_at=None):
     require(ds['staged_digest'] is None or ds['staged_algorithm'] == 'skill-evaluator-dataset-snapshot/1',
             'Missing staged digest algorithm')
     ids = case_ids(ds['case_ids']); require(ds['case_cohort_digest'] == identity(sorted(ids)), 'Cohort mismatch')
-    validate_policy(data['policy'], static=data['kind'] == 'static')
+    validate_policy(data['policy'])
     availability = data['availability']; closed(availability, ('status', 'reasons', 'provenance'))
     enum(availability['status'], ('complete', 'incomplete', 'unavailable')); enum(availability['provenance'], PROVENANCE)
     require(type(availability['reasons']) is list and len(availability['reasons']) <= len(REASONS)
@@ -1897,7 +1880,7 @@ def validate_evidence(data, *, public=False, _observed_at=None):
             finding_indices[scanner] += 1
         require(aggregate['passed'] == all(scan['passed'] is True or not scan.get('blocking', True)
                                          for scan in validators), 'Static aggregate gate contradiction')
-        if data['policy']['fields']['evaluator_revision'] in (profiles.NEXT['revision'], static_evaluator.REVISION):
+        if data['policy']['fields']['evaluator_revision'] == profiles.NEXT['revision']:
             failing = [scan for scan in validators if scan.get('blocking', True) and scan['passed'] is not True]
             expected = ('passed' if not failing else 'incomplete'
                         if all(scan['status'] == 'incomplete' for scan in failing) else 'failed')
@@ -2121,11 +2104,6 @@ def select_run(root, name, selected, *, entries=None, directory_identities=None)
     return candidates[0]
 
 
-def scanner_owner_matches(runtime, revision):
-    expected = revision if revision in (profiles.NEXT['revision'], static_evaluator.REVISION) else None
-    return runtime.get('evaluator_revision') == expected
-
-
 def validate_runtime_versions(versions):
     require(type(versions) is dict, 'Native versions object required')
     if 'scanner_runtime' in versions:
@@ -2136,13 +2114,9 @@ def validate_runtime_versions(versions):
     elif versions.get('skillspector_revision') in (SCANNER_RUNTIME_2134['skillspector_revision'],
                                                  SCANNER_RUNTIME['skillspector_revision']):
         require(False, 'Missing scanner runtime provenance')
-    if versions.get('evaluator_revision') == static_evaluator.REVISION:
-        require(versions.get('scanner_runtime') == SCANNER_RUNTIME_STATIC_CANDIDATE,
-                'Missing static candidate scanner provenance')
-        return static_evaluator.validate_owner(versions)
     profile = profiles.runtime(versions, owning=True)
     if 'scanner_runtime' in versions:
-        require(scanner_owner_matches(versions['scanner_runtime'], profile['revision']),
+        require((versions['scanner_runtime'] in RELEASED_SCANNER_RUNTIMES) == (profile is profiles.NEXT),
                 'Scanner adapter and evaluator owner differ')
     return profile
 
@@ -2968,7 +2942,6 @@ def static_scanner(value):
         'Secrets Detection': 'SECRETS',
         'Code Integrity & Hygiene': 'HYGIENE',
         'Unicode Smuggling Detection': 'UNICODE',
-        'Harness Compatibility': 'HARNESS',
     }
     require(type(value) is str, 'Invalid scanner identity')
     value = titles.get(value, value)
@@ -3021,11 +2994,11 @@ def normalize_static(root, name, workspace=ROOT):
     require(type(native['incomplete_scans']) is list and len(native['incomplete_scans']) <= 100, 'Scanner limit')
     for scanner in native['incomplete_scans']:
         token(scanner)
-    released = native.get('version') in reports.RELEASED_STATIC_VERSIONS
+    released = native.get('version') == '0.9.0'
     if released:
         require(root / 'versions.json' in scanned_entries, 'Missing static producer provenance')
         producer = read_json_and_digest(root / 'versions.json', budget=budget, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)[0]
-        require(validate_runtime_versions(producer).get('version') == native['version'], 'Static producer version mismatch')
+        require(validate_runtime_versions(producer) is profiles.NEXT, 'Static producer version mismatch')
         from skillevaluator.reporting.base import passes_required_gate
         released_gates = [passes_required_gate(result) for result in reports.released_static_results(native)]
     else:
@@ -3170,9 +3143,8 @@ def normalize_static(root, name, workspace=ROOT):
         if released:
             data['policy'] = make_policy(
                 {key: versions[key] for key in ('evaluator_revision', 'harbor', 'python')},
-                patch='sha256:' + producer['patch_sha256'] if 'patch_sha256' in producer else None,
-                judge={'model': None, 'provider': None, 'enabled': False}, provenance='runtime_recorded',
-                published=producer.get('producer_profile'))
+                patch='sha256:' + producer['patch_sha256'],
+                judge={'model': None, 'provider': None, 'enabled': False}, provenance='runtime_recorded')
         else:
             data['policy'] = make_policy({'evaluator_revision': versions.get('evaluator_revision')}, provenance='runtime_recorded')
         data['references'].append(reference_from_digest(root, root / 'versions.json', 'skill-quality', versions_digest))

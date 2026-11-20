@@ -14,7 +14,11 @@ JOBS = {'contracts': 'ci-contracts', 'quality': 'skill-quality',
         'pester': 'pester-eval-feasibility', 'deadline': 'native-deadline',
         'admission': 'pester-admission'}
 FLAGS = tuple(JOBS)
-STATIC_QUALIFICATION = '.github/scripts/qualify_static_evaluator.py'
+STATIC_QUALIFICATION = {
+    '.github/scripts/qualify_static_evaluator.py',
+    '.github/patches/static-evaluator-1.0.1-reporting.patch',
+    '.github/scripts/static_evaluator.py',
+}
 ROOT = Path(__file__).resolve().parents[2]
 PESTER = {'contracts', 'pester', 'deadline', 'admission'}
 GH = {'contracts', 'quality'}
@@ -82,7 +86,7 @@ def select(paths, *, complete=True):
                 '.github/scripts/qualify_benchmark_evidence.py', '.github/tests/test_standard_judges.py'):
             # Qualification-only leaves; no production task/runtime or scoring consumer.
             selected.add('contracts')
-        elif path.startswith('.github/scripts/qualify_scanner') or path in (STATIC_QUALIFICATION,
+        elif path.startswith('.github/scripts/qualify_scanner') or path in STATIC_QUALIFICATION or path in (
                 '.github/scripts/skill_review.py', '.github/scripts/skill_report_reviews.py',
                 '.github/scripts/skill_pages.py', '.github/scripts/skill_history.py',
                 '.github/scripts/skill_orchestration.py'):
@@ -156,7 +160,7 @@ def main():
         event_name = os.environ.get('GITHUB_EVENT_NAME', '')
         paths, complete, reason = changes(event, event_name)
         selected = select(paths, complete=complete)
-        selected['static_candidate'] = event_name == 'pull_request' and complete and STATIC_QUALIFICATION in paths
+        selected['static_candidate'] = event_name == 'pull_request' and complete and bool(STATIC_QUALIFICATION.intersection(paths))
         if event_name == 'push':
             # Preserve main's production producer population and downstream chains.
             selected.update(dict.fromkeys(('deadline', 'admission'), False))

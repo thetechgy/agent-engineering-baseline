@@ -48,7 +48,7 @@ import skill_evidence as evidence
 import static_evaluator
 root = Path(sys.argv[2])
 if sys.argv[3] == 'candidate':
-    runtime = evidence.SCANNER_RUNTIME_STATIC_CANDIDATE
+    runtime = dict(evidence.SCANNER_RUNTIME_NEXT, evaluator_revision=static_evaluator.REVISION)
     owner = static_evaluator.VERSIONS
 else:
     runtime = evidence.SCANNER_RUNTIME_NEXT
@@ -62,7 +62,10 @@ for name in ('semgrep', 'skillspector', 'bandit', 'pip-audit'):
 assert subprocess.check_output([root / 'bin/gitleaks', 'version'], text=True).strip() == versions['scanners']['gitleaks']
 assert evidence.digest_bytes((root / 'skillspector/uv.lock').read_bytes()) == versions['scanner_runtime']['skillspector_lock']
 assert evidence.digest_bytes((Path(sys.argv[1]) / '.github/requirements/semgrep.txt').read_bytes()) == versions['scanner_runtime']['semgrep_lock']
-evidence.validate_runtime_versions(versions)
+if sys.argv[3] == 'candidate':
+    static_evaluator.validate_owner(versions)
+else:
+    evidence.validate_runtime_versions(versions)
 print(json.dumps(versions, indent=2))
 PYSTATIC
 }
