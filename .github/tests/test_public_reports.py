@@ -611,7 +611,7 @@ class PublicWorkflowTests(unittest.TestCase):
             self.assertEqual(bool(upload.get('continue-on-error')), advisory)
             self.assertNotIn('OPENAI_API_KEY', json.dumps(generation))
         collect = next(step for step in quality['jobs']['skill-quality']['steps'] if step['name'] == 'Collect native skill and dataset reports')
-        self.assertEqual(collect['run'], 'bash .github/scripts/collect-static-quality.sh')
+        self.assertEqual(collect['run'], 'bash "$STATIC_QUALITY_SCRIPTS/collect-static-quality.sh"')
         collection = (REPO / '.github/scripts/collect-static-quality.sh').read_text()
         self.assertIn('--evaluated-source-repository "$GITHUB_REPOSITORY"', collection)
         self.assertIn('--evaluated-source-revision "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)"', collection)
