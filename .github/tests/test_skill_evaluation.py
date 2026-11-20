@@ -4,6 +4,7 @@ import ast
 import asyncio
 import contextlib
 import hashlib
+import importlib.metadata
 import importlib.util
 import inspect
 import io
@@ -1091,6 +1092,8 @@ class WorkflowTests(unittest.TestCase):
                     json.dumps([{"name": name, "version": "fixture-version"}]))
             (root / 'skillspector').mkdir()
             (root / 'skillspector/uv.lock').write_text('scanner lock fixture')
+            (root / 'benchmark').mkdir()
+            (root / 'benchmark/uv.lock').write_bytes(b'benchmark lock fixture')
             for kind in ("quality", "benchmark"):
                 output = io.StringIO()
                 with self.subTest(kind=kind), patch.object(sys, "argv", ["-", str(root), kind, SHA, str(REPO)]), \
@@ -1105,6 +1108,8 @@ class WorkflowTests(unittest.TestCase):
                                      'sha256:' + hashlib.sha256(b'scanner lock fixture').hexdigest())
                 else:
                     self.assertNotIn("skillspector_revision", versions)
+                    self.assertEqual(versions["lock_sha256"], hashlib.sha256(b"benchmark lock fixture").hexdigest())
+                    self.assertEqual(versions["certifi"], importlib.metadata.version("certifi"))
 
     def test_benchmark_contracts_allow_the_intentionally_absent_scanner(self):
         with tempfile.TemporaryDirectory() as directory:
