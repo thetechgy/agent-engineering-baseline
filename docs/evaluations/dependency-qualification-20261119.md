@@ -36,6 +36,11 @@ dispatch, redaction and offline rendering under a new review profile. The scanne
 [Released evaluator manifest](https://github.com/NVIDIA/SkillEvaluator/blob/v1.0.1/pyproject.toml) ·
 [Pydantic release](https://github.com/pydantic/pydantic/releases/tag/v2.14.4).
 
+The opt-in 0.9.0 judge-accounting path calls the upstream judge-evidence redactor before retaining text.
+Version 1.0.1 adds masking for escaped credential-bearing lines. Qualify redaction and refusal capture on
+synthetic input before authorizing further judge-only execution. Actual disclosure remains unverified.
+[Judge evidence fix](https://github.com/NVIDIA/SkillEvaluator/pull/547).
+
 The manual 0.7.2 qualifier and frozen 0.8.0 experiments retain their original inputs. A Tier 3 migration needs
 independent native startup and cleanup, verification of submitted operations and usage, and reproduction of
 retained grades. Static qualification alone cannot settle that decision.

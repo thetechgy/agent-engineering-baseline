@@ -42,6 +42,19 @@ def stage(native, resources, *, scripts):
             'COPY resource-inventory.json /opt/aeb-resources/inventory.json\n'
             'RUN python3 -I /opt/aeb-resources/evaluation_resource_provision.py /opt/aeb-resources/inventory.json\n')
 
+        # Upstream notices accompany installed skills. They are distribution
+        # metadata, outside the task's agent-readable resource inventory.
+        deployed = {row['skill'] for row in resources['files'] if row['role'] != 'input'}
+        for skill in sorted(deployed | {resources['target']['id']}):
+            source = Path('skills') / skill / 'LICENSE'
+            if skill in deployed and regular_bytes(native / 'environment' / source) != regular_bytes(scripts.parents[1] / '.agents' / source):
+                raise ValueError('Staged license differs from deployment')
+            workspace = shlex.quote('/workspace/skills/' + skill)
+            destination = shlex.quote(f'{NATIVE_SKILLS}/{skill}/LICENSE')
+            # Both arms get the same recipe. An absent target stays absent.
+            stream.write(f'RUN if test -d {workspace}; then '
+                         f'install -m 0444 {workspace}/LICENSE {destination}; fi\n')
+
 
 def registration_command(resources):
     """The successor uses root-provisioned copies, rather than overwriting them."""

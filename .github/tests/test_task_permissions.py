@@ -196,6 +196,10 @@ class TaskPermissionControls(unittest.TestCase):
                 if skill == 'gh' and not present: continue
                 members.update({prefix + skill + '/' + name: 'sha256:' + hashlib.sha256(raw).hexdigest()
                                 for name, raw in names.items()})
+                license_path = ROOT / '.agents/skills' / skill / 'LICENSE'
+                members[prefix + skill + '/LICENSE'] = 'sha256:' + hashlib.sha256(license_path.read_bytes()).hexdigest()
+            resources = self.owner.resource_contract(present)
+            self.assertFalse(any(row['path'].endswith('/LICENSE') for row in resources['files']))
             self.owner.validate_members(members, case, arm)
             members['tests/entry.json'] = 'sha256:' + '0' * 64
             with self.assertRaises(ValueError): self.owner.validate_members(members, case, arm)
