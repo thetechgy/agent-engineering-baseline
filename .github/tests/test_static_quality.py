@@ -10,7 +10,8 @@ import unittest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / '.github/scripts'))
+ISOLATED_SCRIPTS = os.environ.get('STATIC_QUALITY_SCRIPTS')
+sys.path.insert(0, ISOLATED_SCRIPTS or str(ROOT / '.github/scripts'))
 import evaluator_profiles as profiles
 import skill_evidence as evidence
 
@@ -62,7 +63,7 @@ class StaticQualityRoutingTests(unittest.TestCase):
         runtime = evidence.SCANNER_RUNTIME if version == '0.9.0' else evidence.SCANNER_RUNTIME_NEXT
         opposite.update(scanner_runtime=runtime, scanners=runtime['versions'],
                         skillspector_revision=runtime['skillspector_revision'])
-        scripts = Path(os.environ.get('STATIC_QUALITY_SCRIPTS', ROOT / '.github/scripts'))
+        scripts = Path(ISOLATED_SCRIPTS or ROOT / '.github/scripts')
         for metadata in (None, {}, opposite):
             with self.subTest(metadata=metadata), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
@@ -82,3 +83,28 @@ class StaticQualityRoutingTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertFalse(marker.exists())
                 self.assertFalse((root / 'runner/skill-quality').exists())
+
+
+    @unittest.skipUnless(ISOLATED_SCRIPTS, 'Requires isolated static reporting tools')
+    def test_pages_history_admits_the_static_producer(self):
+        import skill_history as history
+        import static_evaluator as owner
+        from test_skill_analysis import static_control
+        from test_skill_pages import prov
+
+        record = static_control()
+        record['policy'] = evidence.make_policy(
+            {key: owner.VERSIONS[key] for key in ('evaluator_revision', 'harbor', 'python')},
+            judge={'model': None, 'provider': None, 'enabled': False},
+            provenance='runtime_recorded', published=owner.PRODUCER)
+        record['scanner_runtime'] = evidence.SCANNER_RUNTIME_STATIC_CANDIDATE
+        at = '2026-11-20T00:00:00Z'
+        snapshot = history.empty(at)
+        observation = history.observation(record, 'quality', prov(record['source']['revision']), at)
+        history.add(snapshot, observation)
+        retained = history.retain(snapshot, at)['observations']
+        self.assertEqual(len(retained), 1)
+        self.assertEqual(retained[0]['record']['policy']['published_id'], owner.PRODUCER)
+        observation['record']['kind'] = 'behavioral'
+        with self.assertRaisesRegex(ValueError, 'Unsupported native evaluator'):
+            history.validate(snapshot)

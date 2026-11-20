@@ -13,6 +13,7 @@ import skill_evidence as evidence
 import static_evaluator
 
 ROOT = evidence.ROOT
+HISTORY_PATCH = ROOT / '.github/scripts/static-quality-history.patch'
 
 
 def write_versions(tools):
@@ -87,7 +88,11 @@ def main():
     runner = Path(os.environ['RUNNER_TEMP']).resolve(strict=True)
     evidence.require(not runner.is_relative_to(ROOT), 'Static tooling must be outside the checkout')
     if args.command == 'tools':
-        print(qualification.reporting_tools(runner, os.environ.copy()))
+        env = os.environ.copy()
+        scripts = qualification.reporting_tools(runner, env)
+        qualification.run(['git', 'apply', HISTORY_PATCH], env, cwd=scripts.parents[1],
+                          diagnostic='Could not install static history compatibility')
+        print(scripts)
     else:
         authored_input(runner / 'reporting-tools/.github/scripts', args.output, runner)
 

@@ -1,0 +1,16 @@
+diff --git a/.github/scripts/skill_history.py b/.github/scripts/skill_history.py
+--- a/.github/scripts/skill_history.py
++++ b/.github/scripts/skill_history.py
+@@ -69,9 +69,11 @@ def validate(value):
+         evidence.require(a is None or b is None or timestamp(a) <= timestamp(b), 'History execution order')
+         r=item['record']; evidence.closed(r, FIELDS)
+         evidence.require(expected != 'standard' or 'producer_profile' not in r['policy'],
+                          'Offline behavioral evidence cannot enter production history')
+-        evidence.validate_source(r['source']); evidence.validate_policy(r['policy'], custom_only=r['policy']['fields']['grading']=='custom_only')
+         evidence.enum(r['kind'], ('static','behavioral')); evidence.boolean(item['numeric_complete'])
++        evidence.validate_source(r['source'])
++        evidence.validate_policy(r['policy'], custom_only=r['policy']['fields']['grading']=='custom_only',
++                                 static=expected == 'quality' and r['kind'] == 'static')
+         evidence.require(type(r['schema_version']) is int and r['schema_version'] in (1,2), 'History source schema')
+         evidence.optional(r['run_id'], evidence.token)
+         ds=r['dataset']

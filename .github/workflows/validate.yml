@@ -271,7 +271,8 @@ jobs:
         run: |
           "$SKILL_QUALITY_PYTHON" -B -m unittest discover -s .github/tests -p test_static_quality.py -v
           "$SKILL_QUALITY_PYTHON" -B "$STATIC_QUALITY_SCRIPTS/qualify_scanners.py" \
-            --workspace "$GITHUB_WORKSPACE" --tools "$SKILL_QUALITY_TOOLS" --output "$RUNNER_TEMP/scanner-controls"
+            --workspace "$GITHUB_WORKSPACE" --tools "$SKILL_QUALITY_TOOLS" --redact \
+            --output "$RUNNER_TEMP/scanner-controls"
           "$SKILL_QUALITY_PYTHON" -B .github/scripts/static_quality_ci.py authored-input \
             --output "$RUNNER_TEMP/scanner-controls/authored-input"
 

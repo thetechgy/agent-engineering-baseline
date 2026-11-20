@@ -97,10 +97,14 @@ its public JSON and consolidated HTML at `authored-input/`.
 
 The [Pages publisher](../../.github/workflows/publish-skill-report.yml) authenticates
 the successful main producer and loads the public artifact through the same
-reporting compatibility. It prepares and renders with its existing 0.9.0
+reporting compatibility, including static policy admission in publication
+history. It prepares and renders with its existing 0.9.0
 data-only host. Retained 0.9.0 static reports keep the
 `skillevaluator-0.9.0-offline-v3` identity. Validate on a draft PR produces the
 ordinary artifacts. Live Pages publication follows a successful main run.
+For offline Pages rebuilds, stage the same tools with
+`python3 -B .github/scripts/static_quality_ci.py tools` and run the resulting
+`skill_pages.py build` with the data-only host.
 
 For matched qualification, the existing PR planner enables the comparison
 when the complete diff changes `qualify_static_evaluator.py`,
