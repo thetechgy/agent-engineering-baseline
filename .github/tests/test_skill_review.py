@@ -2381,6 +2381,16 @@ class ReviewTests(unittest.TestCase):
         self.assertIn(value["assessment"]["interpretation"].encode(),
                       review.render_review({"judgment": checked, "provenance": {}}))
 
+    def test_review_requires_fixed_trust_store_before_sdk_requests(self):
+        context = self.control()
+        calls, run = self.invoke(context)
+        version = review.importlib.metadata.version
+        with patch.object(review.importlib.metadata, "version",
+                          side_effect=lambda name: "2026.6.17" if name == "certifi" else version(name)):
+            with self.assertRaises(review.InferenceRejected):
+                asyncio.run(run())
+        self.assertEqual(calls, [])
+
     def test_sensitive_model_identifiers_reject_before_sdk_requests(self):
         context = self.control()
         fake = "sk-" + "A" * 48
