@@ -138,20 +138,6 @@ class GhPermission(GhFixture):
         reports.write_json(entry_path, entry)
         from codex_resources import stage
         stage(native, resources, scripts=ROOT / '.github/scripts')
-        # Distribute upstream notices with each installed skill. The task's
-        # exact read permissions remain defined by its resource inventory.
-        from codex_resources import NATIVE_SKILLS
-        from evaluation_resources import regular_bytes
-        with (native / 'environment/Dockerfile').open('a') as recipe:
-            for skill in self.selections():
-                source = Path('skills') / skill / 'LICENSE'
-                if present or skill != self.definition['skill']:
-                    require(regular_bytes(native / 'environment' / source) ==
-                            regular_bytes(ROOT / '.agents' / source), 'Staged license differs from deployment')
-                # Both arms use identical build instructions. The absent target
-                # has neither a workspace directory nor a native installation.
-                recipe.write(f'RUN if test -d /workspace/skills/{skill}; then '
-                             f'install -m 0444 /workspace/{source.as_posix()} {NATIVE_SKILLS}/{skill}/LICENSE; fi\n')
         if mode == 'oracle':
             reports.write_json(native / 'solution/candidate', {'control': control, 'commands': self.commands(control),
                 'expected': self.entry()['contract']['expected']})

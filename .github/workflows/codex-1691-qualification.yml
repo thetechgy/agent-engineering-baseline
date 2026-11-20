@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - '.agents/skills/gh/**'
+      - '.github/scripts/codex_resources.py'
       - '.github/scripts/gh_permission_task.py'
       - '.github/evals/campaigns/gh-codex-1691.json'
       - '.github/evals/campaigns/codex-1691.json'
