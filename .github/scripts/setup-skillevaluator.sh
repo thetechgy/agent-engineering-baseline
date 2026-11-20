@@ -186,7 +186,7 @@ git -C "$tool_root/evaluator" worktree add --quiet --detach "$tool_root/review" 
 review_patch="$repository_root/.github/patches/skillevaluator-v0.3.0-review-runtime.patch"
 git -C "$tool_root/review" apply --check "$review_patch"
 git -C "$tool_root/review" apply "$review_patch"
-review_lock_sha256=029846ad359472e0f2bf2df96de430f5aca0fcf2c242949ceab8289013a532ec
+review_lock_sha256=4df95f60d91da22824193c00fbfaa51acdc9f910a6a09c0b3856c5188eb25b6e
 printf '%s  %s\n' "$review_lock_sha256" "$tool_root/review/uv.lock" | sha256sum --check --strict
 git -C "$tool_root/review" diff --exit-code -- pyproject.toml
 uv sync --project "$tool_root/review" --python 3.13 --managed-python \
@@ -197,7 +197,7 @@ printf '%s  %s\n' "$review_lock_sha256" "$tool_root/review/uv.lock" | sha256sum 
 uv pip list --python "$review_bin/python" --format json > "$tool_root/dependencies/review.json"
 "$review_bin/python" - <<'PYREVIEW' > "$tool_root/review-versions.json"
 import importlib.metadata, json, sys
-expected = {'openai': '2.54.0', 'pydantic': '2.14.3', 'pydantic-core': '2.50.4',
+expected = {'certifi': '2026.10.23', 'openai': '2.54.0', 'pydantic': '2.14.3', 'pydantic-core': '2.50.4',
             'typing-inspection': '0.4.5', 'skillevaluator': '0.3.0', 'harbor': '0.13.2'}
 actual = {name: importlib.metadata.version(name) for name in expected}
 assert sys.version_info[:2] == (3, 13) and actual == expected
