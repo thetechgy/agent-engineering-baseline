@@ -22,6 +22,7 @@ import skill_reports as reports
 
 ROOT = Path(__file__).resolve().parents[2]
 OVERLAY = Path(".github/evals/gh")
+SKILL_FILES = ("SKILL.md", "LICENSE")
 DEPLOYED = Path(".agents/skills/gh")
 UPSTREAM = "63837fb778d6a39f02be0ce76ff89f2bc8d74bdc"
 SMOKE = ("gh-002", "gh-005", "gh-008", "gh-010")
@@ -71,7 +72,7 @@ def verify_skill(workspace, *, read_bytes=None):
         actual == owner["deployed_file_hashes"], "Managed gh file hash mismatch"
     )
     reports.require(
-        set(actual) == {str(DEPLOYED / "SKILL.md")}, "Unreviewed upstream gh file set"
+        set(actual) == {str(DEPLOYED / name) for name in SKILL_FILES}, "Unreviewed upstream gh file set"
     )
     for relative, digest in actual.items():
         deployments = [
@@ -213,7 +214,8 @@ def stage(workspace, destination, selected=None):
             "GIT_CONFIG_NOSYSTEM": "1",
         },
     )
-    shutil.copyfile(source / "SKILL.md", destination / "SKILL.md")
+    for name in SKILL_FILES:
+        shutil.copyfile(source / name, destination / name)
     shutil.copytree(workspace / OVERLAY / "evals", destination / "evals")
     reports.write_json(
         destination / "evals/evals.json",

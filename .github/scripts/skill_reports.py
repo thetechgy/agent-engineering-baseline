@@ -165,8 +165,9 @@ def benchmark_skill(workspace, name, root=None):
     if root is not None and (root / "bundle/gh").exists():
         staged = root / "bundle/gh"
         regular_tree(staged)
-        require((staged / "SKILL.md").read_bytes() == (workspace / gh.DEPLOYED / "SKILL.md").read_bytes(),
-                "Staged upstream skill drift")
+        for member in gh.SKILL_FILES:
+            require((staged / member).read_bytes() == (workspace / gh.DEPLOYED / member).read_bytes(),
+                    "Staged upstream skill drift")
         return staged
     return workspace / gh.OVERLAY
 
@@ -199,7 +200,7 @@ def benchmark_policy(name):
             "63837fb778d6a39f02be0ce76ff89f2bc8d74bdc", "deterministic_gate": 3, "workspace_mode": "group",
             "fixture_boundary": "root-broker-unprivileged-agent-v1", "authorization_policy": "per-case-allowlist-v1",
             "task_source": "native_harbor", "task_build": GH_TASK_BUILD,
-            "competing_revision": "30a0d7465b14b05e05949d6588b99f7af0c537b4"} if name == "gh" else POLICY
+            "competing_revision": "1683f50e94c9fd489191f73d7c8f7e2bd871bd0c"} if name == "gh" else POLICY
 
 
 def released_static_results(payload):
