@@ -18,9 +18,10 @@ Compared with the production 0.9.0 owner on main
 
 Both controls use Gitleaks 8.30.1 from the same binary. The authored marker is
 in an input declared by a committed `evals/evals.json` in a disposable skill
-checkout. Each case uses the same committed bytes for both producers. Coverage in the control rows refers
-to Gitleaks. The fixture also has independent schema findings. The candidate retains the authored location in native evidence, public JSON and
-consolidated HTML. The upload gate checks that the marker value is absent
+checkout. Each case uses the same committed bytes for both producers.
+Coverage in the control rows refers to Gitleaks. The fixture also has
+independent schema findings. The candidate retains the authored location in
+native evidence, public JSON and consolidated HTML. The upload gate checks that the marker value is absent
 from every staged file, including the native JSON, HTML, Markdown and
 strict-dataset diagnostics. Fixture source and raw scanner streams stay in
 scratch. This is a synthetic detection and redaction result. [Upstream fix](https://github.com/NVIDIA/SkillEvaluator/pull/552).
