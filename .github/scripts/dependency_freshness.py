@@ -320,6 +320,10 @@ def inventory(root):
          "Uses existing pinned SkillEvaluator 0.9.0 / Harbor 0.25.0 with custom-only deterministic grading. "
          "Preparation is credential-free; live provider behavior remains untested. Default benchmarks stay 0.3.0. "
          "No paid allocation is opened; standard model judging, Pester clarification and skill adoption remain deferred."),
+        ("observation-environment", "Active single-case observation",
+         ".github/evals/codex-execution-1691.json",
+         "Current case-observation CLI, model and reasoning effort. "
+         "Changing this profile requires a new identity and credential-free observer qualification."),
         ("pilot-environment", "Frozen CLI pilot and campaign selectors",
          ".github/evals/codex-pilot.json",
          "Frozen Codex/model/reasoning selectors, not a production default or freshness approval. "
@@ -333,6 +337,15 @@ def inventory(root):
     ):
         try:
             source = read(root, path)
+            sources = [{"path": path, "line": 1}]
+            if id == "observation-environment":
+                definition = ".github/evals/campaigns/case-observation.json"
+                selector = ".github/evals/campaigns/codex-1691-observation.json"
+                require(json.loads(read(root, definition))["runtime_profile"] == selector, "observation_selector_changed")
+                binding = json.loads(read(root, selector))
+                require(binding["frozen_profile"] == path and binding["frozen_profile_sha256"] ==
+                        hashlib.sha256(source.encode()).hexdigest(), "observation_profile_changed")
+                sources.extend({"path": member, "line": 1} for member in (definition, selector))
             if id == "scanner-environment":
                 packages = tomllib.loads(source)["package"]
                 value = {p["name"]: p["version"] for p in packages if p["name"] in
@@ -344,8 +357,7 @@ def inventory(root):
                 value = {key: profile[key] for key in keys}
             rows.append(row(dict(id=id, label=label, owner="Maintainer environment qualification",
                                  hold=note, group="Independent runtime profiles", validation=note),
-                            {"version": None, "revision": None, "value": json.dumps(value, sort_keys=True)},
-                            [{"path": path, "line": 1}]))
+                            {"version": None, "revision": None, "value": json.dumps(value, sort_keys=True)}, sources))
         except (DiscoveryError, ValueError, KeyError, TypeError) as error:
             rows.append(row(dict(id=id, label=label, owner="Maintainer environment qualification"),
                             {"version": None, "revision": None, "value": "Unknown"}, [],
