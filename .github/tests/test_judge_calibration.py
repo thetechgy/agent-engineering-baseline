@@ -87,7 +87,7 @@ class JudgeContracts(unittest.TestCase):
         value['profiles'].pop('gh-deterministic-gate-v6')
         value['profiles'].pop('gh-native-oracle-v2')
         value['active_profiles']['gh'] = 'gh-deterministic-gate-v5'
-        original = {**value, 'profiles': {k:v for k,v in value['profiles'].items() if '-source-v31-' not in k and '-source-v30-' not in k and '-source-v29-' not in k and '-source-v28-' not in k and '-source-v27-' not in k and '-source-v26-' not in k and k not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18', 'pester-effectiveness-v31', 'pester-cli-pilot-retained-v19', 'pester-effectiveness-v32', 'pester-effectiveness-v33', 'pester-effectiveness-v34', 'pester-cli-pilot-retained-v20') and '-source-v25-' not in k}}
+        original = {**value, 'profiles': {k:v for k,v in value['profiles'].items() if '-source-v33-' not in k and '-source-v31-' not in k and '-source-v30-' not in k and '-source-v29-' not in k and '-source-v28-' not in k and '-source-v27-' not in k and '-source-v26-' not in k and k not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18', 'pester-effectiveness-v31', 'pester-cli-pilot-retained-v19', 'pester-effectiveness-v32', 'pester-effectiveness-v33', 'pester-effectiveness-v34', 'pester-effectiveness-v36', 'pester-cli-pilot-retained-v20') and '-source-v25-' not in k}}
         self.assertEqual(len(original['profiles']), 839)
         from evaluation_evidence import source_manifest
         import skill_evidence as evidence
@@ -98,7 +98,7 @@ class JudgeContracts(unittest.TestCase):
             old = value['profiles'][key.replace('-source-v25-', '-source-v24-')]
             self.assertEqual({k:v for k,v in row.items() if k not in ('id', 'runtime_digest')},
                              {k:v for k,v in old.items() if k not in ('id', 'runtime_digest')})
-            active = key.replace('-source-v25-', '-source-v31-')
+            active = key.replace('-source-v25-', '-source-v33-')
             successor = value['profiles'][active]
             self.assertEqual(successor['runtime_digest'],
                              evidence.identity(source_manifest(ROOT, successor['skill_id'], active)))

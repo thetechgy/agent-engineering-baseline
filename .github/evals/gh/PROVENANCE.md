@@ -29,10 +29,10 @@ illustrative; replay never contacts them.
   staging, hidden verifier, native activation, and custom metric contracts.
 - **Evaluation method:** [Testing Agent Skills Systematically with Evals](https://developers.openai.com/blog/eval-skills).
   Evaluate observed execution and task artifacts, not claims in a final answer.
-- **Competing skill:** [github-actions-hardening at 61fa1fa](https://github.com/github/awesome-copilot/tree/61fa1fa8fcc63d6dbd2f07a75aeb8e214df5acfb/skills/github-actions-hardening).
-  Its six locked files are byte-identical to the previous `b1a0045` selection and
-  are staged equally in both arms. The new revision changes current benchmark
-  policy identity; historical reports retain their original policy and tooling.
+- **Competing skill:** [github-actions-hardening at 1683f50](https://github.com/github/awesome-copilot/tree/1683f50e94c9fd489191f73d7c8f7e2bd871bd0c/skills/github-actions-hardening).
+  Its six previously deployed files retain their hashes. APM 0.36.1 also deploys the upstream license.
+  Both benchmark arms stage the competing skill. The gh permission fixture distributes the upstream notices
+  with installed skills and keeps its existing agent-readable file inventory.
 
 The upstream CLI skill and captured CLI help are MIT-licensed, copyright GitHub,
 Inc. The repository's `AGENTS.md` carries the applicable MIT notice. No upstream

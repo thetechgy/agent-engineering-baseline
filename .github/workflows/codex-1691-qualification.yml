@@ -2,6 +2,8 @@ name: Codex 0.169.1 fixture qualification
 on:
   pull_request:
     paths:
+      - '.agents/skills/gh/**'
+      - '.github/scripts/gh_permission_task.py'
       - '.github/evals/campaigns/gh-codex-1691.json'
       - '.github/evals/campaigns/codex-1691.json'
       - '.github/evals/codex-execution-1691.json'
