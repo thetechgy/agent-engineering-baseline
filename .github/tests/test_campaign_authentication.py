@@ -56,7 +56,7 @@ class AuthenticationContracts(unittest.TestCase):
         registry['profiles'].pop('gh-native-oracle-v2')
         registry['active_profiles']['gh'] = 'gh-deterministic-gate-v5'
         registry['profiles']={k:v for k,v in registry['profiles'].items()
-            if '-source-v24-' not in k and '-source-v31-' not in k and '-source-v30-' not in k and '-source-v29-' not in k and '-source-v28-' not in k and '-source-v27-' not in k and '-source-v26-' not in k and k not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18', 'pester-effectiveness-v31', 'pester-cli-pilot-retained-v19', 'pester-effectiveness-v32', 'pester-effectiveness-v33', 'pester-effectiveness-v34', 'pester-cli-pilot-retained-v20') and '-source-v25-' not in k and k != 'pester-effectiveness-v29'}
+            if '-source-v24-' not in k and '-source-v32-' not in k and '-source-v31-' not in k and '-source-v30-' not in k and '-source-v29-' not in k and '-source-v28-' not in k and '-source-v27-' not in k and '-source-v26-' not in k and k not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18', 'pester-effectiveness-v31', 'pester-cli-pilot-retained-v19', 'pester-effectiveness-v32', 'pester-effectiveness-v33', 'pester-effectiveness-v34', 'pester-effectiveness-v35', 'pester-cli-pilot-retained-v20') and '-source-v25-' not in k and k != 'pester-effectiveness-v29'}
         added=[k for k in registry['profiles'] if any(f'-source-v{v}-' in k for v in (21,22,23))]
         self.assertEqual(len(added), 105)
         for key in added:

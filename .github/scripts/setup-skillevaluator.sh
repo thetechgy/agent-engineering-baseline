@@ -18,7 +18,7 @@ chmod 700 "$tool_root"
 if [ "$kind" = candidate-current ] && [ "$(uv --version | awk '{print $2}')" = '0.13.7' ]; then
   :
 else
-test "$(uv --version | awk '{print $2}')" = '0.13.8'
+test "$(uv --version | awk '{print $2}')" = '0.13.9'
 fi
 export UV_CACHE_DIR="$tool_root/uv-cache"
 export UV_PYTHON_INSTALL_DIR="$tool_root/python"

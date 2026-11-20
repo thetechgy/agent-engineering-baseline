@@ -8,14 +8,14 @@ install_skill_scanners() {
   uv pip sync --quiet --python "$tool_root/semgrep/bin/python" --require-hashes --only-binary :all: \
     "$repository_root/.github/requirements/semgrep.txt"
   ln -s "$tool_root/semgrep/bin/semgrep" "$tool_root/bin/semgrep"
-  skillspector_revision=54824463814a0be01360792523ec7245a69190fc # v2.13.4
+  skillspector_revision=e2674da339b0bddc6e565d059c0577c6d9cd25da # v2.13.6
   git init --quiet "$tool_root/skillspector"
   git -C "$tool_root/skillspector" fetch --quiet --depth=1 \
     https://github.com/NVIDIA/SkillSpector.git "$skillspector_revision"
   git -C "$tool_root/skillspector" checkout --quiet --detach FETCH_HEAD
   test "$(git -C "$tool_root/skillspector" rev-parse HEAD)" = "$skillspector_revision"
   # Scanner-owned compatible lock; evaluator and historical environments are untouched.
-  skillspector_lock_sha256=3352c462434ed1d906069b710bfba8b352c255139a0c5718f4edb6ad4051be2b
+  skillspector_lock_sha256=5ab9adb9707d66ee786cf934509d6c8d7258fb7ce12ebbc6a5b74fee35733fd1
   printf '%s  %s\n' "$skillspector_lock_sha256" "$repository_root/.github/locks/skillspector.lock" | sha256sum --check --strict
   cp "$repository_root/.github/locks/skillspector.lock" "$tool_root/skillspector/uv.lock"
   uv sync --project "$tool_root/skillspector" --python 3.13 --managed-python --frozen --no-dev

@@ -492,7 +492,7 @@ HTTP response. Main producers and diagnostic reruns are retained; only initial
 validation runs for the same PR supersede one another.
 
 GitHub Actions are pinned to commit SHAs; Python dependencies use hashed or frozen
-locks. Both evaluation workflows install Compose 5.7.1 through the shared
+locks. Both evaluation workflows install Compose 5.8.0 through the shared
 [checksum-first helper](.github/scripts/setup-compose.sh), verifying reviewed
 release bytes before execution in an isolated temporary Docker CLI configuration.
 Its always-run cleanup removes only that installation. Historical evidence keeps
@@ -548,7 +548,7 @@ use reviewed hashed locks in [.github/requirements](.github/requirements). See t
 [scanner modernization evidence](.github/evals/SCANNER-MODERNIZATION-95.md) for adopted updates,
 holds and validation limits. CI rejects unverified Python
 installers and records tool versions and dependency inventories. The requirements locks use
-uv 0.13.8. Semgrep installation requires wheels; regenerate its lock for Python
+uv 0.13.9. Semgrep installation requires wheels; regenerate its lock for Python
 3.13 and the Linux x86_64 / glibc 2.34 wheel floor:
 
 ```bash
@@ -572,7 +572,7 @@ separate evidence; a PyPI patch can precede a public GitHub tag. See the
 [Semgrep 1.182.1 assessment](.github/evals/SEMGREP-1.182.1.md) for artifact
 verification, scanner comparisons, and residual MCP dependency risk.
 
-Current evaluation setup pins uv 0.13.8; the immutable return-contract workflow
+Current evaluation setup pins uv 0.13.9; the immutable return-contract workflow
 retains reviewed uv 0.13.7. Both frozen recipes retain their verified interpreter
 download identities. Current setup retains the managed Python 3.13 selector.
 Fresh installations select a managed Python 3.13 patch release; the exact interpreter version

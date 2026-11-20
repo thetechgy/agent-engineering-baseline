@@ -43,18 +43,32 @@ SCANNER_RUNTIME_UNPATCHED = {
 
 SCANNER_RUNTIME_PREVIOUS = {**SCANNER_RUNTIME_UNPATCHED,
                    "adapter_patch": "sha256:09ab5d1440f355224935b9498ea3c2a68395d656997932ab525771287cb802bc"}
-SCANNER_RUNTIME = {**SCANNER_RUNTIME_PREVIOUS,
+SCANNER_RUNTIME_2134 = {**SCANNER_RUNTIME_PREVIOUS,
                    "versions": {**SCANNER_RUNTIME_PREVIOUS["versions"], "semgrep": "1.185.0"},
                    "skillspector_lock": "sha256:3352c462434ed1d906069b710bfba8b352c255139a0c5718f4edb6ad4051be2b",
                    "semgrep_lock": "sha256:d0c13313fb643f578a8116375078d344bfcf74748380ca88acd6e0d7d467c520"}
-SCANNER_RUNTIME_CURRENT_UNPATCHED = {key: value for key, value in SCANNER_RUNTIME.items()
-                                     if key != "adapter_patch"}
-# Same scanner executables/locks, released 0.9 adapter instead of the 0.3 patch.
-SCANNER_RUNTIME_NEXT = {**SCANNER_RUNTIME_CURRENT_UNPATCHED,
-                        "evaluator_revision": profiles.NEXT['revision']}
-SCANNER_RUNTIMES = (SCANNER_RUNTIME_NEXT, SCANNER_RUNTIME_UNPATCHED, SCANNER_RUNTIME_PREVIOUS,
-                    SCANNER_RUNTIME_CURRENT_UNPATCHED, SCANNER_RUNTIME)
-CAVEAT_SCANNER_RUNTIMES = (SCANNER_RUNTIME_PREVIOUS, SCANNER_RUNTIME, SCANNER_RUNTIME_NEXT)
+SCANNER_RUNTIME = {
+    **SCANNER_RUNTIME_2134,
+    "versions": {**SCANNER_RUNTIME_2134["versions"], "skillspector": "2.13.6", "semgrep": "1.186.0"},
+    "skillspector_revision": "e2674da339b0bddc6e565d059c0577c6d9cd25da",
+    "skillspector_lock": "sha256:5ab9adb9707d66ee786cf934509d6c8d7258fb7ce12ebbc6a5b74fee35733fd1",
+    "semgrep_lock": "sha256:f0e17604bc64d9189ea4165c1e7fb5612834488d4be786312601d0f04763053e",
+}
+
+
+def scanner_adapters(patched):
+    """Bind the same scanner bytes to the two other qualified evaluator adapters."""
+    unpatched = {key: value for key, value in patched.items() if key != "adapter_patch"}
+    return unpatched, {**unpatched, "evaluator_revision": profiles.NEXT['revision']}
+
+
+SCANNER_2134_UNPATCHED, SCANNER_2134_NEXT = scanner_adapters(SCANNER_RUNTIME_2134)
+SCANNER_RUNTIME_CURRENT_UNPATCHED, SCANNER_RUNTIME_NEXT = scanner_adapters(SCANNER_RUNTIME)
+RELEASED_SCANNER_RUNTIMES = (SCANNER_2134_NEXT, SCANNER_RUNTIME_NEXT)
+CAVEAT_SCANNER_RUNTIMES = (SCANNER_RUNTIME_PREVIOUS, SCANNER_RUNTIME_2134, SCANNER_RUNTIME,
+                           *RELEASED_SCANNER_RUNTIMES)
+SCANNER_RUNTIMES = (SCANNER_RUNTIME_UNPATCHED, SCANNER_2134_UNPATCHED,
+                    SCANNER_RUNTIME_CURRENT_UNPATCHED, *CAVEAT_SCANNER_RUNTIMES)
 
 ROOT = Path(__file__).resolve().parents[2]
 JSON_LIMIT = 8 * 1024 * 1024
@@ -1520,7 +1534,7 @@ def validate_evidence(data, *, public=False, _observed_at=None):
     if 'scanner_runtime' in data:
         require(data.get('kind') == 'static' and data['scanner_runtime'] in SCANNER_RUNTIMES,
                 'Unsupported or contradictory scanner runtime')
-        require((data['scanner_runtime'] == SCANNER_RUNTIME_NEXT) ==
+        require((data['scanner_runtime'] in RELEASED_SCANNER_RUNTIMES) ==
                 (data['policy']['fields']['evaluator_revision'] == profiles.NEXT['revision']),
                 'Scanner adapter and public producer differ')
         fields += ('scanner_runtime',)
@@ -2097,11 +2111,12 @@ def validate_runtime_versions(versions):
                 and versions.get('scanners') == versions['scanner_runtime']['versions']
                 and versions.get('skillspector_revision') == versions['scanner_runtime']['skillspector_revision'],
                 'Unsupported or contradictory scanner provenance')
-    elif versions.get('skillspector_revision') == SCANNER_RUNTIME['skillspector_revision']:
+    elif versions.get('skillspector_revision') in (SCANNER_RUNTIME_2134['skillspector_revision'],
+                                                 SCANNER_RUNTIME['skillspector_revision']):
         require(False, 'Missing scanner runtime provenance')
     profile = profiles.runtime(versions, owning=True)
     if 'scanner_runtime' in versions:
-        require((versions['scanner_runtime'] == SCANNER_RUNTIME_NEXT) == (profile is profiles.NEXT),
+        require((versions['scanner_runtime'] in RELEASED_SCANNER_RUNTIMES) == (profile is profiles.NEXT),
                 'Scanner adapter and evaluator owner differ')
     return profile
 
@@ -3102,7 +3117,7 @@ def normalize_static(root, name, workspace=ROOT):
                     match = re.fullmatch(
                         r'skillspector complete_with_caveats: ([1-9][0-9]*) reference_missing caveat\(s\); '
                         r'producer is_complete=true; repository coverage remains incomplete', error)
-                    if versions.get('scanner_runtime') == SCANNER_RUNTIME_NEXT:
+                    if versions.get('scanner_runtime') in RELEASED_SCANNER_RUNTIMES:
                         # The released adapter names up to three missing-reference
                         # rows, followed by the exact remaining count. Retain that
                         # producer claim without promoting incomplete coverage.
@@ -3515,7 +3530,7 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v34'
+        profile_id = 'pester-effectiveness-v35'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v20'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
