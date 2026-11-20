@@ -19,8 +19,8 @@ and incomplete comparisons select every maintained PR check.
 
 Validate on main still feeds the report publisher and orchestration planner.
 Benchmark dispatch/history, publisher recovery, scheduled dependency freshness
-and baseline refresh keep their existing triggers and permissions. Campaign,
-Pester return and candidate packaging remain manual. CLI observation comparison
+and baseline refresh keep their existing triggers and permissions. Campaign
+and Pester return remain manual. CLI observation comparison
 is called only through the explicit deadline diagnostic. PR calls receive no
 inherited secrets. The aggregate gate is separate from the two required checks.
 
@@ -288,7 +288,10 @@ branch protection; platform success is not all-selected success.
 
 ## Operator commands
 
-Use the existing manual preparation paths when their coverage is needed:
+The 0.7.2 migration qualifier is retired from current CI. Its
+[historical reproduction command](EVALUATOR-CANDIDATE-95.md#reproduction) uses
+the reviewed checkout. Use the maintained manual preparation paths when their
+coverage is needed:
 
 ```sh
 gh workflow run current-evaluator.yml --ref <reviewed-ref> -f candidate-next=true
@@ -296,7 +299,6 @@ gh workflow run evaluation-campaign.yml --ref <reviewed-ref> -f campaign=boolean
 gh workflow run pester-return-qualification.yml --ref <reviewed-ref>
 gh workflow run codex-pilot.yml --ref <reviewed-ref>
 gh workflow run native-deadline.yml --ref <reviewed-ref> -f cli_observation=true -f observation_final=true
-gh workflow run pester-candidate.yml --ref <reviewed-ref>
 ```
 
 These commands are credential-free preparation/diagnosis, not authorization for

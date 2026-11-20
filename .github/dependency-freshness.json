@@ -31,7 +31,7 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Data-only reporting/orchestration adopted pinned 0.9.0 in #138 and complete static quality in merged #141. Offline-v3 finding retention and strict-dataset correction are merged. The focused behavioral-090-offline-v1 path qualifies native collection/recovery, evidence admission, public reporting and simulated history refusal; it does not switch production execution. Benchmarks, contracts/native gh, private reviews and exact historical replay retain their original owners. Frozen 0.8 experiments remain closed; manual 0.7.2 qualification remains maintained. See EVALUATOR-090-95.md and docs/evaluations/behavioral-evidence-090.md. Merged #142 qualifies offline behavioral evidence only. Explicit gh-runtime-090-v1 prepares 0.9.0 / Harbor 0.25.0 with held production Codex/model settings; hosted preparation does not establish live provider or model-judge compatibility. Default benchmarks stay held; no allocation is reopened. See docs/evaluations/execution-runtime-090.md.",
+      "hold": "Data-only reporting/orchestration adopted pinned 0.9.0 in #138 and complete static quality in merged #141. Offline-v3 finding retention and strict-dataset correction are merged. The focused behavioral-090-offline-v1 path qualifies native collection/recovery, evidence admission, public reporting and simulated history refusal; it does not switch production execution. Benchmarks, contracts/native gh, private reviews and exact historical replay retain their original owners. Frozen 0.8 experiments retain their owners. The retired 0.7.2 qualifier remains reproducible from Git. See EVALUATOR-090-95.md and docs/evaluations/behavioral-evidence-090.md. Merged #142 qualifies offline behavioral evidence only. Explicit gh-runtime-090-v1 prepares 0.9.0 / Harbor 0.25.0 with held production Codex/model settings; hosted preparation does not establish live provider or model-judge compatibility. Default benchmarks stay held; no allocation is reopened. See docs/evaluations/execution-runtime-090.md.",
       "group": "evaluation-runtime compatibility group",
       "tag_prefix": "v",
       "validation": "Review the versioned offline evidence contract, released semantics, native failure and missingness controls, retained reproduction and final selected CI. Live provider routing, judge accuracy and skill benefit require separate evidence and authorization.",
@@ -143,11 +143,6 @@
           "path": ".github/workflows/pester-admission-qualification.yml",
           "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
           "count": 1
-        },
-        {
-          "path": ".github/workflows/pester-candidate.yml",
-          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
-          "count": 3
         },
         {
           "path": ".github/workflows/publish-skill-report.yml",
