@@ -1694,6 +1694,8 @@ async def invoke(context, config, authorized, *, http_client=None, diagnostic=No
     try:
         review_require(authorized is True, "Explicit inference authorization required", "inference_unauthorized")
         versions()
+        review_require(importlib.metadata.version("certifi") == "2026.10.23",
+                       "Pinned review trust store required", "runtime_unsupported", ("provenance", "versions"))
         config = validated(ModelConfig, config, "model_structure_invalid", ("configuration",))
         review_require(not config.model.lower().startswith("ft:"), "Fine-tuned models unsupported for constrained schema",
                        "model_unsupported", ("configuration", "model"))
