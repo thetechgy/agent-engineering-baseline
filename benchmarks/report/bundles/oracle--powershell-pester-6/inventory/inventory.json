@@ -27,7 +27,7 @@
         "lineage": null,
         "owner": "local",
         "repository": "thetechgy/agent-engineering-baseline",
-        "revision": "29d41b996acaaf25bd8317bb8016ce7b6efa4c34",
+        "revision": "598b55b579bc8d1503437364c617b06b18c7dbdc",
         "skill_id": "a11y",
         "source_path": ".apm/skills/a11y"
       },
@@ -58,7 +58,7 @@
         "lineage": null,
         "owner": "local",
         "repository": "thetechgy/agent-engineering-baseline",
-        "revision": "29d41b996acaaf25bd8317bb8016ce7b6efa4c34",
+        "revision": "598b55b579bc8d1503437364c617b06b18c7dbdc",
         "skill_id": "agent-safety",
         "source_path": ".apm/skills/agent-safety"
       },
@@ -89,7 +89,7 @@
         "lineage": null,
         "owner": "local",
         "repository": "thetechgy/agent-engineering-baseline",
-        "revision": "29d41b996acaaf25bd8317bb8016ce7b6efa4c34",
+        "revision": "598b55b579bc8d1503437364c617b06b18c7dbdc",
         "skill_id": "ansible",
         "source_path": ".apm/skills/ansible"
       },
@@ -107,8 +107,12 @@
       "source": {
         "content": {
           "algorithm": "sha256-relative-file-manifest-v1",
-          "digest": "sha256:970856caac10c66e1225eb35134f3e7ccccc625f87ff779e5ba45705616fd479",
+          "digest": "sha256:842bbb633e603664537c3f2ed5b6dcc95471705c5215cb78d94110c623f539b4",
           "manifest": [
+            {
+              "digest": "sha256:6da4adc42392c8485e40b4251c7e332fc3352df1947c9ffade71dd60b14a7a4f",
+              "member": "LICENSE"
+            },
             {
               "digest": "sha256:b40d44ef9077b34d710b4c0737fee0e72c595e0770fbbdcb339de2ba0b40e23b",
               "member": "SKILL.md"
@@ -218,7 +222,7 @@
         "lineage": null,
         "owner": "local",
         "repository": "thetechgy/agent-engineering-baseline",
-        "revision": "29d41b996acaaf25bd8317bb8016ce7b6efa4c34",
+        "revision": "598b55b579bc8d1503437364c617b06b18c7dbdc",
         "skill_id": "podman",
         "source_path": ".apm/skills/podman"
       },
@@ -266,7 +270,7 @@
         "lineage": null,
         "owner": "local",
         "repository": "thetechgy/agent-engineering-baseline",
-        "revision": "29d41b996acaaf25bd8317bb8016ce7b6efa4c34",
+        "revision": "598b55b579bc8d1503437364c617b06b18c7dbdc",
         "skill_id": "powershell-module-engineering",
         "source_path": ".apm/skills/powershell-module-engineering"
       },
@@ -305,7 +309,7 @@
         "lineage": null,
         "owner": "local",
         "repository": "thetechgy/agent-engineering-baseline",
-        "revision": "29d41b996acaaf25bd8317bb8016ce7b6efa4c34",
+        "revision": "598b55b579bc8d1503437364c617b06b18c7dbdc",
         "skill_id": "powershell-pester-6",
         "source_path": ".apm/skills/powershell-pester-6"
       },
