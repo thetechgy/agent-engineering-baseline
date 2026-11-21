@@ -119,7 +119,7 @@ finally { [Environment]::SetEnvironmentVariable('Path', $previous, 'User') }
 
 
 class Scenario:
-    def __init__(self, root, apm, global_scope, bootstrap=None):
+    def __init__(self, root, apm, global_scope, bootstrap=None, *, extra_repos=()):
         self.root, self.apm, self.global_scope = root, apm, global_scope
         self.bootstrap = bootstrap
         self.home, self.project = root / "home", root / "project"
@@ -149,7 +149,7 @@ class Scenario:
         self.scope = ["--global"] if global_scope else []
         self.repos = {}
         slots = []
-        for name in ("baseline", "graph", "unrelated"):
+        for name in ("baseline", "graph", "unrelated", *extra_repos):
             path = root / name
             path.mkdir()
             self.run(["git", "init", "--initial-branch=main"], path)
@@ -187,6 +187,8 @@ class Scenario:
                     pass
             output, _ = process.communicate()
             raise AssertionError(f"Native command timed out after {timeout} seconds; owned process tree stopped.\n{output}") from None
+        if success is None:
+            return process.returncode, output
         if (process.returncode == 0) != success:
             raise AssertionError(f"Command failed contract ({process.returncode}): {args}\n{output}")
         return output
@@ -194,7 +196,7 @@ class Scenario:
     def native(self, *args, success=True):
         return self.run([self.apm, *args, *self.scope], success=success)
 
-    def install(self, ref, update=False, timeout=120):
+    def install(self, ref, update=False, timeout=120, *, success=True):
         if self.bootstrap and not update:
             source, archive = self.bootstrap
             self.env["BASELINE_PACKAGE_REF"] = ref
@@ -214,8 +216,9 @@ class Scenario:
                     except FileNotFoundError:
                         previous_path = None
                     try:
-                        self.run([os.environ.get("CI_PWSH", "pwsh"), "-NoProfile", "-File",
-                                  source / "invoke.ps1", "Global" if self.global_scope else "Repo"], timeout=timeout)
+                        return self.run([os.environ.get("CI_PWSH", "pwsh"), "-NoProfile", "-File",
+                                         source / "invoke.ps1", "Global" if self.global_scope else "Repo"],
+                                        success=success, timeout=timeout)
                     finally:
                         if previous_path is not None:
                             winreg.SetValueEx(key, "Path", 0, previous_path[1], previous_path[0])
@@ -226,8 +229,9 @@ class Scenario:
                                 pass
             else:
                 self.env["APM_RELEASE_BASE_URL"] = archive.parent.parent.as_uri()
-                self.run(["bash", source / "scripts/bootstrap.sh",
-                          "--global" if self.global_scope else "--repo"], timeout=timeout)
+                return self.run(["bash", source / "scripts/bootstrap.sh",
+                                 "--global" if self.global_scope else "--repo"],
+                                success=success, timeout=timeout)
         else:
             self.native("install", *(["--update"] if update else []), "--target", "codex,copilot",
                         "--trust-bin", "--trust-transitive-mcp", ref)
@@ -494,6 +498,92 @@ def unrelated_state(scenario):
     return row, digest(scenario.deploy / ".agents/skills/unrelated/SKILL.md")
 
 
+def destination_hashes(scenario):
+    paths = [scenario.deploy / "AGENTS.md"]
+    directories = [scenario.deploy / name for name in (".agents", ".codex", ".copilot", ".github")]
+    directories.append(scenario.metadata / "apm_modules")
+    for directory in directories:
+        paths.extend(directory.rglob("*"))
+    return {path.relative_to(scenario.deploy).as_posix(): digest(path) for path in paths if path.is_file()}
+
+
+def lock_handling(scenario, case):
+    scope = "user" if scenario.global_scope else "repository"
+    stage = f"{scope} {case}"
+    graph = scenario.repos["graph"]
+    skill_path = ".apm/skills/graph"
+    identity = f"bootstrap-fixture/graph/{skill_path}"
+    dependency = {"git": scenario.url("graph") + ".git", "path": skill_path}
+    reviewed_commit = scenario.commit("graph", "reviewed-a")
+    reviewed = {f".agents/skills/graph/{path.relative_to(graph / skill_path).as_posix()}": digest(path)
+                for path in (graph / skill_path).rglob("*") if path.is_file()}
+    other_commit = scenario.commit("graph", "other-b")
+    check(reviewed_commit != other_commit and digest(graph / skill_path / "scripts/bin/probe.py") !=
+          reviewed[".agents/skills/graph/scripts/bin/probe.py"],
+          f"{stage}: A and B are distinct commits with distinct executables")
+
+    def publish(name, revision):
+        package(scenario.repos[name], name, {"apm": [{**dependency, "ref": revision}]})
+        commit = scenario.commit(name, name)
+        return scenario.url(name) + ".git#" + commit
+
+    baseline = publish("baseline", reviewed_commit)
+    package(scenario.repos["unrelated"], "unrelated")
+    scenario.commit("unrelated", "unrelated")
+    scenario.install(scenario.url("unrelated") + ".git#main")
+    scenario.install(baseline)
+    verify_imports(scenario, {identity: (reviewed_commit, reviewed)}, f"{stage} seed")
+    independent = unrelated_state(scenario)
+    lock = scenario.metadata / "apm.lock.yaml"
+    manifest = scenario.metadata / "apm.yml"
+    if case == "contradictory lock":
+        # Keep the requested ref and all other fields from the native row.
+        # A different resolved_ref would only replay the migration case.
+        original = lock.read_bytes()
+        field = f"  resolved_commit: {reviewed_commit}".encode()
+        check(original.count(field) == 1, f"{stage}: exactly one native commit field to change")
+        lock.write_bytes(original.replace(field, f"  resolved_commit: {other_commit}".encode()))
+        commit, body = locked_dependencies(lock)[identity]
+        declared = json.loads((scenario.repos["baseline"] / "apm.yml").read_text(encoding="utf-8"))
+        check(declared["dependencies"]["apm"] == [{**dependency, "ref": reviewed_commit}]
+              and f"  resolved_ref: {reviewed_commit}" in body.splitlines() and commit == other_commit,
+              f"{stage}: manifest requests {reviewed_commit}, destination records {commit} for the same ref and skill")
+        incoming = baseline
+    else:
+        incoming = publish("conflict", other_commit)
+        declared = json.loads((scenario.repos["conflict"] / "apm.yml").read_text(encoding="utf-8"))
+        check(declared["dependencies"]["apm"] == [{**dependency, "ref": other_commit}],
+              f"{stage}: incoming package requests {other_commit} for the installed skill at {reviewed_commit}")
+
+    old_lock, old_manifest, old_files = lock.read_bytes(), manifest.read_bytes(), destination_hashes(scenario)
+    status, output = scenario.install(incoming, success=None)
+    new_lock = lock.read_bytes() if lock.exists() else None
+    new_files = destination_hashes(scenario)
+    rows = locked_dependencies(lock) if lock.exists() else {}
+    selected = rows.get(identity, (None, ""))[0]
+    print(f"{stage}: exit={status}, resolved={selected}, "
+          f"lock unchanged={new_lock == old_lock}, destination files unchanged={new_files == old_files}", flush=True)
+    check((rows.get("bootstrap-fixture/unrelated"), new_files.get(".agents/skills/unrelated/SKILL.md"))
+          == independent, f"{stage}: unrelated lock record and deployed bytes preserved")
+    if case == "contradictory lock" and status == 0:
+        check(selected == reviewed_commit, f"{stage}: success resolved {selected} instead of {reviewed_commit}")
+        verify_imports(scenario, {identity: (reviewed_commit, reviewed)}, f"{stage} reconciled")
+        return
+
+    diagnostic = " ".join(output.lower().split())
+    if case == "shared dependency conflict":
+        visible = ("incompatible immutable requirements" in diagnostic and identity in diagnostic
+                   and reviewed_commit in diagnostic and other_commit in diagnostic)
+    else:
+        visible = (re.search(r"contradict|mismatch|incompatible|conflict", diagnostic)
+                   and (identity in diagnostic or "lock" in diagnostic))
+    if status == 0 or not visible:
+        raise AssertionError(f"{stage}: expected a visible refusal (exit={status})\n{output}")
+    print(f"{stage}: bootstrap reported {case}", flush=True)
+    check(new_lock == old_lock and manifest.exists() and manifest.read_bytes() == old_manifest
+          and new_files == old_files, f"{stage}: refusal preserves the lock, manifest, modules and deployed files")
+
+
 def reviewed_imports(root, apm, bootstrap):
     rows = locked_dependencies(REPOSITORY / "apm.lock.yaml")
     imports = {identity: (commit, file_hashes(body)) for identity, (commit, body) in rows.items()}
@@ -579,10 +669,21 @@ def main():
     with tempfile.TemporaryDirectory(prefix="apm-lifecycle-") as directory:
         root = Path(directory).resolve()
         bootstrap = prepare_bootstrap(root, member, expected)
+        failures = []
+        for user in (False, True):
+            for case in ("contradictory lock", "shared dependency conflict"):
+                with tempfile.TemporaryDirectory(dir=root, prefix=case[0]) as destination:
+                    scenario = Scenario(Path(destination), apm, user, bootstrap, extra_repos=("conflict",))
+                    try:
+                        lock_handling(scenario, case)
+                    except AssertionError as error:
+                        failures.append(str(error))
         for scope in (False, True):
             Scenario(root / ("user" if scope else "repo"), apm, scope, bootstrap).exercise()
         instruction_regeneration(root / "instructions", apm)
         reviewed_imports(root / "imports", apm, bootstrap)
+        if failures:
+            raise AssertionError("\n".join(failures))
     print(f"Native APM lifecycle: {CHECKS} checks passed.")
 
 
