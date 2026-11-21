@@ -43,7 +43,8 @@ def digest(path):
 
 def write(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(value, encoding="utf-8")
+    # Native APM hashes Markdown with LF. Use identical fixture bytes on both hosts.
+    path.write_text(value, encoding="utf-8", newline="\n")
 
 
 def package(path, name, dependencies=None, includes=None):
