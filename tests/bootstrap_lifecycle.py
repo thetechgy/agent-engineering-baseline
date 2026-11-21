@@ -263,7 +263,7 @@ class Scenario:
 
     def config_paths(self):
         return [self.deploy / ".codex/config.toml", self.deploy /
-                (".copilot/mcp-config.json" if self.global_scope else ".github/mcp.json")]
+                (".copilot/mcp-config.json" if self.global_scope else ".mcp.json")]
 
     def instruction_paths(self):
         # These are APM outputs. Local Copilot CLI 1.0.103 discovery selected

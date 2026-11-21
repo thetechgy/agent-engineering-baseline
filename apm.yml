@@ -23,12 +23,15 @@ dependencies:
       registry: false
       transport: http
       url: https://learn.microsoft.com/api/mcp
-      tools: &microsoft_learn_tools
+      tools:
         - microsoft_docs_search
         - microsoft_docs_fetch
         - microsoft_code_sample_search
       # Supply Codex's native allowlist key through APM's passthrough support.
-      enabled_tools: *microsoft_learn_tools
+      enabled_tools:
+        - microsoft_docs_search
+        - microsoft_docs_fetch
+        - microsoft_code_sample_search
 
 includes:
   - .apm/instructions/personal.instructions.md

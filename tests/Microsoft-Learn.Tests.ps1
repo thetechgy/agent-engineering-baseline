@@ -5,7 +5,7 @@ BeforeAll {
         'microsoft_docs_fetch'
         'microsoft_code_sample_search'
     )
-    $script:LearnCopilot = Get-Content -LiteralPath (Join-Path $repositoryRoot '.github/mcp.json') -Raw |
+    $script:LearnCopilot = Get-Content -LiteralPath (Join-Path $repositoryRoot '.mcp.json') -Raw |
         ConvertFrom-Json -ErrorAction Stop
     $script:LearnCodex = Get-Content -LiteralPath (Join-Path $repositoryRoot '.codex/config.toml') -Raw
     $script:LearnLockfile = Get-Content -LiteralPath (Join-Path $repositoryRoot 'apm.lock.yaml') -Raw
@@ -18,7 +18,7 @@ Describe 'Microsoft Learn generated MCP configuration' {
         $server.url | Should-Be 'https://learn.microsoft.com/api/mcp'
         $server.type | Should-Be 'http'
         @($server.PSObject.Properties.Name) |
-            Should-BeCollection @('url', 'type', 'tools', 'id', 'enabled_tools')
+            Should-BeCollection @('url', 'type', 'tools', 'enabled_tools')
     }
 
     It 'exposes exactly the reviewed tools through Copilot native and passthrough lists' {
@@ -33,7 +33,7 @@ Describe 'Microsoft Learn generated MCP configuration' {
         $script:LearnCodex | Should-MatchString '(?m)^url = "https://learn\.microsoft\.com/api/mcp"\r?$'
         $keys = @([regex]::Matches($script:LearnCodex, '(?m)^([a-z_]+)\s*=') |
             ForEach-Object { $_.Groups[1].Value })
-        # APM 0.35 keeps its bookkeeping identity outside Codex's native settings.
+        # The generated Codex table contains only native settings.
         $keys | Should-BeCollection @('url', 'enabled_tools')
     }
 

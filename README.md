@@ -106,6 +106,9 @@ wrapper's checkout aren't automatically installed. Reinstalling unchanged `#main
 keeps the destination's locked baseline commit; it does not adopt newer commits
 on that branch. See [deliberate updates](#install-and-update-deliberately).
 
+**APM 0.37.0 is a qualification candidate.** Keep the 0.36.1 bootstrap for existing installations.
+See the [migration evidence and rollback](docs/apm-0370-qualification.md).
+
 Both scopes configure both CLIs. Codex only loads project configuration for trusted
 projects; Copilot CLI also requires folder trust before loading project MCP servers.
 APM maintains the following state and CLI instruction sources:
@@ -113,7 +116,7 @@ APM maintains the following state and CLI instruction sources:
 | Scope | APM state | Instructions | MCP configuration | Skills |
 | --- | --- | --- | --- | --- |
 | User | `~/.apm/apm.yml`, `~/.apm/apm.lock.yaml`, `~/.apm/config.json` | Codex: `~/.codex/AGENTS.md`; Copilot: `~/.copilot/instructions/personal.instructions.md` | `~/.codex/config.toml`, `~/.copilot/mcp-config.json` | `~/.agents/skills/*` |
-| Project | `./apm.yml`, `./apm.lock.yaml`, `./apm_modules/` | Both: `./AGENTS.md`; Copilot also: `./.github/instructions/personal.instructions.md` | `./.codex/config.toml`, `./.github/mcp.json` | `./.agents/skills/*` |
+| Project | `./apm.yml`, `./apm.lock.yaml`, `./apm_modules/` | Both: `./AGENTS.md`; Copilot also: `./.github/instructions/personal.instructions.md` | `./.codex/config.toml`, `./.mcp.json` | `./.agents/skills/*` |
 
 With APM 0.35.0, user-scope compilation also generates `~/.copilot/AGENTS.md`.
 Local discovery with Copilot CLI 1.0.103 selected the modular user instruction above,
