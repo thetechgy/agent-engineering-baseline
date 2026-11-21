@@ -132,9 +132,15 @@ a selected install does not reconstruct unrelated packages' lock entries, even
 when their declarations and deployed files remain. Restore the reviewed lock in
 an existing multi-package destination rather than treating bootstrap as lock
 repair. Malformed YAML, an invalid dependency section, and unresolved Git
-conflict markers fail validation. APM can reconcile a valid lock entry that
-disagrees with a declared pin. Preserve the destination manifest and lockfile,
-and inspect APM's reported resolved commits.
+conflict markers fail validation.
+
+APM 0.36.1 can reconcile a valid lock entry whose resolved commit disagrees
+with an exact pin. Keep the destination manifest and lock, rerun bootstrap at
+the same scope with the reviewed baseline commit, and verify the destination
+commit and deployed file hashes against the reviewed values. If bootstrap
+reports incompatible immutable requirements for the same skill path, select
+reviewed package versions that agree on the commit or use separate destinations.
+Keep the existing lock so unrelated package records are available on retry.
 
 **Adopt a specific reviewed baseline commit:** set the existing override, then run
 bootstrap for the intended scope. For example:
