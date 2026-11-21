@@ -56,14 +56,23 @@ def provider(root, scenario, commands):
     require(server.poll() is not None, 'Controlled endpoint survived cleanup')
 
 
-def config(root, runtime, *, sandbox):
+def config(root, runtime, *, named_workspace=False):
     home = root / 'home'
     home.mkdir()
     # Keep the existing observation model and feature choices. This fixture
     # exercises the CLI sandbox, in addition to the deployed external boundary.
     current = dict(runtime, cli='0.169.1')
     settings = configuration(ENDPOINT, runtime=current)
-    settings['sandbox_mode'] = sandbox
+    if named_workspace:
+        # Built-in workspace permissions also allow generic temporary-folder writes.
+        # Keep the test independent of where the runner puts the two workspaces.
+        settings.pop('sandbox_mode')
+        settings['default_permissions'] = 'fixture-workspace'
+        settings['permissions'] = {'fixture-workspace': {
+            'extends': ':workspace', 'filesystem': {':slash_tmp': 'read', ':tmpdir': 'read'},
+        }}
+    else:
+        settings['sandbox_mode'] = 'workspace-write'
     settings.update(analytics={'enabled': False})
     (home / 'config.toml').write_text(toml.dumps(settings))
     return {'PATH': os.defpath, 'HOME': str(home), 'CODEX_HOME': str(home), 'OPENAI_API_KEY': TEST_KEY}
@@ -82,7 +91,7 @@ def verify_requests(path, runtime, count):
 def run_exec(binary, root, runtime, output, scenario):
     workspace = root / 'workspace'
     workspace.mkdir()
-    environment = config(root, runtime, sandbox='workspace-write')
+    environment = config(root, runtime)
     patch = {'tool': 'apply_patch', 'input': '*** Begin Patch\n*** Add File: edits.txt\n+fixture edit\n*** End Patch',
              'expect_failure': False}
     commands = ['printf fixture-command-ok', patch] if scenario == 'priced-success' else [':']
@@ -146,7 +155,7 @@ def working_directory(binary, root, runtime, output):
                + 'if { printf old > ' + shlex.quote(str(before / 'old.txt'))
                + '; } 2>/dev/null; then old=allowed; else old=denied; fi; '
                'printf "cwd-policy:%s:%s:%s\\n" "$result" "$git" "$old"')
-    environment = config(root, runtime, sandbox='workspace-write')
+    environment = config(root, runtime, named_workspace=True)
     with provider(root, 'compatibility', [command]) as request, subprocess.Popen(
             [binary, 'app-server', '--strict-config'], cwd=before, env=environment,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
@@ -192,10 +201,10 @@ def working_directory(binary, root, runtime, output):
                                'capabilities': {'experimentalApi': True}})
             server.stdin.write('{"method":"initialized"}\n')
             server.stdin.flush()
-            thread = rpc('thread/start', {'cwd': str(before), 'permissions': ':workspace',
+            thread = rpc('thread/start', {'cwd': str(before), 'permissions': 'fixture-workspace',
                                           'ephemeral': True, 'model': runtime['model']})
             identifier = thread['thread']['id']
-            require(thread['activePermissionProfile']['id'] == ':workspace', 'Expected named workspace profile')
+            require(thread['activePermissionProfile']['id'] == 'fixture-workspace', 'Expected named workspace profile')
             rpc('thread/settings/update', {'threadId': identifier, 'cwd': str(after)})
             turn = rpc('turn/start', {'threadId': identifier, 'input': [{'type': 'text', 'text': 'Run the fixture.'}]})
             completed = read_for(lambda event: event.get('method') == 'turn/completed'
