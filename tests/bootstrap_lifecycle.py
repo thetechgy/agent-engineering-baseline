@@ -686,8 +686,14 @@ def main():
                         failures.append(str(error))
         for scope in (False, True):
             Scenario(root / ("user" if scope else "repo"), apm, scope, bootstrap).exercise()
-        instruction_regeneration(root / "instructions", apm)
-        reviewed_imports(root / "imports", apm, bootstrap)
+        for name, qualification, arguments in (
+            ("reviewed imports", reviewed_imports, (root / "imports", apm, bootstrap)),
+            ("instruction regeneration", instruction_regeneration, (root / "instructions", apm)),
+        ):
+            try:
+                qualification(*arguments)
+            except AssertionError as error:
+                failures.append(f"{name}: {error}")
         if failures:
             raise AssertionError("\n".join(failures))
     print(f"Native APM lifecycle: {CHECKS} checks passed.")

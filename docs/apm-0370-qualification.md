@@ -15,6 +15,15 @@ The [0.37.0 release](https://github.com/microsoft/apm/releases/tag/v0.37.0) chan
 
 The isolated refresh preserved all seven resolved commits and every per-file digest, including all six msgraph executables. The regenerated v4 lock records the new package hashes and target list. The repo does not invoke `apm unpack` or `microsoft/apm-action`, so the release's known unpack rewrite does not require an action upgrade here.
 
+## Weekly source regeneration
+
+The one-time isolated refresh of the main checkout preserved the full skill graph.
+The native lifecycle control for routine regeneration then refused a legitimate
+authored instruction change. In a checkout without local deployment receipts,
+0.37.0 kept the old generated Copilot instruction and exited 1. Retain 0.36.1
+for the weekly updater until it can replace the previous, still-unedited
+generated output while preserving a separately edited destination file.
+
 ## MCP migration on Ubuntu
 
 These controls started with real APM 0.36.1 destinations in both scopes and ran 0.37.0 against the same local Git packages. The transitive fixture contained two self-defined HTTP entries. All fixture endpoints except the canonical Learn URL use reserved hostnames, and the test makes no requests to them.
