@@ -20,7 +20,7 @@
       "check": "body_recommended_section",
       "line": null,
       "member": null,
-      "reference": "sha256:aeb21d171c4efa50dffff7aa57421792a26601fd0c5c42903a05f94841bc0793",
+      "reference": "sha256:0ebf4f0b3fc9d1bab7fbd295792539eb01de33b29486daf57cc1100accec52e5",
       "scanner": "SCHEMA",
       "severity": "medium"
     },
@@ -28,7 +28,7 @@
       "check": "body_recommended_section",
       "line": null,
       "member": null,
-      "reference": "sha256:5e1673c578a64414c6ed17e563b03477937efcdd256dc7b6769f77c265c89ae0",
+      "reference": "sha256:7a8ef87a6d60bc4cc386fe07cca1d94180ae63c28aaf6b6ba25f2ddb234d7217",
       "scanner": "SCHEMA",
       "severity": "medium"
     },
@@ -36,15 +36,23 @@
       "check": "author_missing",
       "line": null,
       "member": null,
-      "reference": "sha256:a68878588af096a2916ca9d5208a6516670a24aa0905f829f56070869b05e0d8",
+      "reference": "sha256:e79acac4019b1f951ea5bfcf50ec3f7deceab40535ad497dfd50abfd9e50ee0c",
       "scanner": "SCHEMA",
-      "severity": "high"
+      "severity": "low"
+    },
+    {
+      "check": "description_trigger",
+      "line": null,
+      "member": null,
+      "reference": "sha256:6f39d314799fd1a9f4557c4bd707b18bd2587f1c47b984b195a00b56269fcfca",
+      "scanner": "SCHEMA",
+      "severity": "low"
     },
     {
       "check": "RA1",
       "line": 92,
       "member": "SKILL.md",
-      "reference": "sha256:67ef000f34c5211e7510a3f958c449e016f560dd4a2bf2ef103e510f7bed0ecb",
+      "reference": "sha256:0a535491eff61dacece96c80f987f679c2d028a67ae857419396651c9cfa9c29",
       "scanner": "SECURITY",
       "severity": "high"
     },
@@ -52,7 +60,7 @@
       "check": "EA1",
       "line": 17,
       "member": "SKILL.md",
-      "reference": "sha256:26f4eea66260eb38de3090435f1206fce9eea2c1b085b3f1da570a2b3797217c",
+      "reference": "sha256:4e8d6ef13da47c9ec86d5354de45f919c11c0ce62727889f19fce357f0a8faea",
       "scanner": "SECURITY",
       "severity": "medium"
     },
@@ -60,7 +68,7 @@
       "check": "quality_correctness",
       "line": null,
       "member": null,
-      "reference": "sha256:e4c59902d36f7d5fbe2e3e481fce0f677b4bd95740664e320a572f720d4424c4",
+      "reference": "sha256:ac3c62778973b70614c7f5415036dfb41debb86bb118ecbbf0691a9dbacd71c3",
       "scanner": "QUALITY",
       "severity": "medium"
     },
@@ -68,15 +76,7 @@
       "check": "quality_correctness",
       "line": null,
       "member": null,
-      "reference": "sha256:c27d9e4a4ac4c8def6c8570f00a9b35ccfd8619713dadb92e5c67b8dd05fc4d1",
-      "scanner": "QUALITY",
-      "severity": "medium"
-    },
-    {
-      "check": "quality_correctness",
-      "line": null,
-      "member": null,
-      "reference": "sha256:5182abeda6a48aea7b184c50c3773bb56b6976f03afb55459c909cd9d5698a8f",
+      "reference": "sha256:ad5d8a98511570c1c8cabca50bd82adb9f1a0ab76e21437fa2c252cadc7cceaa",
       "scanner": "QUALITY",
       "severity": "medium"
     },
@@ -84,7 +84,7 @@
       "check": "quality_discoverability",
       "line": null,
       "member": null,
-      "reference": "sha256:b64ba65ba68865028c9f07113fd14c9b8a8e3d4c5700aae3e10aa5607cdb7276",
+      "reference": "sha256:bfd9e6da34664461586d473f1e65dc727ec80a70dd4806bf8c6b5230e7479df4",
       "scanner": "QUALITY",
       "severity": "low"
     },
@@ -92,7 +92,7 @@
       "check": "quality_discoverability",
       "line": null,
       "member": null,
-      "reference": "sha256:1353ff085083e546ec5ec8f9e530e4a528ad18b3d9f9caec00c44ec38278e77f",
+      "reference": "sha256:916542ebed5fc70076da3c13db61a1ddca2838d1798febf181e56ab0b41e4fdd",
       "scanner": "QUALITY",
       "severity": "low"
     },
@@ -100,7 +100,7 @@
       "check": "quality_reliability",
       "line": null,
       "member": null,
-      "reference": "sha256:77d2a08dc2162e2ef47e38b9b84b18cdfc8ed15b509bc9000aa2157e5f34f748",
+      "reference": "sha256:0e14bbc031e9b9c5376e9b7754df59184bf4e75f1974db75467a1f668f58c768",
       "scanner": "QUALITY",
       "severity": "low"
     },
@@ -108,7 +108,7 @@
       "check": "quality_reliability",
       "line": null,
       "member": null,
-      "reference": "sha256:d23c81f54291be34bfb33b4d033934df37a0583aeac0e88a5c3ab1c9bb3b1efd",
+      "reference": "sha256:6f16440d787891dbf226bca39a292fc227f05e838022b2a516dacd6d727663fc",
       "scanner": "QUALITY",
       "severity": "low"
     },
@@ -116,9 +116,33 @@
       "check": "quality_reliability",
       "line": null,
       "member": null,
-      "reference": "sha256:ea1820695d1d915d0eff029ed2db547b0863f1e978b0d40daf9421c627fa50f6",
+      "reference": "sha256:fb90adb4af20987bfab941b947baa9fc58a16f946a26e23957c90532599422c4",
       "scanner": "QUALITY",
       "severity": "low"
+    },
+    {
+      "check": "CP-RELOAD",
+      "line": null,
+      "member": null,
+      "reference": "sha256:eb92fa9ddfd32ef28ff46f33083cf01e4bd40a61309053b7a132adcf8d673566",
+      "scanner": "HARNESS",
+      "severity": "info"
+    },
+    {
+      "check": "HM-DESC-60",
+      "line": null,
+      "member": null,
+      "reference": "sha256:33aa2ab2f27381a3cfb13bad13674b035ce3d5f33e92ca087e450f76c064fea6",
+      "scanner": "HARNESS",
+      "severity": "info"
+    },
+    {
+      "check": "OC-RELOAD",
+      "line": null,
+      "member": null,
+      "reference": "sha256:3652d5d195f695e3734cbf66a11bc403f4f4c58d0cf7a6458b6ddd766995f4ab",
+      "scanner": "HARNESS",
+      "severity": "info"
     }
   ],
   "kind": "static",
@@ -140,7 +164,7 @@
       "deterministic_gate": null,
       "docker_compose": null,
       "environment": null,
-      "evaluator_revision": "b78d14618a694dec84bc9601468f8f711df5cab3",
+      "evaluator_revision": "914c15cb3f31562ccffdc9a7166002a87ed2ce1e",
       "fixture_boundary": null,
       "grading": null,
       "harbor": "0.25.0",
@@ -155,26 +179,24 @@
       "upstream_revision": null,
       "workspace_mode": null
     },
-    "id": "sha256:089c18fc42c154dfcc2c4628de251cbcec0d796307bc50ed7df4d384acce2961",
+    "id": "sha256:2fcd05b2ff8c3fd5f926997169dcba5fd230bbef147e1522df454a7291916e2a",
     "judge": {
       "enabled": false,
       "model": null,
       "provider": null
     },
     "metric_set": null,
-    "patch_digest": "sha256:ca00768c1c2b054573743707473ed98964ed6bf910ad8bfac5accfd683860da4",
-    "producer_profile": "skillevaluator-0.9.0-offline-v3",
+    "patch_digest": null,
     "provenance": "runtime_recorded",
-    "published_id": null,
-    "scoring_policy": "skill-evaluator-dimension-mean-v1"
+    "published_id": "skillevaluator-1.0.1-static-v1"
   },
   "references": [
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:f52a62e9340602ae9c27132c299f7a4a0692a778f2e29870b51239c72cb2bfc1",
-      "id": "sha256:43a4957f726d87ce4df59dea376f861b6ce829b47c3518563aa51da3dbb6296e",
+      "digest": "sha256:8bfb8d8b55cbc7b769ee8166af160a08139417e973d7a88a386762a4bad0155c",
+      "id": "sha256:55611431802814c483dcc14131ccda8d3b0da8c1c60f9bafe3578e23994ab652",
       "locator": [],
       "member": "reports/catalog-summary.json",
       "provenance": "runtime_recorded"
@@ -183,356 +205,414 @@
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:1264a83c75cf2bff35873b5b264caf2f324fe4582d9a9fc3519ad3bbf1933f96",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:5778c1c3a5bea895c134e78d6a7c0eef4614fda48f43641a79c1d24a6a0a98fd",
       "locator": [],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:b508ffa8d340cec9c037fc2db8d396cddd78ff891603c91820d4874fa19aa1c6",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:b6140d9a362496b24b65fe5d5678907d8ec0aaf7eca465e18906ebe2b627c1b7",
       "locator": [
         "results",
         0
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:7dac056200268d49550f6ed47f435d552434de22f8102f2c51f27914bf6a8d60",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:a6a25701e8f89761d73d031ee578292e07ee55b605dc134f22b470fc3a86a10d",
       "locator": [
         "results",
         1
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:b0d31547ea705650c369f6217eef5a69aebaf1bf79c9d0ffefd38a367e7585e6",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:5abeaa565a2cff1e7b2768fb3297eda4da0dcb0e7ce79962b2ed6265695b25e2",
       "locator": [
         "results",
         2
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:5ac08cebc5d37fca6498cb042673c77180acb15ac59c87bbdd004b1f26899d5b",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:90fb6c4c8e14cc9951d4bd1a5757b5c515640898bc91283fb64e61a26d04bf1d",
       "locator": [
         "results",
         3
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:de26c04e92ae557fee697c241649dfa23db2d2825a66ec0c158d8aecd0e7b672",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:5e13940510cb8cc27384504f4cabe7c485a5754f3c7ac3d0fe49084161f6249a",
       "locator": [
         "results",
         4
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:3fe96ad6e1570b7bb8808fb4f84705ae1694e1212a8e064c5276ee61e0879761",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:94ade5900841d7567580729a6896e6b0e5b0bb77304a9329227de75a66ead634",
       "locator": [
         "results",
         5
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:432f0d9a3bac030413816de199f4a7d6f370eb4dcc9acca157804f35e3f43287",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:62f38963de603c17ae199ef71f42ed564023ba32470a228eba1f86dcfa01b004",
       "locator": [
         "results",
         6
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:d9a17154c2e4f75fed4e0efc9acc0ed50910aa5efe84a66010f6b8807e62de21",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:c85f05aac3fc5bca71aa1ac170eab5ad216963c053c54a1d94082e623296f3ab",
       "locator": [
         "results",
         7
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:fded7392df784c12ddab7ec1855a03a59f4b2bb8089173cc512997d4ce12b2af",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:e8c95508b7420e0b277e358bbfe0f4d81a82ef62edb2015b4cb8c76caa1b7861",
       "locator": [
         "results",
         8
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:1878132df88830811b29b942c377aca455c9dfb3cc7ef7dc16a037e663d98e33",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:077885573de61e0279a9e229834b08c9ffd6554158163f1e214b7a950471a624",
       "locator": [
         "results",
         9
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:ff915cad4ca1a9360322c0c54ed2a925bed3033ac88cc75f6dde19ca17ffe537",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:8c66e99e72d4f0d9830faf9e0165ff39a032c5b00996eaba91a030ec2a1bed2c",
       "locator": [
         "results",
         10
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:aeb21d171c4efa50dffff7aa57421792a26601fd0c5c42903a05f94841bc0793",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:42351bd99e732d0893d8dc6018611bfe4cac42dda57c1f695494f4a291990607",
+      "locator": [
+        "results",
+        11
+      ],
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "skill-quality",
+      "availability": "available",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:0ebf4f0b3fc9d1bab7fbd295792539eb01de33b29486daf57cc1100accec52e5",
       "locator": [
         "results",
         0,
         "findings",
         0
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:5e1673c578a64414c6ed17e563b03477937efcdd256dc7b6769f77c265c89ae0",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:7a8ef87a6d60bc4cc386fe07cca1d94180ae63c28aaf6b6ba25f2ddb234d7217",
       "locator": [
         "results",
         0,
         "findings",
         1
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:a68878588af096a2916ca9d5208a6516670a24aa0905f829f56070869b05e0d8",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:e79acac4019b1f951ea5bfcf50ec3f7deceab40535ad497dfd50abfd9e50ee0c",
       "locator": [
         "results",
         0,
         "findings",
         2
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:67ef000f34c5211e7510a3f958c449e016f560dd4a2bf2ef103e510f7bed0ecb",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:6f39d314799fd1a9f4557c4bd707b18bd2587f1c47b984b195a00b56269fcfca",
+      "locator": [
+        "results",
+        0,
+        "findings",
+        3
+      ],
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "skill-quality",
+      "availability": "available",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:0a535491eff61dacece96c80f987f679c2d028a67ae857419396651c9cfa9c29",
       "locator": [
         "results",
         2,
         "findings",
         0
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:26f4eea66260eb38de3090435f1206fce9eea2c1b085b3f1da570a2b3797217c",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:4e8d6ef13da47c9ec86d5354de45f919c11c0ce62727889f19fce357f0a8faea",
       "locator": [
         "results",
         2,
         "findings",
         1
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:e4c59902d36f7d5fbe2e3e481fce0f677b4bd95740664e320a572f720d4424c4",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:ac3c62778973b70614c7f5415036dfb41debb86bb118ecbbf0691a9dbacd71c3",
       "locator": [
         "results",
         9,
         "findings",
         0
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:c27d9e4a4ac4c8def6c8570f00a9b35ccfd8619713dadb92e5c67b8dd05fc4d1",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:ad5d8a98511570c1c8cabca50bd82adb9f1a0ab76e21437fa2c252cadc7cceaa",
       "locator": [
         "results",
         9,
         "findings",
         1
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:5182abeda6a48aea7b184c50c3773bb56b6976f03afb55459c909cd9d5698a8f",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:bfd9e6da34664461586d473f1e65dc727ec80a70dd4806bf8c6b5230e7479df4",
       "locator": [
         "results",
         9,
         "findings",
         2
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:b64ba65ba68865028c9f07113fd14c9b8a8e3d4c5700aae3e10aa5607cdb7276",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:916542ebed5fc70076da3c13db61a1ddca2838d1798febf181e56ab0b41e4fdd",
       "locator": [
         "results",
         9,
         "findings",
         3
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:1353ff085083e546ec5ec8f9e530e4a528ad18b3d9f9caec00c44ec38278e77f",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:0e14bbc031e9b9c5376e9b7754df59184bf4e75f1974db75467a1f668f58c768",
       "locator": [
         "results",
         9,
         "findings",
         4
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:77d2a08dc2162e2ef47e38b9b84b18cdfc8ed15b509bc9000aa2157e5f34f748",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:6f16440d787891dbf226bca39a292fc227f05e838022b2a516dacd6d727663fc",
       "locator": [
         "results",
         9,
         "findings",
         5
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:d23c81f54291be34bfb33b4d033934df37a0583aeac0e88a5c3ab1c9bb3b1efd",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:fb90adb4af20987bfab941b947baa9fc58a16f946a26e23957c90532599422c4",
       "locator": [
         "results",
         9,
         "findings",
         6
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:2cccc76ef12a3dfec0bdc10af70725fec307f1e11852bb6956202f6f444c68f5",
-      "id": "sha256:ea1820695d1d915d0eff029ed2db547b0863f1e978b0d40daf9421c627fa50f6",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:eb92fa9ddfd32ef28ff46f33083cf01e4bd40a61309053b7a132adcf8d673566",
       "locator": [
         "results",
-        9,
+        11,
         "findings",
-        7
+        0
       ],
-      "member": "reports/agent-safety/skillevaluator-output-20261120183304.json",
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
       "provenance": "runtime_recorded"
     },
     {
       "artifact_digest": null,
       "artifact_id": "skill-quality",
       "availability": "available",
-      "digest": "sha256:61f2e577fa6ce0cb18ad584321c9cba579e56288fc9af82ac7b9e81780100923",
-      "id": "sha256:d6bcd2bf4739f906a1d0786ebcfd1e617144ab15ae88f6e915138f27bd3fd34c",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:33aa2ab2f27381a3cfb13bad13674b035ce3d5f33e92ca087e450f76c064fea6",
+      "locator": [
+        "results",
+        11,
+        "findings",
+        1
+      ],
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "skill-quality",
+      "availability": "available",
+      "digest": "sha256:4e7159cfc7d739dcb6ba9638fcc018068f3c4312db44d399d6e628cd20d316c4",
+      "id": "sha256:3652d5d195f695e3734cbf66a11bc403f4f4c58d0cf7a6458b6ddd766995f4ab",
+      "locator": [
+        "results",
+        11,
+        "findings",
+        2
+      ],
+      "member": "reports/agent-safety/skillevaluator-output-20261121034345.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "skill-quality",
+      "availability": "available",
+      "digest": "sha256:567a0fdc581e646a9a97fd55e10a943f033624cfde673cf83d659496752afad5",
+      "id": "sha256:666afdcd24caf4193419fd489bec9d80b021d764669b775ca1cd56928c280626",
       "locator": [],
       "member": "versions.json",
       "provenance": "runtime_recorded"
@@ -540,7 +620,7 @@
   ],
   "run_id": null,
   "scanner_runtime": {
-    "evaluator_revision": "b78d14618a694dec84bc9601468f8f711df5cab3",
+    "evaluator_revision": "914c15cb3f31562ccffdc9a7166002a87ed2ce1e",
     "semgrep_lock": "sha256:f0e17604bc64d9189ea4165c1e7fb5612834488d4be786312601d0f04763053e",
     "skillspector_lock": "sha256:5ab9adb9707d66ee786cf934509d6c8d7258fb7ce12ebbc6a5b74fee35733fd1",
     "skillspector_revision": "e2674da339b0bddc6e565d059c0577c6d9cd25da",
@@ -557,29 +637,14 @@
       "blocking": true,
       "passed": false,
       "references": [
-        "sha256:1264a83c75cf2bff35873b5b264caf2f324fe4582d9a9fc3519ad3bbf1933f96"
+        "sha256:5778c1c3a5bea895c134e78d6a7c0eef4614fda48f43641a79c1d24a6a0a98fd"
       ],
       "scanner": "catalog-total",
       "severity_counts": {
         "critical": 0,
-        "high": 2,
-        "low": 5,
-        "medium": 6
-      },
-      "status": "failed"
-    },
-    {
-      "blocking": true,
-      "passed": false,
-      "references": [
-        "sha256:b508ffa8d340cec9c037fc2db8d396cddd78ff891603c91820d4874fa19aa1c6"
-      ],
-      "scanner": "SCHEMA",
-      "severity_counts": {
-        "critical": 0,
         "high": 1,
-        "low": 0,
-        "medium": 2
+        "low": 7,
+        "medium": 5
       },
       "status": "failed"
     },
@@ -587,7 +652,22 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:7dac056200268d49550f6ed47f435d552434de22f8102f2c51f27914bf6a8d60"
+        "sha256:b6140d9a362496b24b65fe5d5678907d8ec0aaf7eca465e18906ebe2b627c1b7"
+      ],
+      "scanner": "SCHEMA",
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "low": 2,
+        "medium": 2
+      },
+      "status": "passed"
+    },
+    {
+      "blocking": true,
+      "passed": true,
+      "references": [
+        "sha256:a6a25701e8f89761d73d031ee578292e07ee55b605dc134f22b470fc3a86a10d"
       ],
       "scanner": "VERSION",
       "severity_counts": {
@@ -602,7 +682,7 @@
       "blocking": true,
       "passed": false,
       "references": [
-        "sha256:b0d31547ea705650c369f6217eef5a69aebaf1bf79c9d0ffefd38a367e7585e6"
+        "sha256:5abeaa565a2cff1e7b2768fb3297eda4da0dcb0e7ce79962b2ed6265695b25e2"
       ],
       "scanner": "SECURITY",
       "severity_counts": {
@@ -617,7 +697,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:5ac08cebc5d37fca6498cb042673c77180acb15ac59c87bbdd004b1f26899d5b"
+        "sha256:90fb6c4c8e14cc9951d4bd1a5757b5c515640898bc91283fb64e61a26d04bf1d"
       ],
       "scanner": "PII",
       "severity_counts": {
@@ -632,7 +712,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:de26c04e92ae557fee697c241649dfa23db2d2825a66ec0c158d8aecd0e7b672"
+        "sha256:5e13940510cb8cc27384504f4cabe7c485a5754f3c7ac3d0fe49084161f6249a"
       ],
       "scanner": "LICENSE",
       "severity_counts": {
@@ -647,7 +727,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:3fe96ad6e1570b7bb8808fb4f84705ae1694e1212a8e064c5276ee61e0879761"
+        "sha256:94ade5900841d7567580729a6896e6b0e5b0bb77304a9329227de75a66ead634"
       ],
       "scanner": "CODE_RISK",
       "severity_counts": {
@@ -662,7 +742,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:432f0d9a3bac030413816de199f4a7d6f370eb4dcc9acca157804f35e3f43287"
+        "sha256:62f38963de603c17ae199ef71f42ed564023ba32470a228eba1f86dcfa01b004"
       ],
       "scanner": "SECRETS",
       "severity_counts": {
@@ -677,7 +757,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:d9a17154c2e4f75fed4e0efc9acc0ed50910aa5efe84a66010f6b8807e62de21"
+        "sha256:c85f05aac3fc5bca71aa1ac170eab5ad216963c053c54a1d94082e623296f3ab"
       ],
       "scanner": "HYGIENE",
       "severity_counts": {
@@ -692,7 +772,7 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:fded7392df784c12ddab7ec1855a03a59f4b2bb8089173cc512997d4ce12b2af"
+        "sha256:e8c95508b7420e0b277e358bbfe0f4d81a82ef62edb2015b4cb8c76caa1b7861"
       ],
       "scanner": "UNICODE",
       "severity_counts": {
@@ -707,14 +787,14 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:1878132df88830811b29b942c377aca455c9dfb3cc7ef7dc16a037e663d98e33"
+        "sha256:077885573de61e0279a9e229834b08c9ffd6554158163f1e214b7a950471a624"
       ],
       "scanner": "QUALITY",
       "severity_counts": {
         "critical": 0,
         "high": 0,
         "low": 5,
-        "medium": 3
+        "medium": 2
       },
       "status": "passed"
     },
@@ -722,9 +802,24 @@
       "blocking": true,
       "passed": true,
       "references": [
-        "sha256:ff915cad4ca1a9360322c0c54ed2a925bed3033ac88cc75f6dde19ca17ffe537"
+        "sha256:8c66e99e72d4f0d9830faf9e0165ff39a032c5b00996eaba91a030ec2a1bed2c"
       ],
       "scanner": "SCRIPT_LINT",
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "low": 0,
+        "medium": 0
+      },
+      "status": "passed"
+    },
+    {
+      "blocking": true,
+      "passed": true,
+      "references": [
+        "sha256:42351bd99e732d0893d8dc6018611bfe4cac42dda57c1f695494f4a291990607"
+      ],
+      "scanner": "HARNESS",
       "severity_counts": {
         "critical": 0,
         "high": 0,
@@ -751,7 +846,7 @@
     "lineage": null,
     "owner": "local",
     "repository": "thetechgy/agent-engineering-baseline",
-    "revision": "a6d860186a9e7683f9e42c7627a150baff8fe23e",
+    "revision": "9e4c363d17ad851810c85b918af4df484caa5e5a",
     "skill_id": "agent-safety",
     "source_path": ".apm/skills/agent-safety"
   }
