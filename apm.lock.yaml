@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-11-20T00:00:02.006237+00:00'
+generated_at: '2026-11-21T01:37:17.480791+00:00'
 apm_version: 0.36.1
 dependencies:
 - repo_url: addyosmani/agent-skills
@@ -148,7 +148,7 @@ dependencies:
   name: msgraph
   host: github.com
   resolved_commit: fae3e26c33a1d40c3e81426980f5ca43e7ce2214
-  resolved_ref: main
+  resolved_ref: fae3e26c33a1d40c3e81426980f5ca43e7ce2214
   version: unknown
   virtual_path: skills/msgraph
   is_virtual: true

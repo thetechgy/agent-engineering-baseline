@@ -438,6 +438,25 @@
       "validation": "Review the skill directory diff and reproduce preservation of unrelated partial staging before changing the APM reference."
     },
     {
+      "id": "msgraph",
+      "label": "msgraph skill",
+      "repo": "merill/msgraph",
+      "kind": "skill",
+      "path": "skills/msgraph",
+      "ref": "main",
+      "sources": [
+        {
+          "path": "apm.yml",
+          "pattern": "^\\s*- merill/msgraph/skills/msgraph#(?P<revision>[0-9a-f]{40})$",
+          "count": 1
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": "Pin the reviewed revision to preserve the six bundled executables on fresh installs.",
+      "group": null,
+      "validation": "Review the skill changes and all six executable hashes, regenerate with the reviewed APM CLI, and verify scoped installation and migration on Ubuntu and Windows."
+    },
+    {
       "id": "gh",
       "label": "gh skill compatibility baseline",
       "repo": "cli/cli",

@@ -319,8 +319,8 @@ remote systems.
   bootstrap retains matching locks, including an unchanged baseline branch ref.
   Fresh installations or new declarations can resolve branch-tracking skills to
   current upstream commits rather than this repository's reviewed commits. Even a
-  fixed baseline commit does not freeze those transitive branches. Five imported
-  skills track `main`; git-commit and gh retain explicit commit declarations.
+  fixed baseline commit does not freeze those transitive branches. Four imported
+  skills track `main`. The msgraph, git-commit and gh declarations pin full commits.
 
 Review the destination's manifest, resolved skills, executable assets and source
 overrides. `--trust-bin` remains necessary for `msgraph`: APM 0.35.0 can exit zero
@@ -347,13 +347,19 @@ settings. Preserve user changes and inspect deployed functionality; do not use
 [Issue #88](https://github.com/thetechgy/agent-engineering-baseline/issues/88)
 tracks safe native MCP trust narrowing **and** reviewed transitive reproducibility
 for fresh installations. It includes the tagged source evidence, reproduced
-limitations and Windows/Ubuntu acceptance criteria. A fresh probe of baseline
-`8c5f7af` selected msgraph `5da043b2` while the reviewed source lock contained
-`e77b382d`, illustrating the executable supply-chain gap. Removing automatic
-updates stabilizes subsequent installs; it does not retroactively review those
-initial choices. Immutable declarations or reviewed native bundles require a
-separate installation/publication design. No custom resolver, MCP restoration
-mechanism or extra bootstrap runtime is introduced here.
+limitations and Windows/Ubuntu acceptance criteria.
+
+For msgraph, select a reviewed baseline commit containing the pin using
+`BASELINE_PACKAGE_REF` as described above, then run bootstrap in the existing
+scope. Keeping the same locked baseline revision keeps its old declaration.
+The destination lock records the msgraph commit and the SHA-256 hashes of the
+six files under `.agents/skills/msgraph/scripts/bin/`.
+
+The freshness report tracks changes to the upstream skill directory. For a pin
+bump, review the upstream diff and all six executable hashes, update the full
+SHA in `apm.yml` in a maintainer PR, and regenerate with the reviewed APM CLI.
+Check that unrelated revisions stay fixed and require both platform jobs to
+verify fresh install, ordinary reinstall and migration before merging.
 
 ### Verified tooling and reviewed refreshes
 

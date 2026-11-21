@@ -369,6 +369,23 @@ class Scenario:
         check((self.metadata / "apm.yml").read_bytes() == manifest_before,
               "missing lock leaves dependency declarations byte-identical")
 
+        # The upstream branch already points at C. A baseline pinned to A
+        # still installs A; selecting a new baseline pinned to B adopts B.
+        for revision, marker in ((graph_a, "graph-a"), (graph_b, "graph-b")):
+            package(self.repos["baseline"], "baseline", {
+                "apm": [self.url("graph") + ".git#" + revision], "mcp": [LEARN],
+            })
+            pinned = self.commit("baseline", "pin-" + marker)
+            self.install(self.url("baseline") + ".git#" + pinned)
+            check(self.pins()["bootstrap-fixture/graph"] == revision,
+                  f"{label}: deliberate {marker} pin installed while upstream remained at C")
+            script = self.deploy / ".agents/skills/graph/scripts/bin/probe.py"
+            reviewed = self.run(["git", "rev-parse", revision + ":.apm/skills/graph/scripts/bin/probe.py"],
+                                self.repos["graph"])
+            check(self.run(["git", "hash-object", "--no-filters", script]) == reviewed
+                  and self.run([sys.executable, script]).strip() == marker,
+                  f"{label}: deployed executable matches selected fixture pin")
+
 
 def instruction_regeneration(root, apm):
     """Exercise the production helper with native APM and no external dependencies."""
@@ -404,25 +421,101 @@ def instruction_regeneration(root, apm):
           "repeated native instruction regeneration retains lock and output bytes")
 
 
-def reviewed_msgraph(root, apm):
-    """Run the actual reviewed platform binary, never a branch-tip executable."""
-    scenario = Scenario(root, apm, False)
-    rows = locked_dependencies(REPOSITORY / "apm.lock.yaml")
-    commit, body = rows["merill/msgraph"]
-    scenario.native("install", "--target", "codex,copilot", "--trust-bin",
-                    f"merill/msgraph/skills/msgraph#{commit}")
-    platform = "windows_amd64.exe" if os.name == "nt" else (
-        "linux_arm64" if os.uname().machine in {"aarch64", "arm64"} else "linux_amd64")
-    member = f".agents/skills/msgraph/scripts/bin/msgraph_{platform}"
-    expected = re.search(re.escape(member) + r": sha256:([0-9a-f]{64})", body)
-    check(expected is not None and digest(scenario.project / member) == expected[1],
-          "actual msgraph executable matches reviewed lock hash before execution")
-    if os.name == "nt":
-        args = [os.environ.get("CI_PWSH", "pwsh"), "-NoProfile", "-File", scenario.project / ".agents/skills/msgraph/scripts/run.ps1"]
-    else:
-        args = ["bash", scenario.project / ".agents/skills/msgraph/scripts/run.sh"]
-    output = scenario.run([*args, "openapi-search", "--query", "users", "--limit", "1"])
-    check(bool(output.strip()), "actual reviewed msgraph offline launcher succeeds")
+MSGRAPH = "merill/msgraph/skills/msgraph"
+MSGRAPH_BIN = ".agents/skills/msgraph/scripts/bin/"
+# A real former #main selection, recorded in baseline e09e67d. Serve that Git
+# commit as main during setup so this case survives future upstream movement.
+LEGACY_MSGRAPH = "4ac367a69752b54b0dc8b2cf9d01194c1685d545"
+
+
+def msgraph_hashes(body):
+    return dict(re.findall(r"(?m)^    (" + re.escape(MSGRAPH_BIN) +
+                           r"[^:\s]+): sha256:([0-9a-f]{64})\r?$", body))
+
+
+def verify_msgraph(scenario, commit, expected, stage):
+    rows = locked_dependencies(scenario.metadata / "apm.lock.yaml")
+    actual, body = rows["merill/msgraph"]
+    check(actual == commit and f"  resolved_ref: {commit}" in body.splitlines(),
+          f"{stage}: msgraph resolved and locked to {actual}")
+    directory = scenario.deploy / MSGRAPH_BIN
+    installed = {MSGRAPH_BIN + path.name: digest(path) for path in directory.iterdir() if path.is_file()}
+    check(installed == expected == msgraph_hashes(body),
+          f"{stage}: six deployed executable SHA-256 hashes match the reviewed and destination locks")
+
+
+def reviewed_msgraph(root, apm, bootstrap):
+    commit, body = locked_dependencies(REPOSITORY / "apm.lock.yaml")["merill/msgraph"]
+    expected = msgraph_hashes(body)
+    platforms = ("darwin_amd64", "darwin_arm64", "linux_amd64", "linux_arm64",
+                 "windows_amd64.exe", "windows_arm64.exe")
+    check(set(expected) == {MSGRAPH_BIN + "msgraph_" + platform for platform in platforms},
+          "reviewed lock contains all six msgraph platform executables")
+    manifest = (REPOSITORY / "apm.yml").read_text(encoding="utf-8")
+    check(f"    - {MSGRAPH}#{commit}" in manifest.splitlines(),
+          "authored msgraph declaration matches the reviewed commit")
+
+    # Prepare a real branch-tracking installation without relying on changing
+    # upstream branch tips or editing destination manifests, locks or receipts.
+    producer = Scenario(root / "producer", apm, False)
+    mirror = root / "legacy-msgraph.git"
+    producer.run(["git", "init", "--bare", "--initial-branch=main", mirror])
+    upstream = "https://github.com/merill/msgraph"
+    producer.run(["git", "fetch", "--no-tags", upstream + ".git",
+                  LEGACY_MSGRAPH + ":refs/heads/main"], mirror)
+    baseline = producer.repos["baseline"]
+    package(baseline, "baseline", {"apm": [MSGRAPH + "#main"]})
+    old = producer.commit("baseline", "legacy-msgraph")
+    # Publish the candidate's actual manifest, lock, and authored package
+    # contents to local Git. Other dependencies follow their normal APM paths.
+    shutil.copytree(REPOSITORY / ".apm", baseline / ".apm", dirs_exist_ok=True)
+    for name in ("apm.yml", "apm.lock.yaml", "LICENSE"):
+        shutil.copy2(REPOSITORY / name, baseline / name)
+    producer.run(["git", "add", "."], baseline)
+    producer.run(["git", "commit", "--message", "Reviewed msgraph declaration"], baseline)
+    selected = producer.run(["git", "rev-parse", "HEAD"], baseline).strip()
+    for user in (False, True):
+        scope = "user" if user else "repository"
+        for migration in (True, False):
+            stage = "migration" if migration else "fresh"
+            scenario = Scenario(root / scope / stage, apm, user, bootstrap)
+            scenario.run(["git", "pull", "--ff-only", baseline, "main"], scenario.repos["baseline"])
+            ref = scenario.url("baseline") + ".git#"
+            if migration:
+                # Route only the old install's msgraph Git traffic to the snapshot.
+                slots = int(scenario.env["GIT_CONFIG_COUNT"])
+                for index, suffix in enumerate((".git", ""), slots):
+                    scenario.env[f"GIT_CONFIG_KEY_{index}"] = f"url.{mirror.as_uri()}.insteadOf"
+                    scenario.env[f"GIT_CONFIG_VALUE_{index}"] = upstream + suffix
+                scenario.env["GIT_CONFIG_COUNT"] = str(slots + 2)
+                scenario.install(ref + old)
+                scenario.env["GIT_CONFIG_COUNT"] = str(slots)
+                lock = scenario.metadata / "apm.lock.yaml"
+                previous, legacy_body = locked_dependencies(lock)["merill/msgraph"]
+                legacy_hashes = msgraph_hashes(legacy_body)
+                check(previous == LEGACY_MSGRAPH != commit and "  resolved_ref: main" in legacy_body.splitlines()
+                      and legacy_hashes.keys() == expected.keys()
+                      and all(digest(scenario.deploy / path) == value for path, value in legacy_hashes.items()),
+                      f"{scope} legacy #main: installed {previous} and verified six files against its own lock")
+                package(scenario.repos["unrelated"], "unrelated")
+                scenario.commit("unrelated", "unrelated package")
+                scenario.install(scenario.url("unrelated") + ".git#main")
+                unrelated = scenario.deploy / ".agents/skills/unrelated/SKILL.md"
+                record = locked_dependencies(lock)["bootstrap-fixture/unrelated"], digest(unrelated)
+                check(scenario.pins()["merill/msgraph"] == previous, f"{scope}: legacy commit present before migration")
+            scenario.install(ref + selected)
+            verify_msgraph(scenario, commit, expected, f"{scope} {stage}")
+            if migration:
+                check((locked_dependencies(lock)["bootstrap-fixture/unrelated"], digest(unrelated)) == record,
+                      f"{scope} migration preserves unrelated lock record and deployed bytes")
+            else:
+                scenario.install(ref + selected)
+                verify_msgraph(scenario, commit, expected, f"{scope} ordinary reinstall")
+                scripts = scenario.deploy / ".agents/skills/msgraph/scripts"
+                args = ([os.environ.get("CI_PWSH", "pwsh"), "-NoProfile", "-File", scripts / "run.ps1"]
+                        if os.name == "nt" else ["bash", scripts / "run.sh"])
+                output = scenario.run([*args, "openapi-search", "--query", "users", "--limit", "1"])
+                check(bool(output.strip()), f"{scope}: actual reviewed msgraph offline launcher succeeds")
 
 
 def main():
@@ -440,7 +533,7 @@ def main():
         for scope in (False, True):
             Scenario(root / ("user" if scope else "repo"), apm, scope, bootstrap).exercise()
         instruction_regeneration(root / "instructions", apm)
-        reviewed_msgraph(root / "reviewed-msgraph", apm)
+        reviewed_msgraph(root / "msgraph", apm, bootstrap)
     print(f"Native APM lifecycle: {CHECKS} checks passed.")
 
 
