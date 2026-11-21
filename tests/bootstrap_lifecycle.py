@@ -439,7 +439,10 @@ LEGACY_MSGRAPH = "eb081bf8628d0c9669dc20e681d5eb9623dea9b0"
 
 
 def file_hashes(body):
-    return dict(re.findall(r"(?m)^    ([^:\r\n]+): sha256:([0-9a-f]{64})$", body))
+    deployed = re.search(r"(?ms)^  deployed_file_hashes:\n(.*?)(?=^  \S|\Z)", body)
+    if deployed is None:
+        return {}
+    return dict(re.findall(r"(?m)^    ([^:\r\n]+): sha256:([0-9a-f]{64})$", deployed[1]))
 
 
 def verify_imports(scenario, expected, stage):
