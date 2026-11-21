@@ -68,6 +68,12 @@ jobs:
         working-directory: trusted
         run: bash .github/scripts/setup-skillevaluator.sh candidate-next
 
+      - name: Stage isolated static reporting tools
+        working-directory: trusted
+        run: |
+          scripts=$(python3 -B .github/scripts/static_quality_ci.py tools)
+          printf 'STATIC_QUALITY_SCRIPTS=%s\n' "$scripts" >> "$GITHUB_ENV"
+
       - name: Authenticate producers and build complete candidate without write permissions
         id: preparation
         working-directory: trusted
@@ -75,7 +81,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RETAINED: ${{ github.workspace }}/retained
         run: |
-          "$SKILL_NEXT_PYTHON" .github/scripts/skill_pages.py prepare \
+          "$SKILL_NEXT_PYTHON" -B "$STATIC_QUALITY_SCRIPTS/skill_pages.py" prepare \
             --workspace "$PWD" --retained "$RETAINED" --output "$RUNNER_TEMP/skill-pages-candidate"
 
       - name: Seal generated handoff

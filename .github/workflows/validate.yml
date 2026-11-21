@@ -154,7 +154,7 @@ jobs:
 
       - name: Test CI contracts without inference
         run: |
-          shellcheck .github/scripts/setup-skillevaluator.sh .github/scripts/setup-skill-scanners.sh .github/scripts/collect-static-quality.sh .github/scripts/setup-compose.sh
+          shellcheck .github/scripts/setup-skillevaluator.sh .github/scripts/setup-skill-scanners.sh .github/scripts/setup-static-evaluator.sh .github/scripts/collect-static-quality.sh .github/scripts/setup-compose.sh
           "$SKILL_REVIEW_PYTHON" -m unittest discover -s .github/tests -v
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py validate gh
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py replay gh
@@ -259,17 +259,24 @@ jobs:
           version: '0.13.9'
           enable-cache: false
 
-      - name: Install pinned static evaluator 0.9.0 and security scanners
-        run: bash .github/scripts/setup-skillevaluator.sh quality-next
+      - name: Install pinned static evaluator and security scanners
+        run: bash .github/scripts/setup-static-evaluator.sh quality-static
+
+      - name: Stage isolated static reporting tools
+        run: |
+          scripts=$(python3 -B .github/scripts/static_quality_ci.py tools)
+          printf 'STATIC_QUALITY_SCRIPTS=%s\n' "$scripts" >> "$GITHUB_ENV"
 
       - name: Qualify scanner controls and consolidated reporting without credentials
         run: |
           "$SKILL_QUALITY_PYTHON" -B -m unittest discover -s .github/tests -p test_static_quality.py -v
-          "$SKILL_QUALITY_PYTHON" .github/scripts/qualify_scanners.py \
-            --tools "$RUNNER_TEMP/skill-evaluation-tools" --output "$RUNNER_TEMP/scanner-controls"
+          "$SKILL_QUALITY_PYTHON" -B "$STATIC_QUALITY_SCRIPTS/qualify_scanners.py" \
+            --workspace "$GITHUB_WORKSPACE" --tools "$SKILL_QUALITY_TOOLS" --redact \
+            --output "$RUNNER_TEMP/scanner-controls"
+          "$SKILL_QUALITY_PYTHON" -B .github/scripts/static_quality_ci.py authored-input \
+            --output "$RUNNER_TEMP/scanner-controls/authored-input"
 
       - name: Retain scanner controls and report
-        if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: scanner-controls
@@ -280,19 +287,19 @@ jobs:
       - name: Collect native skill and dataset reports
         env:
           SKILLEVALUATOR_RESULTS_DIR: ${{ runner.temp }}/skill-quality/results
-        run: bash .github/scripts/collect-static-quality.sh
+        run: 'bash "$STATIC_QUALITY_SCRIPTS/collect-static-quality.sh"'
 
       - name: Enforce native collection and dataset contracts
         id: native-quality
         if: always()
-        run: '"$SKILL_QUALITY_PYTHON" .github/scripts/skill_reports.py catalog "$RUNNER_TEMP/skill-quality"'
+        run: '"$SKILL_QUALITY_PYTHON" -B "$STATIC_QUALITY_SCRIPTS/skill_reports.py" catalog "$RUNNER_TEMP/skill-quality"'
 
       - name: Generate validated public quality evidence and findings summary
         id: public-quality
         if: always() && env.SKILL_QUALITY_PYTHON != ''
         timeout-minutes: 3
         run: |
-          "$SKILL_QUALITY_PYTHON" .github/scripts/skill_reports.py public-quality \
+          "$SKILL_QUALITY_PYTHON" -B "$STATIC_QUALITY_SCRIPTS/skill_reports.py" public-quality \
             "$RUNNER_TEMP/skill-quality" "$RUNNER_TEMP/skill-public-quality"
 
       - name: Report quality summary availability
@@ -336,15 +343,22 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Install opt-in SkillEvaluator 1.0.1 static candidate
-        if: needs.plan.outputs.static_candidate == 'true'
-        run: bash .github/scripts/setup-skillevaluator.sh quality-candidate
-
       - name: Compare pinned static producers and verify artifact redaction
         if: needs.plan.outputs.static_candidate == 'true'
         run: |
-          "$SKILL_QUALITY_PYTHON" -B .github/scripts/qualify_static_evaluator.py \
-            --output "$RUNNER_TEMP/static-evaluator-qualification"
+          output="$RUNNER_TEMP/static-evaluator-qualification"
+          export RUNNER_TEMP="$RUNNER_TEMP/static-comparison"
+          mkdir "$RUNNER_TEMP"
+          export GITHUB_ENV="$RUNNER_TEMP/owners.env" GITHUB_PATH="$RUNNER_TEMP/owners.path"
+          set -a
+          bash .github/scripts/setup-skillevaluator.sh quality-next
+          source "$GITHUB_ENV"
+          bash .github/scripts/setup-skillevaluator.sh quality-candidate
+          source "$GITHUB_ENV"
+          set +a
+          export SKILLEVALUATOR_RESULTS_DIR="$RUNNER_TEMP/skill-quality/results"
+          bash "$STATIC_QUALITY_SCRIPTS/collect-static-quality.sh"
+          "$SKILL_QUALITY_PYTHON" -B .github/scripts/qualify_static_evaluator.py --output "$output"
           git diff --exit-code
           test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
 

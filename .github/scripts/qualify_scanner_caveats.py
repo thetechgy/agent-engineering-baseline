@@ -46,7 +46,7 @@ cli()
 
 
 def qualify(output, tools, workspace):
-    contract_result = contracts(tools)
+    contract_result = contracts(tools, workspace)
     output.mkdir(parents=True, exist_ok=False)
     (output / "contracts.json").write_bytes(evidence.encoded(contract_result))
     versions = evidence.read_json(tools / 'versions.json')
@@ -183,12 +183,12 @@ def qualify(output, tools, workspace):
 
 
 
-def contracts(tools):
+def contracts(tools, workspace=evidence.ROOT):
     """Mutation controls are synthetic; the seed is an unchanged real producer response."""
     import types
     from skillevaluator.validators.base import ValidationResult
     from skillevaluator.validators.security import SecurityValidator
-    fixture = evidence.read_json(evidence.ROOT / '.github/tests/fixtures/skillspector-caveat-response.json')
+    fixture = evidence.read_json(workspace / '.github/tests/fixtures/skillspector-caveat-response.json')
     if importlib.metadata.version('skillevaluator') == '0.9.0':
         result = ValidationResult()
         assert SecurityValidator._validate_skillspector_report(fixture, 0, False, 'skillspector', result)

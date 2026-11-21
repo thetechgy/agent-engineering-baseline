@@ -10,8 +10,10 @@ import unittest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / '.github/scripts'))
+ISOLATED_SCRIPTS = os.environ.get('STATIC_QUALITY_SCRIPTS')
+sys.path.insert(0, ISOLATED_SCRIPTS or str(ROOT / '.github/scripts'))
 import evaluator_profiles as profiles
+import skill_evidence as evidence
 
 
 class StaticQualityRoutingTests(unittest.TestCase):
@@ -20,15 +22,20 @@ class StaticQualityRoutingTests(unittest.TestCase):
         quality = jobs['skill-quality']
         contracts = jobs['ci-contracts']
         body = '\n'.join(step.get('run', '') for step in quality['steps'])
-        self.assertIn('setup-skillevaluator.sh quality-next', body)
-        candidate = next(step for step in quality['steps'] if 'setup-skillevaluator.sh quality-candidate' in step.get('run', ''))
-        self.assertEqual(candidate['if'], "needs.plan.outputs.static_candidate == 'true'")
+        setup = next(step for step in quality['steps'] if 'setup-static-evaluator.sh' in step.get('run', ''))
+        self.assertEqual(setup['run'], 'bash .github/scripts/setup-static-evaluator.sh quality-static')
+        self.assertNotIn('if', setup)
+        comparison = next(step for step in quality['steps'] if 'qualify_static_evaluator.py' in step.get('run', ''))
+        self.assertEqual(comparison['if'], "needs.plan.outputs.static_candidate == 'true'")
+        for selector in ('quality-next', 'quality-candidate'):
+            self.assertIn('setup-skillevaluator.sh ' + selector, comparison['run'])
+            self.assertEqual(body.count('setup-skillevaluator.sh ' + selector), 1)
         self.assertNotIn('SKILL_EVALUATOR_PYTHON', body)
         self.assertNotIn('gh_container_validation', body)
         for step in quality['steps']:
             if 'skill_reports.py' in step.get('run', '') and 'preflight' not in step['run']:
-                self.assertIn('"$SKILL_QUALITY_PYTHON"', step['run'])
-        self.assertIn('bash .github/scripts/collect-static-quality.sh', body)
+                self.assertIn('"$SKILL_QUALITY_PYTHON" -B "$STATIC_QUALITY_SCRIPTS/skill_reports.py"', step['run'])
+        self.assertIn('bash "$STATIC_QUALITY_SCRIPTS/collect-static-quality.sh"', body)
         setup = next(step for step in contracts['steps'] if 'setup-skillevaluator' in step.get('run', ''))
         self.assertEqual(setup['run'], 'bash .github/scripts/setup-skillevaluator.sh quality')
         native = [step for job in jobs.values() for step in job.get('steps', [])
@@ -47,6 +54,10 @@ class StaticQualityRoutingTests(unittest.TestCase):
         opposite = (dict(python='3.13', skillevaluator='0.3.0', harbor='0.13.2',
                          evaluator_revision=profiles.HISTORICAL_REVISION)
                     if version == '0.9.0' else profiles.candidate_versions(profiles.NEXT))
+        runtime = evidence.SCANNER_RUNTIME if version == '0.9.0' else evidence.SCANNER_RUNTIME_NEXT
+        opposite.update(scanner_runtime=runtime, scanners=runtime['versions'],
+                        skillspector_revision=runtime['skillspector_revision'])
+        scripts = Path(ISOLATED_SCRIPTS or ROOT / '.github/scripts')
         for metadata in (None, {}, opposite):
             with self.subTest(metadata=metadata), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
@@ -57,7 +68,7 @@ class StaticQualityRoutingTests(unittest.TestCase):
                 marker = root / 'unexpected-cli'
                 cli = binary / 'skillevaluator'
                 cli.write_text('#!/bin/sh\ntouch "$CLI_MARKER"\nexit 0\n'); cli.chmod(0o700)
-                result = subprocess.run(['bash', str(ROOT / '.github/scripts/collect-static-quality.sh')],
+                result = subprocess.run(['bash', str(scripts / 'collect-static-quality.sh')],
                     env={'PATH': str(binary) + os.pathsep + os.defpath, 'CLI_MARKER': str(marker),
                          'SKILL_QUALITY_PYTHON': sys.executable, 'SKILL_QUALITY_TOOLS': str(tools),
                          'GITHUB_WORKSPACE': str(ROOT), 'RUNNER_TEMP': str(root / 'runner'),
@@ -66,3 +77,28 @@ class StaticQualityRoutingTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertFalse(marker.exists())
                 self.assertFalse((root / 'runner/skill-quality').exists())
+
+
+    @unittest.skipUnless(ISOLATED_SCRIPTS, 'Requires isolated static reporting tools')
+    def test_pages_history_admits_the_static_producer(self):
+        import skill_history as history
+        import static_evaluator as owner
+        from test_skill_analysis import static_control
+        from test_skill_pages import prov
+
+        record = static_control()
+        record['policy'] = evidence.make_policy(
+            {key: owner.VERSIONS[key] for key in ('evaluator_revision', 'harbor', 'python')},
+            judge={'model': None, 'provider': None, 'enabled': False},
+            provenance='runtime_recorded', published=owner.PRODUCER)
+        record['scanner_runtime'] = evidence.SCANNER_RUNTIME_STATIC_CANDIDATE
+        at = '2026-11-20T00:00:00Z'
+        snapshot = history.empty(at)
+        observation = history.observation(record, 'quality', prov(record['source']['revision']), at)
+        history.add(snapshot, observation)
+        retained = history.retain(snapshot, at)['observations']
+        self.assertEqual(len(retained), 1)
+        self.assertEqual(retained[0]['record']['policy']['published_id'], owner.PRODUCER)
+        observation['record']['kind'] = 'behavioral'
+        with self.assertRaisesRegex(ValueError, 'Unsupported native evaluator'):
+            history.validate(snapshot)

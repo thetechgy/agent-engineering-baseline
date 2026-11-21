@@ -52,14 +52,14 @@ catalog has no such gate finding and this comparison does not exercise a hook.
 | powershell-module-engineering | 88.5 | 90.2 |
 | powershell-pester-6 | 85.8 | 87.5 |
 
-Each score rises 1.7 points under the candidate's native heuristic. Treat
+Each score rises 1.7 points from the evaluator's scoring change. Treat
 the score as release-specific and review decisions against the findings and
 coverage. There is no behavioral measurement in this qualification.
 
-## Setup, reporting and rollback
+## PR #165 qualification setup and reporting
 
-The PR opts in when the complete PR comparison includes the qualification
-script, static producer profile, or reporting patch. The standard job uses `quality-next`. The opt-in step installs 1.0.1
+PR #165 opted in through the complete PR comparison. The standard job
+used `quality-next` during qualification. The opt-in step installed 1.0.1
 from commit `914c15cb3f31562ccffdc9a7166002a87ed2ce1e` with its frozen
 upstream lock and checks the owning source, Python 3.14.10 and scanner versions.
 The strict dataset CLI imports the Tier 3 extra. The qualification invokes
@@ -75,8 +75,7 @@ collection and reporting commands in a disposable copy of the checked-in
 tools. That copy scans the same repository inputs. The copy preserves the
 byte-bound campaign and replay sources on the checkout. The candidate public
 bundle retains the catalog and inventory. Retained 0.9.0 evidence from #141
-renders under its original producer identity. A static switch should carry
-the isolated reporting compatibility with it.
+renders under its original producer identity.
 
 The opt-in attachment contains the matched receipt, both public bundles,
 consolidated reports and verified native diagnostics. Candidate evidence uses
@@ -84,3 +83,38 @@ consolidated reports and verified native diagnostics. Candidate evidence uses
 setup and the same collection, admission and projection commands under
 `skillevaluator-0.9.0-offline-v3`. No replay, benchmark or judge selection is
 required to use that path.
+
+## Operate the static scanner
+
+The `Skill quality (advisory findings)` job in [Validate](../../.github/workflows/validate.yml)
+selects `quality-static` by default. It installs SkillEvaluator 1.0.1 under
+`skillevaluator-1.0.1-static-v1` with the #165 pins, scans the repository catalog
+once, and uses the isolated reporting tools for strict dataset admission and
+public projection. Check `versions.json` in the native `skill-quality` artifact
+and the producer ID in the `skill-public-quality-<run>-<attempt>` artifact.
+The `scanner-controls` artifact includes the redacted authored-input control,
+its public JSON and consolidated HTML at `authored-input/`.
+
+The [Pages publisher](../../.github/workflows/publish-skill-report.yml) authenticates
+the successful main producer and loads the public artifact through the same
+reporting compatibility, including static policy admission in publication
+history. It prepares and renders with its existing 0.9.0
+data-only host. Retained 0.9.0 static reports keep the
+`skillevaluator-0.9.0-offline-v3` identity. Validate on a draft PR produces the
+ordinary artifacts. Live Pages publication follows a successful main run.
+For offline Pages rebuilds, stage the same tools with
+`python3 -B .github/scripts/static_quality_ci.py tools` and run the resulting
+`skill_pages.py build` with the data-only host.
+
+For matched qualification, the existing PR planner enables the comparison
+when the complete diff changes `qualify_static_evaluator.py`,
+`static_evaluator.py` or `static-evaluator-1.0.1-reporting.patch`. Look for the
+separate `static-evaluator-qualification-<attempt>` artifact. The catalog's
+findings and coverage are input-dependent. Use #165's 11 SECURITY findings and
+four incomplete SkillSpector scans as the comparison snapshot.
+
+To roll back, change the one selector in the Validate quality job from
+`bash .github/scripts/setup-static-evaluator.sh quality-static` to
+`bash .github/scripts/setup-static-evaluator.sh quality-next`. Keep the
+isolated reporting setup and publisher preparation so both producer identities
+remain readable.

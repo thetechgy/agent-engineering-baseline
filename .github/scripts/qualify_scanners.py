@@ -49,7 +49,7 @@ def write(path, value):
     path.write_bytes(evidence.encoded(value))
 
 
-def run(output, tools):
+def run(output, tools, repository=evidence.ROOT, *, redact=False):
     output.mkdir(parents=True, exist_ok=False)
     versions = evidence.read_json(tools / 'versions.json')
     evidence.validate_runtime_versions(versions)
@@ -119,14 +119,14 @@ def run(output, tools):
             if mode == 'clean':
                 assert all(row['status'] == 'passed' and not row['findings'] for row in (security, code, secrets)), raw
             elif mode == 'bad':
-                assert security['status'] == code['status'] == secrets['status'] == 'failed', raw
+                assert security['status'] == code['status'] == secrets['status'] == 'failed', 'Bad scanner control did not fail'
                 assert any(f['check_name'].endswith('(P2)') and f['line_number'] for f in security['findings'])
                 assert any(f['category'] == 'SEMGREP' and f['line_number'] for f in code['findings'])
                 assert any(f['line_number'] and f['file_path'] for f in secrets['findings'])
-                assert not raw['incomplete_scans'], raw
+                assert not raw['incomplete_scans'], 'Bad scanner control coverage was incomplete'
             else:
                 assert 'skillspector' in security['incomplete_scans'] and 'skillspector' in raw['incomplete_scans'], raw
-                if versions['skillevaluator'] == '0.9.0':
+                if versions['skillevaluator'] in ('0.9.0', '1.0.1'):
                     # A confirmed finding outranks incompleteness in this release.
                     # Validate both axes with the released rehydrator.
                     reports.released_static_results(raw)
@@ -205,8 +205,19 @@ def run(output, tools):
                     raise AssertionError('Unknown scanner provenance accepted')
     (output / 'report.html').write_text(report)
     write(output / 'controls.json', {'synthetic': True, 'versions': versions, 'outcomes': outcomes})
-    from qualify_scanner_caveats import qualify
-    qualify(output / 'repository-caveats', tools, evidence.ROOT)
+    if versions['skillevaluator'] != '1.0.1':
+        from qualify_scanner_caveats import qualify
+        qualify(output / 'repository-caveats', tools, repository)
+    if redact:
+        # Native diagnostics can quote the inert value as SkillSpector evidence.
+        # Scrub the saved copies after native and projection checks have run.
+        from qualify_static_evaluator import MARKER, require_redaction
+        for member in [*evidence.safe_tree(output / 'bad/native'),
+                       output / 'bad/scanner-process.json', output / 'bad/collection.log']:
+            raw = member.read_bytes()
+            if MARKER in raw:
+                member.write_bytes(raw.replace(MARKER, b'[REDACTED]'))
+        require_redaction(output)
     return outcomes
 
 
@@ -236,8 +247,10 @@ if __name__ == '__main__':
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--tools', required=True, type=Path)
     parser.add_argument('--evaluator-next', action='store_true', help='Use the 0.9 owner with existing qualified scanners')
+    parser.add_argument('--workspace', type=Path, default=evidence.ROOT)
+    parser.add_argument('--redact', action='store_true', help='Redact the synthetic marker before upload')
     args = parser.parse_args()
     tools = args.tools.resolve()
     if args.evaluator_next:
         tools = next_tools(tools, args.output.resolve().with_name(args.output.name + '-tools'))
-    run(args.output.resolve(), tools)
+    run(args.output.resolve(), tools, args.workspace.resolve(), redact=args.redact)
