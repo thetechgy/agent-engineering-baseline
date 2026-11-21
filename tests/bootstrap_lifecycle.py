@@ -423,9 +423,9 @@ def instruction_regeneration(root, apm):
 
 MSGRAPH = "merill/msgraph/skills/msgraph"
 MSGRAPH_BIN = ".agents/skills/msgraph/scripts/bin/"
-# A real former #main selection, recorded in baseline e09e67d. Serve that Git
-# commit as main during setup so this case survives future upstream movement.
-LEGACY_MSGRAPH = "4ac367a69752b54b0dc8b2cf9d01194c1685d545"
+# Upstream v1.0.18 binaries. All six differ from the reviewed set. Only the
+# Git branch is staged locally; native APM creates all destination state.
+LEGACY_MSGRAPH = "eb081bf8628d0c9669dc20e681d5eb9623dea9b0"
 
 
 def msgraph_hashes(body):
@@ -442,6 +442,33 @@ def verify_msgraph(scenario, commit, expected, stage):
     installed = {MSGRAPH_BIN + path.name: digest(path) for path in directory.iterdir() if path.is_file()}
     check(installed == expected == msgraph_hashes(body),
           f"{stage}: six deployed executable SHA-256 hashes match the reviewed and destination locks")
+
+
+def seed_legacy_msgraph(scenario, mirror, old_ref, expected, scope):
+    package(scenario.repos["unrelated"], "unrelated")
+    scenario.commit("unrelated", "unrelated package")
+    scenario.install(scenario.url("unrelated") + ".git#main")
+    # Route only the old install's msgraph Git traffic to the snapshot.
+    slots = int(scenario.env["GIT_CONFIG_COUNT"])
+    for index, suffix in enumerate((".git", ""), slots):
+        scenario.env[f"GIT_CONFIG_KEY_{index}"] = f"url.{mirror.as_uri()}.insteadOf"
+        scenario.env[f"GIT_CONFIG_VALUE_{index}"] = "https://github.com/merill/msgraph" + suffix
+    scenario.env["GIT_CONFIG_COUNT"] = str(slots + 2)
+    scenario.install(old_ref)
+    scenario.env["GIT_CONFIG_COUNT"] = str(slots)
+    lock = scenario.metadata / "apm.lock.yaml"
+    previous, legacy_body = locked_dependencies(lock)["merill/msgraph"]
+    legacy_hashes = msgraph_hashes(legacy_body)
+    check(previous == LEGACY_MSGRAPH and "  resolved_ref: main" in legacy_body.splitlines()
+          and legacy_hashes.keys() == expected.keys()
+          and all(digest(scenario.deploy / path) == value != expected[path]
+                  for path, value in legacy_hashes.items()),
+          f"{scope} legacy #main: installed {previous} with six distinct pre-migration hashes")
+
+
+def unrelated_state(scenario):
+    row = locked_dependencies(scenario.metadata / "apm.lock.yaml")["bootstrap-fixture/unrelated"]
+    return row, digest(scenario.deploy / ".agents/skills/unrelated/SKILL.md")
 
 
 def reviewed_msgraph(root, apm, bootstrap):
@@ -482,31 +509,12 @@ def reviewed_msgraph(root, apm, bootstrap):
             scenario.run(["git", "pull", "--ff-only", baseline, "main"], scenario.repos["baseline"])
             ref = scenario.url("baseline") + ".git#"
             if migration:
-                # Route only the old install's msgraph Git traffic to the snapshot.
-                slots = int(scenario.env["GIT_CONFIG_COUNT"])
-                for index, suffix in enumerate((".git", ""), slots):
-                    scenario.env[f"GIT_CONFIG_KEY_{index}"] = f"url.{mirror.as_uri()}.insteadOf"
-                    scenario.env[f"GIT_CONFIG_VALUE_{index}"] = upstream + suffix
-                scenario.env["GIT_CONFIG_COUNT"] = str(slots + 2)
-                scenario.install(ref + old)
-                scenario.env["GIT_CONFIG_COUNT"] = str(slots)
-                lock = scenario.metadata / "apm.lock.yaml"
-                previous, legacy_body = locked_dependencies(lock)["merill/msgraph"]
-                legacy_hashes = msgraph_hashes(legacy_body)
-                check(previous == LEGACY_MSGRAPH != commit and "  resolved_ref: main" in legacy_body.splitlines()
-                      and legacy_hashes.keys() == expected.keys()
-                      and all(digest(scenario.deploy / path) == value for path, value in legacy_hashes.items()),
-                      f"{scope} legacy #main: installed {previous} and verified six files against its own lock")
-                package(scenario.repos["unrelated"], "unrelated")
-                scenario.commit("unrelated", "unrelated package")
-                scenario.install(scenario.url("unrelated") + ".git#main")
-                unrelated = scenario.deploy / ".agents/skills/unrelated/SKILL.md"
-                record = locked_dependencies(lock)["bootstrap-fixture/unrelated"], digest(unrelated)
-                check(scenario.pins()["merill/msgraph"] == previous, f"{scope}: legacy commit present before migration")
+                seed_legacy_msgraph(scenario, mirror, ref + old, expected, scope)
+                record = unrelated_state(scenario)
             scenario.install(ref + selected)
             verify_msgraph(scenario, commit, expected, f"{scope} {stage}")
             if migration:
-                check((locked_dependencies(lock)["bootstrap-fixture/unrelated"], digest(unrelated)) == record,
+                check(unrelated_state(scenario) == record,
                       f"{scope} migration preserves unrelated lock record and deployed bytes")
             else:
                 scenario.install(ref + selected)
