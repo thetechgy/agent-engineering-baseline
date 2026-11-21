@@ -566,7 +566,7 @@ def lock_handling(scenario, case):
     check((rows.get("bootstrap-fixture/unrelated"), new_files.get(".agents/skills/unrelated/SKILL.md"))
           == independent, f"{stage}: unrelated lock record and deployed bytes preserved")
     if case == "contradictory lock" and status == 0:
-        check(selected == reviewed_commit, f"{stage}: success resolved {selected} instead of {reviewed_commit}")
+        check(selected == reviewed_commit, f"{stage}: successful reinstall selected the reviewed pin")
         verify_imports(scenario, {identity: (reviewed_commit, reviewed)}, f"{stage} reconciled")
         return
 
@@ -580,8 +580,14 @@ def lock_handling(scenario, case):
     if status == 0 or not visible:
         raise AssertionError(f"{stage}: expected a visible refusal (exit={status})\n{output}")
     print(f"{stage}: bootstrap reported {case}", flush=True)
-    check(new_lock == old_lock and manifest.exists() and manifest.read_bytes() == old_manifest
-          and new_files == old_files, f"{stage}: refusal preserves the lock, manifest, modules and deployed files")
+    check(new_lock == old_lock, f"{stage}: refusal preserves the destination lock")
+    check(manifest.exists() and manifest.read_bytes() == old_manifest,
+          f"{stage}: refusal preserves the destination manifest")
+    changed = sorted(path for path in old_files.keys() | new_files.keys()
+                     if old_files.get(path) != new_files.get(path))
+    if changed:
+        raise AssertionError(f"{stage}: files changed after refusal: {', '.join(changed)}")
+    print(f"{stage}: refusal preserved modules and deployed files", flush=True)
 
 
 def reviewed_imports(root, apm, bootstrap):
