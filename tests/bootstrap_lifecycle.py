@@ -162,13 +162,13 @@ class Scenario:
         # process-local rewrite routes every fixture acquisition to local Git.
         return f"https://git.example.invalid/bootstrap-fixture/{name}"
 
-    def run(self, args, cwd=None, success=True):
+    def run(self, args, cwd=None, success=True, timeout=120):
         process = subprocess.Popen([str(a) for a in args], cwd=cwd or self.project,
                                    env=self.env, text=True, encoding="utf-8", errors="replace",
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                    start_new_session=os.name != "nt")
         try:
-            output, _ = process.communicate(timeout=120)
+            output, _ = process.communicate(timeout=timeout)
         except subprocess.TimeoutExpired:
             # Native Git hydration can outlive its APM parent. Terminate only
             # this test-owned process tree before removing its temporary home.
@@ -181,7 +181,7 @@ class Scenario:
                 except ProcessLookupError:
                     pass
             output, _ = process.communicate()
-            raise AssertionError(f"Native command timed out after 120 seconds; owned process tree stopped.\n{output}") from None
+            raise AssertionError(f"Native command timed out after {timeout} seconds; owned process tree stopped.\n{output}") from None
         if (process.returncode == 0) != success:
             raise AssertionError(f"Command failed contract ({process.returncode}): {args}\n{output}")
         return output
@@ -189,7 +189,7 @@ class Scenario:
     def native(self, *args, success=True):
         return self.run([self.apm, *args, *self.scope], success=success)
 
-    def install(self, ref, update=False):
+    def install(self, ref, update=False, timeout=120):
         if self.bootstrap and not update:
             source, archive = self.bootstrap
             self.env["BASELINE_PACKAGE_REF"] = ref
@@ -210,7 +210,7 @@ class Scenario:
                         previous_path = None
                     try:
                         self.run([os.environ.get("CI_PWSH", "pwsh"), "-NoProfile", "-File",
-                                  source / "invoke.ps1", "Global" if self.global_scope else "Repo"])
+                                  source / "invoke.ps1", "Global" if self.global_scope else "Repo"], timeout=timeout)
                     finally:
                         if previous_path is not None:
                             winreg.SetValueEx(key, "Path", 0, previous_path[1], previous_path[0])
@@ -222,7 +222,7 @@ class Scenario:
             else:
                 self.env["APM_RELEASE_BASE_URL"] = archive.parent.parent.as_uri()
                 self.run(["bash", source / "scripts/bootstrap.sh",
-                          "--global" if self.global_scope else "--repo"])
+                          "--global" if self.global_scope else "--repo"], timeout=timeout)
         else:
             self.native("install", *(["--update"] if update else []), "--target", "codex,copilot",
                         "--trust-bin", "--trust-transitive-mcp", ref)
@@ -505,25 +505,28 @@ def reviewed_msgraph(root, apm, bootstrap):
         scope = "user" if user else "repository"
         for migration in (True, False):
             stage = "migration" if migration else "fresh"
-            scenario = Scenario(root / scope / stage, apm, user, bootstrap)
-            scenario.run(["git", "pull", "--ff-only", baseline, "main"], scenario.repos["baseline"])
-            ref = scenario.url("baseline") + ".git#"
-            if migration:
-                seed_legacy_msgraph(scenario, mirror, ref + old, expected, scope)
-                record = unrelated_state(scenario)
-            scenario.install(ref + selected)
-            verify_msgraph(scenario, commit, expected, f"{scope} {stage}")
-            if migration:
-                check(unrelated_state(scenario) == record,
-                      f"{scope} migration preserves unrelated lock record and deployed bytes")
-            else:
-                scenario.install(ref + selected)
-                verify_msgraph(scenario, commit, expected, f"{scope} ordinary reinstall")
-                scripts = scenario.deploy / ".agents/skills/msgraph/scripts"
-                args = ([os.environ.get("CI_PWSH", "pwsh"), "-NoProfile", "-File", scripts / "run.ps1"]
-                        if os.name == "nt" else ["bash", scripts / "run.sh"])
-                output = scenario.run([*args, "openapi-search", "--query", "users", "--limit", "1"])
-                check(bool(output.strip()), f"{scope}: actual reviewed msgraph offline launcher succeeds")
+            # Release the real Git caches between independent installations.
+            with tempfile.TemporaryDirectory(dir=root, prefix=stage[0]) as directory:
+                scenario = Scenario(Path(directory), apm, user, bootstrap)
+                scenario.run(["git", "pull", "--ff-only", baseline, "main"], scenario.repos["baseline"])
+                ref = scenario.url("baseline") + ".git#"
+                if migration:
+                    seed_legacy_msgraph(scenario, mirror, ref + old, expected, scope)
+                    record = unrelated_state(scenario)
+                # A cold full manifest hydrates every upstream skill, including cli/cli.
+                scenario.install(ref + selected, timeout=600)
+                verify_msgraph(scenario, commit, expected, f"{scope} {stage}")
+                if migration:
+                    check(unrelated_state(scenario) == record,
+                          f"{scope} migration preserves unrelated lock record and deployed bytes")
+                else:
+                    scenario.install(ref + selected, timeout=600)
+                    verify_msgraph(scenario, commit, expected, f"{scope} ordinary reinstall")
+                    scripts = scenario.deploy / ".agents/skills/msgraph/scripts"
+                    args = ([os.environ.get("CI_PWSH", "pwsh"), "-NoProfile", "-File", scripts / "run.ps1"]
+                            if os.name == "nt" else ["bash", scripts / "run.sh"])
+                    output = scenario.run([*args, "openapi-search", "--query", "users", "--limit", "1"])
+                    check(bool(output.strip()), f"{scope}: actual reviewed msgraph offline launcher succeeds")
 
 
 def main():
