@@ -9,13 +9,13 @@ targets:
 
 dependencies:
   apm:
-    - github/awesome-copilot/skills/dependabot#main
+    - github/awesome-copilot/skills/dependabot#1683f50e94c9fd489191f73d7c8f7e2bd871bd0c
     # Retain the reviewed skill until upstream preserves unrelated partial staging.
     - github/awesome-copilot/skills/git-commit#613efc8c21d9b3ce642dff361d17006cd9967e28
-    - github/awesome-copilot/skills/github-actions-hardening#main
+    - github/awesome-copilot/skills/github-actions-hardening#1683f50e94c9fd489191f73d7c8f7e2bd871bd0c
     - merill/msgraph/skills/msgraph#fae3e26c33a1d40c3e81426980f5ca43e7ce2214
-    - addyosmani/agent-skills/skills/code-simplification#main
-    - github/awesome-copilot/skills/microsoft-code-reference#main
+    - addyosmani/agent-skills/skills/code-simplification#8c99fa36d90068c82d547f7c12a9d67a3e95f4ee
+    - github/awesome-copilot/skills/microsoft-code-reference#1683f50e94c9fd489191f73d7c8f7e2bd871bd0c
     # GitHub CLI 2.103.3; trunk can document commands absent from released CLIs.
     - cli/cli/skills/gh#63837fb778d6a39f02be0ce76ff89f2bc8d74bdc
   mcp:

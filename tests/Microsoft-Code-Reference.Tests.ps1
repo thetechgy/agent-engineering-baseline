@@ -10,6 +10,19 @@ BeforeAll {
         Join-Path $script:CodeReferenceRoot '.agents/skills/microsoft-code-reference/SKILL.md'
     ) -Raw
 
+    $apmDependencies = [regex]::Match(
+        $script:CodeReferenceManifest,
+        '(?ms)^dependencies:\r?\n  apm:\r?\n(.*?)(?=^  [a-z_]+:|^[a-z_]+:|\z)'
+    )
+    $references = @(
+        $apmDependencies.Groups[1].Value -split '\r?\n' |
+            Where-Object { $_ -match 'microsoft-code-reference' } |
+            ForEach-Object { $_.Trim() }
+    )
+    $script:CodeReferencePin = [regex]::Match(
+        ($references -join "`n"), '\A- github/awesome-copilot/skills/microsoft-code-reference#([a-f0-9]{40})\z'
+    )
+
     # Read the native lockfile's top-level sequences, as the Learn tests do.
     # Content integrity remains the responsibility of the full native APM audit.
     $dependencies = [regex]::Match(
@@ -33,20 +46,8 @@ BeforeAll {
 }
 
 Describe 'Microsoft code reference upstream APM integration' {
-    It 'declares exactly one upstream directory dependency on main' {
-        $apmDependencies = [regex]::Match(
-            $script:CodeReferenceManifest,
-            '(?ms)^dependencies:\r?\n  apm:\r?\n(.*?)(?=^  [a-z_]+:|^[a-z_]+:|\z)'
-        )
-        $apmDependencies.Success | Should-BeTrue
-        $references = @(
-            $apmDependencies.Groups[1].Value -split '\r?\n' |
-                Where-Object { $_ -match 'microsoft-code-reference' } |
-                ForEach-Object { $_.Trim() }
-        )
-        Should-BeCollection -Actual $references -Expected @(
-            '- github/awesome-copilot/skills/microsoft-code-reference#main'
-        )
+    It 'declares exactly one upstream directory dependency at a full commit SHA' {
+        $script:CodeReferencePin.Success | Should-BeTrue
     }
 
     It 'exposes the upstream skill identity from the shared deployment directory' {
@@ -73,8 +74,10 @@ Describe 'Microsoft code reference upstream APM integration' {
         $dependency = $script:CodeReferenceDependencies[0]
         $dependency | Should-MatchString '(?m)^- repo_url: github/awesome-copilot\r?$'
         $dependency | Should-MatchString '(?m)^  host: github\.com\r?$'
-        $dependency | Should-MatchString '(?m)^  resolved_ref: main\r?$'
-        $dependency | Should-MatchString '(?m)^  resolved_commit: [a-f0-9]{40}\r?$'
+        $script:CodeReferencePin.Success | Should-BeTrue
+        $pin = $script:CodeReferencePin.Groups[1].Value
+        $dependency | Should-MatchString "(?m)^  resolved_ref: $pin\r?$"
+        $dependency | Should-MatchString "(?m)^  resolved_commit: $pin\r?$"
         $dependency | Should-MatchString '(?m)^  virtual_path: skills/microsoft-code-reference\r?$'
         $dependency | Should-MatchString '(?m)^  is_virtual: true\r?$'
         $dependency | Should-MatchString '(?m)^  package_type: claude_skill\r?$'

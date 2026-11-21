@@ -1,12 +1,12 @@
 lockfile_version: '1'
-generated_at: '2026-11-21T01:37:17.480791+00:00'
+generated_at: '2026-11-21T03:49:39.649713+00:00'
 apm_version: 0.36.1
 dependencies:
 - repo_url: addyosmani/agent-skills
   name: code-simplification
   host: github.com
   resolved_commit: 8c99fa36d90068c82d547f7c12a9d67a3e95f4ee
-  resolved_ref: main
+  resolved_ref: 8c99fa36d90068c82d547f7c12a9d67a3e95f4ee
   version: unknown
   virtual_path: skills/code-simplification
   is_virtual: true
@@ -48,7 +48,7 @@ dependencies:
   name: dependabot
   host: github.com
   resolved_commit: 1683f50e94c9fd489191f73d7c8f7e2bd871bd0c
-  resolved_ref: main
+  resolved_ref: 1683f50e94c9fd489191f73d7c8f7e2bd871bd0c
   version: unknown
   virtual_path: skills/dependabot
   is_virtual: true
@@ -96,7 +96,7 @@ dependencies:
   name: github-actions-hardening
   host: github.com
   resolved_commit: 1683f50e94c9fd489191f73d7c8f7e2bd871bd0c
-  resolved_ref: main
+  resolved_ref: 1683f50e94c9fd489191f73d7c8f7e2bd871bd0c
   version: unknown
   virtual_path: skills/github-actions-hardening
   is_virtual: true
@@ -127,7 +127,7 @@ dependencies:
   name: microsoft-code-reference
   host: github.com
   resolved_commit: 1683f50e94c9fd489191f73d7c8f7e2bd871bd0c
-  resolved_ref: main
+  resolved_ref: 1683f50e94c9fd489191f73d7c8f7e2bd871bd0c
   version: unknown
   virtual_path: skills/microsoft-code-reference
   is_virtual: true

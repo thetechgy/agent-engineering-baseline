@@ -419,6 +419,82 @@
       "validation": "Use the reviewed weekly updater; verify release/archive/executable hashes, regeneration and Windows/Linux bootstrap evidence. apm.lock.yaml apm_version records the generator CLI, not the active bootstrap pin: the updater intentionally uses the previously reviewed CLI."
     },
     {
+      "id": "code-simplification",
+      "label": "code-simplification skill",
+      "repo": "addyosmani/agent-skills",
+      "kind": "skill",
+      "path": "skills/code-simplification",
+      "ref": "main",
+      "sources": [
+        {
+          "path": "apm.yml",
+          "pattern": "^\\s*- addyosmani/agent-skills/skills/code-simplification#(?P<revision>[0-9a-f]{40})$",
+          "count": 1
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": null,
+      "group": null,
+      "validation": "Review the upstream skill directory diff, regenerate with the reviewed APM CLI, and verify deployed file hashes in both bootstrap scopes on Ubuntu and Windows."
+    },
+    {
+      "id": "dependabot",
+      "label": "dependabot skill",
+      "repo": "github/awesome-copilot",
+      "kind": "skill",
+      "path": "skills/dependabot",
+      "ref": "main",
+      "sources": [
+        {
+          "path": "apm.yml",
+          "pattern": "^\\s*- github/awesome-copilot/skills/dependabot#(?P<revision>[0-9a-f]{40})$",
+          "count": 1
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": null,
+      "group": null,
+      "validation": "Review the upstream skill directory diff, regenerate with the reviewed APM CLI, and verify deployed file hashes in both bootstrap scopes on Ubuntu and Windows."
+    },
+    {
+      "id": "github-actions-hardening",
+      "label": "github-actions-hardening skill",
+      "repo": "github/awesome-copilot",
+      "kind": "skill",
+      "path": "skills/github-actions-hardening",
+      "ref": "main",
+      "sources": [
+        {
+          "path": "apm.yml",
+          "pattern": "^\\s*- github/awesome-copilot/skills/github-actions-hardening#(?P<revision>[0-9a-f]{40})$",
+          "count": 1
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": null,
+      "group": null,
+      "validation": "Review the upstream skill directory diff, regenerate with the reviewed APM CLI, and verify deployed file hashes in both bootstrap scopes on Ubuntu and Windows."
+    },
+    {
+      "id": "microsoft-code-reference",
+      "label": "microsoft-code-reference skill",
+      "repo": "github/awesome-copilot",
+      "kind": "skill",
+      "path": "skills/microsoft-code-reference",
+      "ref": "main",
+      "sources": [
+        {
+          "path": "apm.yml",
+          "pattern": "^\\s*- github/awesome-copilot/skills/microsoft-code-reference#(?P<revision>[0-9a-f]{40})$",
+          "count": 1
+        }
+      ],
+      "owner": "Maintainer review",
+      "hold": null,
+      "group": null,
+      "validation": "Review the upstream skill directory diff, regenerate with the reviewed APM CLI, and verify deployed file hashes in both bootstrap scopes on Ubuntu and Windows."
+    },
+    {
       "id": "git-commit",
       "label": "git-commit skill",
       "repo": "github/awesome-copilot",

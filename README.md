@@ -45,9 +45,8 @@ commands.
 Microsoft Learn uses **Model Context Protocol (MCP)** to let agents search official
 Microsoft documentation. There's also an offline Microsoft Graph reference skill.
 
-The bootstrap scripts verify and install a pinned APM CLI. That's different from pinning
-the skills: fresh installations can resolve upstream branches, while unchanged
-destination locks are retained on reinstall. See
+The bootstrap scripts verify and install a pinned APM CLI. Each reviewed baseline
+commit declares the exact revisions of its imported skills. See
 [Security and safety](#security-and-safety) before running the scripts.
 
 GitHub Actions checks PRs and pushes to `main`, including scripts, generated files,
@@ -66,9 +65,8 @@ need network access to releases/dependencies or a mirror. Bash needs `curl`, `ta
 and `sha256sum`.
 
 **Before installing:** Default bootstrap trusts bundled executables and transitive MCP
-servers. Ordinary installation retains matching destination locks; it does not
-refresh dependency branches. A fresh installation can still select upstream revisions
-that have not been individually reviewed here. Review the
+servers. Select a reviewed baseline commit to get its pinned skill revisions.
+Ordinary reinstall retains matching destination locks. Review the
 [security details](#security-and-safety). User scope changes your shared agent
 configuration; project scope changes the current project.
 
@@ -133,8 +131,10 @@ dependency declarations resolve natively. Missing locks require new resolution;
 a selected install does not reconstruct unrelated packages' lock entries, even
 when their declarations and deployed files remain. Restore the reviewed lock in
 an existing multi-package destination rather than treating bootstrap as lock
-repair. Malformed or conflicted locks fail rather than being silently reset. Preserve the
-destination manifest and lockfile, and inspect APM's reported resolved commits.
+repair. Malformed YAML, an invalid dependency section, and unresolved Git
+conflict markers fail validation. APM can reconcile a valid lock entry that
+disagrees with a declared pin. Preserve the destination manifest and lockfile,
+and inspect APM's reported resolved commits.
 
 **Adopt a specific reviewed baseline commit:** set the existing override, then run
 bootstrap for the intended scope. For example:
@@ -158,9 +158,11 @@ baseline. Changing the baseline ref adopts its instructions/local skills and any
 changed dependency declarations; unchanged transitive declarations retain their
 destination locks. It does not import the new baseline's source lockfile.
 
-**Deliberately refresh branch-tracking dependencies:** use the reviewed executable
-reported by bootstrap. The following paths are the defaults; adjust them for
-`APM_INSTALL_DIR`. Select the same baseline reference you intend to retain.
+**Deliberately refresh a branch-based installation:** use the reviewed executable
+reported by bootstrap. A scoped refresh can advance a baseline selected by
+`#main` and refresh mutable dependencies in older baseline revisions. The paths
+below are the defaults. Adjust them for `APM_INSTALL_DIR` and select the
+baseline reference you intend to retain.
 
 On Ubuntu:
 
@@ -193,19 +195,16 @@ $baselineRef = if ($env:BASELINE_PACKAGE_REF) { $env:BASELINE_PACKAGE_REF } else
 Run only the pair for your intended scope and stop if installation fails. The
 positional package scopes refresh to the baseline and its dependency subtree;
 with a valid destination lock, independent unrelated packages retain their locked
-commits. Shared dependency
-identities can affect other consumers, subject to APM's native conflict rules.
-Both trust flags are intentionally retained in these commands. A SHA-selected baseline stays
-at that SHA while its branch-tracking children refresh; a `#main` selection also
-adopts the current baseline branch tip. Inspect the resulting commits and deployed
-configuration before use. This is deliberate upstream resolution, **not** replay of
-this repository's reviewed transitive lock. Avoid bare `apm update` when you do not
-intend to refresh every dependency in the destination.
+commits. Shared dependency identities can affect other consumers, subject to
+APM's native conflict rules. Both trust flags are enabled in these commands.
+Inspect the resulting commits and deployed configuration before use. A refresh
+resolves upstream dependencies and writes the destination lock. To limit a
+refresh to the baseline subtree, use the positional package command above.
 
-The daily freshness report detects candidates, review approves changes, and the
-weekly updater proposes source/lock changes. Installing an approved baseline ref
-and deliberately refreshing a destination are separate actions. Neither process
-makes every fresh-installed transitive revision individually reviewed.
+The daily freshness report detects skill changes. Maintainers propose pin updates
+in review PRs. The weekly updater proposes CLI and generated-output changes within
+its existing allowlists. To adopt a reviewed skill update, select the new reviewed
+baseline commit.
 
 ### Reinstall when adopting APM 0.35
 
@@ -317,10 +316,13 @@ remote systems.
   checks.
 - **Your installation:** its own manifest and lock govern the result. Ordinary
   bootstrap retains matching locks, including an unchanged baseline branch ref.
-  Fresh installations or new declarations can resolve branch-tracking skills to
-  current upstream commits rather than this repository's reviewed commits. Even a
-  fixed baseline commit does not freeze those transitive branches. Four imported
-  skills track `main`. The msgraph, git-commit and gh declarations pin full commits.
+  In a fresh destination, a reviewed baseline commit selects the exact commits
+  declared for all seven imported skills, including the six msgraph platform
+  executables. Upstream branch movement leaves those selections fixed. The current
+  skill graph has no further mutable Git dependencies. APM resolves the graph
+  from the declarations and creates the destination lock. The source lock's hashes
+  are review and validation evidence. Bootstrap uses native APM installation and
+  does not enforce those hashes against the destination on each run.
 
 Review the destination's manifest, resolved skills, executable assets and source
 overrides. `--trust-bin` remains necessary for `msgraph`: APM 0.35.0 can exit zero
@@ -349,17 +351,18 @@ tracks safe native MCP trust narrowing **and** reviewed transitive reproducibili
 for fresh installations. It includes the tagged source evidence, reproduced
 limitations and Windows/Ubuntu acceptance criteria.
 
-For msgraph, select a reviewed baseline commit containing the pin using
-`BASELINE_PACKAGE_REF` as described above, then run bootstrap in the existing
-scope. Keeping the same locked baseline revision keeps its old declaration.
-The destination lock records the msgraph commit and the SHA-256 hashes of the
-six files under `.agents/skills/msgraph/scripts/bin/`.
+To migrate from a branch-based installation, set `BASELINE_PACKAGE_REF` to
+a reviewed baseline commit containing the pins and run bootstrap in the original
+scope with its existing destination lock. Reusing the same locked baseline
+revision retains its declarations.
 
-The freshness report tracks changes to the upstream skill directory. For a pin
-bump, review the upstream diff and all six executable hashes, update the full
-SHA in `apm.yml` in a maintainer PR, and regenerate with the reviewed APM CLI.
-Check that unrelated revisions stay fixed and require both platform jobs to
-verify fresh install, ordinary reinstall and migration before merging.
+The freshness report compares each pinned skill directory with upstream. For a
+pin bump, review the directory diff, plus all six executable hashes for msgraph.
+Update the full SHA in `apm.yml` in a maintainer PR and regenerate with the reviewed
+APM CLI using `scripts/apm_regeneration.py --mode refresh`. Check that unrelated
+revisions stay fixed. The existing Ubuntu and Windows PR jobs compare installed
+files and destination locks against the reviewed lock across fresh install,
+ordinary reinstall and migration in both scopes.
 
 ### Verified tooling and reviewed refreshes
 
@@ -393,15 +396,15 @@ and subscribe to receive material-change comments through your GitHub notificati
 settings. The publisher also links the issue from its job summary.
 
 Freshness and management policy are separate. An outdated component can remain on
-an intentional hold or belong to another updater. Branch-tracking APM skills show
-their actual pins with freshness **not checked** where upstream polling is
-delegated to the weekly updater. Dependabot proposes Actions and Python updates. Those
+an intentional hold or belong to another updater. Pinned APM skills use directory
+comparisons so unrelated upstream commits do not signal a skill change.
+Dependabot proposes Actions and Python updates. Those
 dependencies are omitted from this issue and its upstream polling and alerts;
 local pin and hash checks remain enforced. Python coverage applies only to
 `.github/requirements`, including its transitive dependencies, and does not
 include the evaluator or SkillSpector frozen locks. The existing reviewed weekly
-APM update workflow remains responsible for CLI/hash refreshes and branch
-dependencies.
+APM update workflow remains responsible for CLI/hash refreshes and generated
+outputs. Authored skill pins are reviewed in maintainer PRs.
 
 The report monitors direct tooling and the explicitly constrained Harbor, OpenAI
 and Pydantic compatibility group. It extracts pins from existing installation,
