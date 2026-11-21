@@ -18,6 +18,23 @@ import judge_calibration_inputs as inputs
 import skill_reports as reports
 
 
+HISTORICAL_AUTHENTICATION_CLI = '''import runpy
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from unittest.mock import patch
+
+# run_case invokes <python> -B <selection CLI> authenticate ...
+sys.argv = sys.argv[2:]
+sys.path.insert(0, str(Path(sys.argv[0]).parent))
+import evaluation_campaign_protocol as protocol
+
+with patch.object(protocol, 'datetime', wraps=datetime) as clock:
+    clock.now.return_value = datetime(2026, 11, 17, 18, tzinfo=timezone.utc)
+    runpy.run_path(sys.argv[0], run_name='__main__')
+'''
+
+
 class JudgeContracts(unittest.TestCase):
     def setUp(self):
         self.task = selected_task('judge-calibration-090-v1')
@@ -56,8 +73,15 @@ class JudgeContracts(unittest.TestCase):
             shared.runtime_gate(self.task)
         from campaign_authentication_qualification import run_case
         with tempfile.TemporaryDirectory() as directory:
-            run_case(Path(directory) / 'closed', self.task, 'closed-allocation')
-            run_case(Path(directory) / 'wrong-artifact', self.task, 'wrong-artifact')
+            root = Path(directory)
+            # run_case starts a child interpreter. Patch only its protocol clock.
+            python = root / 'historical-python'
+            python.write_text(f'#!{sys.executable} -B\n' + HISTORICAL_AUTHENTICATION_CLI)
+            python.chmod(0o700)
+            for case in ('closed-allocation', 'wrong-artifact'):
+                with self.subTest(case=case):
+                    run_case(root / case, self.task, case, python=python)
+            run_case(root / 'expired-authority', self.task, 'expired-authority')
 
     def test_missing_reference_cannot_be_replaced_by_an_invented_success_target(self):
         original = reports.read_json
