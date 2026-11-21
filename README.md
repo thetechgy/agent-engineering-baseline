@@ -45,9 +45,8 @@ commands.
 Microsoft Learn uses **Model Context Protocol (MCP)** to let agents search official
 Microsoft documentation. There's also an offline Microsoft Graph reference skill.
 
-The bootstrap scripts verify and install a pinned APM CLI. That's different from pinning
-the skills: fresh installations can resolve upstream branches, while unchanged
-destination locks are retained on reinstall. See
+The bootstrap scripts verify and install a pinned APM CLI. Each reviewed baseline
+commit declares the exact revisions of its imported skills. See
 [Security and safety](#security-and-safety) before running the scripts.
 
 GitHub Actions checks PRs and pushes to `main`, including scripts, generated files,
@@ -132,8 +131,10 @@ dependency declarations resolve natively. Missing locks require new resolution;
 a selected install does not reconstruct unrelated packages' lock entries, even
 when their declarations and deployed files remain. Restore the reviewed lock in
 an existing multi-package destination rather than treating bootstrap as lock
-repair. Malformed or conflicted locks fail rather than being silently reset. Preserve the
-destination manifest and lockfile, and inspect APM's reported resolved commits.
+repair. Malformed YAML, an invalid dependency section, and unresolved Git
+conflict markers fail validation. APM can reconcile a valid lock entry that
+disagrees with a declared pin. Preserve the destination manifest and lockfile,
+and inspect APM's reported resolved commits.
 
 **Adopt a specific reviewed baseline commit:** set the existing override, then run
 bootstrap for the intended scope. For example:
@@ -157,9 +158,11 @@ baseline. Changing the baseline ref adopts its instructions/local skills and any
 changed dependency declarations; unchanged transitive declarations retain their
 destination locks. It does not import the new baseline's source lockfile.
 
-**Deliberately refresh branch-tracking dependencies:** use the reviewed executable
-reported by bootstrap. The following paths are the defaults; adjust them for
-`APM_INSTALL_DIR`. Select the same baseline reference you intend to retain.
+**Deliberately refresh a branch-based installation:** use the reviewed executable
+reported by bootstrap. A scoped refresh can advance a baseline selected by
+`#main` and refresh mutable dependencies in older baseline revisions. The paths
+below are the defaults. Adjust them for `APM_INSTALL_DIR` and select the
+baseline reference you intend to retain.
 
 On Ubuntu:
 
@@ -192,14 +195,11 @@ $baselineRef = if ($env:BASELINE_PACKAGE_REF) { $env:BASELINE_PACKAGE_REF } else
 Run only the pair for your intended scope and stop if installation fails. The
 positional package scopes refresh to the baseline and its dependency subtree;
 with a valid destination lock, independent unrelated packages retain their locked
-commits. Shared dependency
-identities can affect other consumers, subject to APM's native conflict rules.
-Both trust flags are intentionally retained in these commands. A SHA-selected baseline stays
-at that SHA while its branch-tracking children refresh; a `#main` selection also
-adopts the current baseline branch tip. Inspect the resulting commits and deployed
-configuration before use. This is deliberate upstream resolution, **not** replay of
-this repository's reviewed transitive lock. Avoid bare `apm update` when you do not
-intend to refresh every dependency in the destination.
+commits. Shared dependency identities can affect other consumers, subject to
+APM's native conflict rules. Both trust flags are enabled in these commands.
+Inspect the resulting commits and deployed configuration before use. A refresh
+resolves upstream dependencies and writes the destination lock. To limit a
+refresh to the baseline subtree, use the positional package command above.
 
 The daily freshness report detects skill changes. Maintainers propose pin updates
 in review PRs. The weekly updater proposes CLI and generated-output changes within
