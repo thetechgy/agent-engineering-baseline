@@ -120,6 +120,9 @@ class FixtureAPI(fresh.GitHub):
                                 for name in ("harbor", "openai", "pydantic"))
             return {"encoding": "base64", "content": base64.b64encode(content.encode()).decode()}
         if item and "contents" in parts:
+            skill_path = "/".join(parts[4:])
+            item = next(entry for entry in self.definitions.values()
+                        if entry["repo"] == repo and entry.get("path") == skill_path)
             ref = arguments["ref"][0]
             changed = self.tree_changed and ref != self.rows[item["id"]]["pin"]["revision"]
             return [{"path": item["path"] + "/SKILL.md", "type": "file", "sha": ("b" if changed else "a") * 40}]
@@ -494,6 +497,23 @@ class FreshnessTests(unittest.TestCase):
         api.failures["repos/NVIDIA/SkillEvaluator/commits/"] = "pin_tag_mismatch"
         report = self.collect(api)
         self.assertEqual(self.find(report, "skillevaluator")["freshness"], "unverified")
+
+    def test_reviewed_imports_poll_each_skill_directory_at_pin_and_upstream(self):
+        api = FixtureAPI()
+        current = self.collect(api)
+        api.tree_changed = True
+        api.calls.clear()
+        changed = self.collect(api)
+        for name in ("code-simplification", "dependabot", "github-actions-hardening", "microsoft-code-reference"):
+            with self.subTest(skill=name):
+                item = api.definitions[name]
+                row = self.find(changed, name)
+                self.assertEqual(self.find(current, name)["freshness"], "current")
+                self.assertEqual(row["freshness"], "update_available")
+                self.assertEqual(row["policy"]["owner"], "Maintainer review")
+                location = f"repos/{item['repo']}/contents/skills/{name}?ref="
+                for revision in (row["pin"]["revision"], row["upstream"]["revision"]):
+                    self.assertIn(("GET", location + revision, False), api.calls)
 
     def test_held_skill_content_changes_update_issue_but_unrelated_commits_do_not(self):
         api = FixtureAPI()
