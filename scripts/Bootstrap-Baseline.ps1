@@ -716,7 +716,11 @@ try {
         $packageRef = if ($env:BASELINE_PACKAGE_REF) { $env:BASELINE_PACKAGE_REF }
         else { $defaultPackageRef }
         if ($Scope -eq 'Global') {
-            Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --global --target 'codex,copilot' --trust-bin --trust-transitive-mcp $packageRef
+            $packages = @($packageRef)
+            if ($packageRef -cmatch '^https://github\.com/thetechgy/agent-engineering-baseline\.git#(.+)$') {
+                $packages += "thetechgy/agent-engineering-baseline/packages/copilot-learn#$($Matches[1])"
+            }
+            Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --global --target 'codex,copilot' --trust-bin --trust-transitive-mcp @packages
             Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --global
         }
         else {

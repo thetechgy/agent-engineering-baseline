@@ -465,7 +465,13 @@ deploy_baseline() {
     case "$MODE" in
         global)
             log "installing $package_ref at user scope"
-            run_apm install --global --target codex,copilot --trust-bin --trust-transitive-mcp "$package_ref"
+            local -a packages=("$package_ref")
+            case "$package_ref" in
+                https://github.com/thetechgy/agent-engineering-baseline.git\#*)
+                    packages+=("thetechgy/agent-engineering-baseline/packages/copilot-learn#${package_ref#*\#}")
+                    ;;
+            esac
+            run_apm install --global --target codex,copilot --trust-bin --trust-transitive-mcp "${packages[@]}"
             run_apm compile --global
             ;;
         repo)

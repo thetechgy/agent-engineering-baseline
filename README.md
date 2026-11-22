@@ -106,17 +106,19 @@ wrapper's checkout aren't automatically installed. Reinstalling unchanged `#main
 keeps the destination's locked baseline commit; it does not adopt newer commits
 on that branch. See [deliberate updates](#install-and-update-deliberately).
 
-**APM 0.37.0 is a qualification candidate.** Keep the 0.36.1 bootstrap for existing installations.
-See the [migration evidence and rollback](docs/apm-0370-qualification.md).
+Existing 0.36.1 destinations require a one-time
+[scoped reset and rollback backup](docs/apm-0370-qualification.md#reset-an-existing-destination). New installations
+select 0.37.0.
 
-Both scopes configure both CLIs. Codex only loads project configuration for trusted
-projects; Copilot CLI also requires folder trust before loading project MCP servers.
+Both scopes deploy instructions and skills to Codex and Copilot. Microsoft Learn is available to Codex in trusted
+projects. User bootstrap adds the Copilot-only native package from the same baseline ref. Its server ID is
+`microsoft-learn-copilot`. Custom package URLs install the package specified by the caller.
 APM maintains the following state and CLI instruction sources:
 
 | Scope | APM state | Instructions | MCP configuration | Skills |
 | --- | --- | --- | --- | --- |
 | User | `~/.apm/apm.yml`, `~/.apm/apm.lock.yaml`, `~/.apm/config.json` | Codex: `~/.codex/AGENTS.md`; Copilot: `~/.copilot/instructions/personal.instructions.md` | `~/.codex/config.toml`, `~/.copilot/mcp-config.json` | `~/.agents/skills/*` |
-| Project | `./apm.yml`, `./apm.lock.yaml`, `./apm_modules/` | Both: `./AGENTS.md`; Copilot also: `./.github/instructions/personal.instructions.md` | `./.codex/config.toml`, `./.mcp.json` | `./.agents/skills/*` |
+| Project | `./apm.yml`, `./apm.lock.yaml`, `./apm_modules/` | Both: `./AGENTS.md`; Copilot also: `./.github/instructions/personal.instructions.md` | `./.codex/config.toml` | `./.agents/skills/*` |
 
 With APM 0.35.0, user-scope compilation also generates `~/.copilot/AGENTS.md`.
 Local discovery with Copilot CLI 1.0.103 selected the modular user instruction above,
@@ -137,7 +139,7 @@ an existing multi-package destination rather than treating bootstrap as lock
 repair. Malformed YAML, an invalid dependency section, and unresolved Git
 conflict markers fail validation.
 
-APM 0.36.1 can reconcile a valid lock entry whose resolved commit disagrees
+APM 0.37.0 can reconcile a valid lock entry whose resolved commit disagrees
 with an exact pin. Keep the destination manifest and lock, rerun bootstrap at
 the same scope with the reviewed baseline commit, and verify the destination
 commit and deployed file hashes against the reviewed values. If bootstrap
@@ -178,8 +180,9 @@ On Ubuntu:
 ```sh
 apm_path="$HOME/.local/bin/apm"
 baseline_ref="${BASELINE_PACKAGE_REF:-https://github.com/thetechgy/agent-engineering-baseline.git#main}"
-# User scope:
-"$apm_path" install --global --update --target codex,copilot --trust-bin --trust-transitive-mcp "$baseline_ref"
+# User scope, for the canonical baseline URL:
+copilot_ref="thetechgy/agent-engineering-baseline/packages/copilot-learn#${baseline_ref#*#}"
+"$apm_path" install --global --update --target codex,copilot --trust-bin --trust-transitive-mcp "$baseline_ref" "$copilot_ref"
 "$apm_path" compile --global
 # Repository scope, from the destination project:
 "$apm_path" install --update --target codex,copilot --trust-bin --trust-transitive-mcp "$baseline_ref"
@@ -193,8 +196,9 @@ $apm = Join-Path $env:LOCALAPPDATA 'Programs/apm/bin/apm.cmd'
 $baselineRef = if ($env:BASELINE_PACKAGE_REF) { $env:BASELINE_PACKAGE_REF } else {
     'https://github.com/thetechgy/agent-engineering-baseline.git#main'
 }
-# User scope:
-& $apm install --global --update --target codex,copilot --trust-bin --trust-transitive-mcp $baselineRef
+# User scope, for the canonical baseline URL:
+$copilotRef = "thetechgy/agent-engineering-baseline/packages/copilot-learn#" + $baselineRef.Split("#", 2)[1]
+& $apm install --global --update --target codex,copilot --trust-bin --trust-transitive-mcp $baselineRef $copilotRef
 & $apm compile --global
 # Repository scope, from the destination project:
 & $apm install --update --target codex,copilot --trust-bin --trust-transitive-mcp $baselineRef

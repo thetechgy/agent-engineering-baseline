@@ -20,6 +20,7 @@ dependencies:
     - cli/cli/skills/gh#63837fb778d6a39f02be0ce76ff89f2bc8d74bdc
   mcp:
     - name: microsoft-learn
+      targets: [codex]
       registry: false
       transport: http
       url: https://learn.microsoft.com/api/mcp

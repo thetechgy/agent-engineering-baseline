@@ -12,18 +12,8 @@ BeforeAll {
 }
 
 Describe 'Microsoft Learn generated MCP configuration' {
-    It 'configures only the official unauthenticated remote server for Copilot CLI' {
-        @($script:LearnCopilot.mcpServers.PSObject.Properties.Name) | Should-BeCollection @('microsoft-learn')
-        $server = $script:LearnCopilot.mcpServers.'microsoft-learn'
-        $server.url | Should-Be 'https://learn.microsoft.com/api/mcp'
-        $server.type | Should-Be 'http'
-        @($server.PSObject.Properties.Name) |
-            Should-BeCollection @('url', 'type', 'tools', 'enabled_tools')
-    }
-
-    It 'exposes exactly the reviewed tools through Copilot native and passthrough lists' {
-        $script:LearnCopilot.mcpServers.'microsoft-learn'.tools | Should-BeCollection $script:LearnExpectedTools
-        $script:LearnCopilot.mcpServers.'microsoft-learn'.enabled_tools | Should-BeCollection $script:LearnExpectedTools
+    It 'leaves the shared project MCP file without a baseline server' {
+        @($script:LearnCopilot.mcpServers.PSObject.Properties).Count | Should-Be 0
     }
 
     It 'configures only the official unauthenticated remote server for Codex CLI' {
@@ -58,14 +48,14 @@ Describe 'Microsoft Learn generated MCP configuration' {
         $configs.Groups[1].Value | Should-MatchString '(?m)^    url: https://learn\.microsoft\.com/api/mcp\r?$'
     }
 
-    It 'restricts locked MCP target ownership to Codex CLI and Copilot CLI' {
+    It 'restricts locked MCP target ownership to Codex CLI' {
         $targets = [regex]::Match($script:LearnLockfile, '(?ms)^mcp_target_servers:\r?\n(.*?)(?=^[a-z_]+:|\z)')
         $targets.Success | Should-BeTrue
         $names = @([regex]::Matches($targets.Groups[1].Value, '(?m)^  ([a-z]+):\r?$') |
             ForEach-Object { $_.Groups[1].Value })
-        $names | Should-BeCollection @('codex', 'copilot')
+        $names | Should-BeCollection @('codex')
         $servers = @([regex]::Matches($targets.Groups[1].Value, '(?m)^  - ([^\r\n]+)\r?$') |
             ForEach-Object { $_.Groups[1].Value })
-        $servers | Should-BeCollection @('microsoft-learn', 'microsoft-learn')
+        $servers | Should-BeCollection @('microsoft-learn')
     }
 }

@@ -1,5 +1,5 @@
 lockfile_version: '4'
-generated_at: '2026-11-21T22:54:23.943229+00:00'
+generated_at: '2026-11-22T00:29:34.194444+00:00'
 apm_version: 0.37.0
 manifest_targets:
 - codex
@@ -955,15 +955,6 @@ deployments:
   - .
   active_owner: .
   content_hash: sha256:c99988390cd73dfd8b30849dadb158911a8d2760d1eeded2c74eb065bff4ad91
-- kind: uri
-  target: mcp
-  value: microsoft-learn
-  runtime: copilot
-  scope: project
-  owners:
-  - .
-  active_owner: .
-  content_hash: sha256:3aaae6c74e36826defc4b53492c748afa60f8af28d51743933761f4d1f7ec047
 mcp_servers:
 - microsoft-learn
 mcp_configs:
@@ -976,14 +967,14 @@ mcp_configs:
     - microsoft_docs_fetch
     - microsoft_code_sample_search
     url: https://learn.microsoft.com/api/mcp
+    targets:
+    - codex
     enabled_tools:
     - microsoft_docs_search
     - microsoft_docs_fetch
     - microsoft_code_sample_search
 mcp_target_servers:
   codex:
-  - microsoft-learn
-  copilot:
   - microsoft-learn
 local_deployed_files:
 - .agents/skills/a11y

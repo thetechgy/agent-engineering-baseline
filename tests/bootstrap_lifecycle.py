@@ -85,9 +85,9 @@ def locked_dependencies(path):
     return rows
 
 
-def prepare_bootstrap(root, member, checksums):
+def prepare_bootstrap(root, member, checksums, repository=REPOSITORY):
     """Reuse authentic reviewed archive bytes for every production-wrapper run."""
-    version = (REPOSITORY / ".apm-version").read_text().strip()
+    version = (repository / ".apm-version").read_text().strip()
     archive_name = member.split("/", 1)[0] + (".zip" if os.name == "nt" else ".tar.gz")
     archive = root / "mirror" / f"v{version}" / archive_name
     archive.parent.mkdir(parents=True)
@@ -98,7 +98,7 @@ def prepare_bootstrap(root, member, checksums):
     source = root / "source"
     (source / "scripts").mkdir(parents=True)
     for name in (".apm-version", ".apm-checksums", "scripts/bootstrap.sh", "scripts/Bootstrap-Baseline.ps1"):
-        shutil.copy2(REPOSITORY / name, source / name)
+        shutil.copy2(repository / name, source / name)
     if os.name == "nt":
         # Match the existing Windows acquisition fixture boundary: only the
         # downloader is replaced. Hashing, extraction, promotion, dispatch and
@@ -420,14 +420,22 @@ def instruction_regeneration(root, apm):
           "native regeneration preserves the authored instruction")
     check("REPOSITORY_ONLY_REVIEW" in (source / "AGENTS.md").read_text(encoding="utf-8"),
           "local compilation retains repository-only review guidance")
-    # The helper deliberately requires clean generated files for another refresh.
-    scenario.run(["git", "add", "."], source)
-    scenario.run(["git", "commit", "--message", "Regenerated instruction outputs"], source)
     paths = [source / "apm.lock.yaml", *scenario.instruction_paths()]
     before = [path.read_bytes() for path in paths]
     scenario.run(helper)
     check([path.read_bytes() for path in paths] == before,
           "repeated native instruction regeneration retains lock and output bytes")
+
+    scenario.run(["git", "add", "."], source)
+    scenario.run(["git", "commit", "--message", "Regenerated instruction outputs"], source)
+    destination = source / ".github/instructions/personal.instructions.md"
+    write(destination, "Independent operator edit\n")
+    scenario.run(["git", "add", "."], source)
+    scenario.run(["git", "commit", "--message", "Independent destination edit"], source)
+    instructions(source, "next")
+    output = scenario.run(helper, success=False)
+    check(destination.read_text() == "Independent operator edit\n" and destination.name in output,
+          "committed destination edit survives and the conflict names the file")
 
 
 MSGRAPH = "merill/msgraph/skills/msgraph"
@@ -663,6 +671,105 @@ def reviewed_imports(root, apm, bootstrap):
                     check(bool(output.strip()), f"{scope}: actual reviewed msgraph offline launcher succeeds")
 
 
+def published_scope(root, apm, bootstrap, user):
+    scenario = Scenario(root, apm, user, bootstrap)
+    revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPOSITORY, text=True).strip()
+    ref = "https://github.com/thetechgy/agent-engineering-baseline.git#" + revision
+    codex, copilot = scenario.config_paths()
+    foreign = {"type": "http", "url": "https://example.invalid/independent"}
+    write(copilot, json.dumps({"mcpServers": {"independent": foreign}}))
+    write(codex, 'model = "operator"\n')
+    for stage in ("fresh", "reinstall"):
+        scenario.install(ref, timeout=600)
+        servers = json.loads(copilot.read_text())["mcpServers"]
+        expected = {"independent": foreign}
+        if user:
+            expected["microsoft-learn-copilot"] = {
+                "type": "http", "url": LEARN["url"], "id": "", "tools": TOOLS}
+        check(servers == expected, f"{stage}: scoped Copilot configuration preserves independent entries")
+        import tomllib
+        config = tomllib.loads(codex.read_text())
+        check(config["model"] == "operator" and config["mcp_servers"]["microsoft-learn"] ==
+              {"url": LEARN["url"], "enabled_tools": TOOLS}, f"{stage}: scoped Codex Learn access")
+        expected_imports = {name: (sha, file_hashes(body)) for name, (sha, body)
+                            in locked_dependencies(REPOSITORY / "apm.lock.yaml").items()}
+        verify_imports(scenario, expected_imports, stage)
+
+
+PREVIOUS = "12e0c54bf133bbbd9a3000b619d6deaf371c1403"
+
+
+def reset_and_rollback(root, apm, bootstrap, previous_bootstrap, user):
+    scenario = Scenario(root, apm, user, previous_bootstrap)
+    old_version = (previous_bootstrap[0] / ".apm-version").read_text().strip()
+    current_version = scenario.env["VERSION"]
+    scenario.env["VERSION"] = old_version
+    for name in ("unrelated", "baseline"):
+        dependencies = {"mcp": [LEARN]} if name == "baseline" else {}
+        package(scenario.repos[name], name, dependencies)
+        revision = scenario.commit(name, "previous")
+        scenario.install(scenario.url(name) + ".git#" + revision)
+    original = revision
+    codex, current_copilot = scenario.config_paths()
+    copilot = current_copilot if user else scenario.deploy / ".github/mcp.json"
+    value = json.loads(copilot.read_text())
+    foreign = {"type": "http", "url": "https://example.invalid/operator"}
+    value["mcpServers"]["independent"] = foreign
+    write(copilot, json.dumps(value))
+    write(codex, 'model = "operator"\n' + codex.read_text())
+    # A temporary, offline backup of this fixture's whole destination also
+    # retains receipts and modules. Only these disposable fixtures are restored.
+    backup = root / "backup"
+    shutil.copytree(scenario.deploy, backup, symlinks=True)
+    receipts = scenario.home / ".apm/deployment-receipts"
+    if not user:
+        shutil.copytree(receipts, root / "previous-receipts")
+    record = unrelated_state(scenario)
+    prior_lock = (scenario.metadata / "apm.lock.yaml").read_bytes()
+    old_executable, = (root / "cli").rglob("apm.exe" if os.name == "nt" else "releases/*/apm")
+    scenario.run([old_executable, "uninstall", *scenario.scope, scenario.url("baseline") + ".git"])
+    check(unrelated_state(scenario) == record and "bootstrap-fixture/baseline" not in scenario.pins(),
+          "0.36.1 scoped uninstall removes only the baseline package")
+    check(json.loads(copilot.read_text())["mcpServers"] == {"independent": foreign}
+          and 'model = "operator"' in codex.read_text(), "reset retains independent Copilot and Codex settings")
+    # Bootstrap promotes the verified CLI in its managed prefix.
+    scenario.env["VERSION"] = current_version
+    scenario.bootstrap = bootstrap
+    package(scenario.repos["baseline"], "baseline", {"mcp": [dict(LEARN, targets=["codex"])]})
+    selected = scenario.commit("baseline", "current")
+    scenario.install(scenario.url("baseline") + ".git#" + selected)
+    check(scenario.pins()["bootstrap-fixture/baseline"] == selected
+          and scenario.pins()["bootstrap-fixture/unrelated"] == record[0][0]
+          and unrelated_state(scenario)[1] == record[1]
+          and file_hashes(unrelated_state(scenario)[0][1]) == file_hashes(record[0][1])
+          and json.loads(copilot.read_text())["mcpServers"]["independent"] == foreign
+          and 'model = "operator"' in codex.read_text(), "re-bootstrap preserves independent configuration and package")
+    scenario.instruction_delivery("current")
+    shutil.rmtree(scenario.deploy)
+    shutil.copytree(backup, scenario.deploy, symlinks=True)
+    if not user:
+        # This home belongs exclusively to this repository fixture.
+        shutil.rmtree(receipts)
+        shutil.copytree(root / "previous-receipts", receipts)
+    scenario.bootstrap = previous_bootstrap
+    scenario.env["VERSION"] = old_version
+    scenario.install(scenario.url("baseline") + ".git#" + original)
+    check((scenario.metadata / "apm.lock.yaml").read_bytes() == prior_lock and unrelated_state(scenario) == record
+          and json.loads(copilot.read_text())["mcpServers"]["independent"] == foreign
+          and 'model = "operator"' in codex.read_text(), "restored snapshot replays 0.36.1 at the original scope")
+    scenario.instruction_delivery("previous")
+
+
+def previous_fixture(root, member):
+    checkout = root / "previous-checkout"
+    for name in (".apm-version", ".apm-checksums", "scripts/bootstrap.sh", "scripts/Bootstrap-Baseline.ps1"):
+        path = checkout / name
+        path.parent.mkdir(exist_ok=True, parents=True)
+        path.write_bytes(subprocess.check_output(["git", "show", PREVIOUS + ":" + name], cwd=REPOSITORY))
+    checksums = dict(line.split()[::-1] for line in (checkout / ".apm-checksums").read_text().splitlines())
+    return prepare_bootstrap(root / "previous", member, checksums, checkout)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apm", required=True, type=Path)
@@ -675,6 +782,12 @@ def main():
     with tempfile.TemporaryDirectory(prefix="apm-lifecycle-") as directory:
         root = Path(directory).resolve()
         bootstrap = prepare_bootstrap(root, member, expected)
+        previous = previous_fixture(root, member)
+        for user in (False, True):
+            reset_and_rollback(root / ("reset-user" if user else "reset-project"), apm, bootstrap, previous, user)
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            for user in (False, True):
+                published_scope(root / ("published-user" if user else "published-repo"), apm, bootstrap, user)
         failures = []
         for user in (False, True):
             for case in ("contradictory lock", "shared dependency conflict"):

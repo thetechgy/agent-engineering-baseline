@@ -4,6 +4,7 @@
 import argparse
 import hashlib
 import os
+import re
 from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
@@ -95,6 +96,20 @@ def snapshot(source, destination):
     run(["git", "update-index", "-z", "--index-info"], destination, input=entries)
 
 
+def omit_locked_instruction(root):
+    # A cold checkout has no deploy receipt. Only discard the copied output
+    # when the previous lock authenticates it, before "update" rewrites it.
+    name = ".github/instructions/personal.instructions.md"
+    output = safe_path(root, name)
+    if not output.is_file():
+        return
+    lock = (root / "apm.lock.yaml").read_text(encoding="utf-8")
+    section = re.search(r"(?ms)^local_deployed_file_hashes:\n((?:  [^\n]+\n?)*)", lock)
+    expected = "  " + name + ": sha256:" + hashlib.sha256(output.read_bytes()).hexdigest()
+    if section and expected in section[1].splitlines():
+        output.unlink()
+
+
 def native_checks(apm, root, refresh, environment=None):
     environment = dict(os.environ if environment is None else environment)
 
@@ -164,10 +179,8 @@ def regenerate(source, apm, mode):
         raise RuntimeError("The absolute APM executable must exist")
     before = inventory(source)
     if mode == "refresh":
-        clean = subprocess.run(["git", "diff", "--quiet", "HEAD", "--", *sorted(OUTPUTS), ".agents/skills"],
-                               cwd=source, env=git_environment(), check=False)
-        if clean.returncode:
-            raise RuntimeError("Refresh requires unchanged generated outputs")
+        dirty = {os.fsdecode(name) for name in git(source, "diff", "--name-only", "-z", "HEAD", "--",
+                                                   *sorted(OUTPUTS), ".agents/skills").split(b"\0") if name}
     tracked = {os.fsdecode(name) for name in git(source, "ls-files", "-z").split(b"\0") if name}
     with tempfile.TemporaryDirectory(prefix="baseline-regeneration-") as directory:
         scratch = Path(directory) / "repository"
@@ -181,6 +194,8 @@ def regenerate(source, apm, mode):
         environment = {**git_environment(), "HOME": str(home), "XDG_CONFIG_HOME": str(home / ".config"),
                        "XDG_CACHE_HOME": str(home / ".cache"), "TMPDIR": directory}
         environment.pop("APM_HOME", None)
+        if mode == "refresh":
+            omit_locked_instruction(scratch)
         native_checks(apm, scratch, mode == "refresh", environment)
         if inventory(source) != before:
             raise RuntimeError("Checkout changed during regeneration; nothing was published")
@@ -193,6 +208,9 @@ def regenerate(source, apm, mode):
         if mode == "validate" and changed:
             raise RuntimeError("APM regeneration differs from checkout: " + ", ".join(changed))
         if mode == "refresh":
+            conflicts = sorted(dirty.intersection(changed))
+            if conflicts:
+                raise RuntimeError("Refresh requires unchanged generated outputs; back up or reconcile: " + ", ".join(conflicts))
             collisions = set(changed) & (before.keys() - tracked)
             if collisions:
                 raise RuntimeError("APM output collides with untracked caller files")
