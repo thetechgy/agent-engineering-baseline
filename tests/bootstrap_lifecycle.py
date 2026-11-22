@@ -727,7 +727,9 @@ def reset_and_rollback(root, apm, bootstrap, previous_bootstrap, user):
     # A temporary, offline backup of this fixture's whole destination also
     # retains receipts and modules. Only these disposable fixtures are restored.
     backup = root / "backup"
-    shutil.copytree(scenario.deploy, backup, symlinks=True)
+    def skip_cache(path, names):
+        return set(names) & {".cache", "AppData"} if user and Path(path) == scenario.deploy else set()
+    shutil.copytree(scenario.deploy, backup, symlinks=True, ignore=skip_cache)
     receipts = scenario.home / ".apm/deployment-receipts"
     if not user:
         shutil.copytree(receipts, root / "previous-receipts")
@@ -754,21 +756,21 @@ def reset_and_rollback(root, apm, bootstrap, previous_bootstrap, user):
     scenario.instruction_delivery("current")
     # The native receipt binds the filesystem identity of both scope roots.
     # Keep those directories in place while restoring their contents.
+    migrated = root / "migrated"
+    migrated.mkdir()
     for child in scenario.deploy.iterdir():
+        if skip_cache(scenario.deploy, {child.name}):
+            continue
         if user and child == scenario.metadata:
+            (migrated / child.name).mkdir()
             for member in child.iterdir():
-                if member.is_dir() and not member.is_symlink():
-                    shutil.rmtree(member)
-                else:
-                    member.unlink()
-        elif child.is_dir() and not child.is_symlink():
-            shutil.rmtree(child)
+                member.rename(migrated / child.name / member.name)
         else:
-            child.unlink()
+            child.rename(migrated / child.name)
     shutil.copytree(backup, scenario.deploy, dirs_exist_ok=True, symlinks=True)
     if not user:
         # This home belongs exclusively to this repository fixture.
-        shutil.rmtree(receipts)
+        receipts.rename(root / "migrated-receipts")
         shutil.copytree(root / "previous-receipts", receipts)
     scenario.bootstrap = previous_bootstrap
     scenario.env["VERSION"] = old_version
