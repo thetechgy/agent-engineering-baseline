@@ -59,7 +59,10 @@ class DecisionReportTests(unittest.TestCase):
         self.assertIn('>Current</a></th><td>0/3</td><td>0/3</td>', pester)
         self.assertIn('>22-line revision</a></th><td>3/3</td><td>0/3</td>', pester)
         self.assertIn('pester-exploratory-004-boolean (five defects) · Codex CLI 0.167.0 / gpt-6.1-sol / High', pester)
-        self.assertIn('Every development failure passed the reference and missed only integer-result.', pester)
+        self.assertIn('All six submissions in the current pair passed the reference and missed only integer-result.', pester)
+        self.assertIn('The three no-skill submissions in the revision pair also passed the reference and missed only integer-result.',
+                      pester)
+        self.assertIn('Both development pairs and both v6 transfer pairs used gpt-6.1-sol.', pester)
         self.assertIn('600-second deadline. The cause is unknown. That run is excluded from these counts.', pester)
         self.assertIn('Stopped run 42847531876', pester)
         self.assertIn('GPT-6.2 Sol has no comparison result.', pester)
@@ -180,6 +183,80 @@ class DecisionReportTests(unittest.TestCase):
                 self.assertIn('Synthetic qualification records also appear below.', page)
                 self.assertEqual(page.count('No agent or model judge was run'), 2)
                 self.assertEqual(page.count('Live Codex execution with custom grading.'), 2)
+
+    def historical_registration(self):
+        registration, = evidence.read_json(MANIFEST)['historical_reports']
+        receipt = evidence.read_json(DOCS / registration['receipt']['member'])
+        historical = evidence.read_json(DOCS / registration['analysis'])
+        return registration, receipt, historical
+
+    def classify_historical(self, captured, registration, receipt, historical):
+        # Re-pin both digests so each test reaches the classification check it varies.
+        analysis_bytes = evidence.encoded(historical)
+        receipt = dict(receipt, analysis_sha256=evidence.digest_bytes(analysis_bytes).removeprefix('sha256:'))
+        receipt_bytes = evidence.encoded(receipt)
+        binding = dict(registration['receipt'], sha256=evidence.digest_bytes(receipt_bytes))
+        for member, data in ((binding['member'], receipt_bytes), (registration['analysis'], analysis_bytes)):
+            path = self.root / member
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        return decisions.live_records(captured, [dict(registration, receipt=binding)], self.root, evidence.read_bytes)
+
+    def test_historical_classification_requires_eligible_matching_evidence(self):
+        captured = analysis.capture_inputs(DEVELOPMENT_INPUTS)
+        registration, receipt, historical = self.historical_registration()
+        current_input, revision_input = (path.relative_to(DEVELOPMENT).as_posix() for path in DEVELOPMENT_INPUTS)
+        entries = {entry['public_input']: entry for entry in receipt['records']}
+        current, revision = entries[current_input], entries[revision_input]
+        current_id, revision_id = (evidence.identity(evidence.read_json(path / 'public-report.json'))
+                                   for path in DEVELOPMENT_INPUTS)
+
+        self.assertEqual(self.classify_historical(captured, registration, receipt, historical),
+                         {current_id, revision_id})
+        for name, entries, expected in (
+                ('wrong source', [dict(current, source=revision['source']), revision], {revision_id}),
+                ('excluded revision', [current, dict(revision, correctness_estimates_excluded=True)], {current_id}),
+                ('ineligible revision', [current, dict(revision, continue_allowed=False)], {current_id})):
+            with self.subTest(name=name):
+                self.assertEqual(self.classify_historical(captured, registration, dict(receipt, records=entries),
+                                                         historical), expected)
+        for flag in ('reproduced', 'original_public_bytes_preserved'):
+            with self.subTest(missing_confirmation=flag):
+                unconfirmed = receipt.copy()
+                del unconfirmed[flag]
+                self.assertEqual(self.classify_historical(captured, registration, unconfirmed, historical), set())
+        with self.subTest(name='current bundle absent from analysis'):
+            other_inputs = [bundle for bundle in historical['input_provenance']
+                            if bundle['id'] != registration['inputs'][current_input]]
+            self.assertEqual(self.classify_historical(captured, registration, receipt,
+                                                     dict(historical, input_provenance=other_inputs)), {revision_id})
+
+    def test_witnessless_probe_with_matching_historical_registration_stays_synthetic(self):
+        current, revision = DEVELOPMENT_INPUTS
+        probe = self.root / 'probe'
+        shutil.copytree(current, probe)
+        record_path = probe / 'public-report.json'
+        record = evidence.read_json(record_path)
+        custom = record['custom']
+        purpose = custom['profile_id'].removesuffix('-live') + '-probe'
+        profile, _, contract = evidence.custom_contract('powershell-pester-6', profile_id=purpose)
+        self.assertEqual(profile['campaign']['mode'], 'experiment-probe')
+        custom.update(profile_id=purpose, purpose=purpose, contract_digest=contract, runtime=profile['runtime'])
+        for key in ('grader_digest', 'fixture_digest', 'runtime_digest'):
+            custom[key] = profile[key]
+        record_path.write_bytes(evidence.encoded(record))
+
+        captured = analysis.capture_inputs([probe, revision])
+        probe_id = evidence.identity(record)
+        self.assertFalse(decisions.scheduler_witness(captured.records[probe_id]))
+        historical = analysis.build_analysis(captured)
+        probe_bundle = next(bundle for bundle in captured.manifests if any(
+            member['record_id'] == probe_id for member in bundle['members']))
+        registration, receipt, _ = self.historical_registration()
+        registration['inputs'][current.relative_to(DEVELOPMENT).as_posix()] = probe_bundle['id']
+
+        revision_id = evidence.identity(evidence.read_json(revision / 'public-report.json'))
+        self.assertEqual(self.classify_historical(captured, registration, receipt, historical), {revision_id})
 
     def test_completed_probe_stays_synthetic(self):
         path, manifest = self.copy_manifest()
