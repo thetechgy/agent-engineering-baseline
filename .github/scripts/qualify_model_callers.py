@@ -35,7 +35,7 @@ def qualify(root):
     options = workflow.get("on", workflow.get(True))["workflow_dispatch"]["inputs"]["campaign"]["options"]
     require(set(options) == {*choices, "case-observation", "case-observation-1691"}, "Unverified workflow selector")
     for name in options:
-        with patch.dict(os.environ, OBSERVATION_SKILL="gh", OBSERVATION_CASE="gh-014"):
+        with patch.dict(os.environ, OBSERVATION_SKILL="podman", OBSERVATION_CASE="4"):
             task = selected_task(name)
         if task.definition.get("type") == "judge-only":
             continue

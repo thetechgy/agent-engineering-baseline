@@ -63,12 +63,14 @@ metadata and the previous workspace stay protected.
 
 The ordinary `case-observation` selection resolves to the 0.171.0 definition. Select `case-observation-1691` to
 restore 0.169.1 with the same model and effort. Each definition binds its own preparation and protocol.
-The 0.155.1 and 0.167.0 campaign records retain their original selectors.
+Historical 0.155.1 and 0.167.0 campaign records retain their original identities. New scored runs on those CLIs
+use the corresponding `-sol62` selector.
 
 The six-slot Boolean effectiveness protocol, the gh-014 0.169.1 probe, and the retained Boolean slot replay
 all bind shared source bytes. Replay an original record from its producing revision and use the same CLI for
-raw rollouts. The prior default source is `fb9c8a0`. New source-v37 registrations inherit their frozen fixture
-and grader contracts and carry new runtime digests. The retained replay also binds the new adapter digest.
+raw rollouts. The prior default source is `fb9c8a0`. Source-v37 records the CLI-only promotion and source-v38
+records the shared model change. Both inherit their frozen fixture and grader contracts. The retained replay
+also binds the adapter digest for its revision.
 [Upstream rollout replay contract](https://github.com/openai/codex/pull/61199).
 
 The production benchmark uses the SkillEvaluator 0.3.0 Docker dispatch patch. The trusted gh initializer reads the
