@@ -101,8 +101,7 @@ cd /path/to/target-project
 
 The wrapper uses the APM pins from its own checkout but installs
 `https://github.com/thetechgy/agent-engineering-baseline.git#main` by default. Set
-`BASELINE_PACKAGE_REF` to install a different reviewed revision; local edits to the
-wrapper's checkout aren't automatically installed. Reinstalling unchanged `#main`
+`BASELINE_PACKAGE_REF` to install a different reviewed baseline revision. Reinstalling unchanged `#main`
 keeps the destination's locked baseline commit; it does not adopt newer commits
 on that branch. See [deliberate updates](#install-and-update-deliberately).
 
@@ -111,7 +110,8 @@ Existing 0.36.1 destinations require a one-time
 select 0.37.0.
 
 Both scopes deploy instructions and skills to Codex and Copilot. Microsoft Learn is available to Codex in trusted
-projects. User bootstrap adds the Copilot-only native package from the same baseline ref. Its server ID is
+projects. For the canonical baseline URL, user bootstrap also installs the Copilot Learn package from the local
+bootstrap checkout. Keep that checkout at the reviewed revision and path for reinstalls. Its server ID is
 `microsoft-learn-copilot`. Custom package URLs install the package specified by the caller.
 APM maintains the following state and CLI instruction sources:
 

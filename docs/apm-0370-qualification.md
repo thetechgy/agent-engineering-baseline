@@ -12,7 +12,8 @@ use the three reviewed Learn tools.
 1. Stop the clients. Make a restorable backup of the destination’s APM manifest, lock, modules, receipts, deployed
    instructions and skills, shared Codex and Copilot settings and the reviewed baseline ref. Include the retired
    project `.github/mcp.json` and any existing root `.mcp.json`. For user scope, include `~/.apm` and the affected
-   client directories. Save independently edited settings separately so you can compare them after uninstall.
+   client directories. For repository scope, include the matching receipt under `~/.apm/deployment-receipts/`.
+   Save independently edited settings separately so you can compare them after uninstall.
 2. From the original scope, use the verified **0.36.1** executable to run
    `apm uninstall thetechgy/agent-engineering-baseline`. Add `--global` for user scope. Check the surviving package
    commits, deployed files and independent client entries against the backup. Restore any independently owned entry
@@ -24,7 +25,7 @@ use the three reviewed Learn tools.
 ## Lock v4 and release verification
 
 The [0.37.0 release](https://github.com/microsoft/apm/releases/tag/v0.37.0) changes the lock schema and package-level
-hash framing. It rejects manifest anchors. The candidate repeats the exact Microsoft Learn tool list in `tools` and
+hash framing. It rejects manifest anchors. The manifest repeats the exact Microsoft Learn tool list in `tools` and
 `enabled_tools`, and permits isolated regeneration to publish the root MCP file and retire the old one. The reviewed
 Linux x86-64/ARM64 and Windows x86-64 archive hashes matched both GitHub release digests and Microsoft's checksum
 sidecars. The pins also bind the extracted executables.
@@ -42,14 +43,13 @@ executables. The regenerated v4 lock records the new package hashes and target l
 
 ## Weekly source regeneration
 
-The one-time isolated refresh of the main checkout preserved the full skill graph.
-The native lifecycle control for routine regeneration then refused a legitimate
-authored instruction change. In a checkout without local deployment receipts,
-0.37.0 kept the old generated Copilot instruction and exited 1. Retain 0.36.1
-for the weekly updater until it can replace the previous, still-unedited
-generated output while preserving a separately edited destination file.
+The weekly updater uses the verified 0.37.0 CLI. A fresh checkout has no deployment receipt. Before calling APM,
+`scripts/apm_regeneration.py --mode refresh` compares the modular Copilot instruction with its previous SHA-256 in
+the native lock. When they match, it removes that copy from the scratch checkout so APM can render the edited
+source. A second refresh preserves the resulting bytes. If the destination was separately edited, back it up and
+reconcile it with the source before retrying. The failure leaves the caller’s file in place.
 
-## MCP migration on Ubuntu
+## Historical in-place MCP migration on Ubuntu
 
 These controls started with real APM 0.36.1 destinations in both scopes and ran 0.37.0 against the same local Git
 packages. The transitive fixture contained two self-defined HTTP entries. All fixture endpoints except the canonical
@@ -77,10 +77,9 @@ any edits made since migration.
 1. Keep the existing project directory and, for user scope, the existing home and `~/.apm` directories in place.
    The receipt binds that directory’s filesystem identity. Restore the pre-upgrade manifest and v1 lock together,
    including the APM ownership state, managed deployments and relevant Codex/Copilot config. In user scope, restore the
-   pre-upgrade `~/.apm` state. In
-   repository scope it includes the existing manifest and lock, modules, the repository installation identity, its
-   matching receipt under `~/.apm/deployment-receipts/`, managed deployment paths, `.codex/config.toml` and
-   `.github/mcp.json`.
+   pre-upgrade `~/.apm` state. For repository scope, restore the existing manifest and lock, modules, the repository
+   installation identity, its matching receipt under `~/.apm/deployment-receipts/`, managed deployment paths,
+   `.codex/config.toml` and `.github/mcp.json`.
 2. Reverse the migration's changes to root `.mcp.json` from that same snapshot. Preserve entries and files owned by
    other clients or added since the snapshot.
 3. Run the verified 0.36.1 bootstrap for the same destination scope and reviewed baseline ref. Verify the previous lock
@@ -90,5 +89,5 @@ any edits made since migration.
    reviewed refs, carrying manually reviewed foreign settings over. This also applies to unrelated packages. Editing
    the version field does not restore the old hash framing or metadata.
 
-The Ubuntu fixtures rejected the v4 lock with the 0.36.1 executable in both scopes and successfully reinstalled after
-restoring the pre-migration lock, manifest and affected MCP files.
+The Ubuntu and Windows bootstrap jobs exercise this reset and rollback at both scopes. Each fixture checks the
+original lock, unrelated package and independently owned client settings after restoring its backup.
