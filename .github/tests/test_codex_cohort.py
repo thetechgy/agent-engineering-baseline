@@ -222,7 +222,9 @@ class Boundaries(unittest.TestCase):
             path=root/'jobs/trial/result.json'
             reports.write_json(path,{'trial_name':'one','agent_result':{'n_input_tokens':100000,'n_cache_tokens':20000,'n_output_tokens':30000}})
             usage=pilot.retain(root,artifact,probe=True)
-            self.assertAlmostEqual(usage[0]['estimated_usd'],.462)
+            # Codex 0.167.0 does not classify cache writes, so the active profile
+            # prices uncached input at the 12-hour cache-write rate.
+            self.assertAlmostEqual(usage[0]['estimated_usd'], 0.702)
             self.assertEqual(usage[0]['n_cache_tokens'],20000)
             reports.write_json(path,{'trial_name':'one','agent_result':{'n_input_tokens':100000,'n_output_tokens':30000}})
             self.assertIsNone(pilot.retain(root,artifact,probe=True)[0]['estimated_usd'])
