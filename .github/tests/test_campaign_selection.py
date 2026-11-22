@@ -88,6 +88,28 @@ class SelectionContracts(unittest.TestCase):
                     self.assertEqual(reports.read_json(ref/'frozen-proposal.json'),protocol.frozen(task))
                     self.assertEqual(internal,selected.location(task,artifact,run))
 
+    def test_stage_one_artifact_is_bound_to_the_current_sol62_selection(self):
+        identity = 'pester-return-development-current-v1-sol62'
+        task = selected.selected_task(identity)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            archive, artifact, run = self.archive(root, task, producer_index=0)
+            self.assertEqual(run['path'], '.github/workflows/evaluation-campaign.yml')
+            self.assertEqual(artifact['name'], 'reusable-evaluation-1')
+            run['event'] = 'workflow_dispatch'
+            reference, internal = protocol.admit(archive, root / 'accepted', artifact, run, task)
+            self.assertEqual(internal, 'preparation/evidence')
+            self.assertEqual(reference, root / 'accepted/preparation/evidence')
+
+            for wrong_identity in ('pester-return-development-current-v1',
+                                   'pester-return-development-candidate-v1-sol62'):
+                with self.subTest(campaign=wrong_identity):
+                    wrong_task = selected.selected_task(wrong_identity)
+                    archive, artifact, run = self.archive(root, wrong_task, producer_index=0)
+                    run['event'] = 'workflow_dispatch'
+                    with self.assertRaisesRegex(ValueError, 'Unqualified source artifact'):
+                        protocol.admit(archive, root / wrong_identity, artifact, run, task)
+
     def test_archive_and_preparation_mismatches_fail_before_receipt(self):
         task=selected.selected_task(CAMPAIGNS[0])
         mutations = [lambda f:f['frozen-proposal.json'].update(revision='0'*40),

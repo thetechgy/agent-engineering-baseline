@@ -514,6 +514,88 @@ remain zero. The four paired comparisons propose 24 future model attempts with
 duplicated absent baselines and an indirect current/candidate comparison; this
 pass requests review, without spending approval.
 
+## Stage 1 Pester comparison on GPT-6.2 Sol
+
+Stage 1 asks whether the current skill still misses `integer-result` on the
+five-defect development case. Select `pester-return-development-current-v1-sol62`
+for Codex CLI 0.167.0 with GPT-6.2 Sol at High. The protocol schedules three
+current and three no-skill attempts in one serial pair.
+[Decision rule](../../../docs/evaluations/pester-return-contract-development/DECISION-RULE.md).
+
+### Prepare and inspect at the intended revision
+
+Set `STAGE1_SHA` to the full reviewed commit on `main`. After a squash merge,
+use the actual merge commit. Reuse a successful, unexpired preparation at
+that SHA if its frozen proposal identifies this selection. Run listings
+show the workflow and revision. Read the proposal to distinguish selections.
+
+```sh
+STAGE1_REPO=thetechgy/agent-engineering-baseline
+STAGE1_CAMPAIGN=pester-return-development-current-v1-sol62
+gh run list --repo "$STAGE1_REPO" --workflow evaluation-campaign.yml \
+  --commit "${STAGE1_SHA:?set the reviewed full commit SHA}" --event workflow_dispatch
+```
+
+If a suitable preparation is unavailable, run the existing reusable workflow
+with the stage's selection and both `allocation` and `preparation_artifact`
+empty. This runs the registered controls, the selected scheduler scenarios
+against the non-forwarding provider, and consumption on a fresh runner.
+
+```sh
+test "$(gh api "repos/$STAGE1_REPO/git/ref/heads/main" --jq .object.sha)" = "${STAGE1_SHA:?}" &&
+  gh workflow run evaluation-campaign.yml --repo "$STAGE1_REPO" --ref main \
+    -f "campaign=$STAGE1_CAMPAIGN"
+```
+
+Verify the producer finished successfully at `STAGE1_SHA` and identify its
+`reusable-evaluation-<attempt>` artifact. Check `preparation/evidence/frozen-proposal.json`
+for the selection, protocol digest, model and six-slot schedule. Use the
+numeric ID of that artifact as `STAGE1_ARTIFACT` for fresh authenticated
+inspection. Keep `allocation` empty.
+
+```sh
+test "$(gh api "repos/$STAGE1_REPO/git/ref/heads/main" --jq .object.sha)" = "${STAGE1_SHA:?}" &&
+  gh workflow run evaluation-campaign.yml --repo "$STAGE1_REPO" --ref main \
+    -f "campaign=$STAGE1_CAMPAIGN" -f "preparation_artifact=${STAGE1_ARTIFACT:?}"
+```
+
+Verify the inspection run also finished successfully at `STAGE1_SHA`. Its
+`campaign-inspection-<attempt>` artifact carries `inspection.json` with the
+producer run, artifact ID, digest, internal location and expiry, plus the
+fresh consumption receipts under `consumption/evidence/`. Retain those
+identities with the frozen proposal and the successful staging, scheduler
+and report reproduction checks. Refresh preparation if the intended revision
+changes or the artifact expires.
+
+### Review the execution proposal
+
+Use the verified SHA and artifact to propose an allocation of the form
+`campaign-<SHA>-pester-return-development-current-v1-sol62-prep<ID>-usd8-<nonce>`
+with a fresh 8–40 character nonce drawn from ASCII letters, digits, underscore
+and hyphen. The frozen definition and preparation record zero authorized
+live attempts. Execution uses a separately approved exact allocation and
+approval of its matching `skill-benchmark` environment gate. Plan $3 in
+estimated usage. The $8 planning allocation comprises a $5 scheduling threshold
+and a $3 overshoot reserve. The provider has no enforced billing cap from this
+protocol.
+
+After separate approval of that proposal, pass the approved allocation as
+`STAGE1_ALLOCATION`. The artifact ID travels in that allocation. Leave
+`preparation_artifact` empty in the paid dispatch. Verify the dispatched
+run's SHA, attempt 1, selected campaign and authentication receipt before
+approving its matching environment gate.
+
+```sh
+test "$(gh api "repos/$STAGE1_REPO/git/ref/heads/main" --jq .object.sha)" = "${STAGE1_SHA:?}" &&
+  gh workflow run evaluation-campaign.yml --repo "$STAGE1_REPO" --ref main \
+    -f "campaign=$STAGE1_CAMPAIGN" -f "allocation=${STAGE1_ALLOCATION:?}"
+```
+
+Reconcile all six slots, native grades, usage, report reproduction and cleanup.
+Use the rule's per-defect counts to interpret measured outcomes and retain the
+result for the private decision card. An operational stop ends this allocation.
+Any repeat or later stage requires a separate decision and approval.
+
 ## Return-contract integration and execution proposal
 
 The merged return-contract experiment uses the existing reusable live workflow,

@@ -149,7 +149,9 @@ Both comparisons used GPT-6.1 Sol. The
 records what new evidence would change the decision and preserves the owner’s
 choice after stage 3.
 
-**Next action** — Keep the current `powershell-pester-6` guidance in place.
+**Next action** — Prepare the Stage 1 current-skill pair for review while
+keeping the current `powershell-pester-6` guidance in place.
+[Stage 1 operator procedure](campaigns/README.md#stage-1-pester-comparison-on-gpt-62-sol).
 
 ## Completed PR #150 judge-only calibration, retained as history
 
