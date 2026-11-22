@@ -335,7 +335,7 @@ make_fixture Linux x86_64
 run_case
 record_result 'global deployment succeeds' success
 assert_true 'global install pins targets, trusts launchers and MCP, and uses full URL ref' \
-    file_has "$CALL_LOG" 'install --global --target codex,copilot --trust-bin --trust-transitive-mcp https://github.com/thetechgy/agent-engineering-baseline.git#main thetechgy/agent-engineering-baseline/packages/copilot-learn#main'
+    file_has "$CALL_LOG" "install --global --target codex,copilot --trust-bin --trust-transitive-mcp https://github.com/thetechgy/agent-engineering-baseline.git#main $CASE_REPO/packages/copilot-learn"
 assert_true 'global deployment does not refresh dependencies' \
     test "$(grep -c ' update ' "$CALL_LOG" || true)" -eq 0
 assert_true 'global compilation is native' file_has "$CALL_LOG" 'compile --global'

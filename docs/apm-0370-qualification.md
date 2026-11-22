@@ -2,7 +2,8 @@
 
 Both bootstrap wrappers and the weekly updater read `.apm-version`. The repository Learn declaration targets Codex. APM
 0.37.0 writes project Copilot servers to the file also read by Claude. User bootstrap installs the Copilot Learn
-companion from the same ref, under its own server ID, so APM can track both declarations independently. Both clients
+companion from the bootstrap checkout as an absolute local APM package. Keep that checkout at the same path for
+subsequent user-scope installs. The companion has a distinct server ID so APM tracks both declarations. Both clients
 use the three reviewed Learn tools.
 [Tagged adapter](https://github.com/microsoft/apm/blob/v0.37.0/src/apm_cli/adapters/client/copilot_project.py).
 

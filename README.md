@@ -181,7 +181,7 @@ On Ubuntu:
 apm_path="$HOME/.local/bin/apm"
 baseline_ref="${BASELINE_PACKAGE_REF:-https://github.com/thetechgy/agent-engineering-baseline.git#main}"
 # User scope, for the canonical baseline URL:
-copilot_ref="thetechgy/agent-engineering-baseline/packages/copilot-learn#${baseline_ref#*#}"
+copilot_ref="$(pwd -P)/packages/copilot-learn"  # Run from the bootstrap checkout.
 "$apm_path" install --global --update --target codex,copilot --trust-bin --trust-transitive-mcp "$baseline_ref" "$copilot_ref"
 "$apm_path" compile --global
 # Repository scope, from the destination project:
@@ -197,7 +197,7 @@ $baselineRef = if ($env:BASELINE_PACKAGE_REF) { $env:BASELINE_PACKAGE_REF } else
     'https://github.com/thetechgy/agent-engineering-baseline.git#main'
 }
 # User scope, for the canonical baseline URL:
-$copilotRef = "thetechgy/agent-engineering-baseline/packages/copilot-learn#" + $baselineRef.Split("#", 2)[1]
+$copilotRef = (Resolve-Path './packages/copilot-learn').Path  # Run from the bootstrap checkout.
 & $apm install --global --update --target codex,copilot --trust-bin --trust-transitive-mcp $baselineRef $copilotRef
 & $apm compile --global
 # Repository scope, from the destination project:

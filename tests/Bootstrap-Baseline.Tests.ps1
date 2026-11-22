@@ -485,7 +485,7 @@ Describe 'Bootstrap-Baseline verified Windows fixtures' -Skip:(-not $script:IsWi
         $calls[0] | Should-MatchString (
             ' install' + $globalOption + ' --target codex,copilot --trust-bin --trust-transitive-mcp ' +
             'https://github.com/thetechgy/agent-engineering-baseline\.git#main' +
-            $(if ($GlobalScope) { ' thetechgy/agent-engineering-baseline/packages/copilot-learn#main' }) + $pinned
+            $(if ($GlobalScope) { ' ' + [regex]::Escape((Join-Path $script:TestRepository.Root 'packages/copilot-learn')) }) + $pinned
         )
         ($calls -join "`n") | Should-NotMatchString ' update '
         $compileOptions = if ($GlobalScope) { ' --global' } else { ' --target codex,copilot' }

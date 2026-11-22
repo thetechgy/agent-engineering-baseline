@@ -718,7 +718,7 @@ try {
         if ($Scope -eq 'Global') {
             $packages = @($packageRef)
             if ($packageRef -cmatch '^https://github\.com/thetechgy/agent-engineering-baseline\.git#(.+)$') {
-                $packages += "thetechgy/agent-engineering-baseline/packages/copilot-learn#$($Matches[1])"
+                $packages += (Join-Path $repositoryRoot 'packages/copilot-learn')
             }
             Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata install --global --target 'codex,copilot' --trust-bin --trust-transitive-mcp @packages
             Invoke-ReviewedApm -Executable $installation.Executable -Metadata $metadata compile --global

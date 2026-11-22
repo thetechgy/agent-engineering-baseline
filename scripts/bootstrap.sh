@@ -468,7 +468,7 @@ deploy_baseline() {
             local -a packages=("$package_ref")
             case "$package_ref" in
                 https://github.com/thetechgy/agent-engineering-baseline.git\#*)
-                    packages+=("thetechgy/agent-engineering-baseline/packages/copilot-learn#${package_ref#*\#}")
+                    packages+=("$REPOSITORY_ROOT/packages/copilot-learn")
                     ;;
             esac
             run_apm install --global --target codex,copilot --trust-bin --trust-transitive-mcp "${packages[@]}"

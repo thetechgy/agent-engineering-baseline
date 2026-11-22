@@ -99,6 +99,9 @@ def prepare_bootstrap(root, member, checksums, repository=REPOSITORY):
     (source / "scripts").mkdir(parents=True)
     for name in (".apm-version", ".apm-checksums", "scripts/bootstrap.sh", "scripts/Bootstrap-Baseline.ps1"):
         shutil.copy2(repository / name, source / name)
+    companion = repository / "packages/copilot-learn"
+    if companion.is_dir():
+        shutil.copytree(companion, source / "packages/copilot-learn")
     if os.name == "nt":
         # Match the existing Windows acquisition fixture boundary: only the
         # downloader is replaced. Hashing, extraction, promotion, dispatch and
