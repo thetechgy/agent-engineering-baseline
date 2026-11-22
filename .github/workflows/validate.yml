@@ -66,9 +66,6 @@ jobs:
       - name: Install the existing pinned evaluator
         timeout-minutes: 15
         run: bash .github/scripts/setup-skillevaluator.sh benchmark
-      - name: Qualify the production Codex benchmark against the loopback fixture
-        timeout-minutes: 18
-        run: '"$SKILL_EVALUATOR_PYTHON" -B .github/scripts/qualify_benchmark_codex.py "$RUNNER_TEMP/benchmark-codex"'
       - name: Verify retained-runtime image preparation contracts
         env:
           IMAGE_PREPARATION_RUNTIME: retained
@@ -92,6 +89,9 @@ jobs:
         id: qualification
         timeout-minutes: 30
         run: '"$SKILL_EVALUATOR_PYTHON" .github/scripts/pester_container_validation.py'
+      - name: Qualify the production Codex benchmark against the loopback fixture
+        timeout-minutes: 18
+        run: '"$SKILL_EVALUATOR_PYTHON" -B .github/scripts/qualify_benchmark_codex.py "$RUNNER_TEMP/benchmark-codex"'
       - name: Verify checkout integrity
         id: pester-integrity
         if: always()

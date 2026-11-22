@@ -39,9 +39,11 @@ Run the credential-free benchmark integration with its production setup and veri
 "$SKILL_EVALUATOR_PYTHON" -B .github/scripts/qualify_benchmark_codex.py "$RUNNER_TEMP/benchmark-codex"
 ```
 
-The qualifier uses the reviewed release in network-isolated task containers, the real gh broker, Harbor agent,
-custom verifier and collector. Its loopback responses supply fixture usage. For the 0.155.1 rollback, select
-the benchmark setup, patch and report policy together from `fb9c8a0`. Historical reporting and comparison
+The qualifier checks the standalone archive, then runs the production npm package and launcher in network-isolated
+task containers. It compares the npm executable and its three shipped helpers to the archive. The npm package omits
+`codex-exec-server`. The real gh broker, Harbor agent, verifier and collector exercise that installed layout.
+Its loopback responses supply fixture usage. For the 0.155.1 rollback, select the benchmark setup, patch and report policy
+together from `fb9c8a0`. Historical reporting and comparison
 must use the policy and source revision that produced the records.
 
 ## Codex 0.169.1 proposed profile for issue #95

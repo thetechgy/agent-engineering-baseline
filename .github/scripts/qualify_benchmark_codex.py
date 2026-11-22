@@ -9,6 +9,7 @@ from pathlib import Path
 import shlex
 import shutil
 import time
+import tempfile
 import subprocess
 
 from skillevaluator.tier3.harbor.benchmark_codex import BenchmarkCodex
@@ -56,8 +57,13 @@ class OfflineCodex(BenchmarkCodex):
         profile = read_json(PROFILE)
         expected = {"bin/codex": profile["cli_executable_sha256"], **profile["helper_sha256"]}
         require(self._version == profile["cli"], "Generated dispatch version drift")
+        vendor = "/opt/reviewed/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/"
+        # npm omits the standalone archive's optional exec-server. Exercise the
+        # installed package exactly as published, including its native launcher.
+        del expected["bin/codex-exec-server"]
+        await self.exec_as_root(environment, "test ! -e " + vendor + "bin/codex-exec-server")
         for name, sha in expected.items():
-            result = await self.exec_as_root(environment, "sha256sum /opt/reviewed/" + name)
+            result = await self.exec_as_root(environment, "sha256sum " + vendor + name)
             require(result.stdout.split()[0] == sha, "Container release bytes differ")
         result = await self.exec_as_agent(environment, "codex --version && id -u && test -S /run/gh-eval/gh.sock && test ! -r /opt/gh-eval/state/case.json")
         require(result.stdout.splitlines() == ["codex-cli " + self._version, "1000"], "Agent identity or CLI drift")
@@ -91,11 +97,10 @@ def stage(root, assets, present):
     require('network_mode = "public"' in source, "Unknown source networking")
     descriptor.write_text(source.replace('network_mode = "public"', 'network_mode = "no-network"'))
     image = task / "environment"
-    for member in ("bin", "codex-resources", "codex-path"):
-        shutil.copytree(assets / member, image / "reviewed" / member)
+    shutil.copytree(assets / "lib/node_modules", image / "reviewed/node_modules", symlinks=True)
     shutil.copy2(gh.ROOT / ".github/scripts/codex_pilot_stub.py", image / "reviewed/stub.py")
     with (image / "Dockerfile").open("a") as build:
-        build.write("\nCOPY reviewed /opt/reviewed\nRUN chmod -R a+rX /opt/reviewed /workspace/skills && ln -s /opt/reviewed/bin/codex /usr/local/bin/codex\n")
+        build.write("\nCOPY reviewed /opt/reviewed\nRUN chmod -R a+rX /opt/reviewed /workspace/skills && ln -s /opt/reviewed/node_modules/@openai/codex/bin/codex.js /usr/local/bin/codex\n")
     # The production verifier reads real ATIF and the private broker audit. Copy
     # only the loopback request and the produced edit into this local fixture.
     # The standard verifier image carries idna. Custom-only mode omits its
@@ -200,9 +205,14 @@ def main():
     root.mkdir()
     assets = root / "release"
     assets.mkdir()
-    acquire(read_json(PROFILE), assets)
-    rows = [run(root / arm, assets, arm == "with") for arm in ("with", "without")]
-    partial = run(root / "interrupted", assets, True, interrupt=True)
+    profile = read_json(PROFILE)
+    acquire(profile, assets)
+    npm_prefix = root / "npm"
+    with tempfile.TemporaryDirectory(prefix="codex-npm-cache-") as cache:
+        subprocess.run(["npm", "install", "--global", "--prefix", str(npm_prefix), "--cache", cache,
+            "--no-audit", "--no-fund", "--ignore-scripts", "@openai/codex@" + profile["cli"]], check=True)
+    rows = [run(root / arm, npm_prefix, arm == "with") for arm in ("with", "without")]
+    partial = run(root / "interrupted", npm_prefix, True, interrupt=True)
     report = root / "report"
     collected = collect_harbor_results("gh", ["codex"], report, root / "jobs", expected_cases=1,
         expected_case_ids=[CASE], expected_trials=1, n_attempts=1, env_mode="docker", stop_on_pass=False,
