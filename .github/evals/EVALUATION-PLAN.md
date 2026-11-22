@@ -1,5 +1,37 @@
 # Evaluation checkpoint
 
+## Codex 0.171.0 observation qualification for issue #95
+
+Run the independent release probe with the pinned `candidate-next` interpreter
+and a new output directory outside the checkout.
+
+```sh
+"$SKILL_NEXT_PYTHON" -B .github/scripts/qualify_codex_1710.py "$RUNNER_TEMP/codex-1710"
+```
+
+The probe verifies the release archive, CLI version, executable and helper
+hashes. It uses the existing non-forwarding provider and observer settings
+(`gpt-6.2-sol` at High). It checks real command and patch events through the
+existing reader, cumulative and cache-write counts, an interrupted turn with
+unknown final usage, and cleanup. It changes directories in a running app
+server and checks that files can be written in the new workspace while Git
+metadata and the previous workspace stay protected.
+[0.170.0 permission updates](https://github.com/openai/codex/releases/tag/rust-v0.170.0)
+· [0.171.0 working-directory fix](https://github.com/openai/codex/pull/61195).
+
+Keep the full Harbor observation on `case-observation` (0.169.1). Registering
+0.171.0 through the shared runner changed three retained identity contracts
+covering the six-slot campaign, gh-014 registry and retrospective replay. The
+independent probe preserves the recorded profiles and existing selectors.
+Raw rollout traces require the same released binary that wrote them.
+[0.171.0 rollout replay contract](https://github.com/openai/codex/pull/61199).
+
+Keep the production SkillEvaluator 0.3.0 benchmark and trusted gh initializer
+on 0.155.1 with `gpt-5.6-sol` at High. The newer binary sent that same model
+and effort to the controlled provider. The production fixture still needs to
+exercise the old Harbor initializer, real CLI and collector together before
+a pin change. Frozen 0.155.1 and 0.167.0 replay selections remain available.
+
 ## Codex 0.169.1 proposed profile for issue #95
 
 The opt-in `gh-014` credential-free qualification uses Codex CLI 0.169.1 /
