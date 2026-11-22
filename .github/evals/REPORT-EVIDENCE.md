@@ -1381,9 +1381,9 @@ produces zero. Contextual links identify the skill and case where applicable.
 ### Review the retained Codex decisions
 
 Use the same saved-analysis and consolidated renderer with the report-only
-decision entry point. The checked-in reviewer input selects the two matched
-Pester cohorts, their diagnostic replay, the completed permission pilot and
-the human-reviewed Podman case 4 observation. The opening gives the finding,
+decision entry point. The checked-in reviewer input selects the two development
+and two transfer Pester pairs, their diagnostic replay, the completed permission
+pilot and the human-reviewed Podman case 4 observation. The opening gives the finding,
 the action and the evidence that would change it. Follow the receipt and run
 links for evidence, provenance and logs.
 
@@ -1394,13 +1394,19 @@ persistent output directory outside the checkout.
 report_parent="$HOME/worktrees/skill-decision-review"
 mkdir -m 700 "$report_parent"
 pester_data="docs/evaluations/pester-transfer-decision/execution-v6/data"
+development="docs/evaluations/pester-return-contract-development/data"
+inputs=(
+  --input "$pester_data/current" --input "$pester_data/candidate"
+  --input "$development/historical-development-current"
+  --input "$development/pester-return-development-candidate-v1"
+)
 
 "$SKILL_NEXT_PYTHON" -B .github/scripts/skill_analysis.py \
-  --input "$pester_data/current" --input "$pester_data/candidate" \
+  "${inputs[@]}" \
   --output "$report_parent/analysis"
 
 "$SKILL_NEXT_PYTHON" -B .github/scripts/skill_report_decisions.py \
-  --input "$pester_data/current" --input "$pester_data/candidate" \
+  "${inputs[@]}" \
   --analysis "$report_parent/analysis/analysis.json" \
   --decisions docs/evaluations/report-decisions.json \
   --output "$report_parent/html"
@@ -1410,8 +1416,14 @@ Open `"$report_parent/html/report.html"`. Follow the result links for scores,
 the receipt links for provenance, and the run links for logs.
 
 The decision input binds each frozen transfer row to an admitted public record
-and the permission rows to the exact checked-in execution receipt. The
-historical permission bundle uses the campaign registry from its execution
+and the permission rows to the exact checked-in execution receipt. The development
+pairs predate the scheduler witness. The manifest pins the historical receipt
+and maps its selected public inputs to the exact bundle identities in the
+receipt-bound analysis. The private report withholds development counts when
+that chain is unavailable or mismatched. The historical analysis also covers two
+excluded runs. The current render uses the four bundles above.
+
+The historical permission bundle uses the campaign registry from its execution
 revision. The report reads the verified receipt for that pair.
 
 The Podman entry binds the [sanitized observation receipt](../../docs/evaluations/podman-case-observation/case-4/receipt.json)

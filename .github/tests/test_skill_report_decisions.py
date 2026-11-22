@@ -13,7 +13,12 @@ import skill_report_decisions as decisions
 ROOT = Path(__file__).resolve().parents[2]
 DOCS = ROOT / 'docs/evaluations'
 TRANSFER = DOCS / 'pester-transfer-decision/execution-v6/data'
+DEVELOPMENT = DOCS / 'pester-return-contract-development'
 MANIFEST = DOCS / 'report-decisions.json'
+TRANSFER_INPUTS = [TRANSFER / 'current', TRANSFER / 'candidate']
+DEVELOPMENT_INPUTS = [DEVELOPMENT / 'data' / name for name in
+                      ('historical-development-current', 'pester-return-development-candidate-v1')]
+ALL_INPUTS = TRANSFER_INPUTS + DEVELOPMENT_INPUTS
 analysis = decisions.analysis
 evidence = decisions.evidence
 
@@ -44,11 +49,31 @@ class DecisionReportTests(unittest.TestCase):
         return (destination / 'report.html').read_text()
 
     def test_retained_pairs_lead_and_link_to_their_evidence(self):
-        inputs = [TRANSFER / 'current', TRANSFER / 'candidate']
+        inputs = ALL_INPUTS
         page = self.run_report(inputs)
         opening = page[:page.index(decisions.OVERVIEW_START.decode())]
         self.assertIn('Keep current guidance. Defer the 22-line revision.', opening)
-        self.assertEqual(opening.count('>3/3<'), 4)
+        self.assertEqual(opening.count('>3/3<'), 5)
+        self.assertEqual(opening.count('>0/3<'), 3)
+        pester = opening.split('<h3>powershell-pester-6</h3>', 1)[1].split('</article>', 1)[0]
+        self.assertIn('>Current</a></th><td>0/3</td><td>0/3</td>', pester)
+        self.assertIn('>22-line revision</a></th><td>3/3</td><td>0/3</td>', pester)
+        self.assertIn('pester-exploratory-004-boolean (five defects) · Codex CLI 0.167.0 / gpt-6.1-sol / High', pester)
+        self.assertIn('Every development failure passed the reference and missed only integer-result.', pester)
+        self.assertIn('600-second deadline. The cause is unknown. That run is excluded from these counts.', pester)
+        self.assertIn('Stopped run 42847531876', pester)
+        self.assertIn('GPT-6.2 Sol has no comparison result.', pester)
+        self.assertIn('Should-HaveType -Actual $actual -Expected ([bool])', pester)
+        self.assertLess(pester.index('Keep current guidance.'), pester.index('<caption>Development'))
+        self.assertLess(pester.index('<caption>Development'), pester.index('<caption>Transfer'))
+        self.assertLess(pester.index('<caption>Transfer'), pester.index('All 12 transfer submissions'))
+        self.assertEqual(opening.count('<h3>powershell-pester-6</h3>'), 1)
+        self.assertEqual(page.count('Live Codex execution with custom grading.'), 4)
+        self.assertNotIn('No agent or model judge was run', page)
+        self.assertNotIn('Decision pending complete evidence', pester)
+        self.run_report(inputs, name='html-repeat')
+        self.assertEqual((self.root / 'html/report.html').read_bytes(),
+                         (self.root / 'html-repeat/report.html').read_bytes())
         self.assertIn('only Int32 and Int64', opening)
         self.assertIn('Historical finding · Valid output rejected', opening)
         self.assertIn('0 accepted · 12 rejected · 0 unmeasured', opening)
@@ -74,7 +99,7 @@ class DecisionReportTests(unittest.TestCase):
         self.assertNotIn('Synthetic candidate qualification', page)
         self.assertNotIn('with measured results', page)
         self.assertIn('Mandatory gates in analyzed bundles', page)
-        self.assertNotIn('No supplied model-backed measurement', page.split('Frozen primary success by matched pair</p>', 1)[1].split('</section>', 1)[0])
+        self.assertNotIn('No supplied model-backed measurement', page.split('Matched development and transfer results</p>', 1)[1].split('</section>', 1)[0])
         analysis_result = analysis.build_analysis(analysis.capture_inputs(inputs))
         for finding in analysis_result['findings']:
             if finding['skill'] in ('powershell-pester-6', 'gh') and finding['next_step'] in (
@@ -88,24 +113,109 @@ class DecisionReportTests(unittest.TestCase):
             else:
                 self.assertIsNotNone(decisions.GITHUB_EVIDENCE.fullmatch(link))
 
-    def test_missing_observation_workspace_withholds_the_zero_change_decision(self):
+    def copy_manifest(self):
+        staged = self.root / 'decisions'
+        staged.mkdir()
         manifest = evidence.read_json(MANIFEST)
-        copy = self.root / 'decisions' / MANIFEST.name
-        copy.parent.mkdir()
-        shutil.copyfile(MANIFEST, copy)
         members = [item['member'] for item in manifest['receipts']]
+        for item in manifest['historical_reports']:
+            members.extend([item['receipt']['member'], item['analysis']])
         for card in manifest['decisions']:
-            for role in ('replay', 'qualification'):
-                if role in card:
-                    members.append(card[role]['member'])
+            members.extend(card[key]['member'] for key in ('replay', 'qualification') if key in card)
             if 'observation' in card:
-                members.append(card['observation']['receipt']['member'])
+                members.extend(card['observation'][key]['member'] for key in ('receipt', 'workspace'))
         for member in members:
-            destination = copy.parent / member
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(DOCS / member, destination)
+            path = staged / member
+            path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(DOCS / member, path)
+        path = staged / MANIFEST.name
+        shutil.copyfile(MANIFEST, path)
+        return path, manifest
 
-        page = self.run_report([TRANSFER / 'current', TRANSFER / 'candidate'], manifest=copy)
+    def test_development_requires_a_matching_receipt_chain(self):
+        path, manifest = self.copy_manifest()
+        registration = manifest['historical_reports'][0]
+        receipt = path.parent / registration['receipt']['member']
+        historical = path.parent / registration['analysis']
+        # These approved transfer notes exercise the optional cited text slots.
+        pester = manifest['decisions'][0]
+        for key in ('next', 'reconsider'):
+            pester[key] = {'text': pester['decision'], 'source': pester['attribution']}
+        path.write_bytes(evidence.encoded(manifest))
+        approved = self.run_report(ALL_INPUTS, path, name='with-cited-guidance')
+        pester_card = approved.split('<h3>powershell-pester-6</h3>', 1)[1].split('</article>', 1)[0]
+        for title in ('Next step', 'What would change it'):
+            self.assertIn(f'<strong>{title}</strong> · {pester["decision"]}', pester_card)
+        original = receipt.read_bytes()
+        historical_bytes = historical.read_bytes()
+        for mode in ('missing', 'wrong-receipt-digest', 'wrong-analysis-digest', 'wrong-public-input'):
+            with self.subTest(mode=mode):
+                receipt.write_bytes(original)
+                historical.write_bytes(historical_bytes)
+                inputs = ALL_INPUTS
+                if mode == 'missing':
+                    receipt.unlink()
+                elif mode == 'wrong-receipt-digest':
+                    receipt.write_bytes(original + b' ')
+                elif mode == 'wrong-analysis-digest':
+                    historical.write_bytes(historical_bytes + b' ')
+                else:
+                    # Same admitted record IDs, different raw bytes from those in the historical analysis.
+                    inputs = list(TRANSFER_INPUTS)
+                    for original_bundle in DEVELOPMENT_INPUTS:
+                        bundle = self.root / original_bundle.name
+                        shutil.copytree(original_bundle, bundle)
+                        record = bundle / 'public-report.json'
+                        record.write_bytes(record.read_bytes() + b' ')
+                        inputs.append(bundle)
+                page = self.run_report(inputs, path, name=mode)
+                opening = page.split(decisions.OVERVIEW_START.decode(), 1)[0]
+                self.assertEqual(opening.count('>Unknown</td><td>Unknown</td>'), 2)
+                self.assertEqual(opening.count('>3/3<'), 4)
+                self.assertIn('Development result</strong> · Decision pending complete evidence.', opening)
+                self.assertIn('Keep current guidance. Defer the 22-line revision.', opening)
+                pester_card = opening.split('<h3>powershell-pester-6</h3>', 1)[1].split('</article>', 1)[0]
+                self.assertNotIn('<strong>Next step</strong> · Keep current guidance.', pester_card)
+                self.assertNotIn('<strong>What would change it</strong> · Keep current guidance.', pester_card)
+                self.assertIn('Synthetic qualification records also appear below.', page)
+                self.assertEqual(page.count('No agent or model judge was run'), 2)
+                self.assertEqual(page.count('Live Codex execution with custom grading.'), 2)
+
+    def test_completed_probe_stays_synthetic(self):
+        path, manifest = self.copy_manifest()
+        fixture = self.root / 'probe'
+        shutil.copytree(TRANSFER / 'current', fixture)
+        record_path = fixture / 'public-report.json'
+        record = evidence.read_json(record_path)
+        custom = record['custom']
+        purpose = custom['profile_id'].removesuffix('-live') + '-experiment-probe'
+        profile, _, contract = evidence.custom_contract('powershell-pester-6', profile_id=purpose)
+        custom.update(profile_id=purpose, purpose=purpose, contract_digest=contract, runtime=profile['runtime'])
+        for key in ('grader_digest', 'fixture_digest', 'runtime_digest'):
+            custom[key] = profile[key]
+        witness = custom['scheduler']['witness']
+        self.assertEqual(witness['state'], 'completed')
+        witness.update(mode='experiment-probe', inference=False, dispatch=None)
+        record_path.write_bytes(evidence.encoded(record))
+        sid = evidence.identity(record)
+        manifest['decisions'][0]['rows'][0]['source'] = sid
+        path.write_bytes(evidence.encoded(manifest))
+        page = self.run_report([fixture, TRANSFER / 'candidate', *DEVELOPMENT_INPUTS], path)
+        result = evidence.read_json(self.root / 'analysis/analysis.json')
+        run = next(run for skill in result['skills'] for run in skill['behavioral_results'] if run['record_id'] == sid)
+        self.assertTrue(run['custom']['complete_paired_population'])
+        opening = page.split(decisions.OVERVIEW_START.decode(), 1)[0]
+        self.assertIn('>Current</a></th><td>Unknown</td><td>Unknown</td>', opening)
+        self.assertEqual(page.count('Live Codex execution with custom grading.'), 3)
+        self.assertIn('Synthetic qualification records also appear below.', page)
+        detail = page.split(f'<article class="run" id="{decisions.report.anchor("record", sid)}">', 1)[1]
+        self.assertIn('No agent or model judge was run', detail.split('</article>', 1)[0])
+
+    def test_missing_observation_workspace_withholds_the_zero_change_decision(self):
+        path, manifest = self.copy_manifest()
+        workspace = manifest['decisions'][2]['observation']['workspace']['member']
+        (path.parent / workspace).unlink()
+        page = self.run_report(ALL_INPUTS, manifest=path)
         opening = page.split(decisions.OVERVIEW_START.decode(), 1)[0]
         self.assertIn('Keep current guidance. Defer the 22-line revision.', opening)
         self.assertIn('unlisted_directory', opening)
@@ -351,6 +461,7 @@ class DecisionReportTests(unittest.TestCase):
         record_path.write_bytes(evidence.encoded(record))
 
         manifest = evidence.read_json(MANIFEST)
+        manifest['decisions'][0].pop('development')
         manifest['decisions'][0]['rows'][0]['source'] = evidence.identity(record)
         binding = manifest['receipts'][0]
         receipt = evidence.read_json(DOCS / binding['member'])

@@ -32,10 +32,13 @@ padding:.85rem 1rem}
 .decision-card th,.decision-card td{padding:.35rem .5rem}
 .decision-card caption{margin-bottom:.25rem}
 .decision-card .finding-result{font-variant-numeric:tabular-nums}
-@media(min-width:50rem){header{display:grid;grid-template-columns:minmax(0,1fr) auto;
+.replay-card{grid-column:1/-1}
+.replay-card>p{max-width:none}
+.replay-card details{margin:.5rem 0}
+@media(min-width:50rem){.decision-results{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+header{display:grid;grid-template-columns:minmax(0,1fr) auto;
 align-items:baseline;column-gap:1rem}
-header .eyebrow{grid-column:1/-1;margin:.2rem 0}
-.decision-cards:has(>.replay-card):has(>:nth-child(2):last-child){grid-template-columns:minmax(0,1.45fr) minmax(0,1fr)}}
+header .eyebrow{grid-column:1/-1;margin:.2rem 0}}
 """.strip()
 GITHUB_EVIDENCE = re.compile(
     r'https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/'
@@ -63,17 +66,74 @@ def cited_text(item):
     return label(item['text']) + ' ' + source_link(item['source'])
 
 
-def live_witness(record):
-    witness = record.get('custom', {}).get('scheduler', {}).get('witness', {})
-    return witness if witness.get('mode') == 'live' else {}
+def scheduler_witness(record):
+    return record.get('custom', {}).get('scheduler', {}).get('witness', {})
 
 
-def public_pair(record, run, metric):
+def live_records(captured, registrations, base, read):
+    """Identify live runs once for both the scores and the diagnostic labels."""
+    require(type(registrations) is list and len(registrations) <= 8, 'Historical report receipt count')
+    live = {sid for sid, record in captured.records.items()
+            if scheduler_witness(record).get('mode') == 'live'}
+    manifests = {item['id']: item for item in captured.manifests}
+    for registration in registrations:
+        evidence.closed(registration, ('receipt', 'analysis', 'inputs'))
+        binding = registration['receipt']
+        evidence.closed(binding, ('member', 'sha256'))
+        evidence.relative(binding['member'])
+        evidence.sha(binding['sha256'])
+        evidence.relative(registration['analysis'])
+        inputs = registration['inputs']
+        require(type(inputs) is dict and 0 < len(inputs) <= 8, 'Historical report input count')
+        for member, sid in inputs.items():
+            evidence.relative(member)
+            evidence.sha(sid)
+
+        receipt_path, analysis_path = base / binding['member'], base / registration['analysis']
+        if not receipt_path.exists() or not analysis_path.exists():
+            continue
+        raw = read(receipt_path, SUPPLEMENT_LIMIT)
+        if evidence.digest_bytes(raw) != binding['sha256']:
+            continue
+        receipt = evidence.parse_json(raw, limit=SUPPLEMENT_LIMIT)
+        saved = read(analysis_path, analysis.JSON_LIMIT)
+        if (receipt.get('reproduced') is not True or receipt.get('original_public_bytes_preserved') is not True
+                or evidence.digest_bytes(saved) != 'sha256:' + receipt.get('analysis_sha256', '')):
+            continue
+        historic = evidence.parse_json(saved, limit=analysis.JSON_LIMIT)
+        for entry in receipt['records']:
+            # The historical analysis has no input paths. The reviewed registration
+            # maps the receipt's path to the complete flat bundle, including its raw bytes.
+            bundle = manifests.get(inputs.get(entry['public_input']))
+            if (bundle is None or bundle not in historic['input_provenance']
+                    or type(entry['run']) is not int or entry['run'] <= 0
+                    or type(entry['artifact']) is not int or entry['artifact'] <= 0
+                    or entry.get('correctness_estimates_excluded') is True
+                    or not (entry.get('correctness_estimates_excluded') is False
+                            or entry.get('continue_allowed') is True)):
+                continue
+            for member in bundle['members']:
+                if member['member'] != 'public-report.json':
+                    continue
+                rid = member['record_id']
+                record = captured.records[rid]
+                if ('custom' not in record or scheduler_witness(record)
+                        or record['source']['revision'] != entry['source']):
+                    continue
+                profile, _, _ = evidence.custom_contract(record['source']['skill_id'],
+                                                          profile_id=record['custom']['profile_id'])
+                if profile.get('campaign', {}).get('mode') == 'live':
+                    live.add(rid)
+    return live
+
+
+def public_pair(record, run, metric, *, live):
     """Select a binary endpoint from one admitted, complete live custom cohort."""
     require(record['kind'] == 'behavioral' and record['schema_version'] == 2, 'Custom behavioral record required')
     if metric is not None:
         require(any(d['id'] == metric for d in record['custom']['definitions']), 'Unknown decision metric')
-    if live_witness(record).get('state') != 'completed' or not run['custom']['complete_paired_population']:
+    if (not live or scheduler_witness(record).get('state', 'completed') != 'completed'
+            or not run['custom']['complete_paired_population']):
         return None
     values = {arm: [] for arm in report.ARM}
     for observation in record['observations']:
@@ -354,8 +414,67 @@ def bound_observation_member(base, binding, read):
     return value
 
 
-def decision_section(manifest, result, records, receipts, replays, population, qualifications, observations):
-    evidence.closed(manifest, ('schema_version', 'receipts', 'decisions'))
+def paired_table(group, skill, runs, records, receipts, live, *, allow_missing=False):
+    evidence.token(group['case'])
+    label(group['caption'])
+    require(type(group['rows']) is list and 0 < len(group['rows']) <= 8, 'Decision row count')
+    rows = []
+    complete = True
+    for row in group['rows']:
+        evidence.closed(row, ('label', 'source', 'metric'))
+        sid = row['source']
+        evidence.sha(sid)
+        evidence.optional(row['metric'], evidence.token)
+        row_label = label(row['label'])
+        if sid in receipts:
+            receipt, binding = receipts[sid]
+            require((binding['skill'], binding['case']) == (skill, group['case']),
+                    'Decision receipt skill or case mismatch')
+            cells = receipt_pair(receipt, row['metric'])
+            support = source_link({'label': row['label'], 'url': binding['scoring']})
+        else:
+            if allow_missing and sid not in runs:
+                complete = False
+                rows.append([row_label, 'Unknown', 'Unknown'])
+                continue
+            require(sid in runs, 'Decision source missing from report')
+            record = records[sid]
+            require(record['source']['skill_id'] == skill and record['dataset']['case_ids'] == [group['case']],
+                    'Decision source skill or case mismatch')
+            cells = public_pair(record, runs[sid], row['metric'], live=sid in live)
+            support = report.link('record', (sid,), row['label'])
+        if cells is None:
+            complete = False
+            rows.append([support, 'Unknown', 'Unknown'])
+        else:
+            rows.append([support, *(report.outcome(passed) if total == 1 else f'{passed}/{total}'
+                                    for passed, total in cells)])
+    return report.table(group['caption'], ('Result', 'With skill', 'Matched no skill'), rows), complete
+
+
+def development_result(group, skill, runs, records, live):
+    evidence.closed(group, ('case', 'caption', 'rows', 'notes', 'limit')
+                    + (('example',) if 'example' in group else ()))
+    require(type(group['notes']) is list and len(group['notes']) <= 4, 'Development notes')
+    scores, complete = paired_table(group, skill, runs, records, {}, live, allow_missing=True)
+    notes = ''.join('<p>' + cited_text(note) + '</p>' for note in group['notes'])
+    limit = '<p><strong>Evidence limit</strong> · ' + cited_text(group['limit']) + '</p>'
+    example = ''
+    if 'example' in group:
+        example = '<details><summary>Example assertions</summary><p>' + cited_text(group['example']) + '</p></details>'
+    pending = '<p><strong>Development result</strong> · Decision pending complete evidence.</p>'
+    return scores, notes + limit if complete else pending, example if complete else '', complete
+
+
+def decision_guidance(card):
+    return ''.join('<p><strong>' + title + '</strong> · ' + cited_text(card[key]) + '</p>'
+                   for key, title in (('next', 'Next step'), ('reconsider', 'What would change it'))
+                   if key in card)
+
+
+def decision_section(manifest, result, records, receipts, replays, population, qualifications, observations, live):
+    evidence.closed(manifest, ('schema_version', 'receipts', 'decisions')
+                    + (('historical_reports',) if 'historical_reports' in manifest else ()))
     require(type(manifest['schema_version']) is int and manifest['schema_version'] == 1, 'Decision schema')
     cards = manifest['decisions']
     require(type(cards) is list and 0 < len(cards) <= 16, 'Decision count')
@@ -364,16 +483,16 @@ def decision_section(manifest, result, records, receipts, replays, population, q
     parts = ['<section class="review-decisions" aria-labelledby="review-decisions">'
              '<h2 id="review-decisions">Skill improvement findings</h2><div class="decision-cards">']
     for card in cards:
+        evidence.skill_id(card['skill'])
         if 'observation' in card:
             parts.append(observation_card(card, *observations[card['skill'], card['case']]))
             continue
-        extra = ('replay',) if 'replay' in card else ('next', 'reconsider')
+        extra = (('replay',) + tuple(key for key in ('development', 'next', 'reconsider') if key in card)
+                 if 'replay' in card else ('next', 'reconsider'))
         if 'qualification' in card:
             require('replay' in card, 'Qualification requires a historical replay')
             extra += ('qualification',)
         evidence.closed(card, ('skill', 'case', 'decision', 'attribution', 'caption', 'rows', 'notes', 'logs') + extra)
-        evidence.skill_id(card['skill'])
-        evidence.token(card['case'])
         heading = '<h3>' + label(card['skill']) + '</h3>'
         attribution = source_link(card['attribution'])
         decision = label(card['decision'])
@@ -382,37 +501,9 @@ def decision_section(manifest, result, records, receipts, replays, population, q
         replay = card.get('replay')
         require(type(card['logs']) is list and 0 < len(card['logs']) <= 4, 'Decision log links')
         logs = ' · '.join(source_link(log) for log in card['logs'])
-        require(type(card['rows']) is list and 0 < len(card['rows']) <= 8, 'Decision row count')
-        rows = []
-        complete = True
-        for row in card['rows']:
-            evidence.closed(row, ('label', 'source', 'metric'))
-            sid = row['source']
-            evidence.sha(sid)
-            evidence.optional(row['metric'], evidence.token)
-            label(row['label'])
-            if sid in receipts:
-                receipt, binding = receipts[sid]
-                require((binding['skill'], binding['case']) == (card['skill'], card['case']),
-                        'Decision receipt skill or case mismatch')
-                cells = receipt_pair(receipt, row['metric'])
-                support = source_link({'label': row['label'], 'url': binding['scoring']})
-            else:
-                require(sid in runs, 'Decision source missing from report')
-                record = records[sid]
-                require(record['source']['skill_id'] == card['skill'] and record['dataset']['case_ids'] == [card['case']],
-                        'Decision source skill or case mismatch')
-                cells = public_pair(record, runs[sid], row['metric'])
-                support = report.link('record', (sid,), row['label'])
-            if cells is None:
-                complete = False
-                rows.append([support, 'Unknown', 'Unknown'])
-            else:
-                rows.append([support, *(report.outcome(passed) if total == 1 else f'{passed}/{total}'
-                                        for passed, total in cells)])
+        scores, complete = paired_table(card, card['skill'], runs, records, receipts, live)
         summaries[card['skill']] = card['caption'] if complete else 'Incomplete matched evidence'
         display_decision = decision if complete else 'Decision pending complete evidence'
-        scores = report.table(card['caption'], ('Result', 'With skill', 'Matched absent'), rows)
         if replay is not None:
             historical = replays.get(replay['id'])
             historical_receipt = historical[0] if historical else None
@@ -423,20 +514,32 @@ def decision_section(manifest, result, records, receipts, replays, population, q
                 verified, qualification_html = qualification_status(
                     qualification, qualifications.get(qualification['id']), historical,
                     replay_complete=admitted[0]['unmeasured'] == 0)
+            development_scores, development_context, example, development_complete = '', '', '', True
+            if 'development' in card:
+                development_scores, development_context, example, development_complete = development_result(
+                    card['development'], card['skill'], runs, records, live)
+                summaries[card['skill']] = ('Matched development and transfer results'
+                                            if complete and development_complete else 'Incomplete matched evidence')
+            shared = ''
+            if not admitted[1] and admitted[0]['rejected'] == replay['expected']:
+                shared = (f'<p><strong>Shared limitation</strong> · All {replay["expected"]} transfer submissions '
+                          'failed the later reference with a ' + label(replay['variation']) + '.</p>')
+            guidance = decision_guidance(card)
             parts.append('<article class="decision-card replay-card">' + heading +
+                         '<p class="lead"><strong>' + display_decision + '</strong> ' + attribution + '</p>' +
+                         '<div class="decision-results">' + development_scores + scores + '</div>' +
+                         development_context + shared + (guidance if complete and development_complete else '') + example +
+                         '<details><summary>Transfer reference, diagnostics and run logs</summary>' +
+                         ''.join('<p>' + note + '</p>' for note in notes) + '<p>' + logs + '</p>' +
                          replay_finding(replay, historical_receipt, admitted, coverage_verified=verified) +
-                         qualification_html +
-                         '<p><strong>Transfer decision</strong> · ' + display_decision + ' ' + attribution + '</p>' +
-                         '<details><summary>Frozen transfer checks and logs</summary>' + scores +
-                         ''.join('<p>' + note + '</p>' for note in notes) + '<p>' + logs + '</p></details>')
+                         qualification_html + '</details>')
         else:
             parts.append('<article class="decision-card">' + heading + '<p class="muted">' +
                          report.code(card['case']) + ' · ' + attribution + '</p><p class="lead"><strong>' +
                          display_decision + '</strong></p>' + scores)
             if complete:
                 parts.extend('<p>' + note + '</p>' for note in notes)
-                parts.append('<p><strong>Next step</strong> · ' + cited_text(card['next']) + '</p>' +
-                             '<p><strong>What would change it</strong> · ' + cited_text(card['reconsider']) + '</p>')
+                parts.append(decision_guidance(card))
             parts.append('<p>' + logs + '</p>')
         parts.append('</article>')
     parts.append('</div></section>')
@@ -488,20 +591,22 @@ def scope_coverage(page, result, records, summaries):
     return replace_once(page, report.review_first(result, records, {}).encode(), review.encode())
 
 
-def add_decisions(page, section, result, records, summaries):
+def add_decisions(page, section, result, records, summaries, live):
     css = report.CSS + '\n' + DECISION_CSS
     page = replace_once(page, report.asset_hash(report.CSS).encode(), report.asset_hash(css).encode())
     page = replace_once(page, ('<style>' + report.CSS + '</style>').encode(), ('<style>' + css + '</style>').encode())
     # The base overview uses producer-profile presence for its synthetic banner.
-    # A live scheduler witness can coexist with that diagnostic producer label.
+    # Live campaign evidence can coexist with that diagnostic producer label.
     flagged = {rid: r for rid, r in records.items() if r['kind'] == 'behavioral'
                and 'producer_profile' in r['policy'] and not analysis.pilot_record(r)}
-    live_custom = {rid for rid, r in flagged.items()
-                   if live_witness(r) and r['policy']['fields']['grading'] == 'custom_only'}
-    if live_custom and live_custom == flagged.keys():
+    live_custom = {rid for rid in live & flagged.keys()
+                   if flagged[rid]['policy']['fields']['grading'] == 'custom_only'}
+    if live_custom:
+        notice = (b'Live diagnostic records retain custom outcomes. The overview below counts standard measurements.'
+                  if live_custom == flagged.keys() else
+                  b'Live diagnostic records retain custom outcomes. Synthetic qualification records also appear below.')
         page, count = re.subn(rb'<p class="safety"><strong>Synthetic candidate qualification\.</strong>[^<]*</p>',
-            b'<p class="notice">Live diagnostic records retain custom outcomes. '
-            b'The overview below counts standard measurements.</p>', page)
+                             b'<p class="notice">' + notice + b'</p>', page)
         require(count == 1, 'Consolidated report diagnostic notice changed')
     for rid in sorted(live_custom):
         marker = f'<article class="run" id="{report.anchor("record", rid)}">'.encode()
@@ -584,13 +689,14 @@ def generate(inputs, saved_analysis, decisions_path, output=None, *, replay_path
         require(key not in observations, 'Duplicate observation decision')
         observations[key] = tuple(bound_observation_member(decisions_path.parent, spec[role], read)
                                   for role in ('receipt', 'workspace'))
+    live = live_records(captured, manifest.get('historical_reports', []), decisions_path.parent, read)
     guard = evidence.input_guard(directories, states, members, budget)
     guard()
 
     page = report.render_report(result, captured)
     section, summaries = decision_section(
-        manifest, result, captured.records, receipts, replays, population, qualifications, observations)
-    page = add_decisions(page, section, result, captured.records, summaries)
+        manifest, result, captured.records, receipts, replays, population, qualifications, observations, live)
+    page = add_decisions(page, section, result, captured.records, summaries, live)
     require(len(page) <= report.HTML_LIMIT, 'HTML report size exceeded')
     return evidence.write_outputs({}, output, input_paths=(*captured.roots, saved_analysis.parent, decisions_path.parent,
                                                           *(path.parent for path in replay_paths)),
