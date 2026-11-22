@@ -12,6 +12,9 @@ from test_codex_effectiveness import ROOT, prospective_grader
 from codex_pilot_effectiveness import runner_bytes as original_runner
 from evaluation_tasks import load
 from evaluation_campaign import purpose
+from evaluation_campaign_core import drive, schedule
+from evaluation_campaign_protocol import protocol, stop_reason
+from evaluation_campaign_selection import selected_task
 from codex_pilot_replay import campaign_corpus, campaign_payload, campaign_retrospective, validate_campaign_retrospective
 from pester_admission import runner_bytes
 import skill_evidence as evidence
@@ -37,6 +40,45 @@ class Admission(unittest.TestCase):
         validate_campaign_retrospective(meta, profile)
         meta['submission_digests']['with_skill'] = 'sha256:'+'0'*64
         with self.assertRaises(ValueError): validate_campaign_retrospective(meta, profile)
+
+    def test_retained_unsupported_grade_stops_after_measured_work(self):
+        root, _, public = campaign_corpus(definition=self.task().definition)
+        retained = evidence.read_json(root / 'attempt-ledger.json')
+        rejection = retained['entries'][0]
+        self.assertEqual(rejection['outcome'], {'classification': 'unsupported', 'code': 'expression_policy'})
+        self.assertEqual(public['observations'][0]['custom']['admission_reason'], rejection['outcome']['code'])
+        self.assertIsNone(public['observations'][0]['score'])
+
+        task = selected_task('pester-return-transfer-current-v6-sol62')
+        contract = protocol(task)
+        slots = schedule(tuple(task.cases('live')), tuple(v['id'] for v in task.definition['variants']),
+                         contract['trials_per_arm'])
+        rows = [dict(slot, state='unlaunched') for slot in slots]
+        ledger = {'entries': rows}
+        measured = ['passed', 'failed', 'passed']
+        launched = []
+
+        def attempt(row, _total):
+            launched.append(row['position'])
+            if row['position'] == 4:
+                self.assertEqual(row['variant'], rejection['variant'])
+                row.update({key: rejection[key] for key in ('cleanup', 'returncode', 'grading_present', 'outcome', 'usage')})
+            else:
+                self.assertLess(row['position'], 4, 'The scheduler launched after unsupported grading')
+                row.update(cleanup=True, returncode=0, grading_present=True,
+                           outcome={'classification': measured[row['position'] - 1]}, usage={'estimated_usd': 0.01})
+            reason = stop_reason(row)
+            row['state'] = 'failed' if reason else 'completed'
+            return reason
+
+        drive(ledger, attempt, save=lambda: None, resources=lambda: (), baseline=(),
+              threshold=contract['budget']['stop_estimate_usd'])
+        self.assertEqual(launched, [1, 2, 3, 4])
+        self.assertEqual(ledger['state'], 'stopped')
+        self.assertEqual(ledger['stop_reason'], 'unsupported_grading')
+        self.assertIn(ledger['stop_reason'], contract['stop_rules'])
+        self.assertEqual([row['outcome']['classification'] for row in rows[:4]], [*measured, 'unsupported'])
+        self.assertEqual([row['state'] for row in rows], ['completed'] * 3 + ['failed', 'unlaunched', 'unlaunched'])
 
     def test_correction_preserves_every_member_except_admission_and_successor_document(self):
         old = self.task('pester-transfer-original-v1').expected_members('pester-transfer-batch-v1', 'with_skill')

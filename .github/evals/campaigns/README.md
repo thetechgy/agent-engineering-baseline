@@ -724,3 +724,36 @@ PR retains exact-source evidence and commands. A pending, failed, cancelled or
 expired receipt does not qualify execution. Review/merge is the next decision.
 A future merge SHA needs the mechanical refresh above, even after a qualified
 PR-head proposal; that proposal grants no authorization for the merge revision.
+
+## Unsupported grades in fresh Pester confirmation
+
+Stop the fresh confirmation at the first Pester verifier outcome classified
+as `unsupported`. The campaign records `unsupported_grading` and leaves the
+remaining slots unlaunched. A measured pass or failure from an earlier slot
+still describes that submission. An unsupported slot has unavailable correctness
+and an incomplete pair cannot drive an adoption decision, even if the unsupported
+grade arrived in the final slot. Replacing or skipping the slot would let the
+grading subset determine which submissions enter the comparison.
+
+Before proposing the fresh case for execution, freeze the case, allowlist,
+runtime and comparison rule. Use the pinned verifier without inference. Check
+that a strong suite passes the reference and detects every seeded defect, a
+valid weak suite produces a measured miss, and an unsupported suite stays
+unscored and stops the schedule. Check the report's recorded, scored and
+unlaunched counts. The existing
+[admission qualification](../../workflows/pester-admission-qualification.yml)
+replays a retained rejection and checks supported and prohibited forms.
+
+On a stop, reconcile the planned and launched slots, admission reason, submission
+handoff, usage, cleanup and available public evidence. Leave the original grade
+and bytes as recorded. If the retained submission is legitimate for the task,
+reproduce the rejection offline and review a bounded verifier change with
+supported and prohibited controls. Report any later replay as retrospective
+evidence. A new comparison requires a separately reviewed and authorized
+allocation on a qualified revision.
+
+The [original transfer stop](../pester-admission-v1/EVIDENCE.md) shows why
+`unsupported` needs its own classification. The
+[row-template transfer stop](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/43322537842)
+also retained three measured attempts before a row-template rejection stopped
+the current pair.
