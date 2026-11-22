@@ -45,7 +45,7 @@ def grader_bytes(workspace=ROOT):
 def configuration(base_url=None, *, runtime=None):
     """The endpoint is the only transport difference in credential-free probes."""
     selected = PROFILE if runtime is None else runtime
-    if selected['cli'] == '0.169.1':
+    if selected['cli'] in ('0.169.1', '0.171.0'):
         agent_settings = {'agents': {'enabled': False}, 'features': {
             'multi_agent_v2': False, 'unified_exec': True, 'code_mode': False}}
     elif selected['cli'] == '0.155.1':

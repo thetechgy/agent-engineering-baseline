@@ -22,7 +22,9 @@ def load(path):
         return load_judges(path, definition)
     if definition.get('type') == 'case-observation':
         from case_observation import CaseObservation
-        require(path == ROOT / '.github/evals/campaigns/case-observation.json', 'Unregistered observation')
+        require(path in (ROOT / '.github/evals/campaigns/case-observation.json',
+                         ROOT / '.github/evals/campaigns/case-observation-1710.json'),
+                'Unregistered observation')
         return CaseObservation(definition, path.relative_to(ROOT).as_posix())
     adapters = {'boolean-contract': BooleanContract, 'gh-fixture': GhFixture, 'batch-summary': BatchSummary}
     if definition.get('adapter') == 'gh-permission':

@@ -34,6 +34,17 @@ class CaseObservationTests(unittest.TestCase):
                 with self.assertRaises(OSError), preserve_interruption(task, row, "observation_retention_failure"):
                     raise OSError("ordinary error")
 
+    def test_workflow_selector_and_rollback_bind_the_intended_runtime(self):
+        from evaluation_campaign_selection import selected_task, binding
+        from evaluation_runtime import ROOT, read_profile
+        with patch.dict(os.environ, OBSERVATION_SKILL="podman", OBSERVATION_CASE="4"):
+            for identity, version in (("case-observation", "0.171.0"), ("case-observation-1691", "0.169.1")):
+                task = selected_task(identity)
+                runtime = read_profile(ROOT / task.definition["runtime_profile"])["resolved"]
+                self.assertEqual((runtime["cli"], runtime["model"], runtime["reasoning_effort"]),
+                                 (version, "gpt-6.2-sol", "high"))
+                self.assertEqual(binding(task)["definition"], task.member)
+
     def test_original_ids_resolve_without_runtime_or_credentials(self):
         self.assertEqual(selected("podman", "4")[1]["files"], [])
         self.assertEqual(selected("gh", "gh-014")[1]["id"], "gh-014")

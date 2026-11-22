@@ -8,7 +8,7 @@ import re
 import shlex
 
 import evaluation_campaign_core as core
-from evaluation_runtime import CODEX_OBSERVATION_PROFILE, ROOT, read_profile
+from evaluation_runtime import CODEX_OBSERVATION_PROFILES, ROOT, read_profile
 from evaluation_tasks import Task
 import skill_evidence as evidence
 import skill_reports as reports
@@ -65,7 +65,7 @@ class CaseObservation(Task):
         argv = "python3 /opt/pilot/codex_pilot_probe.py --observation " + shlex.quote(skill)
         # Always exercise the real CLI tool and its delayed network-policy check.
         command = argv + " && cat /home/agent/.agents/skills/" + skill + "/SKILL.md >/dev/null"
-        if read_profile(ROOT / self.definition["runtime_profile"])["profile"]["id"] == CODEX_OBSERVATION_PROFILE:
+        if read_profile(ROOT / self.definition["runtime_profile"])["profile"]["id"] in CODEX_OBSERVATION_PROFILES:
             command += " && /opt/codex/bin/codex --version"
         if control == "active-configuration":
             command += " && printf %s " + shlex.quote(base64.b64encode(CONFIG.encode()).decode()) + " | base64 -d > /workspace/traefik.yaml"
@@ -209,7 +209,7 @@ def observation(trial, row, task, artifact, mode, secret, *, interrupted=False):
                  and e.get("item", {}).get("type") == "command_execution"]
         record["probe_tool_completed"] = any(t.get("exit_code") == 0 and
             "PILOT_BOUNDARY " in t.get("aggregated_output", "") for t in tools)
-        if audit.get("adapter") == CODEX_OBSERVATION_PROFILE:
+        if audit.get("adapter") in CODEX_OBSERVATION_PROFILES:
             record["responder_profile"] = [
                 {"model": request.get("model"), "effort": (request.get("reasoning") or {}).get("effort")}
                 for request in probe.get("request_observations", [])
@@ -271,7 +271,7 @@ def verify_qualification(root, task):
                           "answer_sha256": hashlib.sha256(answer.encode()).hexdigest(),
                           "changes": [c["path"] for c in workspace["changes"]] if "changes" in workspace else None,
                           **({"scanner_exit": workspace["returncode"]} if name == "collection-interrupted" else {})}
-        if selected_runtime["profile"]["id"] == CODEX_OBSERVATION_PROFILE:
+        if selected_runtime["profile"]["id"] in CODEX_OBSERVATION_PROFILES:
             runtime = selected_runtime["resolved"]
             expected_requests = [{"model": runtime["model"], "effort": runtime["reasoning_effort"]}] * 2
             expected_version = "codex-cli " + runtime["cli"]

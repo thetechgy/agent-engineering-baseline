@@ -101,7 +101,7 @@ def fixture(output, scenario, *, judge_context=None, producer=profiles.NEXT):
         (job / 'result.json').write_text(job_result.model_dump_json(indent=2))
     meta = {'profile':('behavioral-090-accounting-v1' if producer is profiles.ACCOUNTING else 'behavioral-090-offline-v1'), 'origin':'credential_free_fixture', 'judgments':'simulated'}
     reports.write_json(native / 'versions.json', profiles.candidate_versions(producer))
-    policy = {**reports.POLICY, 'evaluator_revision':producer['revision'], 'harbor':producer['harbor'],
+    policy = {**reports.POLICY, 'codex':'0.155.1', 'evaluator_revision':producer['revision'], 'harbor':producer['harbor'],
               'python':producer['python']}
     reports.write_json(native / 'provenance.json', {'schema_version':1, 'skill':'podman', 'mode':'standard',
         'policy':policy, 'patch_sha256':producer['patch_sha256'], 'benchmark':meta})

@@ -367,7 +367,7 @@ def complete_native_lifecycle(inputs, output):
                 else:
                     assert fault is None
                 if row.get('setup_only'):
-                    assert row['setup_only'] == {'installed_codex': '0.155.1', 'inference': False}
+                    assert row['setup_only'] == {'installed_codex': reports.POLICY['codex'], 'inference': False}
                 rows.append(row)
             selections.append({'arm': arm, 'shard': shard, 'success': complete, 'completed': len(observed)})
             target = output / 'native-gh-lifecycle-shards' / (arm + '-' + str(shard) + '.json')

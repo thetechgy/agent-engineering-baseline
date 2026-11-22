@@ -94,7 +94,7 @@ def synthetic_native(root, *, complete=False, candidate=False):
                 write(trial / 'result.json', {'id': 'id-' + trial_name, 'trial_name': trial_name, 'task_name': case,
                     'task_checksum': task['task_checksum'], 'config': {'task': {'path': '/tasks/' + case}, 'agent': {'name': 'codex'}, 'timeout_multiplier': 2.0,
                                'environment': {'import_path': 'skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment'}},
-                    'agent_info': {'name': 'codex', 'version': '0.155.1'}, 'verifier_result': {'rewards': numeric},
+                    'agent_info': {'name': 'codex', 'version': reports.POLICY['codex']}, 'verifier_result': {'rewards': numeric},
                     'exception_info': None, 'started_at': '2026-10-26T00:00:00Z', 'finished_at': '2026-10-26T00:00:02Z',
                     'verifier': {'started_at': '2026-10-26T00:00:01Z', 'finished_at': '2026-10-26T00:00:02Z'},
                     'agent_result': {'n_input_tokens': None, 'n_cache_tokens': None, 'n_output_tokens': None}})
@@ -150,7 +150,7 @@ def synthetic_gh_native(root, *, unscoreable=False, candidate=False, candidate_m
                     'task_checksum': item['task_checksum'], 'config': {'task': {'path': '/tasks/' + item['case_id']},
                         'agent': {'name': 'codex'}, 'timeout_multiplier': 2.0,
                         'environment': {'import_path': 'skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment'}},
-                    'agent_info': {'name': 'codex', 'version': '0.155.1'}, 'verifier_result': None if failed else {'rewards': numeric},
+                    'agent_info': {'name': 'codex', 'version': reports.POLICY['codex']}, 'verifier_result': None if failed else {'rewards': numeric},
                     'exception_info': {'exception_type': 'VerifierTimeoutError', 'exception_message': 'Synthetic native timeout'} if failed else None, 'started_at': '2026-10-26T00:00:00Z', 'finished_at': '2026-10-26T00:00:02Z',
                     'verifier': {'started_at': '2026-10-26T00:00:01Z', 'finished_at': '2026-10-26T00:00:02Z'}})
             write(job / 'result.json', {'n_total_trials': len(ids), 'stats': {'n_trials': len(ids), 'n_errors': int(unscoreable),

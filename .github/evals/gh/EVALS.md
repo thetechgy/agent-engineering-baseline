@@ -44,7 +44,7 @@ python3 .github/scripts/gh_evaluations.py benchmark gh --smoke --output /tmp/gh-
 Use the evaluator's Python 3.13 interpreter and place its executables on `PATH`.
 The exact dependencies and Codex patch come from
 [setup-skillevaluator.sh](../../scripts/setup-skillevaluator.sh). Docker Compose
-5.6.1, Harbor 0.13.2, SkillEvaluator 0.3.0 at `ac0a049`, Codex 0.155.1, and
+5.8.0, Harbor 0.13.2, SkillEvaluator 0.3.0 at `ac0a049`, Codex 0.171.0, and
 `gpt-5.6-sol` remain pinned. Do not substitute a newer host Codex or Podman.
 The runner refuses missing runtime tools and credentials. It does not install them.
 

@@ -316,12 +316,12 @@ def inventory(root):
          "Credential-free compatibility does not establish provider or skill benefit."),
         ("execution-next-environment", "Opt-in 0.9.0 behavioral execution preparation",
          ".github/evals/codex-execution-090.json",
-         "Explicit gh-runtime-090-v1 selection holds production Codex 0.155.1 / gpt-5.6-sol / high. "
+         "Explicit gh-runtime-090-v1 selection holds its historical Codex 0.155.1 / gpt-5.6-sol / high. "
          "Uses existing pinned SkillEvaluator 0.9.0 / Harbor 0.25.0 with custom-only deterministic grading. "
          "Preparation is credential-free; live provider behavior remains untested. Default benchmarks stay 0.3.0. "
          "No paid allocation is opened; standard model judging, Pester clarification and skill adoption remain deferred."),
         ("observation-environment", "Active single-case observation",
-         ".github/evals/codex-execution-1691.json",
+         ".github/evals/codex-execution-1710.json",
          "Current case-observation CLI, model and reasoning effort. "
          "Changing this profile requires a new identity and credential-free observer qualification."),
         ("pilot-environment", "Frozen CLI pilot and campaign selectors",
@@ -339,8 +339,8 @@ def inventory(root):
             source = read(root, path)
             sources = [{"path": path, "line": 1}]
             if id == "observation-environment":
-                definition = ".github/evals/campaigns/case-observation.json"
-                selector = ".github/evals/campaigns/codex-1691-observation.json"
+                definition = ".github/evals/campaigns/case-observation-1710.json"
+                selector = ".github/evals/campaigns/codex-1710-observation.json"
                 require(json.loads(read(root, definition))["runtime_profile"] == selector, "observation_selector_changed")
                 binding = json.loads(read(root, selector))
                 require(binding["frozen_profile"] == path and binding["frozen_profile_sha256"] ==

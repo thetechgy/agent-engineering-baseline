@@ -9,6 +9,7 @@ on:
         default: boolean-effectiveness-v1
         options:
           - boolean-effectiveness-v1
+          - case-observation-1691
           - case-observation
           - gh-runtime-090-v1
           - gh-task-permission-v2
@@ -38,7 +39,7 @@ env:
   OBSERVATION_SKILL: ${{ inputs.skill }}
   OBSERVATION_CASE: ${{ inputs.case }}
   CAMPAIGN_ID: ${{ inputs.campaign || 'boolean-effectiveness-v1' }}
-  CAMPAIGN_SETUP: ${{ inputs.campaign == 'judge-calibration-090-v1' && 'candidate-accounting' || (inputs.campaign == 'case-observation' || inputs.campaign == 'gh-runtime-090-v1' || inputs.campaign == 'gh-task-permission-v2') && 'candidate-next' || 'candidate-current' }}
+  CAMPAIGN_SETUP: ${{ inputs.campaign == 'judge-calibration-090-v1' && 'candidate-accounting' || (inputs.campaign == 'case-observation-1691' || inputs.campaign == 'case-observation' || inputs.campaign == 'gh-runtime-090-v1' || inputs.campaign == 'gh-task-permission-v2') && 'candidate-next' || 'candidate-current' }}
 concurrency:
   group: reusable-evaluation-${{ inputs.allocation != '' && format('live-{0}', github.ref) || format('diagnostic-{0}', github.run_id) }}
   cancel-in-progress: false

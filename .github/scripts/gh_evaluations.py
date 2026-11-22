@@ -497,7 +497,7 @@ def benchmark(args):
     )
     reports.require(
         "--ak" in codex_command
-        and codex_command[codex_command.index("--ak") + 1] == "version=0.155.1",
+        and codex_command[codex_command.index("--ak") + 1] == "version=" + reports.POLICY["codex"],
         "Required pinned Codex patch is absent",
     )
     versions["evaluator_revision"] = revision

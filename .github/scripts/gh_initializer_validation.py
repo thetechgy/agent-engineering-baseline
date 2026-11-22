@@ -47,7 +47,7 @@ def select_tasks(tasks, arm, shard):
     return tasks, expected
 
 
-async def qualify(root, artifact, arm=None, shard=None):
+async def qualify(root, artifact, arm=None, shard=None, *, codex_control=False):
     bundle = gh_candidate.stage(gh.ROOT, root / "bundle/gh")
     tasks = []
     for present in (True, False):
@@ -57,6 +57,11 @@ async def qualify(root, artifact, arm=None, shard=None):
             grading_mode="default_plus_custom", workspace_mode="group",
             workspace_skill_paths=[bundle.parent / gh.COMPETING]))
     tasks, expected = select_tasks(tasks, arm, shard)
+    if codex_control:
+        tasks = [task for task in tasks if task.name == "gh-014"]
+        if arm != "with_skill" or len(tasks) != 1:
+            raise ValueError("Expected one reviewed gh-014 initializer control")
+        expected = 1
     manifest = write_manifest(root / "operator", tasks, staged_roots=[bundle.parent, root / "tasks"])
     os.environ["AEB_GH_MANIFEST"] = str(manifest)
     fixtures = {entry["id"]: entry for entry in gh.dataset()}
@@ -91,12 +96,11 @@ async def qualify(root, artifact, arm=None, shard=None):
             phase = "setup_only"
             if index == 0:
                 from skillevaluator.tier3.harbor.installed_agents import SkillEvaluatorCodex
-                from skillevaluator.tier3.harbor.runner import _harbor_agent_kwargs
                 from unittest.mock import AsyncMock, patch
-                pin = _harbor_agent_kwargs("codex", gh.reports.POLICY["model"], "aeb-gh-fixture")["version"]
-                if pin != "0.155.1":
-                    raise RuntimeError("Generated Codex dispatch pin changed")
-                installed = await environment.exec("npm install --global --ignore-scripts @openai/codex@0.155.1", user="root", timeout_sec=180)
+                pin = gh.reports.POLICY["codex"]
+                installed = await environment.exec(
+                    "npm install --global --ignore-scripts @openai/codex@" + shlex.quote(pin),
+                    user="root", timeout_sec=180)
                 if installed.return_code:
                     raise RuntimeError("Pinned setup-only Codex acquisition failed")
                 agent = SkillEvaluatorCodex(logs_dir=paths.agent_dir, version=pin)
@@ -304,7 +308,7 @@ async def qualify(root, artifact, arm=None, shard=None):
     return len(rows) == expected
 
 
-def main(artifact, arm=None, shard=None):
+def main(artifact, arm=None, shard=None, *, codex_control=False):
     artifact = Path(artifact); artifact.parent.mkdir(parents=True, exist_ok=True)
     artifact.write_text(json.dumps({"success": False, "inference": False, "diagnostic_only": True, "completed": []}) + "\n")
     if any(os.environ.get(key) for key in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "NVIDIA_API_KEY")):
@@ -320,7 +324,7 @@ def main(artifact, arm=None, shard=None):
         raise KeyboardInterrupt
     signal.signal(signal.SIGTERM, interrupted)
     with tempfile.TemporaryDirectory(prefix="gh-native-", dir=os.environ.get("RUNNER_TEMP")) as temporary:
-        if not asyncio.run(qualify(Path(temporary), artifact, arm, shard)):
+        if not asyncio.run(qualify(Path(temporary), artifact, arm, shard, codex_control=codex_control)):
             raise RuntimeError("Native gh qualification incomplete")
 
 

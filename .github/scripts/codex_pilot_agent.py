@@ -12,7 +12,7 @@ import tomllib
 from harbor.agents.installed.codex import Codex
 from codex_pilot_contract import PROFILE, ROOT, configuration
 from codex_pilot_runtime import usage_source
-from evaluation_runtime import CODEX_090_PROFILES, CODEX_FIXTURE_PROFILE, CODEX_OBSERVATION_PROFILE
+from evaluation_runtime import CODEX_090_PROFILES, CODEX_FIXTURE_PROFILE, CODEX_OBSERVATION_PROFILES
 
 BINARY = '/opt/codex/bin/codex'
 HOME = '/home/agent/.codex-pilot'
@@ -90,7 +90,7 @@ class PilotCodex(Codex):
                 context.metadata['usage_observation_failure'] = 'invalid_or_contradictory_usage'
                 return
             raise ValueError('Invalid or contradictory CLI usage protocol')
-        if self.profile['id'] == CODEX_OBSERVATION_PROFILE and usage['input_tokens'] == 0:
+        if self.profile['id'] in CODEX_OBSERVATION_PROFILES and usage['input_tokens'] == 0:
             context.metadata = {'usage_observation_failure': 'empty_cumulative_usage',
                                 'execution_complete': not interrupted}
             return
@@ -99,7 +99,7 @@ class PilotCodex(Codex):
         context.n_output_tokens = usage['output_tokens']
         cache_write = ({'n_cache_write_input_tokens': usage.get('cache_write_input_tokens')}
                        if self.profile['id'] == CODEX_FIXTURE_PROFILE else {})
-        if self.profile['id'] == CODEX_OBSERVATION_PROFILE:
+        if self.profile['id'] in CODEX_OBSERVATION_PROFILES:
             # The retained accounting serializer treats token-like keys as secrets.
             cache_write['cache_write_input_count'] = usage.get('cache_write_input_tokens')
         context.metadata = {'usage_source': usage_source(self.profile), 'billing_verified': False,
@@ -179,7 +179,7 @@ class PilotCodex(Codex):
             if self.profile['id'] == CODEX_FIXTURE_PROFILE and scenario == 'success':
                 scenario = 'priced-success'
             if getattr(self, 'observation_fixture', False):
-                scenario = ('case-observation-priced' if self.profile['id'] == CODEX_OBSERVATION_PROFILE
+                scenario = ('case-observation-priced' if self.profile['id'] in CODEX_OBSERVATION_PROFILES
                             else 'case-observation')
             # Server has no network forwarding and never authenticates to a provider.
             await self.exec_as_agent(environment, command=(

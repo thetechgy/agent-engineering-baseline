@@ -117,13 +117,14 @@ class JudgeContracts(unittest.TestCase):
         import skill_evidence as evidence
         additions = [k for k in value['profiles'] if '-source-v25-' in k]
         self.assertEqual(len(additions), 35)
+        current = evidence.custom_registry(ROOT)
         for key in additions:
             row = value['profiles'][key]
             old = value['profiles'][key.replace('-source-v25-', '-source-v24-')]
             self.assertEqual({k:v for k,v in row.items() if k not in ('id', 'runtime_digest')},
                              {k:v for k,v in old.items() if k not in ('id', 'runtime_digest')})
-            active = key.replace('-source-v25-', '-source-v36-')
-            successor = value['profiles'][active]
+            active = key.replace('-source-v25-', '-source-v37-')
+            successor = current['profiles'][active]
             self.assertEqual(successor['runtime_digest'],
                              evidence.identity(source_manifest(ROOT, successor['skill_id'], active)))
         self.assertEqual(hashlib.sha256(json.dumps(original, sort_keys=True, separators=(',', ':')).encode()).hexdigest(),

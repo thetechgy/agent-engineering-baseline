@@ -49,7 +49,7 @@ class PilotContracts(unittest.TestCase):
     def test_frozen_pilot_has_one_case_one_attempt_and_preserves_active_profile(self):
         self.assertEqual(PROFILE['case'],'pester-001')
         self.assertEqual(PROFILE['attempts_per_arm'],1)
-        registry=evidence.custom_registry(ROOT)
+        registry=evidence.frozen_registry(ROOT)
         self.assertEqual(registry['active_profiles']['powershell-pester-6'],'pester-pilot-v3')
         profile,_,_=evidence.custom_contract('powershell-pester-6',ROOT,purpose='cli_pilot')
         self.assertEqual(set(profile['cases']),{'pester-001'})

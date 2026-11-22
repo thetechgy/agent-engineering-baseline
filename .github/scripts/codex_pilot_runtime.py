@@ -1,7 +1,7 @@
 """Pinned Codex image preparation shared by historical and campaign entry points."""
 import shutil
 from codex_pilot_contract import ROOT, PROFILE as P
-from evaluation_runtime import CODEX_OBSERVATION_PROFILE
+from evaluation_runtime import CODEX_OBSERVATION_PROFILES
 
 
 def prepare_cli(task, runtime=None):
@@ -14,14 +14,14 @@ def prepare_cli(task, runtime=None):
     with (task / 'environment/Dockerfile').open('a') as dockerfile:
         dockerfile.write('RUN mkdir /opt/codex && curl --fail --location --silent --show-error '
             '--proto "=https" --proto-redir "=https" '
-            + ('--connect-timeout 10 --max-time 180 --retry 1 --retry-max-time 190 ' if selected['cli'] in ('0.155.1', '0.169.1') else '') +
+            + ('--connect-timeout 10 --max-time 180 --retry 1 --retry-max-time 190 ' if selected['cli'] in ('0.155.1', '0.169.1', '0.171.0') else '') +
             f'https://github.com/openai/codex/releases/download/rust-v{selected["cli"]}/codex-package-x86_64-unknown-linux-musl.tar.gz '
             '-o /opt/codex.tar.gz && '
             f"echo '{selected['cli_archive_sha256']}  /opt/codex.tar.gz' | sha256sum -c --strict && "
             'tar -xzf /opt/codex.tar.gz -C /opt/codex && '
             f"echo '{selected['cli_executable_sha256']}  /opt/codex/bin/codex' | sha256sum -c --strict && "
             + ''.join(f"echo '{digest}  /opt/codex/{member}' | sha256sum -c --strict && "
-                    for member, digest in (selected['helper_sha256'].items() if selected['cli'] in ('0.155.1', '0.169.1') else ())) +
+                    for member, digest in (selected['helper_sha256'].items() if selected['cli'] in ('0.155.1', '0.169.1', '0.171.0') else ())) +
             'rm /opt/codex.tar.gz\n'
             'COPY build/codex_pilot_stub.py build/codex_pilot_probe.py /opt/pilot/\n'
             'RUN mkdir -p /logs/agent /logs/verifier /logs/artifacts /installed-agent && chmod 777 /logs/agent /logs/artifacts && chmod 700 /logs/verifier && '
@@ -43,8 +43,8 @@ def usage_record(value, *, probe=False, runtime=None):
     agent = value.get('agent_result') or {}
     counts = {key: agent.get(key) for key in ('n_input_tokens', 'n_cache_tokens', 'n_output_tokens')}
     metadata = agent.get('metadata') or {}
-    candidate = selected['cli'] == '0.169.1'
-    write_key = ('cache_write_input_count' if selected['id'] == CODEX_OBSERVATION_PROFILE
+    candidate = selected['cli'] in ('0.169.1', '0.171.0')
+    write_key = ('cache_write_input_count' if selected['id'] in CODEX_OBSERVATION_PROFILES
                  else 'n_cache_write_input_tokens')
     writes = metadata.get(write_key) if candidate else 0
     if candidate:

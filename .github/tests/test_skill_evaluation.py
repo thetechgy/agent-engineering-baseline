@@ -730,7 +730,7 @@ class UpstreamTests(unittest.TestCase):
         runner_patch = "diff --git" + patch_text.split("diff --git")[members.index("src/skillevaluator/tier3/harbor/runner.py") + 1]
         added = [line[1:].strip() for line in runner_patch.splitlines()
                  if line.startswith("+") and not line.startswith("+++")]
-        self.assertEqual(added, ['if agent == "codex":', 'command.extend(["--ak", "version=0.155.1"])'])
+        self.assertEqual(added, ['if agent == "codex":', 'command.extend(["--ak", "version=0.171.0"])'])
 
         runner_source = Path(inspect.getfile(runner)).read_text()
         with tempfile.TemporaryDirectory() as directory:
@@ -739,7 +739,7 @@ class UpstreamTests(unittest.TestCase):
             runner_target.parent.mkdir(parents=True)
             runner_target.write_text(runner_source)
             # Benchmark setup is already patched; quality setup is the pristine source.
-            if 'command.extend(["--ak", "version=0.155.1"])' not in runner_source:
+            if 'command.extend(["--ak", "version=0.171.0"])' not in runner_source:
                 subprocess.run(["git", "apply", "--include=src/skillevaluator/tier3/harbor/runner.py", "--check", str(REPO / reports.PATCH)], cwd=root, check=True)
                 subprocess.run(["git", "apply", "--include=src/skillevaluator/tier3/harbor/runner.py", str(REPO / reports.PATCH)], cwd=root, check=True)
             runner_tree = ast.parse(runner_target.read_text())
@@ -750,15 +750,15 @@ class UpstreamTests(unittest.TestCase):
             build = namespace["build_harbor_run_command"]
             common = {"dataset_path": "unused", "job_name": "keyless-test"}
             command = build(agent="codex", env_mode="docker", **common)
-            self.assertEqual(command[command.index("--ak") + 1], "version=0.155.1")
+            self.assertEqual(command[command.index("--ak") + 1], "version=0.171.0")
             for agent, environment in (("claude-code", "docker"), ("codex", "local"), ("codex", "daytona")):
                 self.assertNotIn("--ak", build(agent=agent, env_mode=environment, **common))
-            codex = Codex(logs_dir=root / "logs", model_name=reports.POLICY["model"], version="0.155.1")
+            codex = Codex(logs_dir=root / "logs", model_name=reports.POLICY["model"], version="0.171.0")
             with patch.object(codex, "exec_as_root", new_callable=AsyncMock), \
                     patch.object(codex, "exec_as_agent", new_callable=AsyncMock) as execute:
                 asyncio.run(codex.install(object()))
                 install_command = execute.call_args.kwargs["command"]
-            self.assertIn("npm install -g @openai/codex@0.155.1", install_command)
+            self.assertIn("npm install -g @openai/codex@0.171.0", install_command)
             self.assertNotIn("@latest", install_command)
 
 

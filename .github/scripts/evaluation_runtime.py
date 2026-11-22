@@ -7,10 +7,13 @@ from evaluation_campaign_core import require
 ROOT = Path(__file__).resolve().parents[2]
 CODEX_FIXTURE_PROFILE = 'codex-1691-sol62-v1'
 CODEX_OBSERVATION_PROFILE = 'codex-1691-observation-v1'
+CODEX_OBSERVATION_1710_PROFILE = 'codex-1710-observation-v1'
+CODEX_OBSERVATION_PROFILES = (CODEX_OBSERVATION_PROFILE, CODEX_OBSERVATION_1710_PROFILE)
 CODEX_090_PROFILES = {
     'codex-090-diagnostic-v1': '.github/evals/codex-execution-090.json',
     CODEX_FIXTURE_PROFILE: '.github/evals/codex-execution-1691.json',
     CODEX_OBSERVATION_PROFILE: '.github/evals/codex-execution-1691.json',
+    CODEX_OBSERVATION_1710_PROFILE: '.github/evals/codex-execution-1710.json',
 }
 
 
@@ -34,15 +37,15 @@ def validate_codex(value):
     require(value['frozen_profile'] == expected and
             value['frozen_profile_sha256'] == hashlib.sha256((ROOT / value['frozen_profile']).read_bytes()).hexdigest(),
             'Qualified Codex profile drift')
-    capabilities = (['non-forwarding-cli-probe', 'exact-authorized-live'] if value['id'] in ('codex-authorized-campaign-v1', 'codex-090-diagnostic-v1', CODEX_OBSERVATION_PROFILE)
+    capabilities = (['non-forwarding-cli-probe', 'exact-authorized-live'] if value['id'] in ('codex-authorized-campaign-v1', 'codex-090-diagnostic-v1', *CODEX_OBSERVATION_PROFILES)
                     else ['oracle', 'non-forwarding-cli-probe'])
     if value['id'] == CODEX_FIXTURE_PROFILE:
         capabilities = ['non-forwarding-cli-probe']
     require(value['inference_enabled'] is False and value['capabilities'] == capabilities,
             'Unsupported Codex capabilities or inference setting')
     selected = reports.read_json(ROOT / expected) if value['id'] in CODEX_090_PROFILES else PROFILE
-    if value['id'] == CODEX_OBSERVATION_PROFILE:
-        selected = dict(selected, id=CODEX_OBSERVATION_PROFILE)
+    if value['id'] in CODEX_OBSERVATION_PROFILES:
+        selected = dict(selected, id=value['id'])
     return dict(selected, agent='codex')
 
 

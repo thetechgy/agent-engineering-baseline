@@ -1137,7 +1137,7 @@ def prepare(inputs, saved_analysis, skill, record_id, source=None, support=None,
         "implementation_digest": evidence.identity([
             [path.name, evidence.digest_bytes(capture.read(path))]
             for path in (Path(__file__), Path(analysis.__file__), Path(evidence.__file__), Path(evidence.reports.__file__),
-                         evidence.ROOT / evidence.CUSTOM_REGISTRY,
+                         evidence.ROOT / evidence.CUSTOM_REGISTRY, evidence.ROOT / evidence.SOURCE_SUCCESSORS,
                          evidence.ROOT / '.github/scripts/evaluator_profiles.py',
                          evidence.ROOT / '.github/evals/evaluator-candidate.json',
                          evidence.ROOT / '.github/evals/evaluator-0.9.json')

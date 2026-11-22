@@ -33,7 +33,7 @@ class Codex1691Tests(unittest.TestCase):
         self.assertFalse(config['features']['multi_agent_v2'])
 
     def test_registry_projects_exact_main_and_candidate_matches_shared_evidence_owner(self):
-        registry = skill_evidence.custom_registry(ROOT)
+        registry = skill_evidence.frozen_registry(ROOT)
         registry['profiles'].pop('gh-deterministic-gate-v6')
         registry['profiles'].pop('gh-native-oracle-v2')
         registry['active_profiles']['gh'] = 'gh-deterministic-gate-v5'
@@ -45,7 +45,7 @@ class Codex1691Tests(unittest.TestCase):
         task = load(ROOT / '.github/evals/campaigns/gh-codex-1691.json')
         identity = purpose(task, 'probe')
         manifest = skill_evidence.custom_source_manifest(ROOT, 'gh', purpose=identity)
-        self.assertEqual(skill_evidence.identity(manifest), registry['profiles'][identity]['runtime_digest'])
+        self.assertEqual(skill_evidence.identity(manifest), skill_evidence.custom_registry(ROOT)['profiles'][identity]['runtime_digest'])
 
     def test_pricing_applies_cache_reads_writes_and_only_available_context_evidence(self):
         prices = check_pricing(read_profile(SELECTOR)['resolved'])

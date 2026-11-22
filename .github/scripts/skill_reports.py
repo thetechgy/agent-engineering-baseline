@@ -20,7 +20,7 @@ POLICY = {
     "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
     "harbor": "0.13.2",
     "docker_compose": "5.8.0",
-    "codex": "0.155.1",
+    "codex": "0.171.0",
     "python": "3.13",
     "model": "gpt-5.6-sol",
     "provider": "openai",

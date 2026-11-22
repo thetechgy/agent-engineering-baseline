@@ -19,18 +19,28 @@ metadata and the previous workspace stay protected.
 [0.170.0 permission updates](https://github.com/openai/codex/releases/tag/rust-v0.170.0)
 · [0.171.0 working-directory fix](https://github.com/openai/codex/pull/61195).
 
-Keep the full Harbor observation on `case-observation` (0.169.1). Registering
-0.171.0 through the shared runner changed three retained identity contracts
-covering the six-slot campaign, gh-014 registry and retrospective replay. The
-independent probe preserves the recorded profiles and existing selectors.
-Raw rollout traces require the same released binary that wrote them.
-[0.171.0 rollout replay contract](https://github.com/openai/codex/pull/61199).
+The ordinary `case-observation` selection resolves to the 0.171.0 definition. Select `case-observation-1691` to
+restore 0.169.1 with the same model and effort. Each definition binds its own preparation and protocol.
+The 0.155.1 and 0.167.0 campaign records retain their original selectors.
 
-Keep the production SkillEvaluator 0.3.0 benchmark and trusted gh initializer
-on 0.155.1 with `gpt-5.6-sol` at High. The newer binary sent that same model
-and effort to the controlled provider. The production fixture still needs to
-exercise the old Harbor initializer, real CLI and collector together before
-a pin change. Frozen 0.155.1 and 0.167.0 replay selections remain available.
+The six-slot Boolean effectiveness protocol, the gh-014 0.169.1 probe, and the retained Boolean slot replay
+all bind shared source bytes. Replay an original record from its producing revision and use the same CLI for
+raw rollouts. The prior default source is `fb9c8a0`. New source-v37 registrations inherit their frozen fixture
+and grader contracts and carry new runtime digests. The retained replay also binds the new adapter digest.
+[Upstream rollout replay contract](https://github.com/openai/codex/pull/61199).
+
+The production benchmark uses the SkillEvaluator 0.3.0 Docker dispatch patch. The trusted gh initializer reads the
+same Codex pin as the report policy. Both select 0.171.0. The benchmark uses `gpt-5.6-sol` at High.
+Run the credential-free benchmark integration with its production setup and verified Compose:
+
+```sh
+"$SKILL_EVALUATOR_PYTHON" -B .github/scripts/qualify_benchmark_codex.py "$RUNNER_TEMP/benchmark-codex"
+```
+
+The qualifier uses the reviewed release in network-isolated task containers, the real gh broker, Harbor agent,
+custom verifier and collector. Its loopback responses supply fixture usage. For the 0.155.1 rollback, select
+the benchmark setup, patch and report policy together from `fb9c8a0`. Historical reporting and comparison
+must use the policy and source revision that produced the records.
 
 ## Codex 0.169.1 proposed profile for issue #95
 
