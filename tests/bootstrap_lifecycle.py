@@ -677,6 +677,10 @@ def reviewed_imports(root, apm, bootstrap):
 def published_scope(root, apm, bootstrap, user):
     scenario = Scenario(root, apm, user, bootstrap)
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPOSITORY, text=True).strip()
+    if os.environ.get("GITHUB_EVENT_NAME") == "pull_request":
+        event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
+        revision = event["pull_request"]["head"]["sha"]
+        check(bool(re.fullmatch("[0-9a-f]{40}", revision)), "published package uses the PR head")
     ref = "https://github.com/thetechgy/agent-engineering-baseline.git#" + revision
     codex, copilot = scenario.config_paths()
     foreign = {"type": "http", "url": "https://example.invalid/independent"}
@@ -748,8 +752,20 @@ def reset_and_rollback(root, apm, bootstrap, previous_bootstrap, user):
           and json.loads(copilot.read_text())["mcpServers"]["independent"] == foreign
           and 'model = "operator"' in codex.read_text(), "re-bootstrap preserves independent configuration and package")
     scenario.instruction_delivery("current")
-    shutil.rmtree(scenario.deploy)
-    shutil.copytree(backup, scenario.deploy, symlinks=True)
+    # The native receipt binds the filesystem identity of both scope roots.
+    # Keep those directories in place while restoring their contents.
+    for child in scenario.deploy.iterdir():
+        if user and child == scenario.metadata:
+            for member in child.iterdir():
+                if member.is_dir() and not member.is_symlink():
+                    shutil.rmtree(member)
+                else:
+                    member.unlink()
+        elif child.is_dir() and not child.is_symlink():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+    shutil.copytree(backup, scenario.deploy, dirs_exist_ok=True, symlinks=True)
     if not user:
         # This home belongs exclusively to this repository fixture.
         shutil.rmtree(receipts)
