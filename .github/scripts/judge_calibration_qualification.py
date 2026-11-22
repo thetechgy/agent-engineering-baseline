@@ -4,6 +4,7 @@ Only test IO is substituted. Selection, the real evaluator, shared scheduling,
 accounting, artifact admission, authentication CLI and report consumption run.
 """
 import argparse
+from contextlib import nullcontext
 import json
 import os
 from pathlib import Path
@@ -14,6 +15,7 @@ import tempfile
 import threading
 import time
 import urllib.request
+from unittest.mock import patch
 
 from evaluation_campaign_core import require
 import evaluation_campaign_protocol as shared
@@ -72,12 +74,13 @@ class Observer(transport.Responder):
 class Fixture:
     def __init__(self, name, observer):
         self.name, self.observer = name, observer
-        self.settings = {'SKILL_EVAL_LLM_JUDGE_BUDGET_SEC': '1',
+        self.clock_offset = 0
+        self.settings = {'SKILL_EVAL_LLM_JUDGE_BUDGET_SEC': '30' if name == 'deadline-stop' else '1',
                          'SKILL_EVAL_LLM_RETRY_BASE_DELAY': '0.001',
                          'SKILL_EVAL_LLM_RETRY_MAX_DELAY': '0.01'}
         self.limits = ({'http': 1} if name == 'request-stop' else {'tokens': 26} if name == 'usage-stop'
                        else {'cost': 0.00001} if name == 'cost-stop'
-                       else {'seconds': 0.3} if name == 'deadline-stop' else {})
+                       else {'seconds': 30} if name == 'deadline-stop' else {})
 
     def before_record(self, verifier, row):
         self.observer.scenario = WIRE.get(self.name, 'cache-cost-stop' if self.name == 'cache-cost-stop' else 'valid')
@@ -92,9 +95,14 @@ class Fixture:
             verifier._accounting._ACTIVE.get()[0].with_name('judge_accounting.json.tmp').mkdir()
             verifier._accounting.persist()
 
+    def monotonic(self):
+        return time.monotonic() + self.clock_offset
+
     def after_record(self, row):
         if self.name == 'deadline-stop':
-            time.sleep(0.35)
+            require(row['state'] == 'completed' and row['accounting_summary']['complete'],
+                    'Deadline control requires a completed first judgment')
+            self.clock_offset = self.limits['seconds']
 
 
 def worker(output, task):
@@ -119,7 +127,11 @@ def worker(output, task):
             first = len(observer.requests)
             root = output / 'scenarios' / scenario / 'evidence'
             try:
-                value = campaign.execute(root.parent, task, fixture=Fixture(scenario, observer))
+                fixture = Fixture(scenario, observer)
+                # Advance only the scheduler clock, after the physical HTTP response and its receipt.
+                clock = patch.object(campaign, 'time', fixture) if scenario == 'deadline-stop' else nullcontext()
+                with clock:
+                    value = campaign.execute(root.parent, task, fixture=fixture)
             except BaseException:
                 try: reports.write_json(root / 'request-observer.json', observer.requests[first:])
                 except Exception: sys.stderr.write('Observer retention failed; primary failure preserved.\n')
