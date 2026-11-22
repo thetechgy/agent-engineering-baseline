@@ -723,8 +723,8 @@ class UpstreamTests(unittest.TestCase):
         from harbor.agents.installed.codex import Codex
         patch_text = (REPO / reports.PATCH).read_text()
         members = re.findall(r"^diff --git a/(\S+)", patch_text, re.MULTILINE)
-        self.assertEqual(set(members), {"src/skillevaluator/tier3/" + name for name in (
-            "eval_core/checks.py", "eval_core/codex_tool_call_normalizer.py",
+        self.assertEqual(set(members), {"src/skillevaluator/provider_config.py"} | {"src/skillevaluator/tier3/" + name for name in (
+            "eval_core/checks.py", "eval_core/llm_judge.py", "eval_core/codex_tool_call_normalizer.py",
             "eval_core/sensitive_path_evidence.py", "harbor/adapter.py",
             "harbor/collector.py", "harbor/benchmark_codex.py", "harbor/runner.py", "harbor/templates/eval.py")})
         runner_source = Path(inspect.getfile(runner)).read_text()

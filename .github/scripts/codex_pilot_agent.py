@@ -10,7 +10,7 @@ import shlex
 import tomllib
 
 from harbor.agents.installed.codex import Codex
-from codex_pilot_contract import PROFILE, ROOT, configuration
+from codex_pilot_contract import PROFILE, ROOT, configuration, model_arguments
 from codex_pilot_runtime import usage_source
 from evaluation_runtime import CODEX_090_PROFILES, CODEX_FIXTURE_PROFILE, CODEX_OBSERVATION_PROFILES
 
@@ -116,8 +116,7 @@ class PilotCodex(Codex):
             raise
 
     async def _run_codex(self, instruction, environment, context):
-        if self.model_name != self.profile['model']:
-            raise ValueError('Pilot model drift')
+        model = model_arguments(self.profile, self.model_name)
         probe = os.environ.get('AEB_PILOT_PROBE') == '1'
         if not probe and os.environ.get('OPENAI_BASE_URL'):
             raise ValueError('Pilot provider override refused')
@@ -190,7 +189,7 @@ class PilotCodex(Codex):
                 await self.exec_as_agent(environment, command=(
                     f"timeout 5 sh -c 'until test -f {logs}/probe.ready; do sleep 0.05; done'"))
         command = (f'{BINARY} exec --strict-config --sandbox danger-full-access --skip-git-repo-check '
-                   f'--cd /workspace --model {self.profile["model"]} --json '
+                   f'--cd /workspace {shlex.join(model)} --json '
                    f'--output-last-message {logs}/last-message.txt -- {shlex.quote(instruction)} '
                    f'>{logs}/codex.txt 2>{logs}/codex-stderr.txt')
         if scenario in ('interruption', 'provider-timeout'):

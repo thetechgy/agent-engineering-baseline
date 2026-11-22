@@ -88,7 +88,7 @@ class ReturnContract(unittest.TestCase):
             definitions=[]
             version='v3' if case=='transfer' else 'v1'
             for variant in ('current', 'candidate'):
-                task=load(ROOT / ('.github/evals/campaigns/pester-return-'+case+'-'+variant+'-'+version+'.json'))
+                task=load(ROOT / ('.github/evals/campaigns/pester-return-'+case+'-'+variant+'-'+version+'-sol62.json'))
                 definitions.append(task.definition)
                 self.assertFalse(task.diagnostic_observation)
                 self.assertEqual(task.public_policy_fields(), {})
@@ -100,7 +100,7 @@ class ReturnContract(unittest.TestCase):
                     with self.assertRaises(ValueError):task.launch_context(ROOT, ROOT/'unused', present, {'AEB_UNREVIEWED':'1'})
                     with self.assertRaises(ValueError):task.validate_launch_context(ROOT, {'unreviewed':True}, present, {})
 
-                controls=load(ROOT / ('.github/evals/campaigns/pester-return-'+case+'-'+variant+'-controls-'+version+'.json'))
+                controls=load(ROOT / ('.github/evals/campaigns/pester-return-'+case+'-'+variant+'-controls-'+version+'-sol62.json'))
                 for mode in ('oracle','probe'):
                     selected=purpose(controls,mode)
                     profile,_,_=evidence.custom_contract('powershell-pester-6',purpose=selected)

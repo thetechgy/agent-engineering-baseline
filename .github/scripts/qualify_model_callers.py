@@ -23,12 +23,10 @@ def qualify(root):
     routes = defaultdict(list)
     pilot = PilotCodex.profile
     argv = command(root, "with_skill")
-    require(argv[argv.index("--model") + 1] == pilot["model"], "Pilot launcher omitted its model")
-    routes[pilot["cli"]].append(("pilot", pilot))
+    routes[pilot["cli"]].append(("pilot", pilot, argv[argv.index("--model") + 1]))
     config, _ = launch_config(root, {"position": 1, "trial": 1, "case": "pester-001",
                                      "arm": "with_skill"}, root / "pester-001")
-    require(read_json(config)["agent"]["model_name"] == pilot["model"], "Cohort launcher model drift")
-    routes[pilot["cli"]].append(("pester-cohort", pilot))
+    routes[pilot["cli"]].append(("pester-cohort", pilot, read_json(config)["agent"]["model_name"]))
     choices = read_json(ROOT / ".github/evals/campaigns/selections-sol62.json")["campaigns"]
     import yaml
     workflow = yaml.safe_load((ROOT / ".github/workflows/evaluation-campaign.yml").read_text())
@@ -43,15 +41,15 @@ def qualify(root):
         launch = agent_config(task, "experiment-probe", None, runtime, True)
         require(launch["model_name"] == runtime["model"] and launch["kwargs"]["campaign_definition"] == task.member,
                 "Harbor campaign dispatch model drift")
-        routes[runtime["cli"]].append((name, runtime))
+        routes[runtime["cli"]].append((name, runtime, launch["model_name"]))
 
     receipt = {}
     for version, callers in routes.items():
         with TemporaryDirectory(prefix="model-release-") as directory:
             binary = acquire(callers[0][1], Path(directory))
-            for name, runtime in callers:
+            for name, runtime, selected_model in callers:
                 require(runtime["model"] == POLICY["model"] == "gpt-6.2-sol", "Unapproved model: " + name)
-                observed = probe(runtime, binary, root / name, "provider-refusal")
+                observed = probe(runtime, binary, root / name, "provider-refusal", selected_model=selected_model)
                 receipt[name] = {"cli": version, "model": observed["model"], "effort": observed["reasoning_effort"],
                                  "requests": observed["request_count"], "endpoint": "/v1/responses"}
     write_json(root / "requests.json", receipt)

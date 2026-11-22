@@ -8,6 +8,12 @@ PROFILE = json.loads((ROOT / '.github/evals/codex-pilot-sol62.json').read_text()
 PURPOSES = ('cli_pilot', 'cli_pilot_control')
 
 
+def model_arguments(runtime, selected_model):
+    if selected_model != runtime["model"]:
+        raise ValueError("Pilot model drift")
+    return ["--model", selected_model]
+
+
 def runner_bytes(workspace=ROOT):
     """Explicit versioned correction: Boolean assertion admission and fixed reasons."""
     source = (workspace / '.github/evals/powershell-pester-6/support/Runner.ps1').read_text()

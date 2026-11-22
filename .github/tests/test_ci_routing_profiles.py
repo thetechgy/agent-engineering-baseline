@@ -102,13 +102,17 @@ class RoutingProfiles(unittest.TestCase):
 
     def test_freeze_successor_changes_only_routing_and_preserves_original_bytes(self):
         base = ROOT / '.github/evals/pester-return-contract'
-        current = json.loads((base / 'freeze.json').read_text())
+        active = json.loads((base / 'freeze.json').read_text())
+        prior = (base / active['previous']['manifest']).read_bytes()
+        self.assertEqual(hashlib.sha256(prior).hexdigest(), active['previous']['sha256'])
+        current = json.loads(prior)
         raw = (base / current['previous']['manifest']).read_bytes()
         self.assertEqual(hashlib.sha256(raw).hexdigest(), current['previous']['sha256'])
         old = json.loads(raw)
         workflow = '.github/workflows/pester-return-qualification.yml'
         self.assertEqual(old['files'][workflow], '2078943a7ee5330caab85187ec7b3bbcbfe92489cdf4dc046d302c1b1319b0b0')
-        self.assertEqual(current['files'][workflow], hashlib.sha256((ROOT / workflow).read_bytes()).hexdigest())
+        self.assertEqual(current['files'][workflow], '549a7e100d7a125f6a818d5828faf1979fce1f0f09f6971a86c08397e8200e4e')
+        self.assertEqual(active['files'][workflow], hashlib.sha256((ROOT / workflow).read_bytes()).hexdigest())
         for key in old:
             if key not in ('id', 'previous', 'revision_purpose', 'files'):
                 self.assertEqual(old[key], current[key], key)

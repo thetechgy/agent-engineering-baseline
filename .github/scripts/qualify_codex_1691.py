@@ -11,7 +11,7 @@ import time
 import urllib.error
 import urllib.request
 
-from codex_pilot_contract import ROOT, configuration
+from codex_pilot_contract import ROOT, configuration, model_arguments
 from codex_pilot_runtime import usage_record
 from evaluation_campaign import no_credentials, revision
 from evaluation_campaign_core import require
@@ -48,7 +48,7 @@ def check_digest(path, expected):
         require(file_digest(stream, 'sha256').hexdigest() == expected, 'Release asset digest mismatch')
 
 
-def probe(runtime, binary, root, scenario):
+def probe(runtime, binary, root, scenario, *, selected_model=None):
     import toml
     root.mkdir()
     home = root / 'home'
@@ -76,7 +76,8 @@ def probe(runtime, binary, root, scenario):
             else:
                 raise ValueError('Fixture did not start')
             process = subprocess.run([binary, 'exec', '--strict-config', '--sandbox', 'read-only',
-                '--skip-git-repo-check', '--cd', root, '--json', '--model', runtime['model'], '--', 'Print the fixture result.'],
+                '--skip-git-repo-check', '--cd', root, '--json', *model_arguments(runtime, runtime['model'] if selected_model is None else selected_model),
+                '--', 'Print the fixture result.'],
                 env={'PATH': os.defpath, 'HOME': str(home), 'CODEX_HOME': str(home),
                      'OPENAI_API_KEY': 'pilot-not-a-credential'},
                 stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=45)
