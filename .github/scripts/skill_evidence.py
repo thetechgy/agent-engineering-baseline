@@ -3514,7 +3514,7 @@ def custom_registry(workspace=ROOT):
                                      workspace_profile=parent['runtime']['workspace_profile'] + '-sol62')
         require(successor not in profiles, 'Duplicate model successor')
         profiles[successor] = result
-    registry['active_profiles']['gh'] = 'gh-deterministic-gate-v7'
+    registry['active_profiles']['gh'] = 'gh-deterministic-gate-v8'
     return registry
 
 
@@ -3577,7 +3577,7 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v22'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
-        profile_id = 'gh-native-oracle-v3'
+        profile_id = 'gh-native-oracle-v4'
     profile_id = registry['active_profiles'].get(name) if profile_id is None else profile_id
     require(profile_id in registry['profiles'], 'Unknown custom metric namespace or profile')
     registered = registry['profiles'][profile_id]

@@ -20,7 +20,7 @@ class NativeCurrentTests(unittest.TestCase):
             os.environ['SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE'] = str(root / 'key')
             bundle, fixtures, rows, arms, manifest = native.prepare(root)
             self.assertEqual(len(rows), 48)
-            self.assertEqual(e.custom_registry()['active_profiles']['gh'], 'gh-deterministic-gate-v7')
+            self.assertEqual(e.custom_registry()['active_profiles']['gh'], 'gh-deterministic-gate-v8')
             self.assertEqual({(r['arm'], r['case_id']) for r in rows},
                 {(arm, case) for arm in ('with_skill', 'without_skill') for case in fixtures})
             self.assertEqual({r['task_checksum'] for r in rows},
@@ -29,7 +29,7 @@ class NativeCurrentTests(unittest.TestCase):
                 attempts=1, agent='oracle', execution_policy={'environment':'aeb-gh-fixture',
                 'concurrency':2, 'timeout_multiplier':1.0, 'stop_on_pass':False})
             profile, _ = e.validate_custom_capture(capture, 'gh', ROOT)
-            self.assertEqual(profile['id'], 'gh-native-oracle-v3')
+            self.assertEqual(profile['id'], 'gh-native-oracle-v4')
             self.assertEqual(profile['grading'], 'custom_only')
             capture['execution_policy']['environment'] = 'docker'
             with self.assertRaisesRegex(ValueError, 'Execution policy drift'):
@@ -165,7 +165,7 @@ class NativeCurrentTests(unittest.TestCase):
             _qualify_reporting(root, sanitized, candidate=True, name='gh')
             self.assertTrue((sanitized / 'reporting/consolidated.html').is_file())
             self.assertEqual(len(public['observations']),48)
-            self.assertEqual(public['custom']['profile_id'],'gh-native-oracle-v3')
+            self.assertEqual(public['custom']['profile_id'],'gh-native-oracle-v4')
             self.assertEqual(public['policy']['fields']['workspace_mode'],'group')
             for arm in public['arms']:
                 self.assertEqual(arm['condition']['workspace_mode'],'group')
