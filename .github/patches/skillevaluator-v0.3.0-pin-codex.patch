@@ -269,18 +269,56 @@ diff --git a/src/skillevaluator/tier3/harbor/collector.py b/src/skillevaluator/t
              continue
  
          with_findings = _security_score_findings(reward)
+diff --git a/src/skillevaluator/tier3/harbor/benchmark_codex.py b/src/skillevaluator/tier3/harbor/benchmark_codex.py
+new file mode 100644
+--- /dev/null
++++ b/src/skillevaluator/tier3/harbor/benchmark_codex.py
+@@ -0,0 +1,33 @@
++"""Keep native Codex state private to the agent in each Docker trial."""
++from pathlib import PurePosixPath
++
++from harbor.agents.installed.codex import Codex
++
++
++class BenchmarkCodex(Codex):
++    _exec_completed = False
++
++    def _convert_events_to_trajectory(self, session_dir):
++        trajectory = super()._convert_events_to_trajectory(session_dir)
++        # Harbor otherwise fills missing token fields with zeros on interruption.
++        # Retain the partial steps and native session without reporting final usage.
++        if trajectory is not None and not self._exec_completed:
++            return trajectory.model_copy(update={"final_metrics": None})
++        return trajectory
++
++    def build_cli_flags(self):
++        # The verifier binds each completed command to one native tool result.
++        return super().build_cli_flags() + " --disable code_mode"
++
++    async def run(self, instruction, environment, context):
++        # The image projection creates /tmp/codex-home/skills as root. Codex
++        # 0.171.0 also needs a writable state database and helper directory.
++        created = await self.exec_as_agent(
++            environment,
++            command='home=$(getent passwd "$(id -u)" | cut -d: -f6) && '
++                    'test -n "$home" && mktemp -d -- "$home/.codex-benchmark.XXXXXXXX"',
++        )
++        self._REMOTE_CODEX_HOME = PurePosixPath(created.stdout.strip())
++        self._exec_completed = False
++        await super().run(instruction, environment, context)
++        self._exec_completed = True
 diff --git a/src/skillevaluator/tier3/harbor/runner.py b/src/skillevaluator/tier3/harbor/runner.py
 --- a/src/skillevaluator/tier3/harbor/runner.py
 +++ b/src/skillevaluator/tier3/harbor/runner.py
-@@ -442,6 +442,8 @@
+@@ -440,6 +440,8 @@
+     elif env_mode == "docker":
+         if agent_import_path:
              command.extend(["--agent-import-path", agent_import_path])
++        elif agent == "codex":
++            command.extend(["--agent-import-path", "skillevaluator.tier3.harbor.benchmark_codex:BenchmarkCodex", "--ak", "version=0.171.0"])
          else:
              command.extend(["-a", agent])
-+            if agent == "codex":
-+                command.extend(["--ak", "version=0.171.0"])
          command.extend(["--environment-import-path", SECURE_DOCKER_ENV_IMPORT_PATH])
-     else:
-         command.extend(["-a", agent, "--env", env_mode])
 diff --git a/src/skillevaluator/tier3/harbor/templates/eval.py b/src/skillevaluator/tier3/harbor/templates/eval.py
 --- a/src/skillevaluator/tier3/harbor/templates/eval.py
 +++ b/src/skillevaluator/tier3/harbor/templates/eval.py

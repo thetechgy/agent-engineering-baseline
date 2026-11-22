@@ -35,7 +35,10 @@ def program(command):
 
 record = Path(sys.argv[1])
 scenario = sys.argv[2]
-priced = scenario in ('priced-success', 'case-observation-priced')
+benchmark = scenario in ('benchmark-priced', 'benchmark-interruption')
+priced = scenario in ('priced-success', 'case-observation-priced', 'benchmark-priced')
+if scenario == 'benchmark-interruption':
+    scenario = 'interruption'
 compatibility = scenario == 'compatibility'
 answer = 'Credential-free qualification complete.'
 if scenario in ('case-observation', 'case-observation-priced'):
@@ -104,17 +107,28 @@ class Refuse(BaseHTTPRequestHandler):
                 'interruption': "printf pilot-command-started; sleep 120",
             }.get(scenario, ':')
             issued = commands if commands is not None and scenario in ('success', 'native-deadline') else [command]
-            programs = [program(c) for c in issued]
-            if any(isinstance(c,dict) for c in issued):
-                programs = ['\n'.join(programs)] # Preserve native edit dependencies within one real code-mode call.
+            names = {tool.get('name') for tool in body.get('tools', [])}
+            calls = []
+            if 'exec_command' in names or benchmark and not names:
+                for index, operation in enumerate(issued):
+                    call_id = 'pilot-tool-' + str(index)
+                    if isinstance(operation, str):
+                        calls.append({'type': 'function_call', 'call_id': call_id, 'name': 'exec_command',
+                                      'arguments': json.dumps({'cmd': operation, 'max_output_tokens': 4096})})
+                    else:
+                        if names and 'apply_patch' not in names:
+                            raise ValueError('Native patch tool was not advertised')
+                        calls.append({'type': 'custom_tool_call', 'call_id': call_id, 'name': 'apply_patch',
+                                      'input': operation['input']})
+            else:
+                programs = [program(operation) for operation in issued]
+                if any(isinstance(operation, dict) for operation in issued):
+                    programs = ['\n'.join(programs)]
+                calls = [{'type': 'custom_tool_call', 'call_id': 'pilot-tool-' + str(i),
+                          'name': 'exec', 'input': code} for i, code in enumerate(programs)]
             events = [
                 {'type': 'response.created', 'response': {'id': 'pilot-fixture-1'}},
-                *[{'type': 'response.output_item.done', 'item':
-                    ({'type': 'function_call', 'call_id': 'pilot-tool-' + str(i), 'name': 'exec_command',
-                      'arguments': json.dumps({'cmd': issued[i], 'max_output_tokens': 4096})}
-                     if any(t.get('name') == 'exec_command' for t in body.get('tools', [])) else
-                     {'type': 'custom_tool_call', 'call_id': 'pilot-tool-' + str(i), 'name': 'exec', 'input': code})}
-                  for i, code in enumerate(programs)],
+                *[{'type': 'response.output_item.done', 'item': call} for call in calls],
                 {'type': 'response.completed', 'response': {'id': 'pilot-fixture-1',
                     'usage': response_usage(1, deadline=scenario == 'native-deadline')}},
             ]

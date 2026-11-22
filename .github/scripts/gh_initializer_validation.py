@@ -326,6 +326,10 @@ def main(artifact, arm=None, shard=None, *, codex_control=False):
     with tempfile.TemporaryDirectory(prefix="gh-native-", dir=os.environ.get("RUNNER_TEMP")) as temporary:
         if not asyncio.run(qualify(Path(temporary), artifact, arm, shard, codex_control=codex_control)):
             raise RuntimeError("Native gh qualification incomplete")
+    if codex_control:
+        result = json.loads(artifact.read_text())
+        print(json.dumps({"case": "gh-014", "setup_only": result["setup_only"], "teardown": result["teardown"],
+                          "success": result["success"]}, sort_keys=True))
 
 
 

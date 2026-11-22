@@ -3,6 +3,7 @@ import argparse
 import asyncio
 import base64
 import json
+import idna
 import os
 from pathlib import Path
 import shlex
@@ -10,7 +11,7 @@ import shutil
 import time
 import subprocess
 
-from harbor.agents.installed.codex import Codex
+from skillevaluator.tier3.harbor.benchmark_codex import BenchmarkCodex
 from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
 from skillevaluator.tier3.harbor.collector import collect_harbor_results
 from skillevaluator.tier3.harbor.report import display_findings_report
@@ -26,7 +27,29 @@ ENDPOINT = "http://127.0.0.1:8765/v1"
 SENTINEL = "pilot-not-a-credential"
 
 
-class OfflineCodex(Codex):
+# Run as the trial user. Other UIDs' /proc/exe links are intentionally unreadable.
+INTERRUPT_AGENT = r"""
+import os
+from pathlib import Path
+import signal
+
+matches = []
+for proc in Path("/proc").glob("[0-9]*"):
+    try:
+        if proc.stat().st_uid != os.getuid():
+            continue
+        argv = (proc / "cmdline").read_bytes().split(b"\0")
+    except (FileNotFoundError, PermissionError):
+        continue
+    if len(argv) > 2 and argv[0].split(b"/")[-1] == b"codex" and argv[1] == b"exec":
+        matches.append(int(proc.name))
+if len(matches) != 1:
+    raise RuntimeError(f"Expected one trial Codex exec, found {len(matches)}")
+os.kill(matches[0], signal.SIGINT)
+"""
+
+
+class OfflineCodex(BenchmarkCodex):
     """Replace Internet installation only. Harbor owns execution and log conversion."""
 
     async def install(self, environment):
@@ -72,13 +95,16 @@ def stage(root, assets, present):
         shutil.copytree(assets / member, image / "reviewed" / member)
     shutil.copy2(gh.ROOT / ".github/scripts/codex_pilot_stub.py", image / "reviewed/stub.py")
     with (image / "Dockerfile").open("a") as build:
-        build.write("\nCOPY reviewed /opt/reviewed\nRUN ln -s /opt/reviewed/bin/codex /usr/local/bin/codex\n")
+        build.write("\nCOPY reviewed /opt/reviewed\nRUN chmod -R a+rX /opt/reviewed /workspace/skills && ln -s /opt/reviewed/bin/codex /usr/local/bin/codex\n")
     # The production verifier reads real ATIF and the private broker audit. Copy
     # only the loopback request and the produced edit into this local fixture.
+    # The standard verifier image carries idna. Custom-only mode omits its
+    # judge dependencies, so stage the same locked pure-Python import.
+    shutil.copytree(Path(idna.__file__).parent, task / "tests/idna", ignore=shutil.ignore_patterns("__pycache__"))
     verify = task / "tests/test.sh"
     with verify.open("a") as script:
         script.write("\ncp /opt/reviewed/request.json /logs/verifier/provider.json\n"
-                     "test ! -e /tmp/codex-secrets && test ! -e /tmp/codex-home\n"
+                     "test ! -e /tmp/codex-secrets\ntest -z \"$(find /home/agent -maxdepth 1 -name '.codex-benchmark.*')\"\n"
                      "cp /workspace/output/result.json /logs/verifier/edited.json\n")
     return task
 
@@ -97,15 +123,15 @@ def run(root, assets, present, *, interrupt=False):
         calls = [{"tool": "apply_patch", "expect_failure": False, "input":
             "*** Begin Patch\n*** Add File: output/result.json\n+" + output + "\n*** End Patch"}]
     fixture_file = root / "provider.json"
-    write_json(fixture_file, {"scenario": "interruption" if interrupt else "priced-success", "commands": calls})
+    write_json(fixture_file, {"scenario": "benchmark-interruption" if interrupt else "benchmark-priced", "commands": calls})
     jobs = root.parent / "jobs"
     job_name = "gh-interrupted" if interrupt else "gh-codex-" + ("with" if present else "without")
     argv = build_harbor_run_command(dataset_path=task.parent, job_name=job_name, jobs_dir=jobs,
         agent="codex", model=POLICY["model"], env_mode="docker", n_concurrent=1)
     require(argv[argv.index("--ak") + 1] == "version=" + POLICY["codex"], "Workflow dispatch pin drift")
-    index = argv.index("-a")
-    require(argv[index + 1] == "codex", "Unexpected benchmark agent")
-    argv[index:index + 2] = ["--agent-import-path", "qualify_benchmark_codex:OfflineCodex"]
+    index = argv.index("--agent-import-path") + 1
+    require(argv[index] == BenchmarkCodex.__module__ + ":BenchmarkCodex", "Unexpected benchmark agent")
+    argv[index] = "qualify_benchmark_codex:OfflineCodex"
     env = dict(os.environ, PYTHONPATH=str(gh.ROOT / ".github/scripts"), BENCHMARK_CODEX_FIXTURE=str(fixture_file))
     with subprocess.Popen(argv, env=env) as job:
         try:
@@ -115,12 +141,8 @@ def run(root, assets, present, *, interrupt=False):
                     log = next((jobs / job_name).glob("*/agent/codex.txt"), None)
                     if log and '"item.started"' in log.read_text(errors="replace"):
                         container = read_json(log.parent.parent / "fixture-container.json")["id"]
-                        # Only signal this fixture's verified executable in its own container.
-                        terminate = ("import os,signal; from pathlib import Path; "
-                            "pids=[int(p.name) for p in Path('/proc').iterdir() if p.name.isdigit() "
-                            "and os.path.realpath(p/'exe')=='/opt/reviewed/bin/codex']; "
-                            "assert len(pids)==1; os.kill(pids[0],signal.SIGINT)")
-                        subprocess.run(["docker", "exec", "--user", "root", container, "python3", "-c", terminate], check=True)
+                        subprocess.run(["docker", "exec", "--user", "agent", container,
+                                        "python3", "-c", INTERRUPT_AGENT], check=True)
                         break
                     time.sleep(.25)
                 else:
@@ -138,11 +160,17 @@ def run(root, assets, present, *, interrupt=False):
     result = read_json(trial / "result.json")
     events = [json.loads(line) for line in (trial / "agent/codex.txt").read_text().splitlines() if line.startswith("{")]
     if interrupt:
-        require(result.get("exception_info") and any(e["type"] == "item.started" for e in events)
+        require((result.get("exception_info") or {}).get("exception_type") == "NonZeroAgentExitCodeError"
+                and any(e["type"] == "item.started" and e["item"]["type"] == "command_execution" for e in events)
                 and not any(e["type"] == "turn.completed" for e in events), "Interrupted trial looked complete")
+        usage = result.get("agent_result") or {}
+        require(all(usage.get(key) is None for key in ("n_input_tokens", "n_cache_tokens", "n_output_tokens", "cost_usd")),
+                "Incomplete usage was presented as a final measurement")
         return {"execution": "interrupted", "exception": result["exception_info"]["exception_type"],
                 "usage": None, "cleanup": True}
     require(result.get("exception_info") is None, "Trial failed: " + str(result.get("exception_info")))
+    native_reward = read_json(trial / "verifier/custom_reward.json")
+    require("error" not in native_reward, "Native custom verifier failed: " + str(native_reward.get("error")))
     request = read_json(trial / "verifier/provider.json")
     require(request["requests"] == 2 and all(row["model"] == POLICY["model"] and row["reasoning"]["effort"] == "high"
         and row["path"] == "/v1/responses" and row["authorization_matches_sentinel"] for row in request["request_observations"]),
@@ -150,11 +178,17 @@ def run(root, assets, present, *, interrupt=False):
     require(read_json(trial / "verifier/edited.json") == fixture["expected"], "Native patch output changed")
     completed = [e["item"]["type"] for e in events if e["type"] == "item.completed"]
     require(("command_execution" if present else "file_change") in completed, "Native action missing")
+    require(result["agent_info"]["version"] == POLICY["codex"], "Reported executable version drift")
+    metrics = native_reward["custom_metrics"]
+    require(metrics["gh_authorization"] == int(present) and metrics["gh_evidence"] == 1,
+            "Verifier could not bind these native operations to the private broker audit: " + str(metrics))
     usage = result["agent_result"]
     require([usage.get(key) for key in ("n_input_tokens", "n_cache_tokens", "n_output_tokens")] == [300, 100, 30],
             "Collector usage drift")
     return {"version": result["agent_info"]["version"], "requests": request["requests"], "model": request["model"],
-            "reasoning": request["reasoning"]["effort"], "actions": completed, "cleanup": True}
+            "reasoning": request["reasoning"]["effort"], "actions": completed, "cleanup": True,
+            "input_tokens": usage["n_input_tokens"], "cache_tokens": usage["n_cache_tokens"],
+            "output_tokens": usage["n_output_tokens"], "authorization": metrics["gh_authorization"]}
 
 
 def main():
@@ -179,7 +213,10 @@ def main():
         if arm == "with":
             require(scores.get("gh_task") == 1 and scores.get("gh_gate") == 1, "Approved gh task failed")
     display_findings_report(collected, "gh", ["codex"], report)
-    write_json(root / "qualification.json", {"inference": False, "agent": rows, "interruption": partial, "results": collected["agents"]["codex"]})
+    summary = {"inference": False, "agent": rows, "interruption": partial,
+               "with_skill_gate": collected["agents"]["codex"]["custom_with_skill"]["gh_gate"]}
+    write_json(root / "qualification.json", summary)
+    print(json.dumps(summary, sort_keys=True), flush=True)
     print("Production dispatch, broker, agent, verifier, collector and report passed", flush=True)
 
 

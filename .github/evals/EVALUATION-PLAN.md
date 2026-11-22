@@ -30,7 +30,9 @@ and grader contracts and carry new runtime digests. The retained replay also bin
 [Upstream rollout replay contract](https://github.com/openai/codex/pull/61199).
 
 The production benchmark uses the SkillEvaluator 0.3.0 Docker dispatch patch. The trusted gh initializer reads the
-same Codex pin as the report policy. Both select 0.171.0. The benchmark uses `gpt-5.6-sol` at High.
+same Codex pin as the report policy. Both select 0.171.0. The benchmark uses `gpt-5.6-sol` at High. Each Docker
+trial runs with the execution user’s private Codex home. Direct native tools keep each command and file edit
+attributable to its own result in the existing verifier.
 Run the credential-free benchmark integration with its production setup and verified Compose:
 
 ```sh

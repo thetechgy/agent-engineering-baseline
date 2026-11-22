@@ -116,6 +116,26 @@ jobs:
           path: ${{ runner.temp }}/pester-gate-artifacts/
           if-no-files-found: warn
           retention-days: 14
+      - name: Remove test-only Compose plugin
+        if: always()
+        run: |
+          bash .github/scripts/setup-compose.sh cleanup
+          if [[ -n "${PREPARATION_COMPOSE_PLUGIN_ROOT:-}" ]]; then
+            COMPOSE_PLUGIN_ROOT="$PREPARATION_COMPOSE_PLUGIN_ROOT" bash .github/scripts/setup-compose.sh cleanup
+          fi
+
+  ci-contracts:
+    needs: plan
+    if: needs.plan.outputs.contracts == 'true'
+    name: CI contracts (no inference)
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    # Prior run: 21m tests + 7.5m container checks; retain room for offline evidence.
+    timeout-minutes: 45
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -150,10 +170,6 @@ jobs:
       - name: Validate native gh Docker boundary without inference or credentials
         run: '"$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_container_validation.py'
 
-      - name: Remove test-only Compose plugin
-        if: always()
-        run: bash .github/scripts/setup-compose.sh cleanup
-
       - name: Install pinned SkillEvaluator 0.9.0 data-only host
         run: bash .github/scripts/setup-skillevaluator.sh candidate-next
 
@@ -161,26 +177,11 @@ jobs:
         timeout-minutes: 8
         run: |
           "$SKILL_NEXT_PYTHON" -I -B -c 'import os,sys; sys.path.insert(0,".github/scripts"); from gh_initializer_validation import main; main(os.environ["RUNNER_TEMP"]+"/gh-codex-initializer.json","with_skill",codex_control=True)'
+
       - name: Remove test-only Compose plugin
         if: always()
-        run: |
-          bash .github/scripts/setup-compose.sh cleanup
-          if [[ -n "${PREPARATION_COMPOSE_PLUGIN_ROOT:-}" ]]; then
-            COMPOSE_PLUGIN_ROOT="$PREPARATION_COMPOSE_PLUGIN_ROOT" bash .github/scripts/setup-compose.sh cleanup
-          fi
+        run: bash .github/scripts/setup-compose.sh cleanup
 
-  ci-contracts:
-    needs: plan
-    if: needs.plan.outputs.contracts == 'true'
-    name: CI contracts (no inference)
-    permissions:
-      contents: read
-    runs-on: ubuntu-latest
-    # Prior run: 21m tests + 7.5m container checks; retain room for offline evidence.
-    timeout-minutes: 45
-    env:
-      PYTHONDONTWRITEBYTECODE: '1'
-    steps:
       - name: Qualify data-only publisher and orchestration with retained rollback
         env:
           EVALUATOR_ADOPTION_CONTROLS: '1'
