@@ -116,6 +116,20 @@
             "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42908510730/artifacts/13808015117"
           }
         }
+      },
+      "next": {
+        "text": "If separately approved, run the current-skill pair on GPT-6.2 Sol at High with Codex CLI 0.167.0.",
+        "source": {
+          "label": "Owner’s GPT-6.2 Sol decision rule",
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/06109eb4b506934938c8184a27bda08f2040203a/docs/evaluations/pester-return-contract-development/DECISION-RULE.md"
+        }
+      },
+      "reconsider": {
+        "text": "If both current and no skill have at least two type misses, test the revision. A 3/3 revision against at least two no-skill type misses moves to transfer. If the revision matches or beats current on transfer, the owner decides whether to adopt it or hold for a fresh case.",
+        "source": {
+          "label": "Owner’s GPT-6.2 Sol decision rule",
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/06109eb4b506934938c8184a27bda08f2040203a/docs/evaluations/pester-return-contract-development/DECISION-RULE.md"
+        }
       }
     },
     {
