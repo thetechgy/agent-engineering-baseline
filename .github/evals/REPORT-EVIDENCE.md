@@ -1381,7 +1381,7 @@ produces zero. Contextual links identify the skill and case where applicable.
 ### Review the retained Codex decisions
 
 Use the same saved-analysis and consolidated renderer with the report-only
-decision entry point. The checked-in reviewer input selects the two development
+decision entry point. The checked-in reviewer input selects the three development
 and two transfer Pester pairs, their diagnostic replay, the completed permission
 pilot and the human-reviewed Podman case 4 observation. The opening gives the finding,
 the action and the evidence that would change it. Follow the receipt and run
@@ -1394,11 +1394,12 @@ persistent output directory outside the checkout.
 report_parent="$HOME/worktrees/skill-decision-review"
 mkdir -m 700 "$report_parent"
 pester_data="docs/evaluations/pester-transfer-decision/execution-v6/data"
-development="docs/evaluations/pester-return-contract-development/data"
+development="docs/evaluations/pester-return-contract-development"
 inputs=(
   --input "$pester_data/current" --input "$pester_data/candidate"
-  --input "$development/historical-development-current"
-  --input "$development/pester-return-development-candidate-v1"
+  --input "$development/data/historical-development-current"
+  --input "$development/data/pester-return-development-candidate-v1"
+  --input "$development/stage-1-sol62/data"
 )
 
 "$SKILL_NEXT_PYTHON" -B .github/scripts/skill_analysis.py \
@@ -1416,15 +1417,16 @@ Open `"$report_parent/html/report.html"`. Follow the result links for scores,
 the receipt links for provenance, and the run links for logs.
 
 The decision input binds each frozen transfer row to an admitted public record
-and the permission rows to the exact checked-in execution receipt. The development
-pairs predate the scheduler witness. The manifest pins the historical receipt
-and maps its selected public inputs to the exact bundle identities in the
-receipt-bound analysis. At render time the historical guard checks that the
+and the permission rows to the exact checked-in execution receipt. The two
+GPT-6.1 Sol development pairs predate the scheduler witness. The manifest pins
+their receipt and maps its selected public inputs to the exact bundle identities
+in the receipt-bound analysis. At render time the historical guard checks that the
 receipt run and artifact IDs are positive integers. The original artifact
 archives and public bundle bytes were authenticated separately when retained.
-The private report withholds development counts when the receipt chain is
-unavailable or mismatched. The historical analysis also covers two excluded
-runs. The current render uses the four bundles above.
+The private report withholds historical development counts when their receipt
+chain is unavailable or mismatched. The historical analysis also covers two excluded
+runs. The GPT-6.2 Sol development pair carries its own live scheduler witness.
+[Stage 1 execution receipt](../../docs/evaluations/pester-return-contract-development/stage-1-sol62/EXECUTION.md).
 
 To add a scheduler-backed pair for the same case, retain its public bundle and
 add a decision-table row sourced to its public record ID. Update the card's
