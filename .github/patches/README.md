@@ -3,8 +3,9 @@
 The legacy-named `skillevaluator-v0.3.0-pin-codex.patch` is the production
 benchmark compatibility artifact. Apply only to upstream
 `ac0a04905100acdafc6c95829311a9739c340ff6` through `setup-skillevaluator.sh`.
-It retains Codex 0.155.1 and adds bounded execution-evidence corrections. No
-dependency update or SkillEvaluator 0.6 adoption is included (issue #86).
+It selects Codex 0.171.0 for Docker benchmarks. Each trial creates a private
+Codex home for its execution user and retains the execution-evidence corrections
+from issue #86. The patch at `fb9c8a0` selects 0.155.1 for rollback.
 
 ## Evidence and defects
 

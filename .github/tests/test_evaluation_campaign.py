@@ -98,7 +98,10 @@ class CampaignContracts(unittest.TestCase):
         frozen=ROOT/'.github/evals/campaigns/codex-qualified.json'
         actual=runtime.read_profile(frozen)
         from codex_pilot_contract import PROFILE
-        self.assertEqual(actual['resolved'],dict(PROFILE,agent='codex'))
+        historical = reports.read_json(ROOT / '.github/evals/codex-pilot.json')
+        self.assertEqual(actual['resolved'], dict(historical, agent='codex'))
+        successor = runtime.read_profile(frozen.with_name('codex-qualified-sol62.json'))
+        self.assertEqual(successor['resolved'], dict(PROFILE, agent='codex'))
         for key,value in [('model','arbitrary'),('inference_enabled',True),('capabilities',['all'])]:
             wrong={**actual['profile'],key:value}
             with self.assertRaises(ValueError):runtime.validate_codex(wrong)

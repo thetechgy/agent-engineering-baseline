@@ -31,7 +31,7 @@ from openai import AsyncOpenAI  # noqa: E402 - standalone import after no-byteco
 FIXTURES = Path(__file__).parent / "fixtures/skill_review"
 NATIVE = Path(__file__).parent / "fixtures/skill_evidence"
 CLOCK = datetime(2026, 10, 12, tzinfo=timezone.utc)
-CONFIG = {"model": "explicit-test-model", "input_limit": 64000, "output_limit": 12000, "deadline_seconds": 180}
+CONFIG = {"model": "gpt-6.2-sol", "input_limit": 64000, "output_limit": 12000, "deadline_seconds": 180}
 
 
 def encoded_string(text, layers):
@@ -179,7 +179,7 @@ def response_body(value, **overrides):
         "object": "response",
         "created_at": 0,
         "status": "completed",
-        "model": "explicit-test-model",
+        "model": "gpt-6.2-sol",
         "error": None,
         "incomplete_details": None,
         "output": [
@@ -2522,6 +2522,7 @@ class ReviewTests(unittest.TestCase):
             [review.ENDPOINT + "/responses/input_tokens", review.ENDPOINT + "/responses"],
         )
         count, generation = [body for _, body in calls]
+        self.assertEqual([count["model"], generation["model"]], ["gpt-6.2-sol", "gpt-6.2-sol"])
         self.assertEqual(count, {key: generation[key] for key in count})
         self.assertFalse(generation["store"])
         self.assertEqual(generation["tools"], [])
@@ -2635,7 +2636,7 @@ class ReviewTests(unittest.TestCase):
             return AsyncOpenAI(**kwargs)
 
         with patch("openai.AsyncOpenAI", side_effect=client), redirect_stdout(StringIO()):
-            destination = review.main(["review", *self.args, "--model", CONFIG["model"], "--authorize-inference"])
+            destination = review.main(["review", *self.args, "--authorize-inference"])
         self.addCleanup(lambda: __import__("shutil").rmtree(destination))
         self.assertEqual(len(calls), 2)
         with redirect_stdout(StringIO()):
@@ -2910,9 +2911,20 @@ class ReviewTests(unittest.TestCase):
         context = self.control()
         calls = []
 
+        deadlines = []
+
+        def start_deadline(seconds):
+            deadline = asyncio.timeout(seconds)
+            deadlines.append(deadline)
+            return deadline
+
         async def slow(request):
             calls.append(request)
-            await asyncio.sleep(0.6)
+            if len(calls) == 2:
+                # Expire the same real timer after the SDK reaches generation.
+                self.assertEqual(len(deadlines), 1)
+                deadlines[0].reschedule(asyncio.get_running_loop().time())
+                await asyncio.sleep(0.1)
             return httpx.Response(
                 200,
                 json={"object": "response.input_tokens", "input_tokens": 1000}
@@ -2921,8 +2933,11 @@ class ReviewTests(unittest.TestCase):
             )
 
         client = httpx.AsyncClient(transport=httpx.MockTransport(slow))
-        with self.assertRaises(ValueError):
-            asyncio.run(review.invoke(context, {**CONFIG, "deadline_seconds": 1}, True, http_client=client))
+        with patch.object(review, "asyncio", wraps=asyncio) as scheduler:
+            scheduler.timeout.side_effect = start_deadline
+            with self.assertRaises(review.InferenceRejected) as rejected:
+                asyncio.run(review.invoke(context, CONFIG, True, http_client=client))
+        self.assert_diagnostic(rejected.exception, "deadline_exceeded", ("configuration", "deadline_seconds"), stage="generation")
         self.assertEqual(len(calls), 2)
 
         def malformed(request):

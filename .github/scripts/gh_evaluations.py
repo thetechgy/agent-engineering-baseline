@@ -497,7 +497,7 @@ def benchmark(args):
     )
     reports.require(
         "--ak" in codex_command
-        and codex_command[codex_command.index("--ak") + 1] == "version=0.155.1",
+        and codex_command[codex_command.index("--ak") + 1] == "version=" + reports.POLICY["codex"],
         "Required pinned Codex patch is absent",
     )
     versions["evaluator_revision"] = revision
@@ -560,7 +560,8 @@ def benchmark(args):
         "Incomplete native evaluation",
     )
     records = deterministic_gate(
-        run, [e["id"] for e in dataset(selected=selected)], reports.MODES[mode]
+        run, [e["id"] for e in dataset(selected=selected)], reports.MODES[mode],
+        numeric_excerpts=local_numeric_excerpts(run),
     )
     reports.write_json(root / "deterministic.json", {"trials": records})
     print(
@@ -591,6 +592,27 @@ def redact_publication(value):
             for key, item in value.items()
         }
     return value
+
+
+def local_numeric_excerpts(run):
+    """Bind the local collector's redacted metrics to the matching original Harbor trials."""
+    import skill_evidence as evidence
+
+    tasks = {}
+    for arm in ("with-skill", "without-skill"):
+        for result in (run / "codex" / arm / "trials").glob("*/result.json"):
+            trial = evidence.read_json(result)
+            reward = evidence.read_json(result.with_name("reward.json"))
+            case = reward["entry_id"]
+            reports.require(trial["trial_name"] == reward["trial_id"] and reward["has_skill"] is (arm == "with-skill"),
+                            "Deterministic trial identity mismatch")
+            key = (arm.replace("-", "_"), case)
+            checksum = trial["task_checksum"]
+            reports.require(tasks.setdefault(key, checksum) == checksum, "Inconsistent collected task checksum")
+    rows = [dict(arm=arm, case_id=case, task_checksum=checksum) for (arm, case), checksum in tasks.items()]
+    capture = evidence.capture_custom_numeric_fields(ROOT, "gh", run / "_harbor-jobs", run, rows)
+    return evidence.custom_numeric_excerpts({"tasks": rows, "numeric_excerpts": capture},
+                                           evidence.custom_contract("gh")[1])
 
 
 def deterministic_gate(run, case_ids, attempts, *, numeric_excerpts=None):

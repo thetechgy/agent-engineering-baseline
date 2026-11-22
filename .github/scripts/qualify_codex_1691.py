@@ -11,7 +11,7 @@ import time
 import urllib.error
 import urllib.request
 
-from codex_pilot_contract import ROOT, configuration
+from codex_pilot_contract import MODEL_CATALOG, ROOT, configuration, model_arguments
 from codex_pilot_runtime import usage_record
 from evaluation_campaign import no_credentials, revision
 from evaluation_campaign_core import require
@@ -48,12 +48,12 @@ def check_digest(path, expected):
         require(file_digest(stream, 'sha256').hexdigest() == expected, 'Release asset digest mismatch')
 
 
-def probe(runtime, binary, root, scenario):
+def probe(runtime, binary, root, scenario, *, selected_model=None):
     import toml
     root.mkdir()
     home = root / 'home'
     home.mkdir(mode=0o700)
-    config = configuration('http://127.0.0.1:8765/v1', runtime=runtime)
+    config = configuration('http://127.0.0.1:8765/v1', runtime=runtime, catalog_path=ROOT / MODEL_CATALOG)
     config['sandbox_mode'] = 'read-only'
     (home / 'config.toml').write_text(toml.dumps(config))
     observed = root / 'request.json'
@@ -76,7 +76,8 @@ def probe(runtime, binary, root, scenario):
             else:
                 raise ValueError('Fixture did not start')
             process = subprocess.run([binary, 'exec', '--strict-config', '--sandbox', 'read-only',
-                '--skip-git-repo-check', '--cd', root, '--json', '--model', runtime['model'], '--', 'Print the fixture result.'],
+                '--skip-git-repo-check', '--cd', root, '--json', *model_arguments(runtime, runtime['model'] if selected_model is None else selected_model),
+                '--', 'Print the fixture result.'],
                 env={'PATH': os.defpath, 'HOME': str(home), 'CODEX_HOME': str(home),
                      'OPENAI_API_KEY': 'pilot-not-a-credential'},
                 stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=45)
@@ -89,7 +90,7 @@ def probe(runtime, binary, root, scenario):
     require(request['model'] == runtime['model'] and request['reasoning']['effort'] == 'high'
             and request['path'] == '/v1/responses' and request['authorization_matches_sentinel'],
             'Fixture request identity drift')
-    events = [json.loads(line) for line in process.stdout.splitlines()]
+    events = [json.loads(line) for line in process.stdout.splitlines() if line != 'Reading additional input from stdin...']
     final = [event['usage'] for event in events if event['type'] == 'turn.completed']
     if scenario == 'provider-refusal':
         require(process.returncode != 0 and request['requests'] == 1 and not final
@@ -134,7 +135,7 @@ def main():
     runtime = read_profile(SELECTOR)['resolved']
     binary = acquire(runtime, root)
     summary = {'revision': revision(), 'inference': False,
-               'compatibility': probe(read_profile(ROOT / '.github/evals/campaigns/codex-090.json')['resolved'],
+               'compatibility': probe(read_profile(ROOT / '.github/evals/campaigns/codex-090-sol62.json')['resolved'],
                                       binary, root / 'compatibility', 'compatibility'),
                'refusal': probe(runtime, binary, root / 'refusal', 'provider-refusal'),
                'pricing_checks': check_pricing(runtime)}

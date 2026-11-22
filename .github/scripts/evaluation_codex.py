@@ -13,7 +13,8 @@ import tempfile
 from codex_pilot_agent import PilotCodex
 from codex_pilot_environment import PilotEnvironment
 from evaluation_campaign_core import require
-from evaluation_runtime import (CODEX_090_PROFILES, CODEX_FIXTURE_PROFILE, CODEX_OBSERVATION_PROFILE,
+from evaluation_runtime import (CODEX_090_PROFILES, CODEX_FIXTURE_PROFILE, CODEX_OBSERVATION_1710_PROFILE,
+                                CODEX_OBSERVATION_PROFILES,
                                 ROOT, failure_reason, read_profile)
 
 
@@ -37,10 +38,11 @@ def exec_trajectory(raw, adapter, *, diagnostics=None):
     Every normalized action links to its exact raw trace and event line(s).
     """
     from harbor.agents.installed.codex import Agent, Trajectory
-    successor = adapter.profile.get('id') in (CODEX_FIXTURE_PROFILE, CODEX_OBSERVATION_PROFILE)
-    observation = (adapter.profile.get('id') == CODEX_OBSERVATION_PROFILE
+    successor = adapter.profile.get('id') in (CODEX_FIXTURE_PROFILE, *CODEX_OBSERVATION_PROFILES)
+    observation = (adapter.profile.get('id') in CODEX_OBSERVATION_PROFILES
                    and getattr(getattr(adapter, 'task', None), 'diagnostic_observation', False))
-    protocol = 'codex-0.169.1-exec-json' if successor else 'codex-0.167-exec-json'
+    protocol = ('codex-0.171.0-exec-json' if adapter.profile.get('id') == CODEX_OBSERVATION_1710_PROFILE
+                else 'codex-0.169.1-exec-json' if successor else 'codex-0.167-exec-json')
     shells = ('/bin/sh', '/bin/bash') if successor else ('/bin/sh',)
     pending = {}; completed = set(); steps = []; notes = []; informational = []
     session = None; turns = 0; actions = 0; terminal = False
@@ -223,7 +225,7 @@ class CampaignCodex(PilotCodex):
         self.control = control
         self.expected_present = present
         self.profile = read_profile(ROOT / self.task.definition['runtime_profile'])['resolved']
-        require(self.profile['id'] != CODEX_OBSERVATION_PROFILE or self.task.diagnostic_observation,
+        require(self.profile['id'] not in CODEX_OBSERVATION_PROFILES or self.task.diagnostic_observation,
                 'Observation runtime requires the single-case diagnostic')
         self.skill = self.task.definition['skill']
         self.output = '/workspace/output/' + self.task.output
@@ -514,7 +516,7 @@ def agent_config(task, mode, control, runtime, present, *, deadline_fixture=None
     if mode in ('oracle','replay'):
         return {'name': 'oracle'}
     if deadline_fixture is not None:
-        require(mode == 'experiment-probe' and runtime['id'] == 'codex-090-diagnostic-v1'
+        require(mode == 'experiment-probe' and runtime['id'] in ('codex-090-diagnostic-v1', 'codex-090-diagnostic-v1-sol62')
                 and deadline_fixture == 'cancelled', 'Unqualified deadline override')
     return {'import_path': 'evaluation_codex:CampaignCodex', 'model_name': runtime['model'],
             **({'override_timeout_sec': 90} if deadline_fixture is not None else {}),

@@ -1,0 +1,33 @@
+{
+  "id": "codex-090-diagnostic-v1-sol62",
+  "case": "gh-014",
+  "skill": "gh",
+  "cli": "0.155.1",
+  "cli_revision": "rust-v0.155.1",
+  "cli_archive_sha256": "a65b895c6ac1a73629bbe4b864640c86133e94a43b4d67b3103044e1a306d5a2",
+  "cli_executable_sha256": "0753dfe1d8b87a52436deb13eb1c549661ef4c84fee2c5aa688385eebeccb761",
+  "model": "gpt-6.2-sol",
+  "reasoning_effort": "high",
+  "provider": "openai",
+  "base_url": "https://api.openai.com/v1",
+  "agent_seconds": 600,
+  "cpus": 2,
+  "memory_mb": 2048,
+  "attempts_per_arm": 1,
+  "prices_per_million": {
+    "input": 2,
+    "cached_input": 0.1,
+    "output": 10,
+    "cache_write_30m": 2.5,
+    "cache_write_12h": 5
+  },
+  "frozen_at": "2026-11-21",
+  "release_url": "https://github.com/openai/codex/releases/tag/rust-v0.155.1",
+  "model_documentation": "https://developers.openai.com/api/docs/models/gpt-6.2-sol",
+  "configuration_documentation": "https://developers.openai.com/codex/config-reference",
+  "helper_sha256": {
+    "bin/codex-code-mode-host": "210ab8ebaebf4bc1421d9e30339c858354ca35fa91e2f87f4c6204e5382f8a63",
+    "codex-resources/bwrap": "77360cb751ccedc5971391444ac86a8a33c15b04d6b4a6fe45f5d25496e62c4c"
+  },
+  "execution_policy": "docker-external-openai-090-v1"
+}

@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "campaigns": {
+    "judge-calibration-090-v1-sol62": {
+      "definition": ".github/evals/campaigns/judge-calibration-090-v1-sol62.json",
+      "controls": [
+        ".github/evals/campaigns/judge-calibration-090-v1-sol62.json"
+      ],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "preparation/evidence"
+        }
+      ]
+    },
+    "boolean-effectiveness-v1-sol62": {
+      "definition": ".github/evals/campaigns/boolean-effectiveness-v1-sol62.json",
+      "controls": [
+        ".github/evals/campaigns/gh-read-sol62.json",
+        ".github/evals/campaigns/boolean-contract-sol62.json"
+      ],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "preparation/evidence"
+        }
+      ]
+    },
+    "pester-return-development-current-v1-sol62": {
+      "definition": ".github/evals/campaigns/pester-return-development-current-v1-sol62.json",
+      "controls": [
+        ".github/evals/campaigns/pester-return-development-current-controls-v1-sol62.json",
+        ".github/evals/campaigns/pester-return-development-candidate-controls-v1-sol62.json"
+      ],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "preparation/evidence"
+        },
+        {
+          "workflow": ".github/workflows/pester-return-qualification.yml",
+          "artifact": "pester-return-development",
+          "location": "current/evidence"
+        }
+      ]
+    },
+    "pester-return-development-candidate-v1-sol62": {
+      "definition": ".github/evals/campaigns/pester-return-development-candidate-v1-sol62.json",
+      "controls": [
+        ".github/evals/campaigns/pester-return-development-current-controls-v1-sol62.json",
+        ".github/evals/campaigns/pester-return-development-candidate-controls-v1-sol62.json"
+      ],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "preparation/evidence"
+        },
+        {
+          "workflow": ".github/workflows/pester-return-qualification.yml",
+          "artifact": "pester-return-development",
+          "location": "candidate/evidence"
+        }
+      ]
+    },
+    "pester-return-transfer-current-v3-sol62": {
+      "definition": ".github/evals/campaigns/pester-return-transfer-current-v3-sol62.json",
+      "controls": [
+        ".github/evals/campaigns/pester-return-transfer-current-controls-v3-sol62.json",
+        ".github/evals/campaigns/pester-return-transfer-candidate-controls-v3-sol62.json"
+      ],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "preparation/evidence"
+        },
+        {
+          "workflow": ".github/workflows/pester-return-qualification.yml",
+          "artifact": "pester-return-transfer",
+          "location": "current/evidence"
+        }
+      ]
+    },
+    "pester-return-transfer-candidate-v3-sol62": {
+      "definition": ".github/evals/campaigns/pester-return-transfer-candidate-v3-sol62.json",
+      "controls": [
+        ".github/evals/campaigns/pester-return-transfer-current-controls-v3-sol62.json",
+        ".github/evals/campaigns/pester-return-transfer-candidate-controls-v3-sol62.json"
+      ],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "preparation/evidence"
+        },
+        {
+          "workflow": ".github/workflows/pester-return-qualification.yml",
+          "artifact": "pester-return-transfer",
+          "location": "candidate/evidence"
+        }
+      ]
+    },
+    "gh-runtime-090-v1-sol62": {
+      "definition": ".github/evals/campaigns/gh-runtime-090-v1-sol62.json",
+      "controls": [
+        ".github/evals/campaigns/gh-read-090-sol62.json"
+      ],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "preparation/evidence"
+        }
+      ]
+    },
+    "gh-task-permission-v2-sol62": {
+      "definition": ".github/evals/campaigns/gh-task-permission-v2-live-sol62.json",
+      "controls": [
+        ".github/evals/campaigns/gh-task-permission-v2-sol62.json"
+      ],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "preparation/evidence"
+        }
+      ]
+    },
+    "pester-return-transfer-current-v6-sol62": {
+      "definition": ".github/evals/campaigns/pester-return-transfer-current-v6-sol62.json",
+      "controls": [
+        ".github/evals/campaigns/pester-return-transfer-current-controls-v6-sol62.json"
+      ],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "preparation/evidence"
+        }
+      ]
+    },
+    "pester-return-transfer-candidate-v6-sol62": {
+      "definition": ".github/evals/campaigns/pester-return-transfer-candidate-v6-sol62.json",
+      "controls": [
+        ".github/evals/campaigns/pester-return-transfer-candidate-controls-v6-sol62.json"
+      ],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "preparation/evidence"
+        }
+      ]
+    }
+  }
+}

@@ -1810,7 +1810,7 @@ source identity; current installed source cannot substitute for different bytes.
   --input /tmp/public-bundle --analysis /tmp/analysis/analysis.json \
   --skill podman --record-id 'sha256:<selected-record-hash>' \
   --source /tmp/evaluated-source --support /tmp/retained-support \
-  --model '<explicit-model-id>' --authorize-inference \
+  --model gpt-6.2-sol --authorize-inference \
   --output /tmp/new-skill-review
 
 # Offline: independent structural/evidence validation plus exact Markdown check.
@@ -1823,7 +1823,7 @@ source identity; current installed source cannot substitute for different bytes.
 
 `--source` and `--support` are optional. Missing support remains unavailable and
 limits conclusions. Prepare and validate never require credentials or inference
-permission. Review requires both an explicit model and `--authorize-inference`
+permission. New reviews select `gpt-6.2-sol` and require `--authorize-inference`
 before reading evidence or creating a client. A prepared context is an inspection
 artifact, not a trusted input to review. Every operation revalidates saved analysis
 against the captured original public bundles. Saved reports require the same

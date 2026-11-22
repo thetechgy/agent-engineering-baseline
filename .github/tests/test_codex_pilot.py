@@ -26,7 +26,7 @@ import skill_evidence as evidence
 class PilotContracts(unittest.TestCase):
     def test_external_config_preserves_model_provider_and_disables_retries(self):
         c=configuration()
-        self.assertEqual((c['model'],c['model_reasoning_effort']),('gpt-6.1-sol','high'))
+        self.assertEqual((c['model'],c['model_reasoning_effort']),('gpt-6.2-sol','high'))
         self.assertEqual(c['sandbox_mode'],'danger-full-access')
         self.assertNotIn('sandbox_workspace_write',c)
         self.assertEqual(c['model_providers']['pilot']['base_url'],'https://api.openai.com/v1')
@@ -49,7 +49,7 @@ class PilotContracts(unittest.TestCase):
     def test_frozen_pilot_has_one_case_one_attempt_and_preserves_active_profile(self):
         self.assertEqual(PROFILE['case'],'pester-001')
         self.assertEqual(PROFILE['attempts_per_arm'],1)
-        registry=evidence.custom_registry(ROOT)
+        registry=evidence.frozen_registry(ROOT)
         self.assertEqual(registry['active_profiles']['powershell-pester-6'],'pester-pilot-v3')
         profile,_,_=evidence.custom_contract('powershell-pester-6',ROOT,purpose='cli_pilot')
         self.assertEqual(set(profile['cases']),{'pester-001'})
@@ -66,7 +66,7 @@ class PilotContracts(unittest.TestCase):
         self.assertIn('version="0.167.0"',cmd)
         self.assertNotIn('version="0.155.1"',cmd)
         self.assertIn('codex_pilot_agent:PilotCodex',cmd)
-        self.assertEqual(cmd[cmd.index('--model')+1],'gpt-6.1-sol')
+        self.assertEqual(cmd[cmd.index('--model')+1],'gpt-6.2-sol')
 
     @unittest.skipUnless(shutil.which('pwsh'), 'Requires local PowerShell for admission')
     def test_actual_admission_boolean_and_template_controls(self):

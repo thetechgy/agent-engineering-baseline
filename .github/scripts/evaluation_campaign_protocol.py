@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from evaluation_campaign_selection import binding, location, registration
 
 from evaluation_campaign_core import require, schedule
-from evaluation_runtime import CODEX_OBSERVATION_PROFILE, ROOT, read_profile
+from evaluation_runtime import CODEX_OBSERVATION_PROFILES, ROOT, read_profile
 import evaluator_profiles as profiles
 import skill_evidence as evidence
 import skill_reports as reports
@@ -38,7 +38,7 @@ def scenarios(task):
                 and set(SCENARIOS) - {'invalid'} <= set(declared)
                 and set(declared) <= set(SCENARIOS) | {'verifier-failure', 'cleanup-failure'}, 'Unregistered qualification scenario')
         return tuple(declared)
-    if task.definition['id'] == 'gh-runtime-090-v1':
+    if task.definition['id'] in ('gh-runtime-090-v1', 'gh-runtime-090-v1-sol62'):
         return ('complete', 'interruption', 'missing-evidence', 'unsupported-runtime',
                 'threshold', 'unknown-usage', 'native-cancellation', 'provider-refusal', 'malformed-response', 'provider-timeout')
     return SCENARIOS
@@ -67,7 +67,7 @@ def protocol(task):
             and value['automatic_retries'] == value['replacements'] == 0 and value['concurrency'] == 1
             and value['budget']['stop_estimate_usd'] == task.definition['stop_estimate_usd'], 'Unqualified live protocol')
     runtime = read_profile(ROOT / task.definition['runtime_profile'])
-    require(runtime['profile']['id'] != CODEX_OBSERVATION_PROFILE or task.diagnostic_observation,
+    require(runtime['profile']['id'] not in CODEX_OBSERVATION_PROFILES or task.diagnostic_observation,
             'Observation runtime requires the single-case diagnostic')
     require(runtime['profile']['capabilities'] == ['non-forwarding-cli-probe', 'exact-authorized-live']
             and runtime['profile']['inference_enabled'] is False
@@ -124,7 +124,7 @@ def check(reference, staging, task, *, qualified=True):
                 for r in reports.read_json(directory / 'staging.json')}
     require(members(reference) == members(staging), 'Complete staged-member drift')
     if not qualified and read_profile(ROOT / task.definition['runtime_profile'])['profile']['id'] in (
-            'codex-090-diagnostic-v1', CODEX_OBSERVATION_PROFILE):
+            'codex-090-diagnostic-v1', 'codex-090-diagnostic-v1-sol62', *CODEX_OBSERVATION_PROFILES):
         from evaluation_codex import compare_probe_descriptors
         result = compare_probe_descriptors(reference, staging)
     else:

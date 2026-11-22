@@ -88,7 +88,11 @@ def render(output):
                      (label, row['requests'], row['attempts'], diagnostic, coverage)])
     section += report.table('Transport qualification',
                             ['Control', 'HTTP requests', 'Logical attempts', 'Failure diagnostic', 'Usage coverage'], rows)
-    section += '<p>OpenAI gpt-5.6-sol, reasoning effort omitted by released gpt-5 selector; native chat payload, strict/replace; local transport only. '
+    model = proof['settings']['LLM_JUDGE_MODEL']
+    requests = reports.read_json(output / 'requests.json')
+    efforts = {row['payload'].get('reasoning_effort', 'omitted') for row in requests if 'model' in row['payload']}
+    reports.require(len(efforts) == 1, 'Unexpected mixed reasoning settings')
+    section += f'<p>OpenAI {report.safe(model)}, reasoning effort {report.safe(efforts.pop())}. Native chat payload, strict/replace. Local transport only. '
     if successor:
         records = [reports.read_json(p) for p in (output / 'reporting/public').rglob('public-report.json')]
         summaries = [record['benchmark']['judge_accounting'] for record in records if 'benchmark' in record]
@@ -208,7 +212,7 @@ def worker(output, *, successor=False):
     for row in responder.requests:
         payload = row['payload']
         reports.require(payload['model'] == transport.MODEL and payload['stream'] is False
-                        and 'reasoning_effort' not in payload and payload['max_completion_tokens'] == 32768
+                        and payload.get('reasoning_effort') == 'medium' and payload['max_completion_tokens'] == 32768
                         and 'temperature' not in payload and 'max_tokens' not in payload, 'Effective request differs')
     reports.require(any(c['requests'] > c['attempts'] for c in controls if c['attempts'] is not None), 'Retry undercount not reproduced')
     sanitized = output / 'sanitized'

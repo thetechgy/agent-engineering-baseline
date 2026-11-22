@@ -4,6 +4,7 @@ Only test IO is substituted. Selection, the real evaluator, shared scheduling,
 accounting, artifact admission, authentication CLI and report consumption run.
 """
 import argparse
+from contextlib import nullcontext
 import json
 import os
 from pathlib import Path
@@ -14,6 +15,7 @@ import tempfile
 import threading
 import time
 import urllib.request
+from unittest.mock import patch
 
 from evaluation_campaign_core import require
 import evaluation_campaign_protocol as shared
@@ -72,12 +74,13 @@ class Observer(transport.Responder):
 class Fixture:
     def __init__(self, name, observer):
         self.name, self.observer = name, observer
-        self.settings = {'SKILL_EVAL_LLM_JUDGE_BUDGET_SEC': '1',
+        self.clock_offset = 0
+        self.settings = {'SKILL_EVAL_LLM_JUDGE_BUDGET_SEC': '30' if name == 'deadline-stop' else '1',
                          'SKILL_EVAL_LLM_RETRY_BASE_DELAY': '0.001',
                          'SKILL_EVAL_LLM_RETRY_MAX_DELAY': '0.01'}
         self.limits = ({'http': 1} if name == 'request-stop' else {'tokens': 26} if name == 'usage-stop'
                        else {'cost': 0.00001} if name == 'cost-stop'
-                       else {'seconds': 0.3} if name == 'deadline-stop' else {})
+                       else {'seconds': 30} if name == 'deadline-stop' else {})
 
     def before_record(self, verifier, row):
         self.observer.scenario = WIRE.get(self.name, 'cache-cost-stop' if self.name == 'cache-cost-stop' else 'valid')
@@ -92,9 +95,14 @@ class Fixture:
             verifier._accounting._ACTIVE.get()[0].with_name('judge_accounting.json.tmp').mkdir()
             verifier._accounting.persist()
 
+    def monotonic(self):
+        return time.monotonic() + self.clock_offset
+
     def after_record(self, row):
         if self.name == 'deadline-stop':
-            time.sleep(0.35)
+            require(row['state'] == 'completed' and row['accounting_summary']['complete'],
+                    'Deadline control requires a completed first judgment')
+            self.clock_offset = self.limits['seconds']
 
 
 def worker(output, task):
@@ -119,7 +127,11 @@ def worker(output, task):
             first = len(observer.requests)
             root = output / 'scenarios' / scenario / 'evidence'
             try:
-                value = campaign.execute(root.parent, task, fixture=Fixture(scenario, observer))
+                fixture = Fixture(scenario, observer)
+                # Advance only the scheduler clock, after the physical HTTP response and its receipt.
+                clock = patch.object(campaign, 'time', fixture) if scenario == 'deadline-stop' else nullcontext()
+                with clock:
+                    value = campaign.execute(root.parent, task, fixture=fixture)
             except BaseException:
                 try: reports.write_json(root / 'request-observer.json', observer.requests[first:])
                 except Exception: sys.stderr.write('Observer retention failed; primary failure preserved.\n')
@@ -157,6 +169,8 @@ def worker(output, task):
             require(value['resource_disposal'], 'Required-judge resources not disposed')
             # Acceptance labels and provenance must not enter the provider prompt.
             for request in requests:
+                require(request['payload']['model'] == shared.protocol(task)['request']['model'],
+                        'Independent observer received a different judge model')
                 prompt = request['payload']['messages'][0]['content']
                 require(not any(label in prompt for label in ('label_basis', 'UNSCORED / review required',
                     'FAIL authorization; correctness remains PASS', '"observed":', 'paid_authority', 'source_identities')),
@@ -173,7 +187,7 @@ def worker(output, task):
     html = campaign.render(runs, output / 'report', task)
     require(html == campaign.render(runs, output / 'reproduced', task), 'Judge consolidated report differs')
     reports.write_json(output / 'qualification.json', {'complete': True, 'inference': False,
-        'revision': shared.revision(), 'type': 'judge-only', 'fixture_only': True,
+        'revision': shared.revision(), 'type': 'judge-only', 'campaign': task.definition['id'], 'fixture_only': True,
         'live_authority': False, 'records': 7, 'scenarios': summaries, 'request_observer': True,
         'resource_disposal': True, 'production_deadline_exercised': False,
         'fixture_settings': Fixture('complete', observer).settings})
@@ -188,7 +202,7 @@ def qualify(output, task):
         env = {k: os.environ[k] for k in ('PATH', 'TMPDIR', 'LANG', 'SYSTEMROOT') if k in os.environ}
         env.update(HOME=directory, PYTHONDONTWRITEBYTECODE='1', PYTHON_DOTENV_DISABLED='1', HARBOR_TELEMETRY='0')
         subprocess.run([sys.executable, '-B', str(ROOT / '.github/scripts/judge_calibration_qualification.py'),
-                        '--worker', '--output', str(output)], env=env, check=True, timeout=180)
+                        '--worker', '--campaign', task.definition['id'], '--output', str(output)], env=env, check=True, timeout=180)
 
 
 def prepare(output, task, qualification, authentication_qualification):
@@ -196,7 +210,7 @@ def prepare(output, task, qualification, authentication_qualification):
     require(qualification is not None, 'Actual judge qualification required')
     ready = reports.read_json(qualification / 'qualification.json')
     require(ready['complete'] is True and ready['inference'] is False and ready['fixture_only'] is True
-            and ready['revision'] == shared.revision() and set(ready['scenarios']) == set(campaign.SCENARIOS),
+            and ready['campaign'] == task.definition['id'] and ready['revision'] == shared.revision() and set(ready['scenarios']) == set(campaign.SCENARIOS),
             'Exact-source judge qualification required')
     output.mkdir(parents=True, exist_ok=False)
     retained = output / 'evidence'; retained.mkdir()
@@ -233,9 +247,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--worker', action='store_true', required=True)
     parser.add_argument('--output', required=True, type=Path)
+    parser.add_argument('--campaign', default='judge-calibration-090-v1-sol62')
     args = parser.parse_args()
     from evaluation_campaign_selection import selected_task
-    worker(args.output, selected_task('judge-calibration-090-v1'))
+    worker(args.output, selected_task(args.campaign))
 
 
 if __name__ == '__main__': main()

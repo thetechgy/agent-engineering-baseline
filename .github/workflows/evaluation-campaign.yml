@@ -6,19 +6,20 @@ on:
       campaign:
         description: 'Reviewed registered campaign; allocation must match this selection.'
         type: choice
-        default: boolean-effectiveness-v1
+        default: boolean-effectiveness-v1-sol62
         options:
-          - boolean-effectiveness-v1
+          - boolean-effectiveness-v1-sol62
+          - case-observation-1691
           - case-observation
-          - gh-runtime-090-v1
-          - gh-task-permission-v2
-          - judge-calibration-090-v1
-          - pester-return-development-current-v1
-          - pester-return-development-candidate-v1
-          - pester-return-transfer-current-v3
-          - pester-return-transfer-candidate-v3
-          - pester-return-transfer-current-v6
-          - pester-return-transfer-candidate-v6
+          - gh-runtime-090-v1-sol62
+          - gh-task-permission-v2-sol62
+          - judge-calibration-090-v1-sol62
+          - pester-return-development-current-v1-sol62
+          - pester-return-development-candidate-v1-sol62
+          - pester-return-transfer-current-v3-sol62
+          - pester-return-transfer-candidate-v3-sol62
+          - pester-return-transfer-current-v6-sol62
+          - pester-return-transfer-candidate-v6-sol62
       skill:
         description: Repository skill for a case observation
         type: string
@@ -37,8 +38,8 @@ permissions: {}
 env:
   OBSERVATION_SKILL: ${{ inputs.skill }}
   OBSERVATION_CASE: ${{ inputs.case }}
-  CAMPAIGN_ID: ${{ inputs.campaign || 'boolean-effectiveness-v1' }}
-  CAMPAIGN_SETUP: ${{ inputs.campaign == 'judge-calibration-090-v1' && 'candidate-accounting' || (inputs.campaign == 'case-observation' || inputs.campaign == 'gh-runtime-090-v1' || inputs.campaign == 'gh-task-permission-v2') && 'candidate-next' || 'candidate-current' }}
+  CAMPAIGN_ID: ${{ inputs.campaign || 'boolean-effectiveness-v1-sol62' }}
+  CAMPAIGN_SETUP: ${{ inputs.campaign == 'judge-calibration-090-v1-sol62' && 'candidate-accounting' || (inputs.campaign == 'case-observation-1691' || inputs.campaign == 'case-observation' || inputs.campaign == 'gh-runtime-090-v1-sol62' || inputs.campaign == 'gh-task-permission-v2-sol62') && 'candidate-next' || 'candidate-current' }}
 concurrency:
   group: reusable-evaluation-${{ inputs.allocation != '' && format('live-{0}', github.ref) || format('diagnostic-{0}', github.run_id) }}
   cancel-in-progress: false
@@ -68,7 +69,7 @@ jobs:
           if [ "$CAMPAIGN_SETUP" = candidate-next ]; then
             echo "SKILL_CURRENT_PYTHON=$RUNNER_TEMP/next-evaluator/.venv/bin/python" >> "$GITHUB_ENV"
           fi
-          if [ "$CAMPAIGN_ID" != judge-calibration-090-v1 ]; then
+          if [ "$CAMPAIGN_ID" != judge-calibration-090-v1-sol62 ]; then
             bash .github/scripts/setup-compose.sh
             APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
             echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
@@ -87,7 +88,7 @@ jobs:
           retention-days: 90
       - name: Check shared contracts
         run: |
-          if [ "$CAMPAIGN_ID" = judge-calibration-090-v1 ]; then
+          if [ "$CAMPAIGN_ID" = judge-calibration-090-v1-sol62 ]; then
             PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_judge_calibration -v
           else
             PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_evaluation_campaign test_evaluation_protocol test_campaign_selection test_codex_cohort test_codex_events test_campaign_replay test_task_permissions test_task_permission_smoke -v
@@ -98,7 +99,7 @@ jobs:
             --campaign "$CAMPAIGN_ID" \
             --output "$RUNNER_TEMP/reusable-evaluation"
       - name: Acquire fresh verified Compose configuration for the experiment phase
-        if: inputs.campaign != 'judge-calibration-090-v1'
+        if: inputs.campaign != 'judge-calibration-090-v1-sol62'
         run: bash .github/scripts/setup-compose.sh
       - name: Qualify the selected protocol through the same execution loop
         timeout-minutes: 55
@@ -109,7 +110,7 @@ jobs:
             --authentication-qualification "$RUNNER_TEMP/authentication-qualification/authentication-qualification.json" \
             --output "$RUNNER_TEMP/reusable-evaluation/preparation"
       - name: Verify retained judge-only preparation and evidence rejection
-        if: inputs.campaign == 'judge-calibration-090-v1'
+        if: inputs.campaign == 'judge-calibration-090-v1-sol62'
         env:
           JUDGE_CALIBRATION_EVIDENCE: ${{ runner.temp }}/reusable-evaluation/preparation/evidence
         run: 'PYTHONPATH=.github/scripts:.github/tests "$SKILL_CURRENT_PYTHON" -B -m unittest test_judge_calibration -v'
@@ -136,7 +137,7 @@ jobs:
 
   retrospective:
     name: Grade authenticated retained submission without inference
-    if: inputs.allocation == '' && inputs.preparation_artifact == '' && inputs.campaign == 'boolean-effectiveness-v1'
+    if: inputs.allocation == '' && inputs.preparation_artifact == '' && inputs.campaign == 'boolean-effectiveness-v1-sol62'
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -158,8 +159,8 @@ jobs:
           if [ "$CAMPAIGN_SETUP" = candidate-next ]; then
             echo "SKILL_CURRENT_PYTHON=$RUNNER_TEMP/next-evaluator/.venv/bin/python" >> "$GITHUB_ENV"
           fi
-          if [ "$CAMPAIGN_ID" != judge-calibration-090-v1 ]; then bash .github/scripts/setup-compose.sh; fi
-          if [ "$CAMPAIGN_ID" != judge-calibration-090-v1 ]; then
+          if [ "$CAMPAIGN_ID" != judge-calibration-090-v1-sol62 ]; then bash .github/scripts/setup-compose.sh; fi
+          if [ "$CAMPAIGN_ID" != judge-calibration-090-v1-sol62 ]; then
             APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
             echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
           fi
@@ -202,7 +203,7 @@ jobs:
           if [ "$CAMPAIGN_SETUP" = candidate-next ]; then
             echo "SKILL_CURRENT_PYTHON=$RUNNER_TEMP/next-evaluator/.venv/bin/python" >> "$GITHUB_ENV"
           fi
-          if [ "$CAMPAIGN_ID" != judge-calibration-090-v1 ]; then
+          if [ "$CAMPAIGN_ID" != judge-calibration-090-v1-sol62 ]; then
             APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
             echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
           fi
@@ -250,7 +251,7 @@ jobs:
           if [ "$CAMPAIGN_SETUP" = candidate-next ]; then
             echo "SKILL_CURRENT_PYTHON=$RUNNER_TEMP/next-evaluator/.venv/bin/python" >> "$GITHUB_ENV"
           fi
-          if [ "$CAMPAIGN_ID" != judge-calibration-090-v1 ]; then
+          if [ "$CAMPAIGN_ID" != judge-calibration-090-v1-sol62 ]; then
             APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
             echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
           fi
@@ -331,7 +332,7 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ inputs.campaign == 'gh-runtime-090-v1' && 65 || 155 }}
+    timeout-minutes: ${{ inputs.campaign == 'gh-runtime-090-v1-sol62' && 65 || 155 }}
     env:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
@@ -349,8 +350,8 @@ jobs:
           if [ "$CAMPAIGN_SETUP" = candidate-next ]; then
             echo "SKILL_CURRENT_PYTHON=$RUNNER_TEMP/next-evaluator/.venv/bin/python" >> "$GITHUB_ENV"
           fi
-          if [ "$CAMPAIGN_ID" != judge-calibration-090-v1 ]; then bash .github/scripts/setup-compose.sh; fi
-          if [ "$CAMPAIGN_ID" != judge-calibration-090-v1 ]; then
+          if [ "$CAMPAIGN_ID" != judge-calibration-090-v1-sol62 ]; then bash .github/scripts/setup-compose.sh; fi
+          if [ "$CAMPAIGN_ID" != judge-calibration-090-v1-sol62 ]; then
             APM_INSTALL_DIR="$RUNNER_TEMP/apm/bin" bash scripts/bootstrap.sh --cli-only
             echo "APM_EXECUTABLE=$RUNNER_TEMP/apm/bin/apm" >> "$GITHUB_ENV"
           fi
@@ -366,7 +367,7 @@ jobs:
             --preparation "$RUNNER_TEMP/campaign-auth/downloaded/preparation/evidence" \
             --output "$RUNNER_TEMP/campaign-live-preflight"
       - name: Execute only the separately approved slots
-        timeout-minutes: ${{ inputs.campaign == 'gh-runtime-090-v1' && 45 || 140 }}
+        timeout-minutes: ${{ inputs.campaign == 'gh-runtime-090-v1-sol62' && 45 || 140 }}
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           AEB_CAMPAIGN_APPROVAL: ${{ inputs.allocation }}

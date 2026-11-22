@@ -139,7 +139,7 @@ class RetrospectiveEvidence(unittest.TestCase):
             self.assertFalse(replay.retained_provenance()['fresh_github_verification'])
 
     def test_new_producer_keeps_v4_grading_and_historical_profile(self):
-        registry = evidence.custom_registry(ROOT)
+        registry = evidence.frozen_registry(ROOT)
         old = registry['profiles']['pester-cli-pilot-external-v4']
         new = registry['profiles']['pester-cli-pilot-retained-v2']
         self.assertNotEqual(old['runtime_digest'], new['runtime_digest'])

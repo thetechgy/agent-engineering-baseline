@@ -1,5 +1,47 @@
 # Evaluation checkpoint
 
+## Model selection for new executions
+
+| Operator or workflow | Model dispatch and evidence |
+| --- | --- |
+| Manual benchmark, scheduled planner and local `gh_evaluations.py benchmark` | The benchmark policy selects `gpt-6.2-sol` for Codex 0.171.0, runtime preflight, provider and standard verifier. The agent requests High. The 0.3.0 verifier sends Chat Completions with its reasoning parameter omitted. The three judge aliases and the CLI argument use the same selection. |
+| Single-case observation | The active 0.171.0 selector and the 0.169.1 rollback both send `gpt-6.2-sol` / High. |
+| Pilot, cohort, Boolean and Pester comparisons | Codex 0.167.0 sends `gpt-6.2-sol` / High. Select the campaign ending in `-sol62`. Direct preparation commands resolve to its versioned definition. |
+| gh runtime and permission campaigns | The `-sol62` successors use their qualified 0.155.1 CLI and send `gpt-6.2-sol` / High. Their deterministic verifiers make no model calls. |
+| Judge calibration and current-evaluator judge qualification | The 0.9.0 templates send `gpt-6.2-sol` with their configured Medium reasoning. Retry and schema fallback use the same model. |
+| Private skill review | `skill_review.py review` selects `gpt-6.2-sol` for the SDK token count and generation. Explicit authorization is required. Reasoning uses the provider default. |
+| GitHub-hosted Copilot PR review, interactive external reviewers | The host or operator selects the model. This repository supplies instructions and can validate saved review evidence. It cannot set or observe these external requests. |
+
+The 0.167.0 pilot and campaign images include the released model record for `gpt-6.2-sol`.
+Their built-in catalog otherwise omits the native file-edit tool. The image build checks the
+single-record catalog's SHA-256. Qualification exercises a real command and file edit and checks
+both outgoing requests against the controlled provider. The source record supports CLI 0.166.0
+and later. [Tagged Codex model catalog](https://github.com/openai/codex/blob/ccf9be8cc458bd6b8336fe84d68d8893f2691a5e/codex-rs/models-manager/models.json)
+
+The production verifier first tries RAGAS for goal accuracy on the canonical OpenAI endpoint. With
+the released 0.4.4 dependency, its `SingleTurnSample` rejects the list of messages before any SDK
+request. The verifier's existing custom goal judge then sends the selected model. The 0.3.0 accuracy
+and behavior judges use the same endpoint.
+
+New work needs fresh authorization for its revision, model and protocol. Existing allocation
+ceilings and expiration dates still apply. Scheduled paid suites remain disabled. The `-sol62`
+protocol files record new estimates and the source of their rates. Standard short-context rates per
+million tokens are $2 input, $0.10 cache reads and $10 output. Cache writes are $2.50 for 30 minutes
+and $5 for 12 hours. Above 272,000 input tokens the input and cache rates double and output costs
+1.5 times the short-context rate. Older CLIs expose cumulative counts and omit cache-write detail,
+so their scheduling estimate prices unclassified input conservatively. [Official model
+pricing](https://developers.openai.com/api/docs/models/gpt-6.2-sol)
+
+The manual native-deadline observation defaults to the current pilot model. The explicit historical
+CLI comparisons check out their original commits and send only to their non-forwarding loopback
+responder. Their saved model names are part of reproduction.
+
+Replay an earlier run at its producing revision using its recorded model, prices, source identity
+and validator. Current source-v38 records retain the existing grader and fixture identities. Each
+versioned definition binds its new runtime, model and budget. For the previous production model
+policy with CLI 0.171.0, use revision `b458913` for offline reproduction. Restarting paid work on a
+previous model requires separate approval.
+
 ## Codex 0.171.0 observation qualification for issue #95
 
 Run the independent release probe with the pinned `candidate-next` interpreter
@@ -19,18 +61,34 @@ metadata and the previous workspace stay protected.
 [0.170.0 permission updates](https://github.com/openai/codex/releases/tag/rust-v0.170.0)
 · [0.171.0 working-directory fix](https://github.com/openai/codex/pull/61195).
 
-Keep the full Harbor observation on `case-observation` (0.169.1). Registering
-0.171.0 through the shared runner changed three retained identity contracts
-covering the six-slot campaign, gh-014 registry and retrospective replay. The
-independent probe preserves the recorded profiles and existing selectors.
-Raw rollout traces require the same released binary that wrote them.
-[0.171.0 rollout replay contract](https://github.com/openai/codex/pull/61199).
+The ordinary `case-observation` selection resolves to the 0.171.0 definition. Select `case-observation-1691` to
+restore 0.169.1 with the same model and effort. Each definition binds its own preparation and protocol.
+Historical 0.155.1 and 0.167.0 campaign records retain their original identities. New scored runs on those CLIs
+use the corresponding `-sol62` selector.
 
-Keep the production SkillEvaluator 0.3.0 benchmark and trusted gh initializer
-on 0.155.1 with `gpt-5.6-sol` at High. The newer binary sent that same model
-and effort to the controlled provider. The production fixture still needs to
-exercise the old Harbor initializer, real CLI and collector together before
-a pin change. Frozen 0.155.1 and 0.167.0 replay selections remain available.
+The six-slot Boolean effectiveness protocol, the gh-014 0.169.1 probe, and the retained Boolean slot replay
+all bind shared source bytes. Replay an original record from its producing revision and use the same CLI for
+raw rollouts. The prior default source is `fb9c8a0`. Source-v37 records the CLI-only promotion and source-v38
+records the shared model change. Both inherit their frozen fixture and grader contracts. The retained replay
+also binds the adapter digest for its revision.
+[Upstream rollout replay contract](https://github.com/openai/codex/pull/61199).
+
+The production benchmark uses the SkillEvaluator 0.3.0 Docker dispatch patch. The trusted gh initializer reads the
+same Codex pin as the report policy. Both select 0.171.0. The benchmark agent uses `gpt-6.2-sol` at High. Each Docker
+trial runs with the execution user’s private Codex home. Direct native tools keep each command and file edit
+attributable to its own result in the existing verifier.
+Run the credential-free benchmark integration with its production setup and verified Compose:
+
+```sh
+"$SKILL_EVALUATOR_PYTHON" -B .github/scripts/qualify_benchmark_codex.py "$RUNNER_TEMP/benchmark-codex"
+```
+
+The qualifier checks the standalone archive, then runs the production npm package and launcher in network-isolated
+task containers. It compares the npm executable and its three shipped helpers to the archive. The npm package omits
+`codex-exec-server`. The real gh broker, Harbor agent, verifier and collector exercise that installed layout.
+Its loopback responses supply fixture usage. For the 0.155.1 rollback, select the benchmark setup, patch and report policy
+together from `fb9c8a0`. Historical reporting and comparison
+must use the policy and source revision that produced the records.
 
 ## Codex 0.169.1 proposed profile for issue #95
 

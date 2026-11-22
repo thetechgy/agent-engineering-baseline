@@ -23,7 +23,7 @@ import evaluator_profiles as profiles
 import skill_evidence as evidence
 import skill_reports as reports
 
-PROTOCOL = 'pester-effectiveness-v3'
+PROTOCOL = 'pester-effectiveness-v3-sol62'
 FIXTURE_SCENARIOS = ('complete', 'threshold', 'unknown-usage', 'unsupported', 'infrastructure', 'cleanup', 'interruption')
 SECRET_KEYS = ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'NVIDIA_API_KEY')
 

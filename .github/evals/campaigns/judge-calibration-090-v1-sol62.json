@@ -1,0 +1,10 @@
+{
+  "id": "judge-calibration-090-v1-sol62",
+  "type": "judge-only",
+  "adapter": "standard-judge-090",
+  "corpus": ".github/evals/judge-calibration-090/corpus.json",
+  "rubric": ".github/evals/judge-calibration-090/inputs.json",
+  "runtime_profile": ".github/evals/evaluator-0.9-accounting-v1.json",
+  "protocol": ".github/evals/judge-calibration-090/protocol-sol62.json",
+  "authorized_live_attempts": 0
+}

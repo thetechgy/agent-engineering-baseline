@@ -767,7 +767,7 @@ API calls, one run at a time. Setup:
    reviewed feature branches allowed alongside main. For one maintainer, leave
    **Prevent self-review** off. The job uses `deployment: false`; avoid incompatible
    deployment protection apps.
-2. Add environment secret `OPENAI_API_KEY` with `gpt-5.6-sol` access. Remove any
+2. Add environment secret `OPENAI_API_KEY` with `gpt-6.2-sol` access. Remove any
    repository-level copy to preserve approval gating; re-enter it securely or replace
    it.
 3. Initialize an empty `gh-pages` branch from a disposable clone with an orphan
@@ -778,7 +778,7 @@ API calls, one run at a time. Setup:
 Dispatch **Actions > Benchmark skills > Run workflow** with a reviewed branch and
 dataset such as `podman`. `standard` makes one attempt per case per comparison
 (20 Podman trials); diagnostic-only `confirmation` makes three (60 trials).
-Codex runs in Docker; agent and judge use GPT-5.6 Sol. Smoke tests/judging add calls.
+Codex runs in Docker; agent and judge use GPT-6.2 Sol. Smoke tests/judging add calls.
 Follow the
 [security review requirements](#ci-permissions-credentials-and-dependency-checks)
 before approval.

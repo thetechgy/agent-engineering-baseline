@@ -1,5 +1,5 @@
 {
-  "id": "pester-return-contract-v8-explicit-preparation-routing",
+  "id": "pester-return-contract-v9-sol62",
   "base_commit": "9f81a66b343f340b681759db8c7c38a4e9e016c5",
   "historical_run": 42744596001,
   "historical_artifact": 13730584511,
@@ -10,10 +10,10 @@
   "duplicated_absent_attempts": 12,
   "authorized_live_attempts": 0,
   "definitions": [
-    ".github/evals/campaigns/pester-return-development-candidate-v1.json",
-    ".github/evals/campaigns/pester-return-development-current-v1.json",
-    ".github/evals/campaigns/pester-return-transfer-candidate-v3.json",
-    ".github/evals/campaigns/pester-return-transfer-current-v3.json"
+    ".github/evals/campaigns/pester-return-development-candidate-v1-sol62.json",
+    ".github/evals/campaigns/pester-return-development-current-v1-sol62.json",
+    ".github/evals/campaigns/pester-return-transfer-candidate-v3-sol62.json",
+    ".github/evals/campaigns/pester-return-transfer-current-v3-sol62.json"
   ],
   "files": {
     ".github/evals/campaigns/codex-authorized-v1.json": "bf5f73c25a747c34591748c46eb8c46731005f4f0dd420d0e241804addf0bbe9",
@@ -73,7 +73,7 @@
     ".github/evals/powershell-pester-6/support/cases/pester-004/input/Existing.Tests.ps1": "322195b479d439e917afe4774fe3988af1e32d8b713db45ba1a6e1ca20e177cd",
     ".github/evals/powershell-pester-6/support/cases/pester-004/reference/Subject.ps1": "6d31ab77b5e387d6c9ddea1c75b8e4f6be84383022e979931700da94cfc9fdbc",
     ".github/evals/powershell-pester-6/support/qualification/pester-004/inline.Tests.ps1": "9fb7a9f7d1164cb1a53222e9e3af5257c4681d250a85aba25d9e622dbbd89de0",
-    ".github/scripts/codex_pilot_effectiveness.py": "7d13240a07448f1eedbb63b6daa23b531d2488e1ac626101cfc1400300fba3fe",
+    ".github/scripts/codex_pilot_effectiveness.py": "550b03902682c8970fa01f7621fb4615afcc1af0906233a161e87e7c51e51734",
     ".github/scripts/evaluation_tasks.py": "97cef0788cd0b41430207e91a28e6d2ef56aa1242ed635fb331a18ae31ffc280",
     ".github/evals/campaigns/pester-return-transfer-candidate-v2-protocol.json": "95b3778cdc59d4dcc05958ff24f2e8df23978061a5c93ba9b47ee113c29841d1",
     ".github/evals/campaigns/pester-return-transfer-candidate-v2.json": "967462b131ba4d4c464d4d6ebd5811db2ff05405e1d817409c89e7c4e3d2b332",
@@ -81,25 +81,40 @@
     ".github/evals/campaigns/pester-return-transfer-current-v2.json": "93062fb9d226653dbf28de8fce634f8551248b23aa13b94deb584b801084f4cd",
     ".github/evals/campaigns/pester-return-transfer-candidate-controls-v2.json": "40d15eb87cdd5f9e09e48017af1fc01097ec79d3134ac1563d3c6eab323e5cbe",
     ".github/evals/campaigns/pester-return-transfer-current-v2-protocol.json": "4ab45a210e9c54de96a3bc3ffe01f6dd8656c4a4a8a23514a5cd4365974987e6",
-    ".github/workflows/pester-return-qualification.yml": "549a7e100d7a125f6a818d5828faf1979fce1f0f09f6971a86c08397e8200e4e",
+    ".github/workflows/pester-return-qualification.yml": "27dbfca2ca3ef1cf943e1feb7db9125b1bc2fbeeb72af8e62dac44f43604f5fe",
     ".github/evals/campaigns/pester-return-transfer-current-v3-protocol.json": "db0219eee2fd9a802504fc15552d3bb0e56671e68c9e36062c21fb77aff01794",
     ".github/evals/campaigns/pester-return-transfer-candidate-v3-protocol.json": "042141a95ea4dcdf6360011414eb29521fd9f987d5cdd76d9691e6f6b3221498",
     ".github/evals/campaigns/pester-return-transfer-candidate-v3.json": "cc6a2345dd5d12f8bc7b2dfc9156986d404afb1b191dc85ca7eb041d1939fed6",
     ".github/evals/campaigns/pester-return-transfer-candidate-controls-v3.json": "896dbe3005265caf55dc62471e94e90853f26419993b6efb83fa7fac6ec98102",
     ".github/evals/campaigns/pester-return-transfer-current-v3.json": "91c0c76d4fc88b50517d9d39c2c55ba1086bffbb74e93463912fc5e7ee4b7a8c",
     ".github/evals/campaigns/pester-return-transfer-current-controls-v3.json": "af409ff45036e0abe861add665e1844ef37ac9b0b34954bfd4776e56c88a9de0",
-    ".github/evals/pester-return-contract/transfer/controls/good-loop.Tests.ps1": "fba014f2e9488f54b04722eb96d5489d2bb71bd3ef028f5702cb00e30eb9d6a5"
+    ".github/evals/pester-return-contract/transfer/controls/good-loop.Tests.ps1": "fba014f2e9488f54b04722eb96d5489d2bb71bd3ef028f5702cb00e30eb9d6a5",
+    ".github/evals/campaigns/codex-authorized-v1-sol62.json": "84d5b1f667dfd39fa12e9a3d9a983392a46f368e0dfaa74d494013e1ee160ebd",
+    ".github/evals/campaigns/pester-return-development-candidate-controls-v1-sol62.json": "a0b8fdcf0baea3517d247bd81c1bfc0720ef5a3260dc4e55573211461721ee74",
+    ".github/evals/campaigns/pester-return-development-candidate-v1-protocol-sol62.json": "b9f5bcbfc46b6be52f020bdabe21e7c07ae130e8490cfe755880e08fa55017a7",
+    ".github/evals/campaigns/pester-return-development-candidate-v1-sol62.json": "c8ab3e704e03a220a804ecb381fd3ad4e313d8336014d770a752080b782e5ea4",
+    ".github/evals/campaigns/pester-return-development-current-controls-v1-sol62.json": "b59cfb2363b2967d325567642c162f10ce8f9bf84192cb427386193f602bd86c",
+    ".github/evals/campaigns/pester-return-development-current-v1-protocol-sol62.json": "122b6d7ac6df78cedfbf52d8874c0a4051176c774c9831688c8de7ac485bd6e9",
+    ".github/evals/campaigns/pester-return-development-current-v1-sol62.json": "64b2709d8b05c518c7fd181a75e1512be70a5bba1582f889501eeefe8a5368ca",
+    ".github/evals/codex-pilot-sol62.json": "1908e0ffd445286dc0731794b16d3744e2b3b77dfd21eb0a77bd978285c282c2",
+    ".github/evals/campaigns/pester-return-transfer-current-v3-protocol-sol62.json": "d7d0df5a1c10f3a3ef3a24bf614c75dcd60e606e55a94c4fbc5d791dc462a454",
+    ".github/evals/campaigns/pester-return-transfer-candidate-v3-protocol-sol62.json": "427c913752c0032f446e65a4b5161e91992c218baedaeb6da400e81bcfadbc51",
+    ".github/evals/campaigns/pester-return-transfer-candidate-v3-sol62.json": "d6760b503ce8cfbacea3daed0f65526f7e56cef83a7134c4e86b674ba3b05f76",
+    ".github/evals/campaigns/pester-return-transfer-candidate-controls-v3-sol62.json": "8fb1c21228ad49698b29c2b4a110460d6248f9932558e7aba7b9c555619276de",
+    ".github/evals/campaigns/pester-return-transfer-current-v3-sol62.json": "123d580a02b2b2f29d67fda06185dea0f5639c6dcee76624602c33480d72744d",
+    ".github/evals/campaigns/pester-return-transfer-current-controls-v3-sol62.json": "646695465c103698feb5bfbac2ed04caacfb860d06dbff3dda0b10b124ac73c9",
+    ".github/evals/campaigns/selections-sol62.json": "e6e9decb519f0bd845d5a757af63997a1d565327307564c09346b7a2e48f23d7"
   },
   "qualification_definitions": [
-    ".github/evals/campaigns/pester-return-development-current-controls-v1.json",
-    ".github/evals/campaigns/pester-return-development-candidate-controls-v1.json",
-    ".github/evals/campaigns/pester-return-transfer-current-controls-v3.json",
-    ".github/evals/campaigns/pester-return-transfer-candidate-controls-v3.json"
+    ".github/evals/campaigns/pester-return-development-current-controls-v1-sol62.json",
+    ".github/evals/campaigns/pester-return-development-candidate-controls-v1-sol62.json",
+    ".github/evals/campaigns/pester-return-transfer-current-controls-v3-sol62.json",
+    ".github/evals/campaigns/pester-return-transfer-candidate-controls-v3-sol62.json"
   ],
   "previous": {
-    "commit": "e40cc0c995025d448fd7b163df3b6f32b7ea569e",
-    "manifest": "history/e40cc0c-freeze.json",
-    "sha256": "479435fd724e4e7d11ada61901b4f5e42b41001456c8c9940076bd1e36610e2d"
+    "commit": "b45891322302926ea545bfad57e71956bc8f8017",
+    "manifest": "history/b458913-freeze.json",
+    "sha256": "bbe36e649dd5a49608e0a95ef019c50b27296c6e9b33babd4d27bb6024b94ee4"
   },
-  "revision_purpose": "Routing only: full return-contract preparation is explicit workflow_dispatch. Native jobs, all frozen task/grading/model/skill inputs, historical identities and closed allocations are unchanged. No live authorization."
+  "revision_purpose": "New qualifications use gpt-6.2-sol and the versioned campaign runtime and prices. Original campaign results retain their model and input digests."
 }

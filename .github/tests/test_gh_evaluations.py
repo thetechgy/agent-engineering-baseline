@@ -506,6 +506,33 @@ class GhOfflineTests(unittest.TestCase):
     "pinned SkillEvaluator environment unavailable",
 )
 class GhNativeTests(unittest.TestCase):
+    def test_local_gate_recovers_only_confirmed_numeric_authorization(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            run = Path(temporary)
+            for present in (True, False):
+                arm = "with-skill" if present else "without-skill"
+                native_id = "trial-" + arm
+                metrics = {"gh_" + key: 1 for key in ("evidence", "activation", "commands", "task",
+                           "recovery", "authorization", "efficiency", "gate")}
+                metrics["gh_gate"] = metrics["gh_authorization"] = int(present)
+                trial = {"id": native_id, "trial_name": native_id, "task_checksum": "f" * 64,
+                         "finished_at": "2026-11-21T00:00:00Z", "verifier_result": {"rewards": metrics}}
+                reward = {"entry_id": "gh-001", "has_skill": present, "trial_id": native_id, "custom_metrics": metrics}
+                native = run / "_harbor-jobs" / arm / native_id
+                collected = run / "codex" / arm / "trials" / native_id
+                reports.write_json(native / "result.json", trial)
+                reports.write_json(native / "verifier/reward.json", metrics)
+                reports.write_json(native / "verifier/skill_evaluator_reward.json", reward)
+                reports.write_json(collected / "result.json", trial)
+                reports.write_json(collected / "reward.json",
+                                   dict(reward, custom_metrics=dict(metrics, gh_authorization="<redacted>")))
+            rows = gh.deterministic_gate(run, ["gh-001"], 1, numeric_excerpts=gh.local_numeric_excerpts(run))
+            self.assertEqual([row["metrics"]["gh_authorization"] for row in rows], [1, 0])
+            reward["custom_metrics"]["gh_authorization"] = 1
+            reports.write_json(native / "verifier/skill_evaluator_reward.json", reward)
+            with self.assertRaisesRegex(ValueError, "Original numeric carrier mismatch"):
+                gh.local_numeric_excerpts(run)
+
     def test_graphql_production_verifier_both_arms_and_receipt_tampering(self):
         import shlex
         from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks

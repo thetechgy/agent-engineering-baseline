@@ -1,5 +1,10 @@
 # Reusable evaluation campaigns
 
+Scored dispatch choices ending in `-sol62` create new records with `gpt-6.2-sol`. Use the
+preparation and protocol produced for that exact selection. The earlier names and allocations in the
+historical examples below identify their original experiments. [Current model and pricing
+policy](../EVALUATION-PLAN.md#model-selection-for-new-executions)
+
 ## Single-case Codex observation
 
 Use the skill name and original ID from its repository dataset. The protected
@@ -7,15 +12,15 @@ job runs one current-skill trial with verification disabled. Generated cases
 use their declared inputs and APM deployment. Native overlays that require a
 different task environment fail during credential-free preparation.
 
-The observation uses the pinned Codex CLI 0.169.1 / GPT-6.2 Sol / High
-profile. The 0.155.1 selector remains available for replay. Prepare the
+The observation uses the pinned Codex CLI 0.171.0 / GPT-6.2 Sol / High
+profile. Dispatch `case-observation-1691` for the previous 0.169.1 observation. Prepare the
 selection at the exact intended revision. The earlier preparation and
 allocation are bound to their original revision and runtime.
 
 For Podman case 4, dispatch the following command after separate approval of
 the source revision, preparation artifact and allocation. Set `EVALUATED_REF`
 to the branch at that revision and `APPROVED_ALLOCATION` to
-`campaign-<40-character SHA>-case-observation-prep<artifact ID>-usd3-<unique nonce>`.
+`campaign-<40-character SHA>-case-observation-1710-prep<artifact ID>-usd3-<unique nonce>`.
 The allocation is a planning figure. The `skill-benchmark` environment gates
 credential delivery.
 
@@ -167,9 +172,9 @@ For **another model supported by an existing runtime**, add a separate explicit
 runtime/model profile and qualify it through the owning validator and actual CLI
 probe. Preserve model/provider/settings, version, limits and pricing assumptions
 in the ledger and registered reporting identity. Unknown settings fail explicitly.
-The Codex validator currently accepts only the unchanged qualified
-[codex-pilot.json](../codex-pilot.json); adding a model is not an arbitrary string
-override and does not enable inference.
+The Codex validator verifies the registered profile and its exact digest. New scored campaigns use
+versioned profiles. Archived profiles describe their original evidence. [Current pilot
+profile](../codex-pilot-sol62.json).
 
 Variant names are configuration, not scheduling conditions. The scheduler also
 has a three-variant contract check. The current report bridge remains paired and

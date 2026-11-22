@@ -37,7 +37,7 @@ class Release090Contracts(unittest.TestCase):
         self.assertEqual((profiles.CANDIDATE['version'], profiles.CANDIDATE['harbor']), ('0.8.0', '0.24.0'))
 
     def test_source_successors_preserve_every_historical_registry_entry(self):
-        registry = evidence.custom_registry(ROOT)
+        registry = evidence.frozen_registry(ROOT)
         registry['profiles'].pop('gh-deterministic-gate-v6')
         registry['profiles'].pop('gh-native-oracle-v2')
         registry['active_profiles']['gh'] = 'gh-deterministic-gate-v5'

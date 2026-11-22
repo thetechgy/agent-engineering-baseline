@@ -20,6 +20,7 @@ from typing import Annotated, Literal
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from skill_reports import POLICY
 import skill_analysis as analysis  # noqa: E402 - standalone import after no-bytecode/path setup
 import skill_evidence as evidence  # noqa: E402 - standalone import after no-bytecode/path setup
 from pydantic import BaseModel, ConfigDict, Field, ValidationError  # noqa: E402 - standalone import after no-bytecode/path setup
@@ -1137,7 +1138,7 @@ def prepare(inputs, saved_analysis, skill, record_id, source=None, support=None,
         "implementation_digest": evidence.identity([
             [path.name, evidence.digest_bytes(capture.read(path))]
             for path in (Path(__file__), Path(analysis.__file__), Path(evidence.__file__), Path(evidence.reports.__file__),
-                         evidence.ROOT / evidence.CUSTOM_REGISTRY,
+                         evidence.ROOT / evidence.CUSTOM_REGISTRY, evidence.ROOT / evidence.SOURCE_SUCCESSORS,
                          evidence.ROOT / '.github/scripts/evaluator_profiles.py',
                          evidence.ROOT / '.github/evals/evaluator-candidate.json',
                          evidence.ROOT / '.github/evals/evaluator-0.9.json')
@@ -1700,6 +1701,8 @@ async def invoke(context, config, authorized, *, http_client=None, diagnostic=No
         review_require(not config.model.lower().startswith("ft:"), "Fine-tuned models unsupported for constrained schema",
                        "model_unsupported", ("configuration", "model"))
         checked_text(config.model, path=("configuration", "model"))
+        review_require(config.model == POLICY["model"], "Select the active review model",
+                       "model_unsupported", ("configuration", "model"))
         metadata["expected_model"] = config.model
         for guard in context.guards:
             guard()
@@ -2055,7 +2058,7 @@ def main(argv=None):
         if name in ("review", "validate"):
             sub.add_argument("--diagnostics", action="store_true", help="Emit bounded failure metadata for private stderr capture")
         if name == "review":
-            sub.add_argument("--model", required=True)
+            sub.add_argument("--model", default=POLICY["model"])
             sub.add_argument("--authorize-inference", action="store_true")
             sub.add_argument("--input-limit", type=int, default=64000)
             sub.add_argument("--output-limit", type=int, default=12000)

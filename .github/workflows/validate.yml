@@ -89,6 +89,9 @@ jobs:
         id: qualification
         timeout-minutes: 30
         run: '"$SKILL_EVALUATOR_PYTHON" .github/scripts/pester_container_validation.py'
+      - name: Qualify the production Codex benchmark against the loopback fixture
+        timeout-minutes: 18
+        run: '"$SKILL_EVALUATOR_PYTHON" -B .github/scripts/qualify_benchmark_codex.py "$RUNNER_TEMP/benchmark-codex"'
       - name: Verify checkout integrity
         id: pester-integrity
         if: always()
@@ -167,12 +170,17 @@ jobs:
       - name: Validate native gh Docker boundary without inference or credentials
         run: '"$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_container_validation.py'
 
+      - name: Install pinned SkillEvaluator 0.9.0 data-only host
+        run: bash .github/scripts/setup-skillevaluator.sh candidate-next
+
+      - name: Verify the trusted gh initializer selects the production Codex CLI
+        timeout-minutes: 8
+        run: |
+          "$SKILL_NEXT_PYTHON" -I -B -c 'import os,sys; sys.path.insert(0,".github/scripts"); from gh_initializer_validation import main; main(os.environ["RUNNER_TEMP"]+"/gh-codex-initializer.json","with_skill",codex_control=True)'
+
       - name: Remove test-only Compose plugin
         if: always()
         run: bash .github/scripts/setup-compose.sh cleanup
-
-      - name: Install pinned SkillEvaluator 0.9.0 data-only host
-        run: bash .github/scripts/setup-skillevaluator.sh candidate-next
 
       - name: Qualify data-only publisher and orchestration with retained rollback
         env:
@@ -202,6 +210,10 @@ jobs:
         timeout-minutes: 8
         run: '"$SKILL_NEXT_PYTHON" -B .github/scripts/qualify_codex_1710.py "$RUNNER_TEMP/codex-1710"'
 
+      - name: Observe each active campaign and pilot model on the wire
+        timeout-minutes: 10
+        run: '"$SKILL_NEXT_PYTHON" -B .github/scripts/qualify_model_callers.py "$RUNNER_TEMP/model-callers"'
+
       - name: Qualify diagnostic evidence retention on handled SIGTERM
         env:
           PYTHONPATH: .github/scripts
@@ -229,6 +241,12 @@ jobs:
             ${{ runner.temp }}/behavioral-evidence-090/receipt.json
           if-no-files-found: error
           retention-days: 30
+
+      - name: Set up the pinned calibration judge
+        run: bash .github/scripts/setup-skillevaluator.sh candidate-accounting
+
+      - name: Observe the calibration judge and its retries without credentials
+        run: '"$SKILL_ACCOUNTING_PYTHON" -B .github/scripts/evaluation_campaign_selection.py qualify --campaign judge-calibration-090-v1-sol62 --output "$RUNNER_TEMP/calibration-sol62"'
 
       - name: Verify contract tests left the checkout unchanged
         if: always()

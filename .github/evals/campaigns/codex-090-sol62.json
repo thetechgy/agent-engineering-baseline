@@ -1,0 +1,11 @@
+{
+  "id": "codex-090-diagnostic-v1-sol62",
+  "adapter": "codex",
+  "frozen_profile": ".github/evals/codex-execution-090-sol62.json",
+  "frozen_profile_sha256": "ad8c0f9b0b85690ea3b4a65ba53e8c01b5e7b8926fe44c91abbe06707a810cb5",
+  "capabilities": [
+    "non-forwarding-cli-probe",
+    "exact-authorized-live"
+  ],
+  "inference_enabled": false
+}

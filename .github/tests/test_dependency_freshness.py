@@ -152,9 +152,9 @@ class FreshnessTests(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
         for name in (fresh.CONFIG, "apm.yml", "apm.lock.yaml", ".apm-version", ".github/dependabot.yml",
-                     ".github/evals/evaluator-candidate.json", ".github/evals/evaluator-0.9.json", ".github/evals/codex-pilot.json", ".github/evals/codex-execution-090.json",
-                     ".github/evals/codex-execution-1691.json", ".github/evals/campaigns/case-observation.json",
-                     ".github/evals/campaigns/codex-1691-observation.json"):
+                     ".github/evals/evaluator-candidate.json", ".github/evals/evaluator-0.9.json", ".github/evals/codex-pilot-sol62.json", ".github/evals/codex-execution-090-sol62.json",
+                     ".github/evals/codex-execution-1710.json", ".github/evals/campaigns/case-observation-1710.json",
+                     ".github/evals/campaigns/codex-1710-observation.json"):
             target = root / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, target)
@@ -185,7 +185,7 @@ class FreshnessTests(unittest.TestCase):
         self.assertEqual(candidate['dependencies']['harbor'], '0.24.0')
         observation = json.loads(by_id['observation-environment']['pin']['value'])
         self.assertEqual((observation['cli'], observation['model'], observation['reasoning_effort']),
-                         ('0.169.1', 'gpt-6.2-sol', 'high'))
+                         ('0.171.0', 'gpt-6.2-sol', 'high'))
         scanner = json.loads(by_id['scanner-environment']['pin']['value'])
         self.assertEqual(scanner['openai'], '3.56.0')
         self.assertIn('not production adoption', by_id['candidate-environment']['label'])

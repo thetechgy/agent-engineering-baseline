@@ -8,13 +8,13 @@ import shutil
 from codex_pilot_contract import ROOT, PROFILE as RUNTIME, grader_bytes as retained_grader
 from codex_pilot_iteration import runner_bytes as retained_runner_bytes
 
-PROFILE_ID = 'pester-effectiveness-v10'
+PROFILE_ID = 'pester-effectiveness-v10-sol62'
 PURPOSE = 'skill_effectiveness'
 CONTROL_PURPOSE = 'skill_effectiveness_control'
 CASES = ('pester-001', 'pester-003', 'pester-004')
 PRIMARY_CASES = CASES[1:]
 DOCUMENT = '.github/evals/pester-effectiveness.md'
-PROTOCOL = '.github/evals/pester-effectiveness.json'
+PROTOCOL = '.github/evals/pester-effectiveness-sol62.json'
 
 
 def case_files(workspace, case):
@@ -255,7 +255,7 @@ def prepare(root):
     if any(os.environ.get(k) for k in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'NVIDIA_API_KEY')):
         raise ValueError('Credential-free preparation received credentials')
     protocol = reports.read_json(ROOT / PROTOCOL)
-    if (protocol['runtime_contract_sha256'] != hashlib.sha256((ROOT / '.github/evals/codex-pilot.json').read_bytes()).hexdigest()
+    if (protocol['runtime_contract_sha256'] != hashlib.sha256((ROOT / '.github/evals/codex-pilot-sol62.json').read_bytes()).hexdigest()
             or protocol['evaluator_profile_sha256'] != hashlib.sha256((ROOT / '.github/evals/evaluator-candidate.json').read_bytes()).hexdigest()
             or protocol['authorized_live_attempts'] != 0 or protocol['proposed_attempts'] != len(schedule())):
         raise ValueError('Frozen protocol/runtime identity drift')

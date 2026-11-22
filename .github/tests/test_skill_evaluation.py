@@ -723,15 +723,10 @@ class UpstreamTests(unittest.TestCase):
         from harbor.agents.installed.codex import Codex
         patch_text = (REPO / reports.PATCH).read_text()
         members = re.findall(r"^diff --git a/(\S+)", patch_text, re.MULTILINE)
-        self.assertEqual(set(members), {"src/skillevaluator/tier3/" + name for name in (
-            "eval_core/checks.py", "eval_core/codex_tool_call_normalizer.py",
+        self.assertEqual(set(members), {"src/skillevaluator/provider_config.py"} | {"src/skillevaluator/tier3/" + name for name in (
+            "eval_core/checks.py", "eval_core/llm_judge.py", "eval_core/codex_tool_call_normalizer.py",
             "eval_core/sensitive_path_evidence.py", "harbor/adapter.py",
-            "harbor/collector.py", "harbor/runner.py", "harbor/templates/eval.py")})
-        runner_patch = "diff --git" + patch_text.split("diff --git")[members.index("src/skillevaluator/tier3/harbor/runner.py") + 1]
-        added = [line[1:].strip() for line in runner_patch.splitlines()
-                 if line.startswith("+") and not line.startswith("+++")]
-        self.assertEqual(added, ['if agent == "codex":', 'command.extend(["--ak", "version=0.155.1"])'])
-
+            "harbor/collector.py", "harbor/benchmark_codex.py", "harbor/runner.py", "harbor/templates/eval.py")})
         runner_source = Path(inspect.getfile(runner)).read_text()
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -739,7 +734,7 @@ class UpstreamTests(unittest.TestCase):
             runner_target.parent.mkdir(parents=True)
             runner_target.write_text(runner_source)
             # Benchmark setup is already patched; quality setup is the pristine source.
-            if 'command.extend(["--ak", "version=0.155.1"])' not in runner_source:
+            if 'version=0.171.0' not in runner_source:
                 subprocess.run(["git", "apply", "--include=src/skillevaluator/tier3/harbor/runner.py", "--check", str(REPO / reports.PATCH)], cwd=root, check=True)
                 subprocess.run(["git", "apply", "--include=src/skillevaluator/tier3/harbor/runner.py", str(REPO / reports.PATCH)], cwd=root, check=True)
             runner_tree = ast.parse(runner_target.read_text())
@@ -750,15 +745,17 @@ class UpstreamTests(unittest.TestCase):
             build = namespace["build_harbor_run_command"]
             common = {"dataset_path": "unused", "job_name": "keyless-test"}
             command = build(agent="codex", env_mode="docker", **common)
-            self.assertEqual(command[command.index("--ak") + 1], "version=0.155.1")
+            self.assertEqual(command[command.index("--ak") + 1], "version=0.171.0")
+            self.assertEqual(command[command.index("--agent-import-path") + 1],
+                             "skillevaluator.tier3.harbor.benchmark_codex:BenchmarkCodex")
             for agent, environment in (("claude-code", "docker"), ("codex", "local"), ("codex", "daytona")):
                 self.assertNotIn("--ak", build(agent=agent, env_mode=environment, **common))
-            codex = Codex(logs_dir=root / "logs", model_name=reports.POLICY["model"], version="0.155.1")
+            codex = Codex(logs_dir=root / "logs", model_name=reports.POLICY["model"], version="0.171.0")
             with patch.object(codex, "exec_as_root", new_callable=AsyncMock), \
                     patch.object(codex, "exec_as_agent", new_callable=AsyncMock) as execute:
                 asyncio.run(codex.install(object()))
                 install_command = execute.call_args.kwargs["command"]
-            self.assertIn("npm install -g @openai/codex@0.155.1", install_command)
+            self.assertIn("npm install -g @openai/codex@0.171.0", install_command)
             self.assertNotIn("@latest", install_command)
 
 
@@ -856,6 +853,8 @@ class WorkflowTests(unittest.TestCase):
         evaluation = next(step for step in steps if step.get("id") == "evaluation")
         recovery = next(step for step in steps if "skill_reports.py recover" in step.get("run", ""))
         staging = next(step for step in steps if step.get("id") == "artifacts")
+        for setting in ("SKILL_EVAL_LLM_MODEL", "SKILL_EVAL_JUDGE_MODEL", "LLM_JUDGE_MODEL"):
+            self.assertEqual(evaluation["env"][setting], "${{ steps.selection.outputs.model }}")
         self.assertIs(steps[0], budget)
         self.assertEqual(budget["timeout-minutes"], 1)
         self.assertEqual(evaluation["env"]["EVALUATION_DEADLINE_EPOCH"],
@@ -891,6 +890,7 @@ class WorkflowTests(unittest.TestCase):
             env = {
                 "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
                 "TIMEOUT_LOG": str(timeout_log),
+                "SKILL_EVAL_LLM_MODEL": reports.POLICY["model"],
                 "RUNNER_TEMP": str(runner_temp),
                 "GITHUB_OUTPUT": str(output),
                 "GITHUB_WORKSPACE": str(REPO),

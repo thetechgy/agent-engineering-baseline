@@ -56,7 +56,9 @@ class ReturnContract(unittest.TestCase):
                     "definition.get('type') == 'case-observation'":
                         "if definition.get('type') == 'case-observation':\n"
                         "        from case_observation import CaseObservation\n"
-                        "        require(path == ROOT / '.github/evals/campaigns/case-observation.json', 'Unregistered observation')\n"
+                        "        require(path in (ROOT / '.github/evals/campaigns/case-observation.json',\n"
+                        "                         ROOT / '.github/evals/campaigns/case-observation-1710.json'),\n"
+                        "                'Unregistered observation')\n"
                         "        return CaseObservation(definition, path.relative_to(ROOT).as_posix())",
                     "definition.get('type') == 'judge-only'":
                         "if definition.get('type') == 'judge-only':\n"
@@ -86,7 +88,7 @@ class ReturnContract(unittest.TestCase):
             definitions=[]
             version='v3' if case=='transfer' else 'v1'
             for variant in ('current', 'candidate'):
-                task=load(ROOT / ('.github/evals/campaigns/pester-return-'+case+'-'+variant+'-'+version+'.json'))
+                task=load(ROOT / ('.github/evals/campaigns/pester-return-'+case+'-'+variant+'-'+version+'-sol62.json'))
                 definitions.append(task.definition)
                 self.assertFalse(task.diagnostic_observation)
                 self.assertEqual(task.public_policy_fields(), {})
@@ -98,7 +100,7 @@ class ReturnContract(unittest.TestCase):
                     with self.assertRaises(ValueError):task.launch_context(ROOT, ROOT/'unused', present, {'AEB_UNREVIEWED':'1'})
                     with self.assertRaises(ValueError):task.validate_launch_context(ROOT, {'unreviewed':True}, present, {})
 
-                controls=load(ROOT / ('.github/evals/campaigns/pester-return-'+case+'-'+variant+'-controls-'+version+'.json'))
+                controls=load(ROOT / ('.github/evals/campaigns/pester-return-'+case+'-'+variant+'-controls-'+version+'-sol62.json'))
                 for mode in ('oracle','probe'):
                     selected=purpose(controls,mode)
                     profile,_,_=evidence.custom_contract('powershell-pester-6',purpose=selected)
