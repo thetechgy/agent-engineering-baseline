@@ -16,6 +16,8 @@ The production verifier first tries RAGAS for goal accuracy on the canonical Ope
 
 New work needs fresh authorization for its revision, model and protocol. Existing allocation ceilings and expiration dates still apply. Scheduled paid suites remain disabled. The `-sol62` protocol files record new estimates and the source of their rates. Standard short-context rates per million tokens are $2 input, $0.10 cache reads and $10 output. Cache writes are $2.50 for 30 minutes and $5 for 12 hours. Above 272,000 input tokens the input and cache rates double and output costs 1.5 times the short-context rate. Older CLIs expose cumulative counts and omit cache-write detail, so their scheduling estimate prices unclassified input conservatively. [Official model pricing](https://developers.openai.com/api/docs/models/gpt-6.2-sol)
 
+The manual native-deadline observation defaults to the current pilot model. The explicit historical CLI comparisons check out their original commits and send only to their non-forwarding loopback responder. Their saved model names are part of reproduction.
+
 Replay an earlier run at its producing revision using its recorded model, prices, source identity and validator. Current source-v38 records retain the existing grader and fixture identities. Each versioned definition binds its new runtime, model and budget. For the previous production model policy with CLI 0.171.0, use revision `b458913` for offline reproduction. Restarting paid work on a previous model requires separate approval.
 
 ## Codex 0.171.0 observation qualification for issue #95

@@ -169,9 +169,7 @@ For **another model supported by an existing runtime**, add a separate explicit
 runtime/model profile and qualify it through the owning validator and actual CLI
 probe. Preserve model/provider/settings, version, limits and pricing assumptions
 in the ledger and registered reporting identity. Unknown settings fail explicitly.
-The Codex validator currently accepts only the unchanged qualified
-[codex-pilot.json](../codex-pilot.json); adding a model is not an arbitrary string
-override and does not enable inference.
+The Codex validator verifies the registered profile and its exact digest. New scored campaigns use versioned profiles. Archived profiles describe their original evidence. [Current pilot profile](../codex-pilot-sol62.json).
 
 Variant names are configuration, not scheduling conditions. The scheduler also
 has a three-variant contract check. The current report bridge remains paired and

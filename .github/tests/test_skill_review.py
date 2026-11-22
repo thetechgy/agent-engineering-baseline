@@ -2911,9 +2911,20 @@ class ReviewTests(unittest.TestCase):
         context = self.control()
         calls = []
 
+        deadlines = []
+
+        def start_deadline(seconds):
+            deadline = asyncio.timeout(seconds)
+            deadlines.append(deadline)
+            return deadline
+
         async def slow(request):
             calls.append(request)
-            await asyncio.sleep(0.6)
+            if len(calls) == 2:
+                # Expire the same real timer after the SDK reaches generation.
+                self.assertEqual(len(deadlines), 1)
+                deadlines[0].reschedule(asyncio.get_running_loop().time())
+                await asyncio.sleep(0.1)
             return httpx.Response(
                 200,
                 json={"object": "response.input_tokens", "input_tokens": 1000}
@@ -2922,8 +2933,11 @@ class ReviewTests(unittest.TestCase):
             )
 
         client = httpx.AsyncClient(transport=httpx.MockTransport(slow))
-        with self.assertRaises(ValueError):
-            asyncio.run(review.invoke(context, {**CONFIG, "deadline_seconds": 1}, True, http_client=client))
+        with patch.object(review, "asyncio", wraps=asyncio) as scheduler:
+            scheduler.timeout.side_effect = start_deadline
+            with self.assertRaises(review.InferenceRejected) as rejected:
+                asyncio.run(review.invoke(context, CONFIG, True, http_client=client))
+        self.assert_diagnostic(rejected.exception, "deadline_exceeded", ("configuration", "deadline_seconds"), stage="generation")
         self.assertEqual(len(calls), 2)
 
         def malformed(request):

@@ -9,11 +9,11 @@ on:
       cli_observation:
         type: boolean
         default: false
-        description: Compare baseline and reviewed CLI observation without inference
+        description: Run the credential-free CLI observation
       observation_final:
         type: boolean
-        default: false
-        description: Qualify only the final head after the matched comparison
+        default: true
+        description: Qualify current sources. Clear only to reproduce the frozen historical comparison.
       expect_broken:
         type: boolean
         default: false
