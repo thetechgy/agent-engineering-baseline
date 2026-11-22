@@ -198,6 +198,10 @@ jobs:
           APM_EXECUTABLE="$RUNNER_TEMP/apm/bin/apm" PYTHONPATH=.github/scripts:.github/tests \
             "$SKILL_NEXT_PYTHON" -B -m unittest -v test_case_observation.CaseObservationTests.test_case9_staging_checks_declared_input_before_launch
 
+      - name: Qualify the Codex 0.171.0 observer CLI without inference
+        timeout-minutes: 8
+        run: '"$SKILL_NEXT_PYTHON" -B .github/scripts/qualify_codex_1710.py "$RUNNER_TEMP/codex-1710"'
+
       - name: Qualify diagnostic evidence retention on handled SIGTERM
         env:
           PYTHONPATH: .github/scripts
