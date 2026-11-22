@@ -152,7 +152,7 @@ class FreshnessTests(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
         for name in (fresh.CONFIG, "apm.yml", "apm.lock.yaml", ".apm-version", ".github/dependabot.yml",
-                     ".github/evals/evaluator-candidate.json", ".github/evals/evaluator-0.9.json", ".github/evals/codex-pilot.json", ".github/evals/codex-execution-090.json",
+                     ".github/evals/evaluator-candidate.json", ".github/evals/evaluator-0.9.json", ".github/evals/codex-pilot-sol62.json", ".github/evals/codex-execution-090-sol62.json",
                      ".github/evals/codex-execution-1710.json", ".github/evals/campaigns/case-observation-1710.json",
                      ".github/evals/campaigns/codex-1710-observation.json"):
             target = root / name

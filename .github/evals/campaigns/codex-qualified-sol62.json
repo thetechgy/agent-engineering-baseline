@@ -1,0 +1,11 @@
+{
+  "id": "codex-qualified-campaign-v1-sol62",
+  "adapter": "codex",
+  "frozen_profile": ".github/evals/codex-pilot-sol62.json",
+  "frozen_profile_sha256": "1908e0ffd445286dc0731794b16d3744e2b3b77dfd21eb0a77bd978285c282c2",
+  "capabilities": [
+    "oracle",
+    "non-forwarding-cli-probe"
+  ],
+  "inference_enabled": false
+}

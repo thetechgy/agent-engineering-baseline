@@ -25,6 +25,7 @@ import skill_reports as reports
 
 
 def fixture(output, scenario, *, judge_context=None, producer=profiles.NEXT):
+    model = reports.POLICY['model'] if judge_context else 'gpt-5.6-sol'
     from harbor.models.job.result import JobResult, JobStats
     from harbor.models.task.task import Task
     from harbor.models.trial.result import TrialResult, ExceptionInfo
@@ -83,7 +84,7 @@ def fixture(output, scenario, *, judge_context=None, producer=profiles.NEXT):
                 'task_name':'nvidia/skillevaluator-' + case, 'trial_name':name, 'trial_uri':trial.as_uri(),
                 'task_id':{'path':str(task)}, 'task_checksum':Task(task).checksum,
                 'config':{'task':{'path':str(task)}, 'trial_name':name},
-                'agent_info':{'name':'codex', 'version':'0.155.1', 'model_info':{'name':reports.POLICY['model']}},
+                'agent_info':{'name':'codex', 'version':'0.155.1', 'model_info':{'name':model}},
                 'agent_result':{'n_input_tokens':0, 'n_output_tokens':0, 'n_cache_tokens':0},
                 'verifier_result':{'rewards':numeric}, 'started_at':now, 'finished_at':now,
                 'exception_info': {'exception_type':'VerifierError', 'exception_message':'Simulated unavailable evidence',
@@ -101,12 +102,12 @@ def fixture(output, scenario, *, judge_context=None, producer=profiles.NEXT):
         (job / 'result.json').write_text(job_result.model_dump_json(indent=2))
     meta = {'profile':('behavioral-090-accounting-v1' if producer is profiles.ACCOUNTING else 'behavioral-090-offline-v1'), 'origin':'credential_free_fixture', 'judgments':'simulated'}
     reports.write_json(native / 'versions.json', profiles.candidate_versions(producer))
-    policy = {**reports.POLICY, 'codex':'0.155.1', 'evaluator_revision':producer['revision'], 'harbor':producer['harbor'],
+    policy = {**reports.POLICY, 'model':model, 'codex':'0.155.1', 'evaluator_revision':producer['revision'], 'harbor':producer['harbor'],
               'python':producer['python']}
     reports.write_json(native / 'provenance.json', {'schema_version':1, 'skill':'podman', 'mode':'standard',
         'policy':policy, 'patch_sha256':producer['patch_sha256'], 'benchmark':meta})
     config = {'grading':{'mode':'default'}, 'judge':{'enabled':False},
-              'provider':{'name':'openai', 'model':reports.POLICY['model']},
+              'provider':{'name':'openai', 'model':model},
               'harbor':{'environment':{'value':'docker'}, 'n_attempts':1, 'n_concurrent':2,
                         'stop_on_pass':False, 'timeout_multiplier':2.0},
               'evaluated_source':{'repository':'thetechgy/agent-engineering-baseline', 'commit':evidence.git_revision(ROOT)}}
@@ -127,7 +128,7 @@ def fixture(output, scenario, *, judge_context=None, producer=profiles.NEXT):
     else:
         collected = collect_harbor_results('podman', ['codex'], run, jobs, expected_cases=10,
             expected_case_ids=[str(i) for i in range(1,11)], expected_trials=10, n_attempts=1,
-            agent_models={'codex':{'model':reports.POLICY['model'], 'source':'fixture'}})
+            agent_models={'codex':{'model':model, 'source':'fixture'}})
     reports.write_json(run / 'result.json', {**collected, 'skill_name':'podman',
         'report_status':'complete' if scenario == 'complete' else 'incomplete',
         'diagnostic_only':True, 'run_config':config,

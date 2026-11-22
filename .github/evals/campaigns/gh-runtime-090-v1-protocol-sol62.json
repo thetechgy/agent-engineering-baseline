@@ -1,0 +1,65 @@
+{
+  "id": "gh-runtime-090-v1-sol62",
+  "definition": ".github/evals/campaigns/gh-runtime-090-v1-sol62.json",
+  "version": 1,
+  "attempt_slots": 2,
+  "trials_per_arm": 1,
+  "automatic_retries": 0,
+  "replacements": 0,
+  "concurrency": 1,
+  "primary_outcome": "Held Codex CLI and evaluator routing compatibility on existing read-only gh-014",
+  "separate_outcomes": [
+    "task correctness",
+    "read authorization",
+    "skill access",
+    "task failure",
+    "unavailable grading",
+    "CLI failure",
+    "usage",
+    "cleanup"
+  ],
+  "interpretation": "Diagnostic compatibility only; valid task failures remain observations. No skill benefit or judge accuracy claim.",
+  "budget": {
+    "estimate_usd": 1.0,
+    "stop_estimate_usd": 3,
+    "overshoot_reserve_usd": 3,
+    "planning_allocation_usd": 6,
+    "billing_limit_enforced": false,
+    "pricing_verified": "2026-11-21",
+    "pricing_source": "https://developers.openai.com/api/docs/models/gpt-6.2-sol",
+    "prices_per_million": {
+      "input": 2,
+      "cached_input": 0.1,
+      "output": 10,
+      "cache_write_30m": 2.5,
+      "cache_write_12h": 5
+    }
+  },
+  "stop_rules": [
+    "estimated_usage_threshold",
+    "unknown_usage",
+    "execution_infrastructure_failure",
+    "cleanup_failure",
+    "missing_grading_evidence",
+    "missing_usable_evidence",
+    "unsupported_grading",
+    "verifier_failure",
+    "missing_native_observation",
+    "unsupported_runtime_protocol",
+    "security_or_identity_drift"
+  ],
+  "agent_seconds": 600,
+  "launch_seconds": 1200,
+  "cleanup_grace_seconds": 80,
+  "protected_environment": "skill-benchmark",
+  "authorized_live_attempts": 0,
+  "grading": {
+    "mode": "custom_only",
+    "agent_attempts": 2,
+    "verifier_runs": 2,
+    "model_judge_calls": 0,
+    "judgments": "deterministic; no model judgments",
+    "production_history": false
+  },
+  "authorization_expires_at": "2026-11-18T00:00:00Z"
+}

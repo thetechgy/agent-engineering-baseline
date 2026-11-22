@@ -196,6 +196,38 @@ def run(root, assets, present, *, interrupt=False):
             "output_tokens": usage["n_output_tokens"], "authorization": metrics["gh_authorization"]}
 
 
+def judge_requests():
+    from unittest.mock import patch
+    from skillevaluator.tier3.harbor.templates import eval as verifier
+    from judge_transport_090 import Responder, SETTINGS
+
+    responder = Responder()
+    settings = {**SETTINGS, "SKILL_EVAL_LLM_MODEL": POLICY["model"], "SKILL_EVAL_JUDGE_MODEL": POLICY["model"]}
+    # v0.3 uses its own JSON score schema. Reuse the loopback transport and capture every POST.
+    def reply(payload):
+        responder.requests.append(payload)
+        result = {"score": 1, "achieved": True, "reason": "Fixture",
+                  "results": [{"step": 1, "passed": True, "reason": "Fixture"}], "summary": "Fixture"}
+        return 200, json.dumps({"choices": [{"message": {"content": json.dumps(result)}}]}).encode()
+
+    with patch.dict(os.environ, settings, clear=True), patch.object(responder, "respond", reply), responder.boundary():
+        for judge, args in ((verifier.judge_accuracy, ("Return 42", "42", "42")),
+                            (verifier.judge_goal_accuracy, ("Return 42", "42", "42")),
+                            (verifier.judge_behavior_check, ("Returned 42", ["Return 42"]))):
+            before = len(responder.requests)
+            result = judge(*args)
+            require(result.get("score") == 1, "Native judge rejected fixture response: " + judge.__name__)
+            require(len(responder.requests) == before + 1, "Missing native judge request: " + judge.__name__)
+    with patch.dict(os.environ, {"LLM_JUDGE_FALLBACK_MODELS": "unapproved-model"}, clear=True):
+        require(verifier._selected_judge_model() == POLICY["model"] and
+                verifier._fallback_models(POLICY["model"]) == [POLICY["model"]],
+                "Unconfigured verifier or inherited retry model drift")
+    require(all(p.get("model") == "gpt-6.2-sol" and "max_completion_tokens" in p
+                and "temperature" not in p and "reasoning_effort" not in p for p in responder.requests),
+            "Production Chat Completions judge payload drift")
+    return {"model": POLICY["model"], "endpoint": "/v1/chat/completions", "requests": len(responder.requests)}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
@@ -223,7 +255,7 @@ def main():
         if arm == "with":
             require(scores.get("gh_task") == 1 and scores.get("gh_gate") == 1, "Approved gh task failed")
     display_findings_report(collected, "gh", ["codex"], report)
-    summary = {"inference": False, "agent": rows, "interruption": partial,
+    summary = {"inference": False, "agent": rows, "judges": judge_requests(), "interruption": partial,
                "with_skill_gate": collected["agents"]["codex"]["custom_with_skill"]["gh_gate"]}
     write_json(root / "qualification.json", summary)
     print(json.dumps(summary, sort_keys=True), flush=True)

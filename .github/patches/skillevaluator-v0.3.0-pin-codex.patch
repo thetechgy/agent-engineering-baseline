@@ -420,3 +420,84 @@ diff --git a/src/skillevaluator/tier3/harbor/templates/eval.py b/src/skillevalua
      security_score = security_result["score"]
      details["security"] = security_result
  
+diff --git a/src/skillevaluator/provider_config.py b/src/skillevaluator/provider_config.py
+--- a/src/skillevaluator/provider_config.py
++++ b/src/skillevaluator/provider_config.py
+@@ -22,7 +22,7 @@
+ # Harbor ``templates/eval.py`` cannot import this module — keep its local
+ # ``DEFAULT_JUDGE_MODEL`` in sync via the drift test in
+ # ``tests/tier3/test_judge_parse_robustness.py``.
+-CHAT_DEFAULT_OPENAI = "gpt-5.6-sol"
++CHAT_DEFAULT_OPENAI = "gpt-6.2-sol"
+ CHAT_DEFAULT_ANTHROPIC = "claude-opus-5"
+ CHAT_DEFAULT_BEDROCK = "us.anthropic.claude-opus-5"
+ # Lower-cost OpenAI alternative for ``SKILL_EVAL_LLM_MODEL`` overrides.
+@@ -65,7 +65,7 @@
+ def _supports_custom_temperature(model: str) -> bool:
+     """Return whether ``model`` accepts a non-default temperature value."""
+     leaf = _model_leaf(model)
+-    if leaf.startswith("gpt-5") or leaf in _NO_CUSTOM_TEMPERATURE_MODEL_IDS:
++    if leaf.startswith(("gpt-5", "gpt-6")) or leaf in _NO_CUSTOM_TEMPERATURE_MODEL_IDS:
+         return False
+ 
+     match = _VERSIONED_CLAUDE_MODEL_RE.fullmatch(leaf)
+diff --git a/src/skillevaluator/tier3/harbor/templates/eval.py b/src/skillevaluator/tier3/harbor/templates/eval.py
+--- a/src/skillevaluator/tier3/harbor/templates/eval.py
++++ b/src/skillevaluator/tier3/harbor/templates/eval.py
+@@ -115,7 +115,7 @@
+ NVIDIA_BUILD_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
+ # Keep in sync with skillevaluator.provider_config.CHAT_DEFAULT_OPENAI
+ # (sandbox template cannot import the package — see drift test).
+-DEFAULT_JUDGE_MODEL = "gpt-5.6-sol"
++DEFAULT_JUDGE_MODEL = "gpt-6.2-sol"
+ _ANTHROPIC_DNS_LABEL_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
+ _ANTHROPIC_INTERNAL_LABEL_RE = re.compile(r"^[A-Za-z0-9_](?:[A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?$")
+ _ANTHROPIC_IPV6_ZONE_RE = re.compile(r"^[A-Za-z0-9._~-]+$")
+@@ -1121,6 +1121,8 @@
+ 
+ 
+ def _fallback_models(primary_model):
++    if primary_model == "gpt-6.2-sol":
++        return [primary_model]
+     env_fallbacks = [
+         item.strip() for item in os.environ.get("LLM_JUDGE_FALLBACK_MODELS", "").split(",") if item.strip()
+     ]
+@@ -1249,7 +1251,7 @@
+ def _supports_custom_temperature(model):
+     # Keep in sync with skillevaluator.tier3.eval_core.llm_judge (drift test).
+     leaf = _model_leaf(model)
+-    if leaf.startswith("gpt-5") or leaf == "claude-mythos-preview":
++    if leaf.startswith(("gpt-5", "gpt-6")) or leaf == "claude-mythos-preview":
+         return False
+     match = re.fullmatch(
+         r"claude-[a-z][a-z-]*-(?P<major>\d+)"
+@@ -1300,7 +1302,7 @@
+     resolved_request_url = _resolve_url(resolved_provider) if request_url is None else request_url
+     token_key = (
+         "max_completion_tokens"
+-        if _model_leaf(model).startswith("gpt-5")
++        if _model_leaf(model).startswith(("gpt-5", "gpt-6"))
+         and _is_native_openai_chat_url(resolved_provider, resolved_request_url)
+         else "max_tokens"
+     )
+diff --git a/src/skillevaluator/tier3/eval_core/llm_judge.py b/src/skillevaluator/tier3/eval_core/llm_judge.py
+--- a/src/skillevaluator/tier3/eval_core/llm_judge.py
++++ b/src/skillevaluator/tier3/eval_core/llm_judge.py
+@@ -62,6 +62,8 @@
+ 
+ 
+ def _fallback_models(primary_model: str) -> list[str]:
++    if primary_model == "gpt-6.2-sol":
++        return [primary_model]
+     env_fallbacks = [
+         item.strip() for item in os.environ.get("LLM_JUDGE_FALLBACK_MODELS", "").split(",") if item.strip()
+     ]
+@@ -206,7 +208,7 @@
+     resolved_request_url = _resolve_url(resolved_provider) if request_url is None else request_url
+     token_key = (
+         "max_completion_tokens"
+-        if _model_leaf(model).startswith("gpt-5")
++        if _model_leaf(model).startswith(("gpt-5", "gpt-6"))
+         and _is_native_openai_chat_url(resolved_provider, resolved_request_url)
+         else "max_tokens"
+     )

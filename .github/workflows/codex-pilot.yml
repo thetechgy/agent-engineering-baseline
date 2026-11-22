@@ -9,7 +9,7 @@ on:
         type: string
         default: ''
       cohort_allocation:
-        description: 'Empty by default. Separately approved cohort-<SHA>-pester-effectiveness-v3-prep<artifact ID>-usd15-<unique dispatch nonce>.'
+        description: 'Empty by default. Separately approved cohort-<SHA>-pester-effectiveness-v3-sol62-prep<artifact ID>-usd15-<unique dispatch nonce>.'
         type: string
         default: ''
 permissions: {}

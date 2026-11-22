@@ -45,8 +45,8 @@ jobs:
       - name: Qualify both sources with native oracle and real CLI controls
         run: |
           "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py qualify \
-            --definition ".github/evals/campaigns/pester-return-$CASE-current-controls-$CASE_VERSION.json" \
-            --definition ".github/evals/campaigns/pester-return-$CASE-candidate-controls-$CASE_VERSION.json" \
+            --definition ".github/evals/campaigns/pester-return-$CASE-current-controls-$CASE_VERSION-sol62.json" \
+            --definition ".github/evals/campaigns/pester-return-$CASE-candidate-controls-$CASE_VERSION-sol62.json" \
             --output "$RUNNER_TEMP/pester-return/controls"
       - name: Acquire fresh Compose configuration for current preparation
         run: bash .github/scripts/setup-compose.sh
@@ -54,7 +54,7 @@ jobs:
         timeout-minutes: 55
         run: |
           "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py prepare \
-            --definition ".github/evals/campaigns/pester-return-$CASE-current-$CASE_VERSION.json" \
+            --definition ".github/evals/campaigns/pester-return-$CASE-current-$CASE_VERSION-sol62.json" \
             --qualification "$RUNNER_TEMP/pester-return/controls" \
             --output "$RUNNER_TEMP/pester-return/current"
       - name: Acquire fresh Compose configuration for candidate preparation
@@ -63,7 +63,7 @@ jobs:
         timeout-minutes: 55
         run: |
           "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py prepare \
-            --definition ".github/evals/campaigns/pester-return-$CASE-candidate-$CASE_VERSION.json" \
+            --definition ".github/evals/campaigns/pester-return-$CASE-candidate-$CASE_VERSION-sol62.json" \
             --qualification "$RUNNER_TEMP/pester-return/controls" \
             --output "$RUNNER_TEMP/pester-return/candidate"
       - name: Verify checkout integrity
@@ -131,7 +131,7 @@ jobs:
         run: |
           for variant in current candidate; do
             "$SKILL_CURRENT_PYTHON" -B .github/scripts/evaluation_campaign.py check-preparation \
-              --definition ".github/evals/campaigns/pester-return-$CASE-$variant-$CASE_VERSION.json" \
+              --definition ".github/evals/campaigns/pester-return-$CASE-$variant-$CASE_VERSION-sol62.json" \
               --preparation "$RUNNER_TEMP/downloaded/$variant/evidence" \
               --output "$RUNNER_TEMP/consumption/$variant"
           done

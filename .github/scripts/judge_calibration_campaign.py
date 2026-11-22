@@ -64,8 +64,9 @@ def transport_estimate(transports, task):
         writes = a - cached if writes is None else writes
         if cached + writes > a:
             return None  # Read/write cache subsets cannot price the same input twice.
-        total += ((a - cached - writes) * prices['input'] + cached * prices['cached_input']
-                  + writes * prices['cache_write_input'] + b * prices['output']) / 1_000_000
+        long_context = task.definition['id'].endswith('-sol62') and a > 272000
+        prefill = (a - cached - writes) * prices['input'] + cached * prices['cached_input'] + writes * prices['cache_write_input']
+        total += (prefill * (2 if long_context else 1) + b * prices['output'] * (1.5 if long_context else 1)) / 1_000_000
     return total
 
 
@@ -187,7 +188,7 @@ def run(root, task, *, live=False, preparation=None, fixture=None):
         payload = json.loads(request.data)
         core.require(payload['model'] == p['request']['model'] and payload['stream'] is False
                      and payload['max_completion_tokens'] == p['request']['max_completion_tokens']
-                     and 'reasoning_effort' not in payload and 'temperature' not in payload,
+                     and payload.get('reasoning_effort') == p['request']['reasoning_effort'] and 'temperature' not in payload,
                      'Judge request settings drift')
         return original_read(request, min(timeout, max(0.001, limits['seconds'] - (time.monotonic() - started))))
 

@@ -853,6 +853,8 @@ class WorkflowTests(unittest.TestCase):
         evaluation = next(step for step in steps if step.get("id") == "evaluation")
         recovery = next(step for step in steps if "skill_reports.py recover" in step.get("run", ""))
         staging = next(step for step in steps if step.get("id") == "artifacts")
+        for setting in ("SKILL_EVAL_LLM_MODEL", "SKILL_EVAL_JUDGE_MODEL", "LLM_JUDGE_MODEL"):
+            self.assertEqual(evaluation["env"][setting], "${{ steps.selection.outputs.model }}")
         self.assertIs(steps[0], budget)
         self.assertEqual(budget["timeout-minutes"], 1)
         self.assertEqual(evaluation["env"]["EVALUATION_DEADLINE_EPOCH"],
@@ -888,6 +890,7 @@ class WorkflowTests(unittest.TestCase):
             env = {
                 "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
                 "TIMEOUT_LOG": str(timeout_log),
+                "SKILL_EVAL_LLM_MODEL": reports.POLICY["model"],
                 "RUNNER_TEMP": str(runner_temp),
                 "GITHUB_OUTPUT": str(output),
                 "GITHUB_WORKSPACE": str(REPO),

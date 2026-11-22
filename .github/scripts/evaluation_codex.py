@@ -516,7 +516,7 @@ def agent_config(task, mode, control, runtime, present, *, deadline_fixture=None
     if mode in ('oracle','replay'):
         return {'name': 'oracle'}
     if deadline_fixture is not None:
-        require(mode == 'experiment-probe' and runtime['id'] == 'codex-090-diagnostic-v1'
+        require(mode == 'experiment-probe' and runtime['id'] in ('codex-090-diagnostic-v1', 'codex-090-diagnostic-v1-sol62')
                 and deadline_fixture == 'cancelled', 'Unqualified deadline override')
     return {'import_path': 'evaluation_codex:CampaignCodex', 'model_name': runtime['model'],
             **({'override_timeout_sec': 90} if deadline_fixture is not None else {}),

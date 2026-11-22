@@ -58,6 +58,8 @@ def usage_record(value, *, probe=False, runtime=None):
         # Conservatively apply its premium once cumulative input exceeds 272K.
         prefill, sample = (2, 1.5) if i > 272000 else (1, 1)
         input_cost = (i - c - writes) * prices['input'] + c * prices['cached_input']
+        if 'cache_write_12h' in prices and not candidate:
+            input_cost = (i - c) * prices['cache_write_12h'] + c * prices['cached_input']
         if candidate:
             input_cost += writes * prices['cache_write_30m']
         cost = (input_cost * prefill + o * prices['output'] * sample) / 1_000_000
@@ -66,5 +68,7 @@ def usage_record(value, *, probe=False, runtime=None):
             'provenance': usage_source(selected) if valid else None, **counts, 'estimated_usd': cost if complete else None,
             **({'observed_estimated_usd': cost} if not complete else {}),
             **({'estimate_basis': 'standard rates; 30-minute cache write assumption; long-context upper bound from cumulative input'
-                if valid else None} if candidate else {}),
+                if valid else None} if candidate else
+               {'estimate_basis': 'unclassified input at 12-hour cache-write rate; cumulative long-context upper bound'}
+               if 'cache_write_12h' in prices and valid else {}),
             'billing': 'stub protocol; no model usage or billing' if probe or os.environ.get('AEB_PILOT_PROBE') == '1' else 'provider-reported tokens; estimate, not invoice'}

@@ -315,8 +315,8 @@ def inventory(root):
          "Harbor 0.25.0 is supported; Python <3.15 and LiteLLM <1.94 still constrain this group. "
          "Credential-free compatibility does not establish provider or skill benefit."),
         ("execution-next-environment", "Opt-in 0.9.0 behavioral execution preparation",
-         ".github/evals/codex-execution-090.json",
-         "Explicit gh-runtime-090-v1 selection holds its historical Codex 0.155.1 / gpt-5.6-sol / high. "
+         ".github/evals/codex-execution-090-sol62.json",
+         "New gh runtime and permission campaigns select Codex 0.155.1 / gpt-6.2-sol / high. "
          "Uses existing pinned SkillEvaluator 0.9.0 / Harbor 0.25.0 with custom-only deterministic grading. "
          "Preparation is credential-free; live provider behavior remains untested. Default benchmarks stay 0.3.0. "
          "No paid allocation is opened; standard model judging, Pester clarification and skill adoption remain deferred."),
@@ -325,8 +325,8 @@ def inventory(root):
          "Current case-observation CLI, model and reasoning effort. "
          "Changing this profile requires a new identity and credential-free observer qualification."),
         ("pilot-environment", "Frozen CLI pilot and campaign selectors",
-         ".github/evals/codex-pilot.json",
-         "Frozen Codex/model/reasoning selectors, not a production default or freshness approval. "
+         ".github/evals/codex-pilot-sol62.json",
+         "Active pilot, Boolean and Pester campaign successors select Codex 0.167.0 / gpt-6.2-sol / high. "
          "PRs #130 and #132 remain separate; transfer stopped at unsupported/test_name_template. "
          "Do not resume or repair admission in dependency maintenance."),
         ("scanner-environment", "Independent SkillSpector SDK environment",

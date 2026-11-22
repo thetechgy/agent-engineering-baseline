@@ -210,6 +210,10 @@ jobs:
         timeout-minutes: 8
         run: '"$SKILL_NEXT_PYTHON" -B .github/scripts/qualify_codex_1710.py "$RUNNER_TEMP/codex-1710"'
 
+      - name: Observe each active campaign and pilot model on the wire
+        timeout-minutes: 10
+        run: '"$SKILL_NEXT_PYTHON" -B .github/scripts/qualify_model_callers.py "$RUNNER_TEMP/model-callers"'
+
       - name: Qualify diagnostic evidence retention on handled SIGTERM
         env:
           PYTHONPATH: .github/scripts
@@ -237,6 +241,12 @@ jobs:
             ${{ runner.temp }}/behavioral-evidence-090/receipt.json
           if-no-files-found: error
           retention-days: 30
+
+      - name: Set up the pinned calibration judge
+        run: bash .github/scripts/setup-skillevaluator.sh candidate-accounting
+
+      - name: Observe the calibration judge and its retries without credentials
+        run: '"$SKILL_ACCOUNTING_PYTHON" -B .github/scripts/evaluation_campaign_selection.py qualify --campaign judge-calibration-090-v1-sol62 --output "$RUNNER_TEMP/calibration-sol62"'
 
       - name: Verify contract tests left the checkout unchanged
         if: always()

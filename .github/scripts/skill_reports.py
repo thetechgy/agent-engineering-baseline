@@ -22,7 +22,7 @@ POLICY = {
     "docker_compose": "5.8.0",
     "codex": "0.171.0",
     "python": "3.13",
-    "model": "gpt-5.6-sol",
+    "model": "gpt-6.2-sol",
     "provider": "openai",
     "environment": "docker",
     "grading": "default",
@@ -392,6 +392,7 @@ def recover_benchmark(workspace, root, name, mode, outcome, *, evidence_profile=
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
     from skillevaluator.tier3.results_location import run_directory_sort_key
 
+    recovery_model = POLICY["model"]
     profile_metadata = None
     retained_provenance = {}
     primary_outcome = outcome
@@ -404,6 +405,7 @@ def recover_benchmark(workspace, root, name, mode, outcome, *, evidence_profile=
                 'Recovery producer mismatch')
         original = read_json(root / 'provenance.json')
         profile_metadata = original['benchmark']
+        recovery_model = original['policy']['model']
         require(original.get('schema_version') == 1 and original.get('skill') == name
                 and original.get('mode') == mode, 'Recovery evidence identity mismatch')
         retained_provenance = {key:original[key] for key in
@@ -456,7 +458,7 @@ def recover_benchmark(workspace, root, name, mode, outcome, *, evidence_profile=
             n_attempts=MODES[mode], stop_on_pass=False, expected_cases=cases,
             expected_case_ids=case_ids,
             expected_trials=cases * MODES[mode], env_mode="docker",
-            agent_models={"codex": {"model": POLICY["model"], "source": "cli"}},
+            agent_models={"codex": {"model": recovery_model, "source": "cli"}},
         )
         # Native diagnostics may include completed trials but are never a completed evaluation.
         write_json(run / "result.json", {**collected, "skill_name": name,
@@ -1045,7 +1047,7 @@ def main():
         options = benchmark_options(args.skill)
         require(not options['diagnostic_only'] or args.mode == 'confirmation',
                 'Diagnostic-only suite requires confirmation mode; history is unavailable')
-        outputs(skill=args.skill, attempts=MODES[args.mode],
+        outputs(skill=args.skill, model=POLICY["model"], attempts=MODES[args.mode],
                 history_eligible=str(not options['diagnostic_only']).lower(),
                 public_supported='true', public_source_kind='retained' if options['grading_mode'] == 'custom_only' else 'original')
     elif args.command == 'prepare':

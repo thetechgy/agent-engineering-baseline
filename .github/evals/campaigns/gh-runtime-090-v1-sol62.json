@@ -1,0 +1,30 @@
+{
+  "id": "gh-runtime-090-v1-sol62",
+  "adapter": "gh-fixture",
+  "skill": "gh",
+  "source": ".agents/skills/gh",
+  "source_case": "gh-014",
+  "runtime_profile": ".github/evals/campaigns/codex-090-sol62.json",
+  "variants": [
+    {
+      "id": "current",
+      "present": true
+    },
+    {
+      "id": "absent",
+      "present": false
+    }
+  ],
+  "trials": 1,
+  "attempt_limit": 2,
+  "stop_estimate_usd": 3,
+  "authorized_live_attempts": 0,
+  "controls": [
+    "good",
+    "wrong-repo",
+    "unauthorized",
+    "unsupported",
+    "missing-trace"
+  ],
+  "protocol": ".github/evals/campaigns/gh-runtime-090-v1-protocol-sol62.json"
+}

@@ -35,7 +35,7 @@ def main():
         adapter.agent_config = config
         root = args.output / scenario
         try:
-            campaign.run(root, load(campaign.ROOT / '.github/evals/campaigns/boolean-contract.json'), 'probe')
+            campaign.run(root, load(campaign.ROOT / '.github/evals/campaigns/boolean-contract-sol62.json'), 'probe')
         except ValueError:
             if scenario == 'normal': raise
         ledger = reports.read_json(root / 'evidence/attempt-ledger.json')
@@ -58,7 +58,7 @@ def main():
                 require(len(copies) == 1, 'Emitted submission was lost')
                 receipt = reports.read_json(copies[0])
                 output = copies[0].parent / 'interrupted-submission/Subject.Tests.ps1'
-                require(output.read_bytes() == load(campaign.ROOT / '.github/evals/campaigns/boolean-contract.json').payload('identity'), 'Exact partial submission changed')
+                require(output.read_bytes() == load(campaign.ROOT / '.github/evals/campaigns/boolean-contract-sol62.json').payload('identity'), 'Exact partial submission changed')
                 require(receipt['sha256'] == hashlib.sha256(output.read_bytes()).hexdigest() and receipt['complete'] is False, 'Partial identity drift')
                 raw = next(retained.rglob('codex.txt')).read_text()
                 require('native-deadline-evidence' in raw and 'turn.completed' not in raw, 'Native events missing or fixture did not stall')

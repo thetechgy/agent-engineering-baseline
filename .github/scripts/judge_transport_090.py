@@ -15,8 +15,10 @@ import time
 import urllib.request
 from unittest.mock import patch
 
+from skill_reports import POLICY
+
 URL = 'https://api.openai.com/v1/chat/completions'
-MODEL = 'gpt-5.6-sol'
+MODEL = POLICY['model']
 SENTINEL = 'fixture-not-a-provider-credential'
 SETTINGS = {
     'SKILL_EVAL_LLM_PROVIDER': 'openai', 'LLM_JUDGE_MODEL': MODEL,

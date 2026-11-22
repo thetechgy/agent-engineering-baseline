@@ -10,6 +10,7 @@ CODEX_OBSERVATION_PROFILE = 'codex-1691-observation-v1'
 CODEX_OBSERVATION_1710_PROFILE = 'codex-1710-observation-v1'
 CODEX_OBSERVATION_PROFILES = (CODEX_OBSERVATION_PROFILE, CODEX_OBSERVATION_1710_PROFILE)
 CODEX_090_PROFILES = {
+    'codex-090-diagnostic-v1-sol62': '.github/evals/codex-execution-090-sol62.json',
     'codex-090-diagnostic-v1': '.github/evals/codex-execution-090.json',
     CODEX_FIXTURE_PROFILE: '.github/evals/codex-execution-1691.json',
     CODEX_OBSERVATION_PROFILE: '.github/evals/codex-execution-1691.json',
@@ -30,20 +31,23 @@ def read_profile(path, validators=None):
 
 def validate_codex(value):
     import skill_reports as reports
-    from codex_pilot_contract import PROFILE
     require(set(value) == {'id', 'adapter', 'frozen_profile', 'frozen_profile_sha256', 'capabilities', 'inference_enabled'},
             'Unsupported Codex profile settings')
-    expected = CODEX_090_PROFILES.get(value['id'], '.github/evals/codex-pilot.json')
+    pilot = '.github/evals/codex-pilot-sol62.json' if value['id'] in (
+        'codex-authorized-campaign-v1-sol62', 'codex-qualified-campaign-v1-sol62') else '.github/evals/codex-pilot.json'
+    expected = CODEX_090_PROFILES.get(value['id'], pilot)
     require(value['frozen_profile'] == expected and
             value['frozen_profile_sha256'] == hashlib.sha256((ROOT / value['frozen_profile']).read_bytes()).hexdigest(),
             'Qualified Codex profile drift')
-    capabilities = (['non-forwarding-cli-probe', 'exact-authorized-live'] if value['id'] in ('codex-authorized-campaign-v1', 'codex-090-diagnostic-v1', *CODEX_OBSERVATION_PROFILES)
+    live_profiles = ('codex-authorized-campaign-v1', 'codex-authorized-campaign-v1-sol62',
+                     'codex-090-diagnostic-v1', 'codex-090-diagnostic-v1-sol62', *CODEX_OBSERVATION_PROFILES)
+    capabilities = (['non-forwarding-cli-probe', 'exact-authorized-live'] if value['id'] in live_profiles
                     else ['oracle', 'non-forwarding-cli-probe'])
     if value['id'] == CODEX_FIXTURE_PROFILE:
         capabilities = ['non-forwarding-cli-probe']
     require(value['inference_enabled'] is False and value['capabilities'] == capabilities,
             'Unsupported Codex capabilities or inference setting')
-    selected = reports.read_json(ROOT / expected) if value['id'] in CODEX_090_PROFILES else PROFILE
+    selected = reports.read_json(ROOT / expected)
     if value['id'] in CODEX_OBSERVATION_PROFILES:
         selected = dict(selected, id=value['id'])
     return dict(selected, agent='codex')

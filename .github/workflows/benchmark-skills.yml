@@ -195,9 +195,10 @@ jobs:
           SKILLEVALUATOR_RESULTS_DIR: ${{ runner.temp }}/skill-benchmark/results
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SKILL_EVAL_LLM_PROVIDER: openai
-          SKILL_EVAL_LLM_MODEL: gpt-5.6-sol
-          SKILL_EVAL_JUDGE_MODEL: gpt-5.6-sol
-          LLM_JUDGE_MODEL: gpt-5.6-sol
+          SKILL_EVAL_LLM_MODEL: ${{ steps.selection.outputs.model }}
+          SKILL_EVAL_JUDGE_MODEL: ${{ steps.selection.outputs.model }}
+          LLM_JUDGE_FALLBACK_MODELS: ''
+          LLM_JUDGE_MODEL: ${{ steps.selection.outputs.model }}
           ATTEMPTS: ${{ steps.selection.outputs.attempts }}
           EVALUATION_DEADLINE_EPOCH: ${{ steps.budget.outputs.deadline_epoch }}
           SKILL_DIR: ${{ steps.preparation.outputs.skill_dir }}
@@ -225,7 +226,7 @@ jobs:
           cd "$RUNNER_TEMP/skill-benchmark"
           # Stop by the deadline, including forced-termination grace, to preserve recovery time.
           timeout --signal=INT --kill-after=30s "${evaluation_seconds}s" skillevaluator tier3 evaluate "$skill_dir" \
-            --agents codex --agent-model codex=gpt-5.6-sol --env-mode docker \
+            --agents codex --agent-model "codex=$SKILL_EVAL_LLM_MODEL" --env-mode docker \
             --skill-workspace-mode "$workspace_mode" --grading-mode "$grading_mode" \
             --n-attempts "$ATTEMPTS" --no-stop-on-pass --n-concurrent 2 --max-agents 1 \
             --agent-runtime-preflight --timeout-multiplier 2 --progress plain --harbor-keep-jobs \

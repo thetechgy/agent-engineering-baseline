@@ -123,7 +123,7 @@ class JudgeContracts(unittest.TestCase):
             old = value['profiles'][key.replace('-source-v25-', '-source-v24-')]
             self.assertEqual({k:v for k,v in row.items() if k not in ('id', 'runtime_digest')},
                              {k:v for k,v in old.items() if k not in ('id', 'runtime_digest')})
-            active = key.replace('-source-v25-', '-source-v37-')
+            active = key.replace('-source-v25-', '-source-v38-')
             successor = current['profiles'][active]
             self.assertEqual(successor['runtime_digest'],
                              evidence.identity(source_manifest(ROOT, successor['skill_id'], active)))
@@ -134,7 +134,7 @@ class JudgeContracts(unittest.TestCase):
 @unittest.skipUnless(os.environ.get('JUDGE_CALIBRATION_EVIDENCE'), 'actual preparation evidence supplied by qualification')
 class RetainedEvidence(unittest.TestCase):
     def setUp(self):
-        self.task = selected_task('judge-calibration-090-v1')
+        self.task = selected_task(os.environ.get('CAMPAIGN_ID', 'judge-calibration-090-v1-sol62'))
         self.reference = Path(os.environ['JUDGE_CALIBRATION_EVIDENCE'])
 
     def test_actual_preparation_consumes_and_reproduces_without_authority(self):

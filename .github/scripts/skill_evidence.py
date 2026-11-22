@@ -3376,6 +3376,7 @@ def validate_public(data):
 CUSTOM_CAPTURE = 'custom-metric-capture.json'
 CUSTOM_REGISTRY = '.github/evals/custom-metrics.json'
 SOURCE_SUCCESSORS = '.github/evals/source-v37.json'
+MODEL_SUCCESSORS = '.github/evals/source-v38.json'
 CUSTOM_OUTCOMES = ('passed', 'failed', 'invalid', 'unsupported', 'timeout',
                    'infrastructure_error', 'interrupted', 'unknown')
 CUSTOM_MEASURED = ('passed', 'failed')
@@ -3496,6 +3497,23 @@ def custom_registry(workspace=ROOT):
         if 'adapter_sha256' in result.get('campaign', {}):
             result['campaign'] = dict(result['campaign'], adapter_sha256=version['replay_adapter'])
         profiles[successor] = result
+    version = parse_json(read_bytes(workspace / MODEL_SUCCESSORS))
+    sha(version['replay_adapter'])
+    for successor, update in version['profiles'].items():
+        parent = profiles[update['parent']]
+        sha(update['runtime_digest'])
+        result = dict(parent, id=successor, runtime_digest=update['runtime_digest'])
+        if 'adapter_sha256' in result.get('campaign', {}):
+            result['campaign'] = dict(result['campaign'], adapter_sha256=version['replay_adapter'])
+        if 'definition' in update:
+            member = update['definition']
+            result['campaign'] = dict(result['campaign'], definition=member)
+            result['runtime'] = dict(parent['runtime'], model='gpt-6.2-sol', profile=update['runtime_profile'])
+        elif successor in ('pester-cli-pilot-retained-v22', 'pester-effectiveness-v41'):
+            result['runtime'] = dict(parent['runtime'], model='gpt-6.2-sol',
+                                     workspace_profile=parent['runtime']['workspace_profile'] + '-sol62')
+        require(successor not in profiles, 'Duplicate model successor')
+        profiles[successor] = result
     registry['active_profiles']['gh'] = 'gh-deterministic-gate-v7'
     return registry
 
@@ -3555,9 +3573,9 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v40'
+        profile_id = 'pester-effectiveness-v41'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-cli-pilot-retained-v21'
+        profile_id = 'pester-cli-pilot-retained-v22'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
         profile_id = 'gh-native-oracle-v3'
     profile_id = registry['active_profiles'].get(name) if profile_id is None else profile_id
@@ -3907,7 +3925,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
                             if name == 'powershell-pester-6' else workspace / '.agents/skills' / name):
             for member in safe_tree(source_root, directory_identities=directories, directory_states=states, file_states=members):
                 read_bytes(member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
-        for registry_member in (CUSTOM_REGISTRY, SOURCE_SUCCESSORS):
+        for registry_member in (CUSTOM_REGISTRY, SOURCE_SUCCESSORS, MODEL_SUCCESSORS):
             read_bytes(workspace / registry_member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
         helper = 'pester_evaluations.py' if name == 'powershell-pester-6' else 'gh_evaluations.py'
         read_bytes(workspace / '.github/scripts' / helper, budget=budget, directory_identities=directories, directory_states=states, file_states=members)

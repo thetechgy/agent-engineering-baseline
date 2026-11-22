@@ -1,5 +1,23 @@
 # Evaluation checkpoint
 
+## Model selection for new executions
+
+| Operator or workflow | Model dispatch and evidence |
+| --- | --- |
+| Manual benchmark, scheduled planner and local `gh_evaluations.py benchmark` | The benchmark policy selects `gpt-6.2-sol` for Codex 0.171.0, runtime preflight, provider and standard verifier. The agent requests High. The 0.3.0 verifier sends Chat Completions with its reasoning parameter omitted. The three judge aliases and the CLI argument use the same selection. |
+| Single-case observation | The active 0.171.0 selector and the 0.169.1 rollback both send `gpt-6.2-sol` / High. |
+| Pilot, cohort, Boolean and Pester comparisons | Codex 0.167.0 sends `gpt-6.2-sol` / High. Select the campaign ending in `-sol62`. Direct preparation commands resolve to its versioned definition. |
+| gh runtime and permission campaigns | The `-sol62` successors use their qualified 0.155.1 CLI and send `gpt-6.2-sol` / High. Their deterministic verifiers make no model calls. |
+| Judge calibration and current-evaluator judge qualification | The 0.9.0 templates send `gpt-6.2-sol` with their configured Medium reasoning. Retry and schema fallback use the same model. |
+| Private skill review | `skill_review.py review` selects `gpt-6.2-sol` for the SDK token count and generation. Explicit authorization is required. Reasoning uses the provider default. |
+| GitHub-hosted Copilot PR review, interactive external reviewers | The host or operator selects the model. This repository supplies instructions and can validate saved review evidence. It cannot set or observe these external requests. |
+
+The production verifier first tries RAGAS for goal accuracy on the canonical OpenAI endpoint. With the released 0.4.4 dependency, its `SingleTurnSample` rejects the list of messages before any SDK request. The verifier's existing custom goal judge then sends the selected model. The 0.3.0 accuracy and behavior judges use the same endpoint.
+
+New work needs fresh authorization for its revision, model and protocol. Existing allocation ceilings and expiration dates still apply. Scheduled paid suites remain disabled. The `-sol62` protocol files record new estimates and the source of their rates. Standard short-context rates per million tokens are $2 input, $0.10 cache reads and $10 output. Cache writes are $2.50 for 30 minutes and $5 for 12 hours. Above 272,000 input tokens the input and cache rates double and output costs 1.5 times the short-context rate. Older CLIs expose cumulative counts and omit cache-write detail, so their scheduling estimate prices unclassified input conservatively. [Official model pricing](https://developers.openai.com/api/docs/models/gpt-6.2-sol)
+
+Replay an earlier run at its producing revision using its recorded model, prices, source identity and validator. Current source-v38 records retain the existing grader and fixture identities. Each versioned definition binds its new runtime, model and budget. For the previous production model policy with CLI 0.171.0, use revision `b458913` for offline reproduction. Restarting paid work on a previous model requires separate approval.
+
 ## Codex 0.171.0 observation qualification for issue #95
 
 Run the independent release probe with the pinned `candidate-next` interpreter
@@ -30,7 +48,7 @@ and grader contracts and carry new runtime digests. The retained replay also bin
 [Upstream rollout replay contract](https://github.com/openai/codex/pull/61199).
 
 The production benchmark uses the SkillEvaluator 0.3.0 Docker dispatch patch. The trusted gh initializer reads the
-same Codex pin as the report policy. Both select 0.171.0. The benchmark uses `gpt-5.6-sol` at High. Each Docker
+same Codex pin as the report policy. Both select 0.171.0. The benchmark agent uses `gpt-6.2-sol` at High. Each Docker
 trial runs with the execution user’s private Codex home. Direct native tools keep each command and file edit
 attributable to its own result in the existing verifier.
 Run the credential-free benchmark integration with its production setup and verified Compose:

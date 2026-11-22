@@ -1,5 +1,7 @@
 # Issue #95 review runtime update
 
+New private reviews use `gpt-6.2-sol`. The operator command binds the same model to the token count and generation. An explicit conflicting model is rejected before either request. Saved review validation reads the original recorded configuration.
+
 The November 12 follow-up advances active reviews to Pydantic 2.14.3,
 pydantic-core 2.50.4 and typing-inspection 0.4.5. OpenAI SDK 2.54.0 remains
 the newest compatible stable SDK: released LiteLLM 1.88.5 requires `<3.0.0`.

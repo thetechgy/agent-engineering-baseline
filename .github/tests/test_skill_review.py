@@ -31,7 +31,7 @@ from openai import AsyncOpenAI  # noqa: E402 - standalone import after no-byteco
 FIXTURES = Path(__file__).parent / "fixtures/skill_review"
 NATIVE = Path(__file__).parent / "fixtures/skill_evidence"
 CLOCK = datetime(2026, 10, 12, tzinfo=timezone.utc)
-CONFIG = {"model": "explicit-test-model", "input_limit": 64000, "output_limit": 12000, "deadline_seconds": 180}
+CONFIG = {"model": "gpt-6.2-sol", "input_limit": 64000, "output_limit": 12000, "deadline_seconds": 180}
 
 
 def encoded_string(text, layers):
@@ -179,7 +179,7 @@ def response_body(value, **overrides):
         "object": "response",
         "created_at": 0,
         "status": "completed",
-        "model": "explicit-test-model",
+        "model": "gpt-6.2-sol",
         "error": None,
         "incomplete_details": None,
         "output": [
@@ -2522,6 +2522,7 @@ class ReviewTests(unittest.TestCase):
             [review.ENDPOINT + "/responses/input_tokens", review.ENDPOINT + "/responses"],
         )
         count, generation = [body for _, body in calls]
+        self.assertEqual([count["model"], generation["model"]], ["gpt-6.2-sol", "gpt-6.2-sol"])
         self.assertEqual(count, {key: generation[key] for key in count})
         self.assertFalse(generation["store"])
         self.assertEqual(generation["tools"], [])
@@ -2635,7 +2636,7 @@ class ReviewTests(unittest.TestCase):
             return AsyncOpenAI(**kwargs)
 
         with patch("openai.AsyncOpenAI", side_effect=client), redirect_stdout(StringIO()):
-            destination = review.main(["review", *self.args, "--model", CONFIG["model"], "--authorize-inference"])
+            destination = review.main(["review", *self.args, "--authorize-inference"])
         self.addCleanup(lambda: __import__("shutil").rmtree(destination))
         self.assertEqual(len(calls), 2)
         with redirect_stdout(StringIO()):

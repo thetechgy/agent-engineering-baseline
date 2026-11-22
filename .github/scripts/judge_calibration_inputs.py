@@ -22,10 +22,11 @@ class Calibration:
 
 
 def load(path, definition):
-    require(path == ROOT / MEMBER and path.resolve() == path,
+    active_member = '.github/evals/campaigns/judge-calibration-090-v1-sol62.json'
+    require(path in (ROOT / MEMBER, ROOT / active_member) and path.resolve() == path,
             'Unregistered judge campaign definition')
-    require(definition == reports.read_json(ROOT / MEMBER)
-            and definition['id'] == 'judge-calibration-090-v1'
+    require(definition == reports.read_json(path)
+            and definition['id'] == path.stem
             and definition['adapter'] == 'standard-judge-090'
             and definition['authorized_live_attempts'] == 0
             and set(definition) == {'id', 'type', 'adapter', 'corpus', 'rubric',
@@ -34,7 +35,7 @@ def load(path, definition):
     for field in ('corpus', 'rubric', 'runtime_profile', 'protocol'):
         target = ROOT / definition[field]
         require(target.resolve() == target and target.is_relative_to(ROOT), 'Unsafe judge input')
-    task = Calibration(definition, MEMBER)
+    task = Calibration(definition, path.relative_to(ROOT).as_posix())
     protocol(task)
     return task
 
@@ -82,12 +83,13 @@ def protocol(task):
             and value['automatic_retries'] == value['replacements'] == 0
             and value['agent_runtime'] is value['agent_cleanup'] is value['variants'] is None,
             'Unsupported judge protocol')
-    require(request == {'provider': 'openai', 'model': 'gpt-5.6-sol',
+    current = task.member != MEMBER
+    require(request == {'provider': 'openai', 'model': reports.POLICY['model'] if current else 'gpt-5.6-sol',
                 'endpoint': 'https://api.openai.com/v1/chat/completions',
                 'follow_redirects': False,
                 'retry_policy': 'strict', 'fallback_policy': 'replace', 'fallback_models': [],
                 'transport_retries': 1, 'max_requests_per_judgment': 2, 'max_completion_tokens': 32768,
-                'reasoning_effort': None, 'temperature': None, 'stream': False, 'judge_seconds': 180},
+                'reasoning_effort': 'medium' if current else None, 'temperature': None, 'stream': False, 'judge_seconds': 180},
             'Unsupported judge provider/request profile')
     require(reports.read_json(ROOT / task.definition['runtime_profile']) == profiles.ACCOUNTING,
             'Judge accounting owner drift')

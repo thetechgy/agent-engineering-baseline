@@ -213,7 +213,7 @@ def run_case(root, task, name, *, python=None, preparation=None):
     if name == 'expired-authority':
         bootstrap = root/'expired.py'; bootstrap.write_text(EXPIRED); command.append(str(bootstrap))
     command += [str(ROOT/'.github/scripts/evaluation_campaign_selection.py'), 'authenticate',
-                '--campaign', ('gh-runtime-090-v1' if task.definition['id'] == 'boolean-effectiveness-v1' else 'boolean-effectiveness-v1') if name == 'wrong-campaign' else campaign,
+                '--campaign', ('gh-runtime-090-v1' if task.definition['id'].startswith('boolean-effectiveness-') else 'boolean-effectiveness-v1') if name == 'wrong-campaign' else campaign,
                 '--approval', approval, '--output', str(output)]
     result = subprocess.run(command, env=env, capture_output=True, text=True, timeout=120)
     receipt_path = output/'downloaded/preparation/evidence/dispatch-authentication.json'

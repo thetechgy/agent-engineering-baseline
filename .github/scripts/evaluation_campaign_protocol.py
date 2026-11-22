@@ -38,7 +38,7 @@ def scenarios(task):
                 and set(SCENARIOS) - {'invalid'} <= set(declared)
                 and set(declared) <= set(SCENARIOS) | {'verifier-failure', 'cleanup-failure'}, 'Unregistered qualification scenario')
         return tuple(declared)
-    if task.definition['id'] == 'gh-runtime-090-v1':
+    if task.definition['id'] in ('gh-runtime-090-v1', 'gh-runtime-090-v1-sol62'):
         return ('complete', 'interruption', 'missing-evidence', 'unsupported-runtime',
                 'threshold', 'unknown-usage', 'native-cancellation', 'provider-refusal', 'malformed-response', 'provider-timeout')
     return SCENARIOS
@@ -124,7 +124,7 @@ def check(reference, staging, task, *, qualified=True):
                 for r in reports.read_json(directory / 'staging.json')}
     require(members(reference) == members(staging), 'Complete staged-member drift')
     if not qualified and read_profile(ROOT / task.definition['runtime_profile'])['profile']['id'] in (
-            'codex-090-diagnostic-v1', *CODEX_OBSERVATION_PROFILES):
+            'codex-090-diagnostic-v1', 'codex-090-diagnostic-v1-sol62', *CODEX_OBSERVATION_PROFILES):
         from evaluation_codex import compare_probe_descriptors
         result = compare_probe_descriptors(reference, staging)
     else:

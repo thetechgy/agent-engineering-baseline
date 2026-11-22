@@ -24,7 +24,7 @@ import skill_reports as reports
 
 def purpose(task, mode):
     identity = {'boolean-contract-v1':'boolean-contract-v4', 'gh-read-v1':'gh-read-v4', 'boolean-effectiveness-v1':'boolean-effectiveness-v3', 'boolean-retained-v1':'boolean-retained-v2'}.get(task.definition['id'], task.definition['id'])
-    source_version = '-lifecycle-v1-source-v37-'
+    source_version = '-lifecycle-v1-source-v38-'
     return 'campaign-' + identity + source_version + mode
 
 
@@ -414,16 +414,28 @@ def main():
         native_compose_config(ROOT)
         core.require(len(args.definition)==1,'One retained source definition required')
         return run(root,load(args.definition[0].absolute()),'replay')
+    # Direct operator commands follow the same versioned definitions as workflow dispatch.
+    for index, member in enumerate(args.definition):
+        successor = member.with_stem(member.stem + '-sol62')
+        if args.action in ('qualify', 'prepare', 'live') and successor.is_file():
+            args.definition[index] = successor
     if args.action != 'qualify':
         from evaluation_campaign_protocol import entry
         core.require(len(args.definition) == 1, 'One frozen experiment definition required')
-        return entry(args, load(args.definition[0].absolute()), root)
+        task = load(args.definition[0].absolute())
+        if args.action in ('prepare', 'live'):
+            core.require(read_profile(ROOT / task.definition['runtime_profile'])['resolved']['model'] == reports.POLICY['model'],
+                         'Historical model is replay-only; select a registered current campaign')
+        return entry(args, task, root)
     root.mkdir(parents=True)
     from qualify_evaluator_candidate import native_compose_config
     native_compose_config(ROOT)
     inputs=[]
     for path in args.definition:
         task=load(path.absolute())
+        if args.mode != 'oracle':
+            core.require(read_profile(ROOT / task.definition['runtime_profile'])['resolved']['model'] == reports.POLICY['model'],
+                         'Use a current campaign for CLI probes, or --mode oracle for historical controls')
         for mode in ('oracle','probe') if args.mode=='all' else (args.mode,):
             inputs.append(run(root / task.definition['id'] / mode, task, mode))
     core.render(inputs, root / 'report')

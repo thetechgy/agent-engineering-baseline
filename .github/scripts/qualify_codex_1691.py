@@ -89,7 +89,7 @@ def probe(runtime, binary, root, scenario):
     require(request['model'] == runtime['model'] and request['reasoning']['effort'] == 'high'
             and request['path'] == '/v1/responses' and request['authorization_matches_sentinel'],
             'Fixture request identity drift')
-    events = [json.loads(line) for line in process.stdout.splitlines()]
+    events = [json.loads(line) for line in process.stdout.splitlines() if line != 'Reading additional input from stdin...']
     final = [event['usage'] for event in events if event['type'] == 'turn.completed']
     if scenario == 'provider-refusal':
         require(process.returncode != 0 and request['requests'] == 1 and not final
@@ -134,7 +134,7 @@ def main():
     runtime = read_profile(SELECTOR)['resolved']
     binary = acquire(runtime, root)
     summary = {'revision': revision(), 'inference': False,
-               'compatibility': probe(read_profile(ROOT / '.github/evals/campaigns/codex-090.json')['resolved'],
+               'compatibility': probe(read_profile(ROOT / '.github/evals/campaigns/codex-090-sol62.json')['resolved'],
                                       binary, root / 'compatibility', 'compatibility'),
                'refusal': probe(runtime, binary, root / 'refusal', 'provider-refusal'),
                'pricing_checks': check_pricing(runtime)}

@@ -17,6 +17,8 @@ def registry_path(identity):
         return ROOT / '.github/evals/campaigns/observation-selections.json'
     if identity == 'case-observation-1710':
         return ROOT / '.github/evals/campaigns/observation-1710-selections.json'
+    if identity.endswith('-sol62'):
+        return ROOT / '.github/evals/campaigns/selections-sol62.json'
     return ROOT / REGISTRY
 
 
@@ -83,7 +85,10 @@ def main():
     parser.add_argument('--artifact')
     args = parser.parse_args()
     if args.action != 'live': no_credentials()
-    task = selected_task(args.campaign)
+    successors = reports.read_json(ROOT / '.github/evals/campaigns/selections-sol62.json')['campaigns']
+    identity = args.campaign + '-sol62'
+    new_execution = args.action in ('qualify', 'prepare', 'live')
+    task = selected_task(identity if new_execution and identity in successors else args.campaign)
     row = registration(task)
     definitions = row['controls'] if args.action == 'qualify' else [task.member]
     action, output = args.action, args.output.absolute()

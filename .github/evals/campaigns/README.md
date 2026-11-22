@@ -1,5 +1,7 @@
 # Reusable evaluation campaigns
 
+Scored dispatch choices ending in `-sol62` create new records with `gpt-6.2-sol`. Use the preparation and protocol produced for that exact selection. The earlier names and allocations in the historical examples below identify their original experiments. [Current model and pricing policy](../EVALUATION-PLAN.md#model-selection-for-new-executions)
+
 ## Single-case Codex observation
 
 Use the skill name and original ID from its repository dataset. The protected
