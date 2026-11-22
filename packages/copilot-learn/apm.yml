@@ -1,0 +1,14 @@
+name: baseline-user-copilot-learn
+version: 1.0.0
+targets: [copilot]
+dependencies:
+  mcp:
+    - name: microsoft-learn-copilot
+      targets: [copilot]
+      registry: false
+      transport: http
+      url: https://learn.microsoft.com/api/mcp
+      tools:
+        - microsoft_docs_search
+        - microsoft_docs_fetch
+        - microsoft_code_sample_search

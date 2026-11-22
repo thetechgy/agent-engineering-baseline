@@ -382,6 +382,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0 # Replay the reviewed 0.36.1 reset and rollback source.
           persist-credentials: false
 
       - name: Acquire latest stable PowerShell
@@ -474,6 +475,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0 # Replay the reviewed 0.36.1 reset and rollback source.
           persist-credentials: false
 
       - name: Acquire latest stable PowerShell
