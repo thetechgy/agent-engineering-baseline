@@ -88,10 +88,17 @@
         ],
         "notes": [
           {
-            "text": "Every development failure passed the reference and missed only integer-result.",
+            "text": "All six submissions in the current pair passed the reference and missed only integer-result.",
             "source": {
-              "label": "Development receipt",
-              "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/0f1e87e119e99f23409fa44db7c731f948e6def3/docs/evaluations/return-contract-new-allocation/execution/report-receipt.json"
+              "label": "Current development report",
+              "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/ee20727a5a6798c70a983e6f178565a889349794/docs/evaluations/pester-return-contract-development/data/historical-development-current/public-report.json"
+            }
+          },
+          {
+            "text": "The three no-skill submissions in the revision pair also passed the reference and missed only integer-result.",
+            "source": {
+              "label": "Revision development report",
+              "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/ee20727a5a6798c70a983e6f178565a889349794/docs/evaluations/pester-return-contract-development/data/pester-return-development-candidate-v1/public-report.json"
             }
           },
           {
@@ -103,10 +110,10 @@
           }
         ],
         "limit": {
-          "text": "All comparisons of this revision used gpt-6.1-sol. GPT-6.2 Sol has no comparison result.",
+          "text": "Both development pairs and both v6 transfer pairs used gpt-6.1-sol. GPT-6.2 Sol has no comparison result.",
           "source": {
-            "label": "Recorded runtime",
-            "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/0f1e87e119e99f23409fa44db7c731f948e6def3/docs/evaluations/return-contract-new-allocation/execution/analysis/analysis.json"
+            "label": "v6 transfer runtime records",
+            "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/2a6c58d95643d0186953b1d3dd83d3577e9971c2/docs/evaluations/pester-transfer-decision/execution-v6/analysis/analysis.json"
           }
         },
         "example": {
@@ -121,14 +128,14 @@
         "text": "If separately approved, run the current-skill pair on GPT-6.2 Sol at High with Codex CLI 0.167.0.",
         "source": {
           "label": "Owner’s GPT-6.2 Sol decision rule",
-          "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/06109eb4b506934938c8184a27bda08f2040203a/docs/evaluations/pester-return-contract-development/DECISION-RULE.md"
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/ee20727a5a6798c70a983e6f178565a889349794/docs/evaluations/pester-return-contract-development/DECISION-RULE.md"
         }
       },
       "reconsider": {
         "text": "If both current and no skill have at least two type misses, test the revision. A 3/3 revision against at least two no-skill type misses moves to transfer. If the revision matches or beats current on transfer, the owner decides whether to adopt it or hold for a fresh case.",
         "source": {
           "label": "Owner’s GPT-6.2 Sol decision rule",
-          "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/06109eb4b506934938c8184a27bda08f2040203a/docs/evaluations/pester-return-contract-development/DECISION-RULE.md"
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/ee20727a5a6798c70a983e6f178565a889349794/docs/evaluations/pester-return-contract-development/DECISION-RULE.md"
         }
       }
     },
