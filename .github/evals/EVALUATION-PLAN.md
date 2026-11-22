@@ -134,6 +134,16 @@ replacements or model judges. The earlier stopped transfer, development results
 and retrospective replay retain their original identities. The recommendation
 leaves the established skill in production.
 
+The [private decision report](REPORT-EVIDENCE.md#review-the-retained-codex-decisions)
+also shows the five-defect development case. Current and its matched absent arm
+each scored 0/3. The revision scored 3/3 against its matched absent arm’s 0/3.
+Every failure passed the reference and missed only `integer-result`. An earlier
+candidate launch hit the 600-second deadline and is excluded from the counts.
+Both comparisons used GPT-6.1 Sol. The
+[pre-declared GPT-6.2 Sol decision rule](../../docs/evaluations/pester-return-contract-development/DECISION-RULE.md)
+records what new evidence would change the decision and preserves the owner’s
+choice after stage 3.
+
 **Next action** — Keep the current `powershell-pester-6` guidance in place.
 
 ## Completed PR #150 judge-only calibration, retained as history

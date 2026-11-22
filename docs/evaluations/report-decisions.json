@@ -18,7 +18,7 @@
         "label": "PR #151 transfer decision",
         "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/2a6c58d95643d0186953b1d3dd83d3577e9971c2/docs/evaluations/pester-transfer-decision/execution-v6/EXECUTION.md#L1-L8"
       },
-      "caption": "Frozen primary success by matched pair",
+      "caption": "Transfer · frozen primary success",
       "rows": [
         {
           "label": "Current",
@@ -70,6 +70,66 @@
       "qualification": {
         "id": "pester-transfer-batch-v2",
         "member": "pester-transfer-decision/diagnostics/quantity-int128-native-v2.json"
+      },
+      "development": {
+        "case": "pester-004",
+        "caption": "Development · pester-exploratory-004-boolean (five defects) · Codex CLI 0.167.0 / gpt-6.1-sol / High",
+        "rows": [
+          {
+            "label": "Current",
+            "source": "sha256:c1a0d9508f3bca939ed402339ca65b43847ee8bc120fc14604f6ab7c0701fa55",
+            "metric": null
+          },
+          {
+            "label": "22-line revision",
+            "source": "sha256:693e5cac46ab9328a6093c2bb9e8fbce21f9edc01afe55b6b2737c78008d5d09",
+            "metric": null
+          }
+        ],
+        "notes": [
+          {
+            "text": "Every development failure passed the reference and missed only integer-result.",
+            "source": {
+              "label": "Development receipt",
+              "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/0f1e87e119e99f23409fa44db7c731f948e6def3/docs/evaluations/return-contract-new-allocation/execution/report-receipt.json"
+            }
+          },
+          {
+            "text": "An earlier revision pair stopped when its first launch hit the 600-second deadline. The cause is unknown. That run is excluded from these counts.",
+            "source": {
+              "label": "Stopped run 42847531876",
+              "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42847531876"
+            }
+          }
+        ],
+        "limit": {
+          "text": "All comparisons of this revision used gpt-6.1-sol. GPT-6.2 Sol has no comparison result.",
+          "source": {
+            "label": "Recorded runtime",
+            "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/0f1e87e119e99f23409fa44db7c731f948e6def3/docs/evaluations/return-contract-new-allocation/execution/analysis/analysis.json"
+          }
+        },
+        "example": {
+          "text": "Without skill, the test pipes Test-PortAllowed -Port $Port into Should-Be $Expected. The revision sample assigns the result to $actual, then uses Should-HaveType -Actual $actual -Expected ([bool]) and Should-Be -Actual $actual -Expected $Expected.",
+          "source": {
+            "label": "Development artifact",
+            "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42908510730/artifacts/13808015117"
+          }
+        }
+      },
+      "next": {
+        "text": "If separately approved, run the current-skill pair on GPT-6.2 Sol at High with Codex CLI 0.167.0.",
+        "source": {
+          "label": "Owner’s GPT-6.2 Sol decision rule",
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/06109eb4b506934938c8184a27bda08f2040203a/docs/evaluations/pester-return-contract-development/DECISION-RULE.md"
+        }
+      },
+      "reconsider": {
+        "text": "If both current and no skill have at least two type misses, test the revision. A 3/3 revision against at least two no-skill type misses moves to transfer. If the revision matches or beats current on transfer, the owner decides whether to adopt it or hold for a fresh case.",
+        "source": {
+          "label": "Owner’s GPT-6.2 Sol decision rule",
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/06109eb4b506934938c8184a27bda08f2040203a/docs/evaluations/pester-return-contract-development/DECISION-RULE.md"
+        }
       }
     },
     {
@@ -177,6 +237,19 @@
           "sha256": "sha256:34e3793c76be2de18393721b095088ffec29b9d2df7f643f3e310ec281e946dd"
         },
         "changed_paths": 0
+      }
+    }
+  ],
+  "historical_reports": [
+    {
+      "receipt": {
+        "member": "pester-return-contract-development/report-receipt.json",
+        "sha256": "sha256:d8d0465e6a17ed612e24d28764f9d4f2b0e87f2e8c3c9558863eaffecc8cd152"
+      },
+      "analysis": "pester-return-contract-development/analysis/analysis.json",
+      "inputs": {
+        "data/historical-development-current": "sha256:1f72c75ea536517b54c5d151b600701bcb9ae6c6e157efcc9d36d0d83fd71728",
+        "data/pester-return-development-candidate-v1": "sha256:ec5fe62fd6b9fc3ceca1b7004b7720c92ac0cfa8173d954b34251d90f4b0baee"
       }
     }
   ]
