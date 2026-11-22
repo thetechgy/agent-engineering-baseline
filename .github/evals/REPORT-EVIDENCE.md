@@ -1419,9 +1419,17 @@ The decision input binds each frozen transfer row to an admitted public record
 and the permission rows to the exact checked-in execution receipt. The development
 pairs predate the scheduler witness. The manifest pins the historical receipt
 and maps its selected public inputs to the exact bundle identities in the
-receipt-bound analysis. The private report withholds development counts when
-that chain is unavailable or mismatched. The historical analysis also covers two
-excluded runs. The current render uses the four bundles above.
+receipt-bound analysis. At render time the historical guard checks that the
+receipt run and artifact IDs are positive integers. The original artifact
+archives and public bundle bytes were authenticated separately when retained.
+The private report withholds development counts when the receipt chain is
+unavailable or mismatched. The historical analysis also covers two excluded
+runs. The current render uses the four bundles above.
+
+To add a scheduler-backed pair for the same case, retain its public bundle and
+add a decision-table row sourced to its public record ID. Update the card's
+runtime wording and citations to cover the new pair. Add its bundle to the
+render inputs above and to the decision tests, and update the expected counts.
 
 The historical permission bundle uses the campaign registry from its execution
 revision. The report reads the verified receipt for that pair.
