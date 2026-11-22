@@ -1,6 +1,6 @@
 """Pinned Codex image preparation shared by historical and campaign entry points."""
 import shutil
-from codex_pilot_contract import ROOT, PROFILE as P
+from codex_pilot_contract import CATALOG_SHA256, MODEL_CATALOG, ROOT, PROFILE as P, needs_model_catalog
 from evaluation_runtime import CODEX_OBSERVATION_PROFILES
 
 
@@ -10,6 +10,12 @@ def prepare_cli(task, runtime=None):
         'services:\n  main:\n    cap_drop: [ALL]\n    security_opt: [no-new-privileges:true]\n    pids_limit: 256\n')
     for name in ('codex_pilot_stub.py', 'codex_pilot_probe.py'):
         shutil.copyfile(ROOT / '.github/scripts' / name, task / 'environment/build' / name)
+    catalog_build = ''
+    if needs_model_catalog(selected):
+        shutil.copyfile(ROOT / MODEL_CATALOG, task / 'environment/build/models.json')
+        catalog_build = ('COPY build/models.json /opt/pilot/models.json\n'
+                         f"RUN echo '{CATALOG_SHA256}  /opt/pilot/models.json' | sha256sum -c --strict "
+                         "&& chmod 444 /opt/pilot/models.json\n")
     # Verified artifacts are embedded before entering the protected job.
     with (task / 'environment/Dockerfile').open('a') as dockerfile:
         dockerfile.write('RUN mkdir /opt/codex && curl --fail --location --silent --show-error '
@@ -23,7 +29,7 @@ def prepare_cli(task, runtime=None):
             + ''.join(f"echo '{digest}  /opt/codex/{member}' | sha256sum -c --strict && "
                     for member, digest in (selected['helper_sha256'].items() if selected['cli'] in ('0.155.1', '0.169.1', '0.171.0') else ())) +
             'rm /opt/codex.tar.gz\n'
-            'COPY build/codex_pilot_stub.py build/codex_pilot_probe.py /opt/pilot/\n'
+            'COPY build/codex_pilot_stub.py build/codex_pilot_probe.py /opt/pilot/\n' + catalog_build +
             'RUN mkdir -p /logs/agent /logs/verifier /logs/artifacts /installed-agent && chmod 777 /logs/agent /logs/artifacts && chmod 700 /logs/verifier && '
             'chmod -R a-w /workspace/input /opt/codex /opt/pilot && '
             'chmod 755 /home/agent && mkdir -p /home/agent/.codex-pilot && '

@@ -18,7 +18,7 @@ from types import SimpleNamespace
 
 import toml
 
-from codex_pilot_contract import ROOT, configuration
+from codex_pilot_contract import MODEL_CATALOG, ROOT, configuration, model_arguments
 from evaluation_campaign import no_credentials, revision
 from evaluation_campaign_core import require
 from evaluation_codex import exec_trajectory
@@ -61,8 +61,7 @@ def config(root, runtime, *, named_workspace=False):
     home.mkdir()
     # Keep the existing observation model and feature choices. This fixture
     # exercises the CLI sandbox, in addition to the deployed external boundary.
-    current = dict(runtime, cli='0.169.1')
-    settings = configuration(ENDPOINT, runtime=current)
+    settings = configuration(ENDPOINT, runtime=runtime, catalog_path=ROOT / MODEL_CATALOG)
     if named_workspace:
         # Built-in workspace permissions also allow generic temporary-folder writes.
         # Keep the test independent of where the runner puts the two workspaces.
@@ -96,7 +95,7 @@ def run_exec(binary, root, runtime, output, scenario):
              'expect_failure': False}
     commands = ['printf fixture-command-ok', patch] if scenario == 'priced-success' else [':']
     argv = [binary, 'exec', '--strict-config', '--sandbox', 'workspace-write', '--skip-git-repo-check',
-            '--cd', workspace, '--json', '--model', runtime['model'], '--', 'Run fixture tools.']
+            '--cd', workspace, '--json', *model_arguments(runtime, runtime['model']), '--', 'Run fixture tools.']
     with provider(root, scenario, commands) as request:
         with output.open('w') as stream, subprocess.Popen(
                 argv, env=environment, cwd=workspace, stdin=subprocess.DEVNULL, stdout=stream,

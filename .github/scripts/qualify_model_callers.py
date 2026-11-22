@@ -9,11 +9,13 @@ from unittest.mock import patch
 from codex_pilot import command
 from codex_pilot_agent import PilotCodex
 from codex_pilot_cohort import launch_config
+from codex_pilot_contract import CATALOG_SHA256, MODEL_CATALOG, needs_model_catalog
 from evaluation_campaign import no_credentials
 from evaluation_campaign_selection import selected_task
 from evaluation_codex import agent_config
 from evaluation_runtime import ROOT, read_profile
-from qualify_codex_1691 import acquire, probe
+from qualify_codex_1691 import acquire, check_digest, probe
+from qualify_codex_1710 import run_exec
 from skill_reports import POLICY, read_json, require, write_json
 
 
@@ -47,6 +49,13 @@ def qualify(root):
     for version, callers in routes.items():
         with TemporaryDirectory(prefix="model-release-") as directory:
             binary = acquire(callers[0][1], Path(directory))
+            runtime = callers[0][1]
+            if needs_model_catalog(runtime):
+                check_digest(ROOT / MODEL_CATALOG, CATALOG_SHA256)
+                edit = root / 'native-pilot-edit'
+                edit.mkdir()
+                result = run_exec(binary, edit, runtime, edit / 'events.jsonl', 'priced-success')
+                write_json(edit / 'qualification.json', result)
             for name, runtime, selected_model in callers:
                 require(runtime["model"] == POLICY["model"] == "gpt-6.2-sol", "Unapproved model: " + name)
                 observed = probe(runtime, binary, root / name, "provider-refusal", selected_model=selected_model)

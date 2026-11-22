@@ -1,6 +1,9 @@
 # Reusable evaluation campaigns
 
-Scored dispatch choices ending in `-sol62` create new records with `gpt-6.2-sol`. Use the preparation and protocol produced for that exact selection. The earlier names and allocations in the historical examples below identify their original experiments. [Current model and pricing policy](../EVALUATION-PLAN.md#model-selection-for-new-executions)
+Scored dispatch choices ending in `-sol62` create new records with `gpt-6.2-sol`. Use the
+preparation and protocol produced for that exact selection. The earlier names and allocations in the
+historical examples below identify their original experiments. [Current model and pricing
+policy](../EVALUATION-PLAN.md#model-selection-for-new-executions)
 
 ## Single-case Codex observation
 
@@ -169,7 +172,9 @@ For **another model supported by an existing runtime**, add a separate explicit
 runtime/model profile and qualify it through the owning validator and actual CLI
 probe. Preserve model/provider/settings, version, limits and pricing assumptions
 in the ledger and registered reporting identity. Unknown settings fail explicitly.
-The Codex validator verifies the registered profile and its exact digest. New scored campaigns use versioned profiles. Archived profiles describe their original evidence. [Current pilot profile](../codex-pilot-sol62.json).
+The Codex validator verifies the registered profile and its exact digest. New scored campaigns use
+versioned profiles. Archived profiles describe their original evidence. [Current pilot
+profile](../codex-pilot-sol62.json).
 
 Variant names are configuration, not scheduling conditions. The scheduler also
 has a three-variant contract check. The current report bridge remains paired and

@@ -46,7 +46,8 @@ The exact dependencies and Codex patch come from
 [setup-skillevaluator.sh](../../scripts/setup-skillevaluator.sh). Docker Compose
 5.8.0, Harbor 0.13.2, SkillEvaluator 0.3.0 at `ac0a049`, Codex 0.171.0, and
 `gpt-6.2-sol` are pinned. Do not substitute a newer host Codex or Podman.
-The local deterministic gate restores the redacted authorization score from the matching original Harbor trial and verifier sidecar for each arm. Diagnostic subsets remain outside benchmark history.
+The local deterministic gate restores the redacted authorization score from the matching original
+Harbor trial and verifier sidecar for each arm. Diagnostic subsets remain outside benchmark history.
 
 The runner refuses missing runtime tools and credentials. It does not install them.
 

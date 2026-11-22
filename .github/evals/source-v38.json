@@ -3,415 +3,415 @@
   "profiles": {
     "campaign-pester-admission-controls-v1-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-pester-admission-controls-v1-lifecycle-v1-source-v37-oracle",
-      "runtime_digest": "sha256:a5bf2d6050b5dbf70b1cf9d32b240c85f68bf90e9e6c77afa67b5b9ea6d037ef"
+      "runtime_digest": "sha256:b7e1265315bcb43279699668f10368ef8bd6187dcee7fa1efd46bf27910bce21"
     },
     "campaign-pester-transfer-retrospective-v1-lifecycle-v1-source-v38-replay": {
       "parent": "campaign-pester-transfer-retrospective-v1-lifecycle-v1-source-v37-replay",
-      "runtime_digest": "sha256:42bea8d914bd27dee2a65bfee2e6a2be35298348446ba5bb57606dbc78368514"
+      "runtime_digest": "sha256:c5510754975871fed0227b7b31e3c86f22f3492aeecad7cc5ba7e09253a4e526"
     },
     "campaign-boolean-contract-v4-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-boolean-contract-v4-lifecycle-v1-source-v37-oracle",
-      "runtime_digest": "sha256:8fb2e44c5579827f50bf654a2e039738fd0c8e396946c7e72dfd8579932903e6"
+      "runtime_digest": "sha256:f20c88be6dee5372808e99be17f57333935699e3ed0b7017447c11e15cffff41"
     },
     "campaign-boolean-contract-v1-sol62-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-boolean-contract-v4-lifecycle-v1-source-v37-oracle",
       "definition": ".github/evals/campaigns/boolean-contract-sol62.json",
-      "runtime_digest": "sha256:0a17858543e6b5ab883ab0eb5e190e07d0a8e9ddec7439d9c1e663c9a38f0212",
+      "runtime_digest": "sha256:ba1818065822b45118c124d10b15ff2c259b8d0dd892b1964628c3758bd44ab9",
       "runtime_profile": ".github/evals/campaigns/codex-qualified-sol62.json"
     },
     "campaign-boolean-contract-v4-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-boolean-contract-v4-lifecycle-v1-source-v37-probe",
-      "runtime_digest": "sha256:8fb2e44c5579827f50bf654a2e039738fd0c8e396946c7e72dfd8579932903e6"
+      "runtime_digest": "sha256:f20c88be6dee5372808e99be17f57333935699e3ed0b7017447c11e15cffff41"
     },
     "campaign-boolean-contract-v1-sol62-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-boolean-contract-v4-lifecycle-v1-source-v37-probe",
       "definition": ".github/evals/campaigns/boolean-contract-sol62.json",
-      "runtime_digest": "sha256:0a17858543e6b5ab883ab0eb5e190e07d0a8e9ddec7439d9c1e663c9a38f0212",
+      "runtime_digest": "sha256:ba1818065822b45118c124d10b15ff2c259b8d0dd892b1964628c3758bd44ab9",
       "runtime_profile": ".github/evals/campaigns/codex-qualified-sol62.json"
     },
     "campaign-gh-read-v4-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-gh-read-v4-lifecycle-v1-source-v37-oracle",
-      "runtime_digest": "sha256:0b120a8816658672493637fa7a69d15f2e2e656a68a231f059f5dac2f49d0bfa"
+      "runtime_digest": "sha256:0d715a1a320ec3edbe4e105eeafd9f9e969ee94c73c550493ffa8787869cc564"
     },
     "campaign-gh-read-v1-sol62-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-gh-read-v4-lifecycle-v1-source-v37-oracle",
       "definition": ".github/evals/campaigns/gh-read-sol62.json",
-      "runtime_digest": "sha256:22f43505c064cb61c78fd30033455ebbbe55ae8fed260cfa3b3fa7cbac20fa6b",
+      "runtime_digest": "sha256:dd5c450c042e700206ea50c2eb7c1db1a88b4b9241ab9d6c6632a8e4c6fb68ac",
       "runtime_profile": ".github/evals/campaigns/codex-qualified-sol62.json"
     },
     "campaign-gh-read-v4-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-gh-read-v4-lifecycle-v1-source-v37-probe",
-      "runtime_digest": "sha256:0b120a8816658672493637fa7a69d15f2e2e656a68a231f059f5dac2f49d0bfa"
+      "runtime_digest": "sha256:0d715a1a320ec3edbe4e105eeafd9f9e969ee94c73c550493ffa8787869cc564"
     },
     "campaign-gh-read-v1-sol62-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-gh-read-v4-lifecycle-v1-source-v37-probe",
       "definition": ".github/evals/campaigns/gh-read-sol62.json",
-      "runtime_digest": "sha256:22f43505c064cb61c78fd30033455ebbbe55ae8fed260cfa3b3fa7cbac20fa6b",
+      "runtime_digest": "sha256:dd5c450c042e700206ea50c2eb7c1db1a88b4b9241ab9d6c6632a8e4c6fb68ac",
       "runtime_profile": ".github/evals/campaigns/codex-qualified-sol62.json"
     },
     "campaign-boolean-effectiveness-v3-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-boolean-effectiveness-v3-lifecycle-v1-source-v37-experiment-probe",
-      "runtime_digest": "sha256:cf21e5ef93ff0c9fefbdd31f5d02cb8d37f78f469908d2721fe106e9a95f8487"
+      "runtime_digest": "sha256:f415c71b597a1fb8e946b430c05b448c154527028ebe8fbf4fd5a309b4fb1cdd"
     },
     "campaign-boolean-effectiveness-v1-sol62-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-boolean-effectiveness-v3-lifecycle-v1-source-v37-experiment-probe",
       "definition": ".github/evals/campaigns/boolean-effectiveness-v1-sol62.json",
-      "runtime_digest": "sha256:03f58589d37b5f9375ced49d3ba9145e2752aea8e6c6ff3dac410a28fbcc5f71",
+      "runtime_digest": "sha256:ea971bf5490085368e3ef22b6560fa5c378d4ebecf862d5379aed6d708b87d65",
       "runtime_profile": ".github/evals/campaigns/codex-authorized-v1-sol62.json"
     },
     "campaign-boolean-effectiveness-v3-lifecycle-v1-source-v38-live": {
       "parent": "campaign-boolean-effectiveness-v3-lifecycle-v1-source-v37-live",
-      "runtime_digest": "sha256:cf21e5ef93ff0c9fefbdd31f5d02cb8d37f78f469908d2721fe106e9a95f8487"
+      "runtime_digest": "sha256:f415c71b597a1fb8e946b430c05b448c154527028ebe8fbf4fd5a309b4fb1cdd"
     },
     "campaign-boolean-effectiveness-v1-sol62-lifecycle-v1-source-v38-live": {
       "parent": "campaign-boolean-effectiveness-v3-lifecycle-v1-source-v37-live",
       "definition": ".github/evals/campaigns/boolean-effectiveness-v1-sol62.json",
-      "runtime_digest": "sha256:03f58589d37b5f9375ced49d3ba9145e2752aea8e6c6ff3dac410a28fbcc5f71",
+      "runtime_digest": "sha256:ea971bf5490085368e3ef22b6560fa5c378d4ebecf862d5379aed6d708b87d65",
       "runtime_profile": ".github/evals/campaigns/codex-authorized-v1-sol62.json"
     },
     "campaign-boolean-retained-v2-lifecycle-v1-source-v38-replay": {
       "parent": "campaign-boolean-retained-v2-lifecycle-v1-source-v37-replay",
-      "runtime_digest": "sha256:4f3d9c9e136dde6808ed6c0eb573b54edf7def4487280ffd3e8557c94cf0a6f7"
+      "runtime_digest": "sha256:1b3e079a1d1e0a81f60382493d1ccb3e74c6aa48b7e601dd6a17cf519f0bcc22"
     },
     "campaign-pester-return-development-current-controls-v1-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-pester-return-development-current-controls-v1-lifecycle-v1-source-v37-oracle",
-      "runtime_digest": "sha256:fa5e2e0adc01bad3c0d14b2828f79aa8842f37574c823aceb08f8bf1a02d7a27"
+      "runtime_digest": "sha256:180c02f144470fe9ff8895d066f24608d7c55531821d5f89afc1545ea0bd6be7"
     },
     "campaign-pester-return-development-current-controls-v1-sol62-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-pester-return-development-current-controls-v1-lifecycle-v1-source-v37-oracle",
       "definition": ".github/evals/campaigns/pester-return-development-current-controls-v1-sol62.json",
-      "runtime_digest": "sha256:14935914a899648007a8a8370a2f10ca27394dacc64c96365f73246175507e4a",
+      "runtime_digest": "sha256:34deb93f771140cc056669aa7d942d0e10720f35021104bb0723a3e8ccaa4a17",
       "runtime_profile": ".github/evals/campaigns/codex-qualified-sol62.json"
     },
     "campaign-pester-return-development-current-controls-v1-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-pester-return-development-current-controls-v1-lifecycle-v1-source-v37-probe",
-      "runtime_digest": "sha256:fa5e2e0adc01bad3c0d14b2828f79aa8842f37574c823aceb08f8bf1a02d7a27"
+      "runtime_digest": "sha256:180c02f144470fe9ff8895d066f24608d7c55531821d5f89afc1545ea0bd6be7"
     },
     "campaign-pester-return-development-current-controls-v1-sol62-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-pester-return-development-current-controls-v1-lifecycle-v1-source-v37-probe",
       "definition": ".github/evals/campaigns/pester-return-development-current-controls-v1-sol62.json",
-      "runtime_digest": "sha256:14935914a899648007a8a8370a2f10ca27394dacc64c96365f73246175507e4a",
+      "runtime_digest": "sha256:34deb93f771140cc056669aa7d942d0e10720f35021104bb0723a3e8ccaa4a17",
       "runtime_profile": ".github/evals/campaigns/codex-qualified-sol62.json"
     },
     "campaign-pester-return-development-current-v1-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-pester-return-development-current-v1-lifecycle-v1-source-v37-experiment-probe",
-      "runtime_digest": "sha256:98bbc1a36cce37d0f60f3e63f4ecc6d144b88b0ccf898867186c01f1841a3e9b"
+      "runtime_digest": "sha256:7a72d6243e9e9a72319217d7718309421bd79ee0ad48a6f1ca213e2ca69372a9"
     },
     "campaign-pester-return-development-current-v1-sol62-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-pester-return-development-current-v1-lifecycle-v1-source-v37-experiment-probe",
       "definition": ".github/evals/campaigns/pester-return-development-current-v1-sol62.json",
-      "runtime_digest": "sha256:cec26df8dc8cdc2f61cb7296ee5ed9c41aea1e2a1dbef6cd6984e8377902660e",
+      "runtime_digest": "sha256:c8fa57f28216b81d6fb4700513123958753987f353be1d04a2b8fda6f148714a",
       "runtime_profile": ".github/evals/campaigns/codex-authorized-v1-sol62.json"
     },
     "campaign-pester-return-development-current-v1-lifecycle-v1-source-v38-live": {
       "parent": "campaign-pester-return-development-current-v1-lifecycle-v1-source-v37-live",
-      "runtime_digest": "sha256:98bbc1a36cce37d0f60f3e63f4ecc6d144b88b0ccf898867186c01f1841a3e9b"
+      "runtime_digest": "sha256:7a72d6243e9e9a72319217d7718309421bd79ee0ad48a6f1ca213e2ca69372a9"
     },
     "campaign-pester-return-development-current-v1-sol62-lifecycle-v1-source-v38-live": {
       "parent": "campaign-pester-return-development-current-v1-lifecycle-v1-source-v37-live",
       "definition": ".github/evals/campaigns/pester-return-development-current-v1-sol62.json",
-      "runtime_digest": "sha256:cec26df8dc8cdc2f61cb7296ee5ed9c41aea1e2a1dbef6cd6984e8377902660e",
+      "runtime_digest": "sha256:c8fa57f28216b81d6fb4700513123958753987f353be1d04a2b8fda6f148714a",
       "runtime_profile": ".github/evals/campaigns/codex-authorized-v1-sol62.json"
     },
     "campaign-pester-return-development-candidate-controls-v1-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-pester-return-development-candidate-controls-v1-lifecycle-v1-source-v37-oracle",
-      "runtime_digest": "sha256:0b2e666ba71688994ae7c0744a13f9b07fb6ae9b540050b8eac2f7a675119873"
+      "runtime_digest": "sha256:94e4ab48f8d1e8e55bb6cd2905920d28f3937c69fbd257139884f8b78c6a5e59"
     },
     "campaign-pester-return-development-candidate-controls-v1-sol62-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-pester-return-development-candidate-controls-v1-lifecycle-v1-source-v37-oracle",
       "definition": ".github/evals/campaigns/pester-return-development-candidate-controls-v1-sol62.json",
-      "runtime_digest": "sha256:0184b9fe195b7d6b22edbcbb6bd4ab1c8a43fd7f48abd906a000f4c2ca676d79",
+      "runtime_digest": "sha256:48291d0d3a2a434410ef91273564e8f5df610cdb50cb6f5d37dca2b816a9ab35",
       "runtime_profile": ".github/evals/campaigns/codex-qualified-sol62.json"
     },
     "campaign-pester-return-development-candidate-controls-v1-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-pester-return-development-candidate-controls-v1-lifecycle-v1-source-v37-probe",
-      "runtime_digest": "sha256:0b2e666ba71688994ae7c0744a13f9b07fb6ae9b540050b8eac2f7a675119873"
+      "runtime_digest": "sha256:94e4ab48f8d1e8e55bb6cd2905920d28f3937c69fbd257139884f8b78c6a5e59"
     },
     "campaign-pester-return-development-candidate-controls-v1-sol62-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-pester-return-development-candidate-controls-v1-lifecycle-v1-source-v37-probe",
       "definition": ".github/evals/campaigns/pester-return-development-candidate-controls-v1-sol62.json",
-      "runtime_digest": "sha256:0184b9fe195b7d6b22edbcbb6bd4ab1c8a43fd7f48abd906a000f4c2ca676d79",
+      "runtime_digest": "sha256:48291d0d3a2a434410ef91273564e8f5df610cdb50cb6f5d37dca2b816a9ab35",
       "runtime_profile": ".github/evals/campaigns/codex-qualified-sol62.json"
     },
     "campaign-pester-return-development-candidate-v1-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-pester-return-development-candidate-v1-lifecycle-v1-source-v37-experiment-probe",
-      "runtime_digest": "sha256:7292fb1be2f4e803c770a1775bd9b3dd579daf8cbcd0f4196054499988d9eae2"
+      "runtime_digest": "sha256:1f0f33909f0034a8ff83844c4abeba6fc189cba671fc0d84dff60794a493cca0"
     },
     "campaign-pester-return-development-candidate-v1-sol62-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-pester-return-development-candidate-v1-lifecycle-v1-source-v37-experiment-probe",
       "definition": ".github/evals/campaigns/pester-return-development-candidate-v1-sol62.json",
-      "runtime_digest": "sha256:569758b901f4c04a22f5516ffc31136375e72a3e3114d51e561b4377a789969b",
+      "runtime_digest": "sha256:628234e3c7c902cd801eae9741bd1a0ed446f054e6a0d56d948860d44c11cb93",
       "runtime_profile": ".github/evals/campaigns/codex-authorized-v1-sol62.json"
     },
     "campaign-pester-return-development-candidate-v1-lifecycle-v1-source-v38-live": {
       "parent": "campaign-pester-return-development-candidate-v1-lifecycle-v1-source-v37-live",
-      "runtime_digest": "sha256:7292fb1be2f4e803c770a1775bd9b3dd579daf8cbcd0f4196054499988d9eae2"
+      "runtime_digest": "sha256:1f0f33909f0034a8ff83844c4abeba6fc189cba671fc0d84dff60794a493cca0"
     },
     "campaign-pester-return-development-candidate-v1-sol62-lifecycle-v1-source-v38-live": {
       "parent": "campaign-pester-return-development-candidate-v1-lifecycle-v1-source-v37-live",
       "definition": ".github/evals/campaigns/pester-return-development-candidate-v1-sol62.json",
-      "runtime_digest": "sha256:569758b901f4c04a22f5516ffc31136375e72a3e3114d51e561b4377a789969b",
+      "runtime_digest": "sha256:628234e3c7c902cd801eae9741bd1a0ed446f054e6a0d56d948860d44c11cb93",
       "runtime_profile": ".github/evals/campaigns/codex-authorized-v1-sol62.json"
     },
     "campaign-pester-return-transfer-current-controls-v3-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-pester-return-transfer-current-controls-v3-lifecycle-v1-source-v37-oracle",
-      "runtime_digest": "sha256:17b77e88d02aa06a80aaba4cfba38b29aa4b2bfd1ec9074d78f53d7d9781da26"
+      "runtime_digest": "sha256:46196dbbb30d27a7bb42d5e05d33fdb3a4e15931ae60d479a86a6b68bc3dd4a7"
     },
     "campaign-pester-return-transfer-current-controls-v3-sol62-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-pester-return-transfer-current-controls-v3-lifecycle-v1-source-v37-oracle",
       "definition": ".github/evals/campaigns/pester-return-transfer-current-controls-v3-sol62.json",
-      "runtime_digest": "sha256:8a25280f019cd3730bc46ec6fed2226aa2a8b22b644355b25e3a7ad862efb22f",
+      "runtime_digest": "sha256:bcf2220c45203c7c5c65e75530f802ca1b242d568e551473ace46a4fac434450",
       "runtime_profile": ".github/evals/campaigns/codex-qualified-sol62.json"
     },
     "campaign-pester-return-transfer-current-controls-v3-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-pester-return-transfer-current-controls-v3-lifecycle-v1-source-v37-probe",
-      "runtime_digest": "sha256:17b77e88d02aa06a80aaba4cfba38b29aa4b2bfd1ec9074d78f53d7d9781da26"
+      "runtime_digest": "sha256:46196dbbb30d27a7bb42d5e05d33fdb3a4e15931ae60d479a86a6b68bc3dd4a7"
     },
     "campaign-pester-return-transfer-current-controls-v3-sol62-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-pester-return-transfer-current-controls-v3-lifecycle-v1-source-v37-probe",
       "definition": ".github/evals/campaigns/pester-return-transfer-current-controls-v3-sol62.json",
-      "runtime_digest": "sha256:8a25280f019cd3730bc46ec6fed2226aa2a8b22b644355b25e3a7ad862efb22f",
+      "runtime_digest": "sha256:bcf2220c45203c7c5c65e75530f802ca1b242d568e551473ace46a4fac434450",
       "runtime_profile": ".github/evals/campaigns/codex-qualified-sol62.json"
     },
     "campaign-pester-return-transfer-current-v3-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-pester-return-transfer-current-v3-lifecycle-v1-source-v37-experiment-probe",
-      "runtime_digest": "sha256:264ea20c69bcd3fe9fb72ee2037f9117695e8d64f7b2e8bc674a4f9689271496"
+      "runtime_digest": "sha256:efe4c6c289ca700528bbc6459652d603f5a81030d931ecdb7553dadd62337560"
     },
     "campaign-pester-return-transfer-current-v3-sol62-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-pester-return-transfer-current-v3-lifecycle-v1-source-v37-experiment-probe",
       "definition": ".github/evals/campaigns/pester-return-transfer-current-v3-sol62.json",
-      "runtime_digest": "sha256:22b9b775e8a893e99b47c3831be688e6e7325c0101f59d6c568d6a99e79954cd",
+      "runtime_digest": "sha256:10083885006e18f70c99c2e23e604d8338ed8c118af1f7a6945df54e14076999",
       "runtime_profile": ".github/evals/campaigns/codex-authorized-v1-sol62.json"
     },
     "campaign-pester-return-transfer-current-v3-lifecycle-v1-source-v38-live": {
       "parent": "campaign-pester-return-transfer-current-v3-lifecycle-v1-source-v37-live",
-      "runtime_digest": "sha256:264ea20c69bcd3fe9fb72ee2037f9117695e8d64f7b2e8bc674a4f9689271496"
+      "runtime_digest": "sha256:efe4c6c289ca700528bbc6459652d603f5a81030d931ecdb7553dadd62337560"
     },
     "campaign-pester-return-transfer-current-v3-sol62-lifecycle-v1-source-v38-live": {
       "parent": "campaign-pester-return-transfer-current-v3-lifecycle-v1-source-v37-live",
       "definition": ".github/evals/campaigns/pester-return-transfer-current-v3-sol62.json",
-      "runtime_digest": "sha256:22b9b775e8a893e99b47c3831be688e6e7325c0101f59d6c568d6a99e79954cd",
+      "runtime_digest": "sha256:10083885006e18f70c99c2e23e604d8338ed8c118af1f7a6945df54e14076999",
       "runtime_profile": ".github/evals/campaigns/codex-authorized-v1-sol62.json"
     },
     "campaign-pester-return-transfer-candidate-controls-v3-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-pester-return-transfer-candidate-controls-v3-lifecycle-v1-source-v37-oracle",
-      "runtime_digest": "sha256:65970a39d0cd823d984b182c1ec69810cdce8f8156954e5e24020e5c3cc4be2c"
+      "runtime_digest": "sha256:788baf941de6c1de3680d7cb3f9bad30aa865a2f725c9aec09442e4f40d3dbc7"
     },
     "campaign-pester-return-transfer-candidate-controls-v3-sol62-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-pester-return-transfer-candidate-controls-v3-lifecycle-v1-source-v37-oracle",
       "definition": ".github/evals/campaigns/pester-return-transfer-candidate-controls-v3-sol62.json",
-      "runtime_digest": "sha256:324826259bcd22158e7eeb36ab0eb428226ddd449e751080ad5c9b06c80cce80",
+      "runtime_digest": "sha256:11c29360c20ed5a051d4d8d7eadb78f712657d089530acde00792e6d6af8c8b8",
       "runtime_profile": ".github/evals/campaigns/codex-qualified-sol62.json"
     },
     "campaign-pester-return-transfer-candidate-controls-v3-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-pester-return-transfer-candidate-controls-v3-lifecycle-v1-source-v37-probe",
-      "runtime_digest": "sha256:65970a39d0cd823d984b182c1ec69810cdce8f8156954e5e24020e5c3cc4be2c"
+      "runtime_digest": "sha256:788baf941de6c1de3680d7cb3f9bad30aa865a2f725c9aec09442e4f40d3dbc7"
     },
     "campaign-pester-return-transfer-candidate-controls-v3-sol62-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-pester-return-transfer-candidate-controls-v3-lifecycle-v1-source-v37-probe",
       "definition": ".github/evals/campaigns/pester-return-transfer-candidate-controls-v3-sol62.json",
-      "runtime_digest": "sha256:324826259bcd22158e7eeb36ab0eb428226ddd449e751080ad5c9b06c80cce80",
+      "runtime_digest": "sha256:11c29360c20ed5a051d4d8d7eadb78f712657d089530acde00792e6d6af8c8b8",
       "runtime_profile": ".github/evals/campaigns/codex-qualified-sol62.json"
     },
     "campaign-pester-return-transfer-candidate-v3-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-pester-return-transfer-candidate-v3-lifecycle-v1-source-v37-experiment-probe",
-      "runtime_digest": "sha256:c04ce4f4a62672b274f7163fdacbbd5983f85b9f2bbd24e64c671b4801d43028"
+      "runtime_digest": "sha256:c5708c5afd8d5abc8bb9506b2319b04ffbe438d0ec7a370e534340191e03c43a"
     },
     "campaign-pester-return-transfer-candidate-v3-sol62-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-pester-return-transfer-candidate-v3-lifecycle-v1-source-v37-experiment-probe",
       "definition": ".github/evals/campaigns/pester-return-transfer-candidate-v3-sol62.json",
-      "runtime_digest": "sha256:cfb4c049ed6e1374ad07afb507e848d95d4a48fbf022b56ebe7af8e4881e57b8",
+      "runtime_digest": "sha256:931ab3ad34e98863dac077b6a609d923d1853ef581433bb08864fbe9ab3df77a",
       "runtime_profile": ".github/evals/campaigns/codex-authorized-v1-sol62.json"
     },
     "campaign-pester-return-transfer-candidate-v3-lifecycle-v1-source-v38-live": {
       "parent": "campaign-pester-return-transfer-candidate-v3-lifecycle-v1-source-v37-live",
-      "runtime_digest": "sha256:c04ce4f4a62672b274f7163fdacbbd5983f85b9f2bbd24e64c671b4801d43028"
+      "runtime_digest": "sha256:c5708c5afd8d5abc8bb9506b2319b04ffbe438d0ec7a370e534340191e03c43a"
     },
     "campaign-pester-return-transfer-candidate-v3-sol62-lifecycle-v1-source-v38-live": {
       "parent": "campaign-pester-return-transfer-candidate-v3-lifecycle-v1-source-v37-live",
       "definition": ".github/evals/campaigns/pester-return-transfer-candidate-v3-sol62.json",
-      "runtime_digest": "sha256:cfb4c049ed6e1374ad07afb507e848d95d4a48fbf022b56ebe7af8e4881e57b8",
+      "runtime_digest": "sha256:931ab3ad34e98863dac077b6a609d923d1853ef581433bb08864fbe9ab3df77a",
       "runtime_profile": ".github/evals/campaigns/codex-authorized-v1-sol62.json"
     },
     "campaign-pester-transfer-original-v1-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-pester-transfer-original-v1-lifecycle-v1-source-v37-oracle",
-      "runtime_digest": "sha256:ad92e6f9e507e9a478c02063d6b37b6658e09147cc8257e81c870cb7a90bbdb7"
+      "runtime_digest": "sha256:37b9afe4128f50df282bd5ce704a07fa745367b52544abc7bd8bd7e05f1601b5"
     },
     "campaign-pester-admission-controls-v2-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-pester-admission-controls-v2-lifecycle-v1-source-v37-oracle",
-      "runtime_digest": "sha256:0502cff4cceca57129898f919066842fd79c8bd6581ce09b0154d2e81427b039"
+      "runtime_digest": "sha256:f127d90eb4f9a86b10d354e5a615e3a1dc719db328b5b3117bc29634e35abef0"
     },
     "campaign-gh-read-090-v1-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-gh-read-090-v1-lifecycle-v1-source-v37-oracle",
-      "runtime_digest": "sha256:716664727ec70592026e85ef2b3b3505e6084bd25d4c3ad8d99e536207de4549"
+      "runtime_digest": "sha256:6ce10018dc2ac1a76bdb0dcb27f82da059f6cb618ac09bb140a1d91dfa045040"
     },
     "campaign-gh-read-090-v1-sol62-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-gh-read-090-v1-lifecycle-v1-source-v37-oracle",
       "definition": ".github/evals/campaigns/gh-read-090-sol62.json",
-      "runtime_digest": "sha256:17cdaab924c1249893f91cb7b748e12624a3fd384e0066cb36df2523d910782c",
+      "runtime_digest": "sha256:db0a09f3b61f10877c0ef88dfefd14eecb39b75198947e51d5f48e67892a4111",
       "runtime_profile": ".github/evals/campaigns/codex-090-sol62.json"
     },
     "campaign-gh-read-090-v1-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-gh-read-090-v1-lifecycle-v1-source-v37-probe",
-      "runtime_digest": "sha256:716664727ec70592026e85ef2b3b3505e6084bd25d4c3ad8d99e536207de4549"
+      "runtime_digest": "sha256:6ce10018dc2ac1a76bdb0dcb27f82da059f6cb618ac09bb140a1d91dfa045040"
     },
     "campaign-gh-read-090-v1-sol62-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-gh-read-090-v1-lifecycle-v1-source-v37-probe",
       "definition": ".github/evals/campaigns/gh-read-090-sol62.json",
-      "runtime_digest": "sha256:17cdaab924c1249893f91cb7b748e12624a3fd384e0066cb36df2523d910782c",
+      "runtime_digest": "sha256:db0a09f3b61f10877c0ef88dfefd14eecb39b75198947e51d5f48e67892a4111",
       "runtime_profile": ".github/evals/campaigns/codex-090-sol62.json"
     },
     "campaign-gh-runtime-090-v1-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-gh-runtime-090-v1-lifecycle-v1-source-v37-experiment-probe",
-      "runtime_digest": "sha256:8417a33303c5d4aad2fa5293b81db5fe6ed49014b59d370cf8a6795606b2584d"
+      "runtime_digest": "sha256:3e6852060ec87c008b3d91c65d11a015d3b165aba94605c7ef9264b9d769e04d"
     },
     "campaign-gh-runtime-090-v1-sol62-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-gh-runtime-090-v1-lifecycle-v1-source-v37-experiment-probe",
       "definition": ".github/evals/campaigns/gh-runtime-090-v1-sol62.json",
-      "runtime_digest": "sha256:abc10913dc435f1074b1b33e45a8d9f6a3d3f5c86cd401a47793f404101b5f46",
+      "runtime_digest": "sha256:5f3757194bc5c939ff1095b086dcc3704d8688792b4b2025ca65b9b2482a9670",
       "runtime_profile": ".github/evals/campaigns/codex-090-sol62.json"
     },
     "campaign-gh-runtime-090-v1-lifecycle-v1-source-v38-live": {
       "parent": "campaign-gh-runtime-090-v1-lifecycle-v1-source-v37-live",
-      "runtime_digest": "sha256:8417a33303c5d4aad2fa5293b81db5fe6ed49014b59d370cf8a6795606b2584d"
+      "runtime_digest": "sha256:3e6852060ec87c008b3d91c65d11a015d3b165aba94605c7ef9264b9d769e04d"
     },
     "campaign-gh-runtime-090-v1-sol62-lifecycle-v1-source-v38-live": {
       "parent": "campaign-gh-runtime-090-v1-lifecycle-v1-source-v37-live",
       "definition": ".github/evals/campaigns/gh-runtime-090-v1-sol62.json",
-      "runtime_digest": "sha256:abc10913dc435f1074b1b33e45a8d9f6a3d3f5c86cd401a47793f404101b5f46",
+      "runtime_digest": "sha256:5f3757194bc5c939ff1095b086dcc3704d8688792b4b2025ca65b9b2482a9670",
       "runtime_profile": ".github/evals/campaigns/codex-090-sol62.json"
     },
     "campaign-gh-task-permission-v2-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-gh-task-permission-v2-lifecycle-v1-source-v37-oracle",
-      "runtime_digest": "sha256:de76891f0f570c981b384993e7d7cc2e4d9ff182250578348fe163aec94ff26f"
+      "runtime_digest": "sha256:b0545ed77e7c3a8c6feacb66ed7244898f857e871750a75e504b8e987d36169a"
     },
     "campaign-gh-task-permission-v2-sol62-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-gh-task-permission-v2-lifecycle-v1-source-v37-oracle",
       "definition": ".github/evals/campaigns/gh-task-permission-v2-sol62.json",
-      "runtime_digest": "sha256:f60a97a566d8e44ec92339fdbc760d11c2b1b844504fb96523913d50061fd48c",
+      "runtime_digest": "sha256:2a91f16bbac5f50bc3fd8f8a3044a6297235f3d09b3108373927889385962483",
       "runtime_profile": ".github/evals/campaigns/codex-090-sol62.json"
     },
     "campaign-gh-task-permission-v2-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-gh-task-permission-v2-lifecycle-v1-source-v37-probe",
-      "runtime_digest": "sha256:de76891f0f570c981b384993e7d7cc2e4d9ff182250578348fe163aec94ff26f"
+      "runtime_digest": "sha256:b0545ed77e7c3a8c6feacb66ed7244898f857e871750a75e504b8e987d36169a"
     },
     "campaign-gh-task-permission-v2-sol62-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-gh-task-permission-v2-lifecycle-v1-source-v37-probe",
       "definition": ".github/evals/campaigns/gh-task-permission-v2-sol62.json",
-      "runtime_digest": "sha256:f60a97a566d8e44ec92339fdbc760d11c2b1b844504fb96523913d50061fd48c",
+      "runtime_digest": "sha256:2a91f16bbac5f50bc3fd8f8a3044a6297235f3d09b3108373927889385962483",
       "runtime_profile": ".github/evals/campaigns/codex-090-sol62.json"
     },
     "campaign-gh-task-permission-v2-lifecycle-v1-source-v38-live": {
       "parent": "campaign-gh-task-permission-v2-lifecycle-v1-source-v37-live",
-      "runtime_digest": "sha256:871d4aec9e7dd7006ce712f9aded84ca6275f3333f73f227ba4b02fb1d6f03f8"
+      "runtime_digest": "sha256:3f8d4f6b6ddb38a4e80ebb8f62af01f5f7769a79bbdf99d6246c1106d9492eb3"
     },
     "campaign-gh-task-permission-v2-sol62-lifecycle-v1-source-v38-live": {
       "parent": "campaign-gh-task-permission-v2-lifecycle-v1-source-v37-live",
       "definition": ".github/evals/campaigns/gh-task-permission-v2-live-sol62.json",
-      "runtime_digest": "sha256:a4996bed06441b70b3283d8ac289f6797da54b864262c3312a65b136e2e1bf3c",
+      "runtime_digest": "sha256:5c2b18c70b2665304cdd5a9d363567a5b877092d0e4662f7c8f8414e50748367",
       "runtime_profile": ".github/evals/campaigns/codex-090-sol62.json"
     },
     "campaign-gh-task-permission-v2-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-gh-task-permission-v2-lifecycle-v1-source-v37-experiment-probe",
-      "runtime_digest": "sha256:871d4aec9e7dd7006ce712f9aded84ca6275f3333f73f227ba4b02fb1d6f03f8"
+      "runtime_digest": "sha256:3f8d4f6b6ddb38a4e80ebb8f62af01f5f7769a79bbdf99d6246c1106d9492eb3"
     },
     "campaign-gh-task-permission-v2-sol62-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-gh-task-permission-v2-lifecycle-v1-source-v37-experiment-probe",
       "definition": ".github/evals/campaigns/gh-task-permission-v2-live-sol62.json",
-      "runtime_digest": "sha256:a4996bed06441b70b3283d8ac289f6797da54b864262c3312a65b136e2e1bf3c",
+      "runtime_digest": "sha256:5c2b18c70b2665304cdd5a9d363567a5b877092d0e4662f7c8f8414e50748367",
       "runtime_profile": ".github/evals/campaigns/codex-090-sol62.json"
     },
     "campaign-pester-return-transfer-current-v6-lifecycle-v1-source-v38-live": {
       "parent": "campaign-pester-return-transfer-current-v6-lifecycle-v1-source-v37-live",
-      "runtime_digest": "sha256:e17ca93804d1ae8dce80d69223df671b96cf5e0d6873dfb5cfdf3eecb73faffe"
+      "runtime_digest": "sha256:e19b9a06fc905a26e40e4f50ca5d7c100e0e0315213e1a09fdb22a59341d1749"
     },
     "campaign-pester-return-transfer-current-v6-sol62-lifecycle-v1-source-v38-live": {
       "parent": "campaign-pester-return-transfer-current-v6-lifecycle-v1-source-v37-live",
       "definition": ".github/evals/campaigns/pester-return-transfer-current-v6-sol62.json",
-      "runtime_digest": "sha256:1335aae3e8d6995cdd2852217cd891d5da4e9a3c01529009d889056d0b68b3dd",
+      "runtime_digest": "sha256:2c2e74cc947abaa7b680e7cf2e72129618cd2ed3f73817fd778c11fc5829ad4e",
       "runtime_profile": ".github/evals/campaigns/codex-authorized-v1-sol62.json"
     },
     "campaign-pester-return-transfer-current-v6-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-pester-return-transfer-current-v6-lifecycle-v1-source-v37-experiment-probe",
-      "runtime_digest": "sha256:e17ca93804d1ae8dce80d69223df671b96cf5e0d6873dfb5cfdf3eecb73faffe"
+      "runtime_digest": "sha256:e19b9a06fc905a26e40e4f50ca5d7c100e0e0315213e1a09fdb22a59341d1749"
     },
     "campaign-pester-return-transfer-current-v6-sol62-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-pester-return-transfer-current-v6-lifecycle-v1-source-v37-experiment-probe",
       "definition": ".github/evals/campaigns/pester-return-transfer-current-v6-sol62.json",
-      "runtime_digest": "sha256:1335aae3e8d6995cdd2852217cd891d5da4e9a3c01529009d889056d0b68b3dd",
+      "runtime_digest": "sha256:2c2e74cc947abaa7b680e7cf2e72129618cd2ed3f73817fd778c11fc5829ad4e",
       "runtime_profile": ".github/evals/campaigns/codex-authorized-v1-sol62.json"
     },
     "campaign-pester-return-transfer-current-controls-v6-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-pester-return-transfer-current-controls-v6-lifecycle-v1-source-v37-oracle",
-      "runtime_digest": "sha256:de5c8f731ccf4ab757f8265e343edb4e3cad0bc2e2fae31eb9c6bc62a3d73d79"
+      "runtime_digest": "sha256:7cdf0d617d70e492330cafb18b013623c8bd24cc144a6930b7cb52b0a1cb4feb"
     },
     "campaign-pester-return-transfer-current-controls-v6-sol62-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-pester-return-transfer-current-controls-v6-lifecycle-v1-source-v37-oracle",
       "definition": ".github/evals/campaigns/pester-return-transfer-current-controls-v6-sol62.json",
-      "runtime_digest": "sha256:d433f15ebf1d9c92022b93be863544f6092b7962484895a9e3d86a0f57daac20",
+      "runtime_digest": "sha256:95f1ed25e0083ca705ed1ea8cbb7a6e19b01903d4d0a83f71813d74189902069",
       "runtime_profile": ".github/evals/campaigns/codex-qualified-sol62.json"
     },
     "campaign-pester-return-transfer-current-controls-v6-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-pester-return-transfer-current-controls-v6-lifecycle-v1-source-v37-probe",
-      "runtime_digest": "sha256:de5c8f731ccf4ab757f8265e343edb4e3cad0bc2e2fae31eb9c6bc62a3d73d79"
+      "runtime_digest": "sha256:7cdf0d617d70e492330cafb18b013623c8bd24cc144a6930b7cb52b0a1cb4feb"
     },
     "campaign-pester-return-transfer-current-controls-v6-sol62-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-pester-return-transfer-current-controls-v6-lifecycle-v1-source-v37-probe",
       "definition": ".github/evals/campaigns/pester-return-transfer-current-controls-v6-sol62.json",
-      "runtime_digest": "sha256:d433f15ebf1d9c92022b93be863544f6092b7962484895a9e3d86a0f57daac20",
+      "runtime_digest": "sha256:95f1ed25e0083ca705ed1ea8cbb7a6e19b01903d4d0a83f71813d74189902069",
       "runtime_profile": ".github/evals/campaigns/codex-qualified-sol62.json"
     },
     "campaign-pester-return-transfer-candidate-v6-lifecycle-v1-source-v38-live": {
       "parent": "campaign-pester-return-transfer-candidate-v6-lifecycle-v1-source-v37-live",
-      "runtime_digest": "sha256:40c47a9feb0d3933aeb7b3d970106945cee32441f621711db66bfd7250a5a84c"
+      "runtime_digest": "sha256:24e240ad85b1fbd6a2c3480136ba814fe029e6e7afdf83c7769f13c257f364af"
     },
     "campaign-pester-return-transfer-candidate-v6-sol62-lifecycle-v1-source-v38-live": {
       "parent": "campaign-pester-return-transfer-candidate-v6-lifecycle-v1-source-v37-live",
       "definition": ".github/evals/campaigns/pester-return-transfer-candidate-v6-sol62.json",
-      "runtime_digest": "sha256:0492b5e7784c3efdfaa63a9c9414424e0d6dfc3a3a07df27ae294746030d0c03",
+      "runtime_digest": "sha256:e0c9dc8d9927cc0650789843c84bde272495f29facaa8d2ea5fa8fb1d56f5db4",
       "runtime_profile": ".github/evals/campaigns/codex-authorized-v1-sol62.json"
     },
     "campaign-pester-return-transfer-candidate-v6-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-pester-return-transfer-candidate-v6-lifecycle-v1-source-v37-experiment-probe",
-      "runtime_digest": "sha256:40c47a9feb0d3933aeb7b3d970106945cee32441f621711db66bfd7250a5a84c"
+      "runtime_digest": "sha256:24e240ad85b1fbd6a2c3480136ba814fe029e6e7afdf83c7769f13c257f364af"
     },
     "campaign-pester-return-transfer-candidate-v6-sol62-lifecycle-v1-source-v38-experiment-probe": {
       "parent": "campaign-pester-return-transfer-candidate-v6-lifecycle-v1-source-v37-experiment-probe",
       "definition": ".github/evals/campaigns/pester-return-transfer-candidate-v6-sol62.json",
-      "runtime_digest": "sha256:0492b5e7784c3efdfaa63a9c9414424e0d6dfc3a3a07df27ae294746030d0c03",
+      "runtime_digest": "sha256:e0c9dc8d9927cc0650789843c84bde272495f29facaa8d2ea5fa8fb1d56f5db4",
       "runtime_profile": ".github/evals/campaigns/codex-authorized-v1-sol62.json"
     },
     "campaign-pester-return-transfer-candidate-controls-v6-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-pester-return-transfer-candidate-controls-v6-lifecycle-v1-source-v37-oracle",
-      "runtime_digest": "sha256:eec0f99ee87e1b031e1ba7249a6e09e62311231ef2e350f47f9c235ddea16d5d"
+      "runtime_digest": "sha256:1b38d547a5309164e7b19e44b5d0ee60dba629eea7ae83fedfc1f104a6468037"
     },
     "campaign-pester-return-transfer-candidate-controls-v6-sol62-lifecycle-v1-source-v38-oracle": {
       "parent": "campaign-pester-return-transfer-candidate-controls-v6-lifecycle-v1-source-v37-oracle",
       "definition": ".github/evals/campaigns/pester-return-transfer-candidate-controls-v6-sol62.json",
-      "runtime_digest": "sha256:3c5d9db07118c8c4be3441dd0bc58e60932aab81828412959bec98d1fdec1c3a",
+      "runtime_digest": "sha256:ffb6ba3abf77b353f07274667cf52ce064f4e827b00380ccf3e85a3efd774674",
       "runtime_profile": ".github/evals/campaigns/codex-qualified-sol62.json"
     },
     "campaign-pester-return-transfer-candidate-controls-v6-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-pester-return-transfer-candidate-controls-v6-lifecycle-v1-source-v37-probe",
-      "runtime_digest": "sha256:eec0f99ee87e1b031e1ba7249a6e09e62311231ef2e350f47f9c235ddea16d5d"
+      "runtime_digest": "sha256:1b38d547a5309164e7b19e44b5d0ee60dba629eea7ae83fedfc1f104a6468037"
     },
     "campaign-pester-return-transfer-candidate-controls-v6-sol62-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-pester-return-transfer-candidate-controls-v6-lifecycle-v1-source-v37-probe",
       "definition": ".github/evals/campaigns/pester-return-transfer-candidate-controls-v6-sol62.json",
-      "runtime_digest": "sha256:3c5d9db07118c8c4be3441dd0bc58e60932aab81828412959bec98d1fdec1c3a",
+      "runtime_digest": "sha256:ffb6ba3abf77b353f07274667cf52ce064f4e827b00380ccf3e85a3efd774674",
       "runtime_profile": ".github/evals/campaigns/codex-qualified-sol62.json"
     },
     "campaign-gh-codex-1691-lifecycle-v1-source-v38-probe": {
       "parent": "campaign-gh-codex-1691-lifecycle-v1-source-v37-probe",
-      "runtime_digest": "sha256:28e9feb4ad85910ee41bb6f421650ba4fd5abcdd01521432be229324adb18d70"
+      "runtime_digest": "sha256:1ddfd835612446767730e94418583c1d9d498067670b8455edef58caa60e003c"
     },
     "pester-effectiveness-v41": {
       "parent": "pester-effectiveness-v40",
-      "runtime_digest": "sha256:42b28e58d822e31fa77583cec2cdc8b60f4ff40accd9668fdc6b36fcf0cbdeaa"
+      "runtime_digest": "sha256:25aefea31b7bcb3663820c54ab1565dd3b4b05d1919d69d8a49213592d9bde81"
     },
     "pester-cli-pilot-retained-v22": {
       "parent": "pester-cli-pilot-retained-v21",
-      "runtime_digest": "sha256:2a83b4fac0df74bc19dede237e99c99fed63f7501593ef6b64801ea908647563"
+      "runtime_digest": "sha256:9171040484efe6d949e36d8886bde08988fda6695b3c4080473f139b415bf23a"
     },
     "gh-deterministic-gate-v8": {
       "parent": "gh-deterministic-gate-v7",

@@ -6,6 +6,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE = json.loads((ROOT / '.github/evals/codex-pilot-sol62.json').read_text())
 PURPOSES = ('cli_pilot', 'cli_pilot_control')
+MODEL_CATALOG = '.github/evals/codex-0167-sol62-catalog/models.json'
+CATALOG_SHA256 = '1a5bc244a0724de5473df59235b23481de3dd50c7828772ad0b09f79af91c632'
+
+
+def needs_model_catalog(runtime):
+    return runtime['cli'] == '0.167.0' and runtime['model'] == 'gpt-6.2-sol'
 
 
 def model_arguments(runtime, selected_model):
@@ -48,7 +54,7 @@ def grader_bytes(workspace=ROOT):
     return source.encode()
 
 
-def configuration(base_url=None, *, runtime=None):
+def configuration(base_url=None, *, runtime=None, catalog_path='/opt/pilot/models.json'):
     """The endpoint is the only transport difference in credential-free probes."""
     selected = PROFILE if runtime is None else runtime
     if selected['cli'] in ('0.169.1', '0.171.0'):
@@ -63,6 +69,7 @@ def configuration(base_url=None, *, runtime=None):
         'model_reasoning_effort': selected['reasoning_effort'],
         'approval_policy': 'never', 'sandbox_mode': 'danger-full-access',
         'web_search': 'disabled', 'check_for_update_on_startup': False,
+        **({'model_catalog_json': str(catalog_path)} if needs_model_catalog(selected) else {}),
         **agent_settings,
         'model_providers': {'pilot': {
             'name': 'OpenAI pilot', 'base_url': base_url or selected['base_url'],
@@ -101,7 +108,7 @@ def runtime_installer_bytes(workspace=ROOT):
 
 
 def pilot_inputs(workspace=ROOT):
-    paths = ['.github/scripts/evaluation_campaign_core.py', '.github/scripts/codex_pilot_runtime.py', '.github/evals/codex-pilot-sol62.json', '.github/scripts/codex_pilot_contract.py',
+    paths = [MODEL_CATALOG, '.github/scripts/evaluation_campaign_core.py', '.github/scripts/codex_pilot_runtime.py', '.github/evals/codex-pilot-sol62.json', '.github/scripts/codex_pilot_contract.py',
              '.github/scripts/codex_pilot_agent.py', '.github/scripts/codex_pilot.py', '.github/scripts/codex_pilot_stub.py',
              '.github/scripts/codex_pilot_deadline_fixture.py', '.github/scripts/codex_pilot_environment.py', '.github/scripts/codex_pilot_boundary.py',
              '.github/scripts/codex_pilot_probe.py', '.github/scripts/codex_pilot_descriptors.py',

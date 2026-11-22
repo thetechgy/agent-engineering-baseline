@@ -12,13 +12,35 @@
 | Private skill review | `skill_review.py review` selects `gpt-6.2-sol` for the SDK token count and generation. Explicit authorization is required. Reasoning uses the provider default. |
 | GitHub-hosted Copilot PR review, interactive external reviewers | The host or operator selects the model. This repository supplies instructions and can validate saved review evidence. It cannot set or observe these external requests. |
 
-The production verifier first tries RAGAS for goal accuracy on the canonical OpenAI endpoint. With the released 0.4.4 dependency, its `SingleTurnSample` rejects the list of messages before any SDK request. The verifier's existing custom goal judge then sends the selected model. The 0.3.0 accuracy and behavior judges use the same endpoint.
+The 0.167.0 pilot and campaign images include the released model record for `gpt-6.2-sol`.
+Their built-in catalog otherwise omits the native file-edit tool. The image build checks the
+single-record catalog's SHA-256. Qualification exercises a real command and file edit and checks
+both outgoing requests against the controlled provider. The source record supports CLI 0.166.0
+and later. [Tagged Codex model catalog](https://github.com/openai/codex/blob/ccf9be8cc458bd6b8336fe84d68d8893f2691a5e/codex-rs/models-manager/models.json)
 
-New work needs fresh authorization for its revision, model and protocol. Existing allocation ceilings and expiration dates still apply. Scheduled paid suites remain disabled. The `-sol62` protocol files record new estimates and the source of their rates. Standard short-context rates per million tokens are $2 input, $0.10 cache reads and $10 output. Cache writes are $2.50 for 30 minutes and $5 for 12 hours. Above 272,000 input tokens the input and cache rates double and output costs 1.5 times the short-context rate. Older CLIs expose cumulative counts and omit cache-write detail, so their scheduling estimate prices unclassified input conservatively. [Official model pricing](https://developers.openai.com/api/docs/models/gpt-6.2-sol)
+The production verifier first tries RAGAS for goal accuracy on the canonical OpenAI endpoint. With
+the released 0.4.4 dependency, its `SingleTurnSample` rejects the list of messages before any SDK
+request. The verifier's existing custom goal judge then sends the selected model. The 0.3.0 accuracy
+and behavior judges use the same endpoint.
 
-The manual native-deadline observation defaults to the current pilot model. The explicit historical CLI comparisons check out their original commits and send only to their non-forwarding loopback responder. Their saved model names are part of reproduction.
+New work needs fresh authorization for its revision, model and protocol. Existing allocation
+ceilings and expiration dates still apply. Scheduled paid suites remain disabled. The `-sol62`
+protocol files record new estimates and the source of their rates. Standard short-context rates per
+million tokens are $2 input, $0.10 cache reads and $10 output. Cache writes are $2.50 for 30 minutes
+and $5 for 12 hours. Above 272,000 input tokens the input and cache rates double and output costs
+1.5 times the short-context rate. Older CLIs expose cumulative counts and omit cache-write detail,
+so their scheduling estimate prices unclassified input conservatively. [Official model
+pricing](https://developers.openai.com/api/docs/models/gpt-6.2-sol)
 
-Replay an earlier run at its producing revision using its recorded model, prices, source identity and validator. Current source-v38 records retain the existing grader and fixture identities. Each versioned definition binds its new runtime, model and budget. For the previous production model policy with CLI 0.171.0, use revision `b458913` for offline reproduction. Restarting paid work on a previous model requires separate approval.
+The manual native-deadline observation defaults to the current pilot model. The explicit historical
+CLI comparisons check out their original commits and send only to their non-forwarding loopback
+responder. Their saved model names are part of reproduction.
+
+Replay an earlier run at its producing revision using its recorded model, prices, source identity
+and validator. Current source-v38 records retain the existing grader and fixture identities. Each
+versioned definition binds its new runtime, model and budget. For the previous production model
+policy with CLI 0.171.0, use revision `b458913` for offline reproduction. Restarting paid work on a
+previous model requires separate approval.
 
 ## Codex 0.171.0 observation qualification for issue #95
 

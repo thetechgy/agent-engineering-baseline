@@ -11,7 +11,7 @@ import time
 import urllib.error
 import urllib.request
 
-from codex_pilot_contract import ROOT, configuration, model_arguments
+from codex_pilot_contract import MODEL_CATALOG, ROOT, configuration, model_arguments
 from codex_pilot_runtime import usage_record
 from evaluation_campaign import no_credentials, revision
 from evaluation_campaign_core import require
@@ -53,7 +53,7 @@ def probe(runtime, binary, root, scenario, *, selected_model=None):
     root.mkdir()
     home = root / 'home'
     home.mkdir(mode=0o700)
-    config = configuration('http://127.0.0.1:8765/v1', runtime=runtime)
+    config = configuration('http://127.0.0.1:8765/v1', runtime=runtime, catalog_path=ROOT / MODEL_CATALOG)
     config['sandbox_mode'] = 'read-only'
     (home / 'config.toml').write_text(toml.dumps(config))
     observed = root / 'request.json'
