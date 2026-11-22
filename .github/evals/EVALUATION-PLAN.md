@@ -134,6 +134,11 @@ replacements or model judges. The earlier stopped transfer, development results
 and retrospective replay retain their original identities. The recommendation
 leaves the established skill in production.
 
+A fresh Pester confirmation will stop on the first unsupported grade. Preserve
+prior measured attempts and treat the comparison as incomplete. Qualify the
+chosen case and verifier before proposing that run.
+[Fresh confirmation policy](campaigns/README.md#unsupported-grades-in-fresh-pester-confirmation).
+
 The [private decision report](REPORT-EVIDENCE.md#review-the-retained-codex-decisions)
 also shows the five-defect development case. Current and its matched absent arm
 each scored 0/3. The revision scored 3/3 against its matched absent arm’s 0/3.
