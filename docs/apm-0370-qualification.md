@@ -74,9 +74,10 @@ Use the reviewed 0.36.1 bootstrap checkout at `12e0c54bf133bbbd9a3000b619d6deaf3
 ref. A binary downgrade alone fails on a v4 lock. Before restoring, save the current destination so you can reconcile
 any edits made since migration.
 
-1. Keep the existing project directory and, for user scope, the existing home and `~/.apm` directories in place. The
-   native receipt binds the original filesystem directory identity. Restore the pre-upgrade destination manifest and v1 lock together, along with its APM ownership state, managed
-   deployments and relevant Codex/Copilot config. In user scope this includes the pre-upgrade `~/.apm` state. In
+1. Keep the existing project directory and, for user scope, the existing home and `~/.apm` directories in place.
+   The receipt binds that directory’s filesystem identity. Restore the pre-upgrade manifest and v1 lock together,
+   including the APM ownership state, managed deployments and relevant Codex/Copilot config. In user scope, restore the
+   pre-upgrade `~/.apm` state. In
    repository scope it includes the existing manifest and lock, modules, the repository installation identity, its
    matching receipt under `~/.apm/deployment-receipts/`, managed deployment paths, `.codex/config.toml` and
    `.github/mcp.json`.
