@@ -34,7 +34,7 @@ index a8daf2c..b5b08f1 100644
      > "$report_root/datasets/$skill.json" \
      2> "$report_root/datasets/$skill.stderr" || status=$?
 diff --git a/.github/scripts/skill_evidence.py b/.github/scripts/skill_evidence.py
-index 5f37e11..a5ea443 100644
+index 4021652..d85e24b 100644
 --- a/.github/scripts/skill_evidence.py
 +++ b/.github/scripts/skill_evidence.py
 @@ -24,6 +24,7 @@ sys.dont_write_bytecode = True
@@ -45,19 +45,24 @@ index 5f37e11..a5ea443 100644
  import unscored_security
 
  # Frozen static admission identity, not a freshness inventory. Retain this profile
-@@ -64,7 +65,10 @@ def scanner_adapters(patched):
-
- SCANNER_2134_UNPATCHED, SCANNER_2134_NEXT = scanner_adapters(SCANNER_RUNTIME_2134)
+@@ -70,7 +71,15 @@ SCANNER_2134_UNPATCHED, SCANNER_2134_NEXT = scanner_adapters(SCANNER_RUNTIME_213
+ SCANNER_2136_INITIAL_UNPATCHED, SCANNER_2136_INITIAL_NEXT = scanner_adapters(
+     SCANNER_RUNTIME_2136_INITIAL)
  SCANNER_RUNTIME_CURRENT_UNPATCHED, SCANNER_RUNTIME_NEXT = scanner_adapters(SCANNER_RUNTIME)
--RELEASED_SCANNER_RUNTIMES = (SCANNER_2134_NEXT, SCANNER_RUNTIME_NEXT)
+-RELEASED_SCANNER_RUNTIMES = (SCANNER_2134_NEXT, SCANNER_2136_INITIAL_NEXT, SCANNER_RUNTIME_NEXT)
 +SCANNER_RUNTIME_STATIC_CANDIDATE = {
 +    **SCANNER_RUNTIME_CURRENT_UNPATCHED, 'evaluator_revision': static_evaluator.REVISION
 +}
-+RELEASED_SCANNER_RUNTIMES = (SCANNER_2134_NEXT, SCANNER_RUNTIME_NEXT, SCANNER_RUNTIME_STATIC_CANDIDATE)
- CAVEAT_SCANNER_RUNTIMES = (SCANNER_RUNTIME_PREVIOUS, SCANNER_RUNTIME_2134, SCANNER_RUNTIME,
++SCANNER_2136_INITIAL_STATIC = {
++    **SCANNER_2136_INITIAL_UNPATCHED, 'evaluator_revision': static_evaluator.REVISION
++}
++STATIC_SCANNER_RUNTIMES = (SCANNER_2136_INITIAL_STATIC, SCANNER_RUNTIME_STATIC_CANDIDATE)
++RELEASED_SCANNER_RUNTIMES = (SCANNER_2134_NEXT, SCANNER_2136_INITIAL_NEXT, SCANNER_RUNTIME_NEXT,
++                             *STATIC_SCANNER_RUNTIMES)
+ CAVEAT_SCANNER_RUNTIMES = (SCANNER_RUNTIME_PREVIOUS, SCANNER_RUNTIME_2134,
+                            SCANNER_RUNTIME_2136_INITIAL, SCANNER_RUNTIME,
                             *RELEASED_SCANNER_RUNTIMES)
- SCANNER_RUNTIMES = (SCANNER_RUNTIME_UNPATCHED, SCANNER_2134_UNPATCHED,
-@@ -1094,7 +1098,13 @@ def strict_dataset(path, name, *, reader=None, directory_identities=None, direct
+@@ -1102,7 +1111,13 @@ def strict_dataset(path, name, *, reader=None, directory_identities=None, direct
          if target in tree_entries:
              # Capture before invoking validators that may catch parse/read errors.
              optional_reader(target)
@@ -72,7 +77,7 @@ index 5f37e11..a5ea443 100644
      native_spec._check_unrecognised(captured_tree, checks)
      require(all(row.status == 'ok' for row in checks), 'Strict dataset contract failed')
      for entry in entries:
-@@ -1344,7 +1354,7 @@ def policy_fields(value):
+@@ -1352,7 +1367,7 @@ def policy_fields(value):
      return {key: copy.deepcopy(value.get(key)) for key in POLICY_FIELDS}
 
 
@@ -81,7 +86,7 @@ index 5f37e11..a5ea443 100644
      require(type(value) is dict, 'Invalid policy')
      require(type(value.get('fields')) is dict, 'Invalid policy fields')
      candidate = profiles.candidate_revision(value['fields'].get('evaluator_revision'),
-@@ -1375,7 +1385,12 @@ def validate_policy(value, *, custom_only=False):
+@@ -1383,7 +1398,12 @@ def validate_policy(value, *, custom_only=False):
              validate_build(val)
          else:
              token(val)
@@ -95,7 +100,7 @@ index 5f37e11..a5ea443 100644
          profiles.by_revision(fields['evaluator_revision'])
      judge = value['judge']; closed(judge, ('model', 'provider', 'enabled'))
      optional(judge['model'], token); optional(judge['provider'], token); optional(judge['enabled'], boolean)
-@@ -1534,10 +1549,12 @@ def validate_evidence(data, *, public=False, _observed_at=None):
+@@ -1542,10 +1562,12 @@ def validate_evidence(data, *, public=False, _observed_at=None):
      if 'scanner_runtime' in data:
          require(data.get('kind') == 'static' and data['scanner_runtime'] in SCANNER_RUNTIMES,
                  'Unsupported or contradictory scanner runtime')
@@ -105,12 +110,12 @@ index 5f37e11..a5ea443 100644
                  'Scanner adapter and public producer differ')
          fields += ('scanner_runtime',)
 +    if data['policy']['fields']['evaluator_revision'] == static_evaluator.REVISION:
-+        require(data.get('scanner_runtime') == SCANNER_RUNTIME_STATIC_CANDIDATE,
++        require(data.get('scanner_runtime') in STATIC_SCANNER_RUNTIMES,
 +                'Missing static candidate scanner provenance')
      if 'coverage_caveats' in data:
          require(data.get('kind') == 'static' and data.get('scanner_runtime') in CAVEAT_SCANNER_RUNTIMES,
                  'Caveats require the qualified adapter')
-@@ -1570,7 +1587,7 @@ def validate_evidence(data, *, public=False, _observed_at=None):
+@@ -1578,7 +1600,7 @@ def validate_evidence(data, *, public=False, _observed_at=None):
      require(ds['staged_digest'] is None or ds['staged_algorithm'] == 'skill-evaluator-dataset-snapshot/1',
              'Missing staged digest algorithm')
      ids = case_ids(ds['case_ids']); require(ds['case_cohort_digest'] == identity(sorted(ids)), 'Cohort mismatch')
@@ -119,7 +124,7 @@ index 5f37e11..a5ea443 100644
      availability = data['availability']; closed(availability, ('status', 'reasons', 'provenance'))
      enum(availability['status'], ('complete', 'incomplete', 'unavailable')); enum(availability['provenance'], PROVENANCE)
      require(type(availability['reasons']) is list and len(availability['reasons']) <= len(REASONS)
-@@ -1880,7 +1897,7 @@ def validate_evidence(data, *, public=False, _observed_at=None):
+@@ -1888,7 +1910,7 @@ def validate_evidence(data, *, public=False, _observed_at=None):
              finding_indices[scanner] += 1
          require(aggregate['passed'] == all(scan['passed'] is True or not scan.get('blocking', True)
                                           for scan in validators), 'Static aggregate gate contradiction')
@@ -128,7 +133,7 @@ index 5f37e11..a5ea443 100644
              failing = [scan for scan in validators if scan.get('blocking', True) and scan['passed'] is not True]
              expected = ('passed' if not failing else 'incomplete'
                          if all(scan['status'] == 'incomplete' for scan in failing) else 'failed')
-@@ -2104,6 +2121,11 @@ def select_run(root, name, selected, *, entries=None, directory_identities=None)
+@@ -2112,6 +2134,11 @@ def select_run(root, name, selected, *, entries=None, directory_identities=None)
      return candidates[0]
 
 
@@ -140,12 +145,12 @@ index 5f37e11..a5ea443 100644
  def validate_runtime_versions(versions):
      require(type(versions) is dict, 'Native versions object required')
      if 'scanner_runtime' in versions:
-@@ -2114,9 +2136,13 @@ def validate_runtime_versions(versions):
+@@ -2122,9 +2149,13 @@ def validate_runtime_versions(versions):
      elif versions.get('skillspector_revision') in (SCANNER_RUNTIME_2134['skillspector_revision'],
                                                   SCANNER_RUNTIME['skillspector_revision']):
          require(False, 'Missing scanner runtime provenance')
 +    if versions.get('evaluator_revision') == static_evaluator.REVISION:
-+        require(versions.get('scanner_runtime') == SCANNER_RUNTIME_STATIC_CANDIDATE,
++        require(versions.get('scanner_runtime') in STATIC_SCANNER_RUNTIMES,
 +                'Missing static candidate scanner provenance')
 +        return static_evaluator.validate_owner(versions)
      profile = profiles.runtime(versions, owning=True)
@@ -155,7 +160,7 @@ index 5f37e11..a5ea443 100644
                  'Scanner adapter and evaluator owner differ')
      return profile
 
-@@ -2942,6 +2968,7 @@ def static_scanner(value):
+@@ -2950,6 +2981,7 @@ def static_scanner(value):
          'Secrets Detection': 'SECRETS',
          'Code Integrity & Hygiene': 'HYGIENE',
          'Unicode Smuggling Detection': 'UNICODE',
@@ -163,7 +168,7 @@ index 5f37e11..a5ea443 100644
      }
      require(type(value) is str, 'Invalid scanner identity')
      value = titles.get(value, value)
-@@ -2994,11 +3021,11 @@ def normalize_static(root, name, workspace=ROOT):
+@@ -3002,11 +3034,11 @@ def normalize_static(root, name, workspace=ROOT):
      require(type(native['incomplete_scans']) is list and len(native['incomplete_scans']) <= 100, 'Scanner limit')
      for scanner in native['incomplete_scans']:
          token(scanner)
@@ -177,7 +182,7 @@ index 5f37e11..a5ea443 100644
          from skillevaluator.reporting.base import passes_required_gate
          released_gates = [passes_required_gate(result) for result in reports.released_static_results(native)]
      else:
-@@ -3143,8 +3170,9 @@ def normalize_static(root, name, workspace=ROOT):
+@@ -3151,8 +3183,9 @@ def normalize_static(root, name, workspace=ROOT):
          if released:
              data['policy'] = make_policy(
                  {key: versions[key] for key in ('evaluator_revision', 'harbor', 'python')},

@@ -28,6 +28,10 @@ class ScannerRuntimeTests(unittest.TestCase):
     def write_versions(self, value):
         (self.native / 'versions.json').write_text(json.dumps(value))
 
+    def test_active_scanner_runtime_matches_the_reviewed_semgrep_lock(self):
+        lock = REPO / '.github/requirements/semgrep.txt'
+        self.assertEqual(evidence.SCANNER_RUNTIME['semgrep_lock'], evidence.digest_bytes(lock.read_bytes()))
+
     def test_source_lock_and_executed_versions_reject_unknown_and_contradictory_identity(self):
         for field in ('skillspector_revision', 'skillspector_lock', 'semgrep_lock', 'adapter_patch'):
             changed = copy.deepcopy(self.versions)
@@ -78,8 +82,9 @@ class ScannerRuntimeTests(unittest.TestCase):
         self.assertNotIn('coverage_caveats', public)
 
     def test_previous_scanner_lock_remains_admitted_without_relabeling(self):
-        for previous in (evidence.SCANNER_RUNTIME_PREVIOUS, evidence.SCANNER_RUNTIME_2134):
-            with self.subTest(lock=previous['skillspector_lock']):
+        for previous in (evidence.SCANNER_RUNTIME_PREVIOUS, evidence.SCANNER_RUNTIME_2134,
+                         evidence.SCANNER_RUNTIME_2136_INITIAL, evidence.SCANNER_2136_INITIAL_UNPATCHED):
+            with self.subTest(runtime=previous):
                 self.versions.update(scanner_runtime=copy.deepcopy(previous), scanners=previous['versions'],
                                      skillspector_revision=previous['skillspector_revision'])
                 self.write_versions(self.versions)
