@@ -113,6 +113,15 @@ read saved diagnostics and reproduce the old qualifier.
 
 ## Pester clarification transfer decision
 
+**Stage 1 closed for this case on GPT-6.2 Sol.** The current skill and its
+matched no-skill arm each passed 3/3 on Codex CLI 0.167.0 at High. Every
+submission passed the reference and caught all five defects, including
+`integer-result`. The decision rule closes the comparison at Stage 1 and the
+current guidance remains in place. The tie leaves a skill effect unmeasured.
+All six slots have verified usage, reports and cleanup. The allocation is closed
+with $0.6721177 in estimated usage.
+[Stage 1 receipt](../../docs/evaluations/pester-return-contract-development/stage-1-sol62/EXECUTION.md).
+
 **DEFER** the exact 22-line `powershell-pester-6` clarification. Both v6 pairs
 completed at `2b58a4652b576247d91ba01c6ce7a743ff703331`. Current and its own absent arm
 each had 3/3 primary successes. Candidate and its own absent arm also had 3/3
@@ -148,10 +157,6 @@ Both comparisons used GPT-6.1 Sol. The
 [pre-declared GPT-6.2 Sol decision rule](../../docs/evaluations/pester-return-contract-development/DECISION-RULE.md)
 records what new evidence would change the decision and preserves the owner’s
 choice after stage 3.
-
-**Next action** — Prepare the Stage 1 current-skill pair for review while
-keeping the current `powershell-pester-6` guidance in place.
-[Stage 1 operator procedure](campaigns/README.md#stage-1-pester-comparison-on-gpt-62-sol).
 
 ## Completed PR #150 judge-only calibration, retained as history
 
