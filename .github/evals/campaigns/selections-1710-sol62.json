@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "campaigns": {
+    "pester-return-development-current-v1-1710-sol62": {
+      "definition": ".github/evals/campaigns/pester-return-development-current-v1-1710-sol62.json",
+      "controls": [
+        ".github/evals/campaigns/pester-return-development-current-controls-v1-1710-sol62.json"
+      ],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "preparation/evidence"
+        }
+      ]
+    }
+  }
+}

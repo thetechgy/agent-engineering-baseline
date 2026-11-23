@@ -15,6 +15,7 @@ on:
           - gh-task-permission-v2-sol62
           - judge-calibration-090-v1-sol62
           - pester-return-development-current-v1-sol62
+          - pester-return-development-current-v1-1710-sol62
           - pester-return-development-candidate-v1-sol62
           - pester-return-transfer-current-v3-sol62
           - pester-return-transfer-candidate-v3-sol62

@@ -110,6 +110,34 @@ class SelectionContracts(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, 'Unqualified source artifact'):
                         protocol.admit(archive, root / wrong_identity, artifact, run, task)
 
+    def test_1710_scored_pair_preserves_stage_one_schedule_and_grading(self):
+        from evaluation_campaign import purpose
+        from skill_evidence import custom_contract
+
+        identity = 'pester-return-development-current-v1-1710-sol62'
+        prior = selected.selected_task('pester-return-development-current-v1-sol62')
+        task = selected.selected_task(identity)
+        original, successor = protocol.frozen(prior), protocol.frozen(task)
+        self.assertEqual(successor['evaluator'], original['evaluator'])
+        self.assertEqual(successor['schedule'], original['schedule'])
+        self.assertEqual(successor['authorized_live_attempts'], 0)
+        self.assertEqual(successor['runtime']['resolved']['cli'], '0.171.0')
+        self.assertEqual(successor['runtime']['resolved']['model'], 'gpt-6.2-sol')
+        self.assertEqual(successor['runtime']['resolved']['reasoning_effort'], 'high')
+        self.assertEqual({p['workflow'] for p in selected.registration(task)['producers']},
+                         {'.github/workflows/evaluation-campaign.yml'})
+        self.assertEqual(len(selected.registration(task)['controls']), 1)
+        for mode in ('live', 'experiment-probe'):
+            old = original['source_identities'][mode]
+            new = successor['source_identities'][mode]
+            for field in ('grader_digest', 'fixture_digest'):
+                self.assertEqual(old[field], new[field])
+            self.assertNotEqual(old['runtime_digest'], new['runtime_digest'])
+            profile, _, _ = custom_contract(task.definition['skill'], purpose=purpose(task, mode))
+            self.assertTrue(all(profile[key] == digest for key, digest in new.items()))
+            self.assertEqual(profile['runtime']['cli'], successor['runtime']['resolved']['cli'])
+            self.assertEqual(profile['runtime']['codex'], successor['runtime']['resolved']['cli'])
+
     def test_archive_and_preparation_mismatches_fail_before_receipt(self):
         task=selected.selected_task(CAMPAIGNS[0])
         mutations = [lambda f:f['frozen-proposal.json'].update(revision='0'*40),

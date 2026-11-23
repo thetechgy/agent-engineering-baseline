@@ -29,7 +29,8 @@ def source_manifest(workspace, name, purpose):
         '.github/scripts/evaluator_profiles.py', '.github/evals/benchmark-090.json', adapter.member,
         adapter.definition['runtime_profile'], '.github/workflows/evaluation-campaign.yml']
     if adapter.definition['id'].endswith('-sol62'):
-        files.append('.github/evals/campaigns/selections-sol62.json')
+        from evaluation_campaign_selection import registry_path
+        files.append(registry_path(adapter.definition['id']).relative_to(ROOT).as_posix())
     if adapter.definition['id'] == 'gh-codex-1691':
         files.extend(('.github/workflows/codex-1691-qualification.yml',
                       '.github/scripts/qualify_codex_1691.py', '.github/scripts/verify_codex_1691.py'))

@@ -9,12 +9,18 @@ CODEX_FIXTURE_PROFILE = 'codex-1691-sol62-v1'
 CODEX_OBSERVATION_PROFILE = 'codex-1691-observation-v1'
 CODEX_OBSERVATION_1710_PROFILE = 'codex-1710-observation-v1'
 CODEX_OBSERVATION_PROFILES = (CODEX_OBSERVATION_PROFILE, CODEX_OBSERVATION_1710_PROFILE)
+CODEX_SCORED_1710_PROFILE = 'codex-1710-scored-v1'
+CODEX_CACHE_WRITE_PROFILES = (*CODEX_OBSERVATION_PROFILES, CODEX_SCORED_1710_PROFILE)
 CODEX_090_PROFILES = {
     'codex-090-diagnostic-v1-sol62': '.github/evals/codex-execution-090-sol62.json',
     'codex-090-diagnostic-v1': '.github/evals/codex-execution-090.json',
     CODEX_FIXTURE_PROFILE: '.github/evals/codex-execution-1691.json',
     CODEX_OBSERVATION_PROFILE: '.github/evals/codex-execution-1691.json',
     CODEX_OBSERVATION_1710_PROFILE: '.github/evals/codex-execution-1710.json',
+}
+CODEX_FROZEN_PROFILES = {
+    **CODEX_090_PROFILES,
+    CODEX_SCORED_1710_PROFILE: '.github/evals/codex-execution-1710-scored.json',
 }
 
 
@@ -35,12 +41,13 @@ def validate_codex(value):
             'Unsupported Codex profile settings')
     pilot = '.github/evals/codex-pilot-sol62.json' if value['id'] in (
         'codex-authorized-campaign-v1-sol62', 'codex-qualified-campaign-v1-sol62') else '.github/evals/codex-pilot.json'
-    expected = CODEX_090_PROFILES.get(value['id'], pilot)
+    expected = CODEX_FROZEN_PROFILES.get(value['id'], pilot)
     require(value['frozen_profile'] == expected and
             value['frozen_profile_sha256'] == hashlib.sha256((ROOT / value['frozen_profile']).read_bytes()).hexdigest(),
             'Qualified Codex profile drift')
     live_profiles = ('codex-authorized-campaign-v1', 'codex-authorized-campaign-v1-sol62',
-                     'codex-090-diagnostic-v1', 'codex-090-diagnostic-v1-sol62', *CODEX_OBSERVATION_PROFILES)
+                     'codex-090-diagnostic-v1', 'codex-090-diagnostic-v1-sol62', *CODEX_OBSERVATION_PROFILES,
+                     CODEX_SCORED_1710_PROFILE)
     capabilities = (['non-forwarding-cli-probe', 'exact-authorized-live'] if value['id'] in live_profiles
                     else ['oracle', 'non-forwarding-cli-probe'])
     if value['id'] == CODEX_FIXTURE_PROFILE:
@@ -74,7 +81,7 @@ def source_inputs(runtime, workspace):
     from codex_pilot_contract import pilot_inputs
     import skill_evidence as e
     extra = []
-    frozen = CODEX_090_PROFILES.get(runtime['profile']['id'])
+    frozen = CODEX_FROZEN_PROFILES.get(runtime['profile']['id'])
     if frozen:
         extra = [{'member': 'runtime/' + Path(frozen).name,
                   'digest': e.digest_bytes(e.read_bytes(workspace / frozen))}]

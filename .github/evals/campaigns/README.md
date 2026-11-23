@@ -514,6 +514,52 @@ remain zero. The four paired comparisons propose 24 future model attempts with
 duplicated absent baselines and an indirect current/candidate comparison; this
 pass requests review, without spending approval.
 
+## Scored campaigns on Codex CLI 0.171.0
+
+Use [`codex-1710-scored.json`](codex-1710-scored.json) for new scored campaigns.
+The first selector is `pester-return-development-current-v1-1710-sol62`.
+It preserves the Stage 1 task, current skill snapshot, matched absent arm,
+six-slot schedule, grader, SkillEvaluator 0.8.0 and Harbor 0.24.0.
+[Decision rule](../pester-return-contract/DECISION-RULE-1710.md).
+
+The release profile verifies the CLI archive, executable and helpers. The
+non-forwarding preparation checks the bundled `functions.exec` tool declaration
+and exercises real command and file-edit events, deterministic grading, cache
+reads and writes, and cleanup.
+The scheduler exercises the ten declared completion and stop scenarios.
+Synthetic fault scenarios retain their fixture labels and native evidence.
+The two older observation selectors retain their existing runtime profiles.
+
+For local qualification, acquire the pinned `candidate-current` evaluator,
+Compose and APM with the setup used in the reusable workflow. Start from the
+intended source revision and use a new persistent output directory. Run these
+commands with the pinned evaluator interpreter in `SKILL_CURRENT_PYTHON`.
+
+```sh
+campaign=pester-return-development-current-v1-1710-sol62
+python="$SKILL_CURRENT_PYTHON"
+"$python" -B .github/scripts/campaign_authentication_qualification.py \
+  --campaign "$campaign" --output "${SCORED_OUTPUT:?set a new persistent output directory}/authentication"
+"$python" -B .github/scripts/evaluation_campaign_selection.py qualify \
+  --campaign "$campaign" --output "$SCORED_OUTPUT/controls"
+"$python" -B .github/scripts/evaluation_campaign_selection.py prepare \
+  --campaign "$campaign" --qualification "$SCORED_OUTPUT/controls" \
+  --authentication-qualification "$SCORED_OUTPUT/authentication/authentication-qualification.json" \
+  --output "$SCORED_OUTPUT/preparation"
+"$python" -B .github/scripts/evaluation_campaign_selection.py check-preparation \
+  --campaign "$campaign" --preparation "$SCORED_OUTPUT/preparation/evidence" \
+  --output "$SCORED_OUTPUT/consumption"
+```
+
+For hosted qualification, dispatch `evaluation-campaign.yml` at the reviewed
+revision with `campaign=pester-return-development-current-v1-1710-sol62`.
+Keep both `allocation` and `preparation_artifact` empty. The same run prepares
+the artifact and consumes it on a fresh runner. Use the artifact inspection
+procedure below at the intended execution revision before proposing any paid
+allocation. The proposal plans $3 estimated usage, uses a $5 scheduling
+threshold and reserves $3 for overshoot. A live dispatch and its matching
+protected environment gate require separate approval.
+
 ## Stage 1 Pester comparison on GPT-6.2 Sol
 
 Stage 1 asks whether the current skill still misses `integer-result` on the

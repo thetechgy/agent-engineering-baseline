@@ -36,7 +36,8 @@ def program(command):
 record = Path(sys.argv[1])
 scenario = sys.argv[2]
 benchmark = scenario in ('benchmark-priced', 'benchmark-interruption')
-priced = scenario in ('priced-success', 'case-observation-priced', 'benchmark-priced')
+scored = scenario == 'scored-priced'
+priced = scored or scenario in ('priced-success', 'case-observation-priced', 'benchmark-priced')
 if scenario == 'benchmark-interruption':
     scenario = 'interruption'
 compatibility = scenario == 'compatibility'
@@ -56,6 +57,16 @@ def response_usage(request, *, deadline=False):
                 'output_tokens': output, 'total_tokens': input_tokens + output}
     return {'input_tokens': 7 if deadline else 0, 'output_tokens': 3 if deadline else 0,
             'total_tokens': 10 if deadline else 0}
+
+
+def scored_exec_advertised(body):
+    # The reviewed 0.171.0 release carries this model's declaration in a
+    # developer-role input item instead of the request's top-level tools.
+    return any(tool.get('name') == 'exec' and tool.get('type') == 'custom'
+               and all(name in tool.get('description', '') for name in ('exec_command', 'apply_patch'))
+               for item in body.get('input', []) if item.get('type') == 'additional_tools' and item.get('role') == 'developer'
+               for namespace in item['tools'] if namespace.get('type') == 'namespace' and namespace.get('name') == 'functions'
+               for tool in namespace['tools'])
 
 
 class Refuse(BaseHTTPRequestHandler):
@@ -82,6 +93,8 @@ class Refuse(BaseHTTPRequestHandler):
         if priced or compatibility:
             observed = {k: value[k] for k in ('path', 'model', 'reasoning', 'authorization_matches_sentinel',
                                              'request_keys', 'tools', 'service_tier')}
+            if scored:
+                observed['native_tool_route'] = 'functions.exec' if scored_exec_advertised(body) else None
             previous = json.loads(record.read_text())['request_observations'] if record.exists() else []
             value['request_observations'] = [*previous, observed]
         record.write_text(json.dumps(value, indent=2) + '\n')
@@ -160,6 +173,5 @@ class Refuse(BaseHTTPRequestHandler):
 
 
 with HTTPServer(('127.0.0.1', 8765), Refuse) as server:
-    if sys.argv[2] in ('case-observation', 'case-observation-priced'):
-        record.with_suffix('.ready').touch()
+    record.with_suffix('.ready').touch()
     server.serve_forever()
