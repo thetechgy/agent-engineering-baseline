@@ -10,6 +10,7 @@ PRODUCER = 'skillevaluator-1.0.1-static-v1'
 REVISION = '914c15cb3f31562ccffdc9a7166002a87ed2ce1e'
 LOCK = 'c49a8340c7312a8396c34be64d0062e8a591f201202c890b7563265958e3f364'
 SOURCE = '7dd63bd0286d9cad9921c1739de193fd55ad407f67d1b6a8476e2fd32544920b'
+SEMGREP_LOCK = 'sha256:f34553471c8d6ad88e2139716a3e584de63b1dddecbe085c44a7a2a33db1199d'
 VERSIONS = {'skillevaluator': VERSION, 'evaluator_revision': REVISION, 'python': '3.14.10',
             'harbor': '0.25.0', 'lock_sha256': LOCK, 'producer_profile': PRODUCER}
 

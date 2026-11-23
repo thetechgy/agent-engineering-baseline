@@ -17,6 +17,15 @@ import skill_evidence as evidence
 
 
 class StaticQualityRoutingTests(unittest.TestCase):
+    def test_active_scanner_runtime_matches_the_reviewed_semgrep_lock(self):
+        import static_evaluator as owner
+
+        lock = ROOT / '.github/requirements/semgrep.txt'
+        self.assertEqual(owner.SEMGREP_LOCK, evidence.digest_bytes(lock.read_bytes()))
+        if ISOLATED_SCRIPTS:
+            self.assertEqual(evidence.SCANNER_RUNTIME_STATIC_CANDIDATE['semgrep_lock'], owner.SEMGREP_LOCK)
+            self.assertEqual(evidence.SCANNER_RUNTIME_NEXT['semgrep_lock'], owner.SEMGREP_LOCK)
+
     def test_static_consumer_and_retained_native_boundary_have_explicit_separate_owners(self):
         jobs = yaml.safe_load((ROOT / '.github/workflows/validate.yml').read_text())['jobs']
         quality = jobs['skill-quality']
@@ -91,14 +100,27 @@ class StaticQualityRoutingTests(unittest.TestCase):
             {key: owner.VERSIONS[key] for key in ('evaluator_revision', 'harbor', 'python')},
             judge={'model': None, 'provider': None, 'enabled': False},
             provenance='runtime_recorded', published=owner.PRODUCER)
-        record['scanner_runtime'] = evidence.SCANNER_RUNTIME_STATIC_CANDIDATE
         at = '2026-11-20T00:00:00Z'
-        snapshot = history.empty(at)
-        observation = history.observation(record, 'quality', prov(record['source']['revision']), at)
-        history.add(snapshot, observation)
-        retained = history.retain(snapshot, at)['observations']
-        self.assertEqual(len(retained), 1)
-        self.assertEqual(retained[0]['record']['policy']['published_id'], owner.PRODUCER)
-        observation['record']['kind'] = 'behavioral'
-        with self.assertRaisesRegex(ValueError, 'Unsupported native evaluator'):
-            history.validate(snapshot)
+        for runtime in (evidence.SCANNER_2136_INITIAL_STATIC, evidence.SCANNER_RUNTIME_STATIC_CANDIDATE):
+            with self.subTest(lock=runtime['semgrep_lock']):
+                versions = dict(owner.VERSIONS, scanner_runtime=runtime, scanners=runtime['versions'],
+                                skillspector_revision=runtime['skillspector_revision'])
+                self.assertEqual(evidence.validate_runtime_versions(versions)['version'], owner.VERSION)
+                record['scanner_runtime'] = runtime
+                snapshot = history.empty(at)
+                observation = history.observation(record, 'quality', prov(record['source']['revision']), at)
+                history.add(snapshot, observation)
+                retained = history.retain(snapshot, at)['observations']
+                self.assertEqual(len(retained), 1)
+                self.assertEqual(retained[0]['record']['policy']['published_id'], owner.PRODUCER)
+                self.assertEqual(retained[0]['record_id'], evidence.identity(record))
+                observation['record']['kind'] = 'behavioral'
+                with self.assertRaisesRegex(ValueError, 'Unsupported native evaluator'):
+                    history.validate(snapshot)
+
+        active = evidence.SCANNER_RUNTIME_STATIC_CANDIDATE
+        for invalid in (evidence.SCANNER_2136_INITIAL_NEXT, dict(active, semgrep_lock='sha256:' + 'a' * 64)):
+            with self.subTest(lock=invalid['semgrep_lock']):
+                record['scanner_runtime'] = invalid
+                with self.assertRaisesRegex(ValueError, 'scanner runtime|Scanner adapter'):
+                    evidence.validate_public(record)
