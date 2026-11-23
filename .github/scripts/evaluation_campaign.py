@@ -318,7 +318,8 @@ def run(root, task, mode, *, reference=None, fixture=None):
                     task.check(task.cases(mode)[row['case']], present, row['outcome'], reward.get('custom_metrics',{}))
                 # Qualification's invalid/unsupported controls remain expected outcomes.
                 if mode == 'probe':
-                    adapter.native_observation(trial, native, present, row, rows, output=task.output, runtime=ledger['runtime']['resolved'])
+                    adapter.native_observation(trial, native, present, row, rows, task=task,
+                                               runtime=ledger['runtime']['resolved'])
                 return 'unknown_usage' if row['usage']['estimated_usd'] is None else None
             reason = stop_reason(row)
             if not reason:
@@ -327,7 +328,8 @@ def run(root, task, mode, *, reference=None, fixture=None):
                     row['state'] = 'failed'; return 'missing_usable_evidence'
             if not reason:
                 try:
-                    adapter.native_observation(trial, native, present, row, rows, output=task.output, live=mode == 'live', runtime=ledger['runtime']['resolved'])
+                    adapter.native_observation(trial, native, present, row, rows, task=task,
+                                               live=mode == 'live', runtime=ledger['runtime']['resolved'])
                 except (ValueError, OSError, KeyError):
                     row['state'] = 'failed'; return 'security_or_identity_drift'
             # Declared host checkpoint controls never replace a primary native failure.

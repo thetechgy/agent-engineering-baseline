@@ -85,6 +85,43 @@ class ExecEvents(unittest.TestCase):
                     with self.assertRaisesRegex(UnsupportedCodexProtocol, 'Unsupported native shell wrapper'):
                         self.parse(events)
 
+    def test_scored_shell_access_requires_the_full_skill_output(self):
+        from tempfile import TemporaryDirectory
+        from evaluation_codex import skill_access
+
+        with TemporaryDirectory() as directory:
+            native = Path(directory) / 'task'
+            staged = native / 'environment/skills/powershell-pester-6'
+            staged.mkdir(parents=True)
+            skill_text = 'Complete staged skill text.\n'
+            (staged / 'SKILL.md').write_text(skill_text)
+            (native / 'tests').mkdir()
+            (native / 'tests/entry.json').write_text('{"id": "pester-004", "grading_mode": "custom_only"}')
+            trial = Path(directory) / 'trial'
+            trial.mkdir()
+            (trial / 'trajectory.json').write_text('{}')
+            for shell, present, stdout, code, expected in (
+                ('/bin/sh -lc', True, skill_text, 0, True),
+                ('/bin/sh -c', True, skill_text, 0, True),
+                ('/bin/bash -lc', True, skill_text, 0, True),
+                ('/bin/bash -c', True, skill_text, 0, None),
+                ('/bin/sh -c', True, skill_text[:12], 0, None),
+                ('/bin/sh -c', True, skill_text, 1, None),
+                ('/bin/sh -c', False, skill_text, 0, None),
+            ):
+                with self.subTest(shell=shell, present=present, stdout=stdout, exit_code=code):
+                    event = {'type': 'item.completed', 'item': {
+                        'type': 'command_execution',
+                        'command': shell + " 'cat /home/agent/.agents/skills/powershell-pester-6/SKILL.md'",
+                        'aggregated_output': stdout, 'exit_code': code}}
+                    (trial / 'codex.txt').write_text(json.dumps(event) + '\n')
+                    old = skill_access(trial, present, native)
+                    self.assertIsNone(old['successful_full_read'])
+                    access = skill_access(trial, present, native, allow_bash=True, allow_sh_c=True,
+                                          expected_skill='powershell-pester-6')
+                    self.assertIs(access['successful_full_read'], expected)
+                    self.assertEqual(access['deployed'], present)
+
     def edit(self,status='completed',identity='edit',kind='add'):
         return {'id':identity,'type':'file_change','changes':[{'path':'/workspace/output/result.txt','kind':kind}],'status':status}
 
