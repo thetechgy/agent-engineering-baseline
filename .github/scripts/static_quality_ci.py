@@ -17,7 +17,8 @@ HISTORY_PATCH = ROOT / '.github/scripts/static-quality-history.patch'
 
 
 def write_versions(tools):
-    runtime = {**evidence.SCANNER_RUNTIME_CURRENT_UNPATCHED, 'evaluator_revision': static_evaluator.REVISION}
+    runtime = dict(evidence.SCANNER_RUNTIME_CURRENT_UNPATCHED,
+                   evaluator_revision=static_evaluator.REVISION, semgrep_lock=static_evaluator.SEMGREP_LOCK)
     versions = dict(static_evaluator.VERSIONS, scanners=runtime['versions'],
                     skillspector_revision=runtime['skillspector_revision'], scanner_runtime=runtime)
     static_evaluator.validate_owner(versions)

@@ -39,10 +39,10 @@ fi
 
 write_static_versions() {
   uv pip list --python "$1" --format json > "$tool_root/dependencies/evaluator.json"
-  "$1" -B - "$repository_root" "$tool_root" "$2" <<'PYSTATIC' > "$tool_root/versions.json"
+  "$1" -B - "$repository_root" "$tool_root" "$2" "$static_scripts" <<'PYSTATIC' > "$tool_root/versions.json"
 import json, subprocess, sys
 from pathlib import Path
-sys.path.insert(0, str(Path(sys.argv[1]) / '.github/scripts'))
+sys.path.insert(0, sys.argv[4])
 import evaluator_profiles as profiles
 import skill_evidence as evidence
 import static_evaluator
@@ -74,10 +74,11 @@ PYSTATIC
 if [ "$kind" = quality-candidate ]; then
   : "${SKILL_QUALITY_PYTHON:?Install quality-next first}" "${SKILL_QUALITY_TOOLS:?Install quality-next first}"
   candidate_root="$tool_root/evaluator"
-  mapfile -t pin < <("$SKILL_QUALITY_PYTHON" -B - "$repository_root" "$SKILL_QUALITY_TOOLS" <<'PYPIN'
+  static_scripts=$(RUNNER_TEMP="$tool_root" python3 -B "$repository_root/.github/scripts/static_quality_ci.py" tools)
+  mapfile -t pin < <("$SKILL_QUALITY_PYTHON" -B - "$static_scripts" "$SKILL_QUALITY_TOOLS" <<'PYPIN'
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(sys.argv[1]) / '.github/scripts'))
+sys.path.insert(0, sys.argv[1])
 import skill_evidence as evidence
 import static_evaluator
 baseline = evidence.read_json(Path(sys.argv[2]) / 'versions.json')
@@ -146,6 +147,7 @@ if [ "$kind" = candidate-next ] || [ "$kind" = quality-next ] || [ "$kind" = can
     # shellcheck source=setup-skill-scanners.sh
     source "$repository_root/.github/scripts/setup-skill-scanners.sh"
     install_skill_scanners "$tool_root" "$current_root/.venv/bin" "$repository_root"
+    static_scripts=$(RUNNER_TEMP="$tool_root" python3 -B "$repository_root/.github/scripts/static_quality_ci.py" tools)
     write_static_versions "$current_root/.venv/bin/python" next
     printf 'SKILL_QUALITY_PYTHON=%s/.venv/bin/python\nSKILL_QUALITY_TOOLS=%s\n' "$current_root" "$tool_root" >> "$GITHUB_ENV"
     printf 'XDG_CACHE_HOME=%s\nXDG_STATE_HOME=%s\nSKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE=%s/static-quality-provenance.key\n' \

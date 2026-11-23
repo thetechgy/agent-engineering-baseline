@@ -100,8 +100,10 @@ jobs:
         env:
           EVALUATOR_ADOPTION_CONTROLS: '1'
         run: |
-          "$SKILL_QUALIFICATION_PYTHON" -B .github/scripts/qualify_scanners.py \
-            --tools "$RUNNER_TEMP/skill-evaluation-tools" --evaluator-next --output "$RUNNER_TEMP/adoption-scanner-controls"
+          scanner_scripts=$(python3 -B .github/scripts/static_quality_ci.py tools)
+          "$SKILL_QUALIFICATION_PYTHON" -B "$scanner_scripts/qualify_scanners.py" \
+            --workspace "$GITHUB_WORKSPACE" --tools "$RUNNER_TEMP/skill-evaluation-tools" \
+            --evaluator-next --output "$RUNNER_TEMP/adoption-scanner-controls"
           EVALUATOR_ADOPTION_SCAN_OUTPUT="$RUNNER_TEMP/adoption-scanner-controls" \
             "$SKILL_QUALIFICATION_PYTHON" -B -m unittest discover -s .github/tests -p test_evaluator_adoption.py -v
       - name: Retain static adoption controls

@@ -17,6 +17,15 @@ import skill_evidence as evidence
 
 
 class StaticQualityRoutingTests(unittest.TestCase):
+    def test_active_scanner_runtime_matches_the_reviewed_semgrep_lock(self):
+        import static_evaluator as owner
+
+        lock = ROOT / '.github/requirements/semgrep.txt'
+        self.assertEqual(owner.SEMGREP_LOCK, evidence.digest_bytes(lock.read_bytes()))
+        if ISOLATED_SCRIPTS:
+            self.assertEqual(evidence.SCANNER_RUNTIME_STATIC_CANDIDATE['semgrep_lock'], owner.SEMGREP_LOCK)
+            self.assertEqual(evidence.SCANNER_RUNTIME_NEXT['semgrep_lock'], owner.SEMGREP_LOCK)
+
     def test_static_consumer_and_retained_native_boundary_have_explicit_separate_owners(self):
         jobs = yaml.safe_load((ROOT / '.github/workflows/validate.yml').read_text())['jobs']
         quality = jobs['skill-quality']
@@ -111,7 +120,7 @@ class StaticQualityRoutingTests(unittest.TestCase):
 
         active = evidence.SCANNER_RUNTIME_STATIC_CANDIDATE
         for invalid in (evidence.SCANNER_2136_INITIAL_NEXT, dict(active, semgrep_lock='sha256:' + 'a' * 64)):
-            with self.subTest(runtime=invalid):
+            with self.subTest(lock=invalid['semgrep_lock']):
                 record['scanner_runtime'] = invalid
                 with self.assertRaisesRegex(ValueError, 'scanner runtime|Scanner adapter'):
                     evidence.validate_public(record)
