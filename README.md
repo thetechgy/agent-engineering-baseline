@@ -544,6 +544,7 @@ exact external references:
 
 ```text
 astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
 benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc
 ```
 
@@ -553,9 +554,11 @@ Missing entries prevent jobs from starting. CI checks that this list matches the
 workflows; keep live repository settings synchronized.
 
 When updating an external action, update its workflow references and this list
-together. Add the new exact SHA to the live allowlist before validating the PR;
-remove the superseded SHA after merging. Branches that still use the old SHA
-must refresh from `main` before rerunning their workflows.
+together. Add the new exact SHA to the live allowlist before validating the PR.
+Remove a superseded SHA after the last workflow using it has been updated on
+`main`. Branches using a removed SHA must refresh from `main` before rerunning
+their workflows. Workflows bound to existing evaluation evidence still use the
+setup-uv v10.3.3 pin for reproducibility.
 
 Enable **Allow GitHub Actions to create and approve pull requests** for update PRs.
 The workflow never submits an approving review. For token-created PRs, a maintainer
