@@ -38,6 +38,12 @@ GHSA = r"GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}"
 MAX_BYTES = 4 * 1024 * 1024
 MAX_REPORT = 256 * 1024
 MAX_BODY = 60 * 1024
+SETUP_UV_EVALUATION_WORKFLOWS = {
+    ".github/workflows/codex-1691-qualification.yml",
+    ".github/workflows/codex-pilot.yml",
+    ".github/workflows/evaluation-campaign.yml",
+    ".github/workflows/pester-return-qualification.yml",
+}
 
 
 class DiscoveryError(Exception):
@@ -235,18 +241,27 @@ def inventory(root):
                         [str(error) if isinstance(error, DiscoveryError) else "invalid_apm_inventory"]))
     actions = {}
     for path in sorted((root / ".github/workflows").glob("*.y*ml")):
-        source = read(root, path.relative_to(root).as_posix())
-        for match in re.finditer(r"(?m)^\s*uses: ([A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+)@([^\s]+)", source):
+        member = path.relative_to(root).as_posix()
+        source = read(root, member)
+        for match in re.finditer(r"(?m)^[ \t]*(?:-[ \t]+)?uses:[ \t]+([A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+)@([^\s]+)", source):
             action, revision = match.groups()
-            actions.setdefault(action, []).append((revision, path.relative_to(root).as_posix(), source.count("\n", 0, match.start()) + 1))
+            held = action == "astral-sh/setup-uv" and member in SETUP_UV_EVALUATION_WORKFLOWS
+            line = source.count("\n", 0, match.start()) + 1
+            actions.setdefault((action, held), []).append((revision, member, line))
     require(bool(actions), "missing_actions")
-    for action, matches in sorted(actions.items()):
+    routine_actions = dependabot_scope(root, "github-actions", "/")
+    for (action, held), matches in sorted(actions.items()):
         revisions = {m[0] for m in matches}
         valid = len(revisions) == 1 and all(full(SHA, value) for value in revisions)
         item = dict(id="action-" + action.lower().replace("/", "-"), label=f"Action: {action}",
-                    owner=("Dependabot routine GitHub Actions version updates" if dependabot_scope(root, "github-actions", "/")
-                           else "Maintainer review"), hold=None, group="GitHub Actions",
+                    owner="Dependabot routine GitHub Actions version updates" if routine_actions else "Maintainer review",
+                    hold=None, group="GitHub Actions",
                     validation="Review the Dependabot PR, action permissions and exact-SHA CI; synchronize the external-action allowlist when required.")
+        if held:
+            item.update(id=item["id"] + "-evaluation-hold", label=f"Action: {action} (evaluation hold)",
+                        owner="Maintainer evaluation qualification",
+                        hold="These workflow bytes are bound to existing evaluation evidence.",
+                        validation="Preserve the workflow bytes or qualify a successor before changing the action pin.")
         pin = next(iter(revisions)) if valid else "Unknown"
         rows.append(row(item, {"version": None, "revision": pin if valid else None, "value": pin},
                         [{"path": path, "line": line} for _, path, line in matches], [] if valid else ["contradictory_action_pins"]))
