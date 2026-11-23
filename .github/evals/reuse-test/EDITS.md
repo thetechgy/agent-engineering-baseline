@@ -31,6 +31,7 @@ the measurement record.
 | `.github/scripts/skill_report.py` | 3 | 3 | Report | Preserve Pester effectiveness rendering for the successor where the renderer lists profile IDs. | Yes. Report applicability could follow a registered profile family. |
 | `.github/scripts/skill_reports.py` | 8 | 6 | Report | Preserve only validated SHA-256 values when the existing redactor masks names of Podman support files. The existing gh publication rule stays in force. | The eligible capture profiles could be data. Typed validation and redaction remain executable. |
 | `.github/workflows/evaluation-campaign.yml` | 6 | 2 | Workflow and orchestration | Add the selector and route it through oracle and probe qualification. The new campaign has no experiment preparation or live protocol. Run the qualification contract tests. | Yes. The reviewed selector and available workflow phases could come from registration. |
+| `.github/scripts/qualify_model_callers.py` | 4 | 3 | Workflow and orchestration | Add the new selector registry to the wire-level check run by Validate. | Yes. The approved registry list could be read from the same registration. |
 | `.github/tests/test_judge_calibration.py` | 1 | 1 | Tests | Check the existing profiles against the current source identity. | The expected successor can be resolved from reviewed registration. |
 | `.github/tests/test_podman_storage.py` | 118 | 0 | Tests | Check the controls, separate inventory and dataset identities, forged capture rejection, and source successors. | The controls are data. The negative checks exercise the admission code. |
 
@@ -39,11 +40,11 @@ the measurement record.
 | Runner-coupled | 3 | 8 | 2 |
 | Evidence and registry | 2 | 526 | 14 |
 | Report | 3 | 12 | 10 |
-| Workflow and orchestration | 1 | 6 | 2 |
+| Workflow and orchestration | 2 | 10 | 5 |
 | Tests | 2 | 119 | 1 |
-| **Total** | **11** | **671** | **29** |
+| **Total** | **12** | **675** | **32** |
 
-Runner-coupled changes account for 10 of 700 changed lines. The runner
+Runner-coupled changes account for 10 of 707 changed lines. The runner
 comparison stays after items 10 through 12.
 
 The five earlier adapters share scheduling, arm matching, and grading
