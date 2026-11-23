@@ -13,12 +13,12 @@
     {
       "skill": "powershell-pester-6",
       "case": "pester-transfer-batch-v1",
-      "decision": "Keep current guidance. Defer the 22-line revision.",
+      "decision": "Keep current guidance. Close this case on GPT-6.2 Sol.",
       "attribution": {
-        "label": "PR #151 transfer decision",
-        "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/2a6c58d95643d0186953b1d3dd83d3577e9971c2/docs/evaluations/pester-transfer-decision/execution-v6/EXECUTION.md#L1-L8"
+        "label": "0.171.0 live run",
+        "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45106823638"
       },
-      "caption": "Transfer · frozen primary success",
+      "caption": "Transfer · GPT-6.1 Sol · frozen primary success",
       "rows": [
         {
           "label": "Current",
@@ -73,10 +73,15 @@
       },
       "development": {
         "case": "pester-004",
-        "caption": "Development · pester-exploratory-004-boolean (five defects) · Codex CLI 0.167.0 / High",
+        "caption": "Development · pester-exploratory-004-boolean (five defects)",
         "rows": [
           {
-            "label": "Current · GPT-6.2 Sol",
+            "label": "Current · GPT-6.2 Sol · CLI 0.171.0",
+            "source": "sha256:169a9bf3e6d55ebd865ad5bf1fe8ac8e4264e0b288e40fab8225f3b12d8d1036",
+            "metric": null
+          },
+          {
+            "label": "Current · GPT-6.2 Sol · CLI 0.167.0",
             "source": "sha256:9cd92deb7728e7cca2a5dd76b25aa5356ba1939c610902971d601d3cadb9728b",
             "metric": null
           },
@@ -93,10 +98,10 @@
         ],
         "notes": [
           {
-            "text": "On GPT-6.2 Sol, all six submissions passed the reference and caught all five defects, including integer-result.",
+            "text": "Both GPT-6.2 Sol pairs passed the reference and caught all five defects, including integer-result, in every submission.",
             "source": {
-              "label": "Stage 1 live evidence",
-              "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45076573933/artifacts/14775628245"
+              "label": "0.167.0 live run",
+              "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45076573933"
             }
           },
           {
@@ -122,14 +127,14 @@
           }
         ],
         "limit": {
-          "text": "The historical development and v6 transfer pairs used gpt-6.1-sol. The Stage 1 tie leaves skill benefit and other tasks unmeasured.",
+          "text": "The historical development and v6 transfer pairs used gpt-6.1-sol. The GPT-6.2 Sol ties cover one case and leave wider skill benefit unmeasured.",
           "source": {
             "label": "v6 transfer runtime records",
             "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/2a6c58d95643d0186953b1d3dd83d3577e9971c2/docs/evaluations/pester-transfer-decision/execution-v6/analysis/analysis.json"
           }
         },
         "example": {
-          "text": "Without skill, the test pipes Test-PortAllowed -Port $Port into Should-Be $Expected. The revision sample assigns the result to $actual, then uses Should-HaveType -Actual $actual -Expected ([bool]) and Should-Be -Actual $actual -Expected $Expected.",
+          "text": "On GPT-6.1 Sol, without skill, the test pipes Test-PortAllowed -Port $Port into Should-Be $Expected. The revision sample assigns the result to $actual, then uses Should-HaveType -Actual $actual -Expected ([bool]) and Should-Be -Actual $actual -Expected $Expected.",
           "source": {
             "label": "Development artifact",
             "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/42908510730/artifacts/13808015117"
@@ -137,17 +142,17 @@
         }
       },
       "next": {
-        "text": "Close this comparison on GPT-6.2 Sol and keep the current guidance.",
+        "text": "Close this comparison on Codex CLI 0.171.0 and keep the current guidance.",
         "source": {
-          "label": "Owner’s GPT-6.2 Sol decision rule",
-          "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/ee20727a5a6798c70a983e6f178565a889349794/docs/evaluations/pester-return-contract-development/DECISION-RULE.md"
+          "label": "0.171.0 decision rule",
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/27cd12f8558ff167154528241e19a6db462f87a4/.github/evals/pester-return-contract/DECISION-RULE-1710.md"
         }
       },
       "reconsider": {
-        "text": "A fresh comparison on a different task would be needed to assess wider effectiveness.",
+        "text": "Reopen this case if a verified production-runtime submission misses the return type.",
         "source": {
-          "label": "Owner’s GPT-6.2 Sol decision rule",
-          "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/ee20727a5a6798c70a983e6f178565a889349794/docs/evaluations/pester-return-contract-development/DECISION-RULE.md"
+          "label": "0.171.0 decision rule",
+          "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/27cd12f8558ff167154528241e19a6db462f87a4/.github/evals/pester-return-contract/DECISION-RULE-1710.md"
         }
       }
     },

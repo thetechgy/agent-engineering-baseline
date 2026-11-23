@@ -116,6 +116,13 @@ read saved diagnostics and reproduce the old qualifier.
 
 ## Pester clarification transfer decision
 
+**The 0.171.0 runtime recheck closed this case.** Current and matched no skill
+each passed 3/3 on GPT-6.2 Sol at High. All six submissions passed the reference
+and caught all five defects, including `integer-result`. The verified allocation
+closed at $0.3922755 in estimated usage. Keep the
+current guidance for this case.
+[0.171.0 execution receipt](../../docs/evaluations/pester-return-contract-development/stage-1-1710-sol62/EXECUTION.md).
+
 **Stage 1 closed for this case on GPT-6.2 Sol.** The current skill and its
 matched no-skill arm each passed 3/3 on Codex CLI 0.167.0 at High. Every
 submission passed the reference and caught all five defects, including
