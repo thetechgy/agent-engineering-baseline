@@ -1,0 +1,301 @@
+{
+  "run": 45106823638,
+  "run_attempt": 1,
+  "source": "27cd12f8558ff167154528241e19a6db462f87a4",
+  "campaign": "pester-return-development-current-v1-1710-sol62",
+  "workflow_conclusion": "success",
+  "live_artifact": 14788082674,
+  "artifact_digest": "sha256:b7871ae43cca05b899b3a8ada63ef4fa6952d654fe922a2c79adef9bd1b77336",
+  "allocation_consumed": true,
+  "authorized_slots": 6,
+  "native_projection_reproduced": true,
+  "report_reproduced": true,
+  "report_sha256": "9c3c6474576642a892c0f337d9438f0ceb2b4e1c4d4aabb9dc06885b3cbd97ad",
+  "ledger_state": "completed",
+  "primary_stop": null,
+  "cleanup_complete": true,
+  "report_failure": null,
+  "launched": 6,
+  "unlaunched_positions": [],
+  "arms": {
+    "current": {
+      "scheduled": 3,
+      "measured": 3,
+      "reference_correct": 3,
+      "passed": 3,
+      "type_misses": 0,
+      "known_estimated_usd": 0.1867982
+    },
+    "absent": {
+      "scheduled": 3,
+      "measured": 3,
+      "reference_correct": 3,
+      "passed": 3,
+      "type_misses": 0,
+      "known_estimated_usd": 0.2054773
+    }
+  },
+  "entries": [
+    {
+      "position": 1,
+      "case": "pester-004",
+      "trial": 1,
+      "variant": "current",
+      "state": "completed",
+      "measured": true,
+      "primary_success": true,
+      "type_miss": false,
+      "cleanup": true,
+      "native_exception": null,
+      "estimated_usd": 0.0559061,
+      "usage": {
+        "trial": "campaign-pester-004-attempt1__slot1",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.171.0-exec-json",
+        "n_input_tokens": 85131,
+        "n_cache_tokens": 69376,
+        "n_output_tokens": 959,
+        "n_cache_write_input_tokens": 15737,
+        "estimated_usd": 0.0559061,
+        "estimate_basis": "standard rates; 30-minute cache write assumption; long-context upper bound from cumulative input",
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "submission": {
+        "sha256": "caf94b1dc30bc80c199b3acb44e6748366c4e42e3156b5665cd15e29c36004b6",
+        "bytes": 587
+      },
+      "skill_access": {
+        "successful_full_read": true,
+        "deployed": true,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "outcome": "passed",
+      "reference_correct": true,
+      "defects": {
+        "above": 1,
+        "highest": 1,
+        "integer-result": 1,
+        "lowest": 1,
+        "zero": 1
+      }
+    },
+    {
+      "position": 2,
+      "case": "pester-004",
+      "trial": 1,
+      "variant": "absent",
+      "state": "completed",
+      "measured": true,
+      "primary_success": true,
+      "type_miss": false,
+      "cleanup": true,
+      "native_exception": null,
+      "estimated_usd": 0.0593965,
+      "usage": {
+        "trial": "campaign-pester-004-attempt1__slot2",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.171.0-exec-json",
+        "n_input_tokens": 112264,
+        "n_cache_tokens": 97825,
+        "n_output_tokens": 1353,
+        "n_cache_write_input_tokens": 14412,
+        "estimated_usd": 0.0593965,
+        "estimate_basis": "standard rates; 30-minute cache write assumption; long-context upper bound from cumulative input",
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "submission": {
+        "sha256": "3e9d857c6c48fe463cc645336192936da13269084e7c1b87a7d447f8a6d170bb",
+        "bytes": 559
+      },
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": false,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "outcome": "passed",
+      "reference_correct": true,
+      "defects": {
+        "above": 1,
+        "highest": 1,
+        "integer-result": 1,
+        "lowest": 1,
+        "zero": 1
+      }
+    },
+    {
+      "position": 3,
+      "case": "pester-004",
+      "trial": 2,
+      "variant": "absent",
+      "state": "completed",
+      "measured": true,
+      "primary_success": true,
+      "type_miss": false,
+      "cleanup": true,
+      "native_exception": null,
+      "estimated_usd": 0.0607811,
+      "usage": {
+        "trial": "campaign-pester-004-attempt2__slot3",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.171.0-exec-json",
+        "n_input_tokens": 114970,
+        "n_cache_tokens": 99921,
+        "n_output_tokens": 1318,
+        "n_cache_write_input_tokens": 15022,
+        "estimated_usd": 0.0607811,
+        "estimate_basis": "standard rates; 30-minute cache write assumption; long-context upper bound from cumulative input",
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "submission": {
+        "sha256": "32bfad40e26a51ad95f8d25a9f04f80bf8d4cdbb7efd96459eb9ccca3d23c58c",
+        "bytes": 544
+      },
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": false,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "outcome": "passed",
+      "reference_correct": true,
+      "defects": {
+        "above": 1,
+        "highest": 1,
+        "integer-result": 1,
+        "lowest": 1,
+        "zero": 1
+      }
+    },
+    {
+      "position": 4,
+      "case": "pester-004",
+      "trial": 2,
+      "variant": "current",
+      "state": "completed",
+      "measured": true,
+      "primary_success": true,
+      "type_miss": false,
+      "cleanup": true,
+      "native_exception": null,
+      "estimated_usd": 0.0654414,
+      "usage": {
+        "trial": "campaign-pester-004-attempt2__slot4",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.171.0-exec-json",
+        "n_input_tokens": 119574,
+        "n_cache_tokens": 102784,
+        "n_output_tokens": 1320,
+        "n_cache_write_input_tokens": 16766,
+        "estimated_usd": 0.0654414,
+        "estimate_basis": "standard rates; 30-minute cache write assumption; long-context upper bound from cumulative input",
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "submission": {
+        "sha256": "4fe4ee9dadc56f2f9ef6593cf5361dfea5106b712a1576bf23fe1da4c10f0068",
+        "bytes": 578
+      },
+      "skill_access": {
+        "successful_full_read": true,
+        "deployed": true,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "outcome": "passed",
+      "reference_correct": true,
+      "defects": {
+        "above": 1,
+        "highest": 1,
+        "integer-result": 1,
+        "lowest": 1,
+        "zero": 1
+      }
+    },
+    {
+      "position": 5,
+      "case": "pester-004",
+      "trial": 3,
+      "variant": "current",
+      "state": "completed",
+      "measured": true,
+      "primary_success": true,
+      "type_miss": false,
+      "cleanup": true,
+      "native_exception": null,
+      "estimated_usd": 0.0654507,
+      "usage": {
+        "trial": "campaign-pester-004-attempt3__slot5",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.171.0-exec-json",
+        "n_input_tokens": 89357,
+        "n_cache_tokens": 71947,
+        "n_output_tokens": 1474,
+        "n_cache_write_input_tokens": 17392,
+        "estimated_usd": 0.0654507,
+        "estimate_basis": "standard rates; 30-minute cache write assumption; long-context upper bound from cumulative input",
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "submission": {
+        "sha256": "726898ee2b9b1168066053cd19231e7c3c2d8c9fd6a721e4b40307668cc15a56",
+        "bytes": 573
+      },
+      "skill_access": {
+        "successful_full_read": true,
+        "deployed": true,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "outcome": "passed",
+      "reference_correct": true,
+      "defects": {
+        "above": 1,
+        "highest": 1,
+        "integer-result": 1,
+        "lowest": 1,
+        "zero": 1
+      }
+    },
+    {
+      "position": 6,
+      "case": "pester-004",
+      "trial": 3,
+      "variant": "absent",
+      "state": "completed",
+      "measured": true,
+      "primary_success": true,
+      "type_miss": false,
+      "cleanup": true,
+      "native_exception": null,
+      "estimated_usd": 0.0852997,
+      "usage": {
+        "trial": "campaign-pester-004-attempt3__slot6",
+        "completeness": "complete_turn",
+        "provenance": "codex-0.171.0-exec-json",
+        "n_input_tokens": 159878,
+        "n_cache_tokens": 141137,
+        "n_output_tokens": 2435,
+        "n_cache_write_input_tokens": 18708,
+        "estimated_usd": 0.08529969999999999,
+        "estimate_basis": "standard rates; 30-minute cache write assumption; long-context upper bound from cumulative input",
+        "billing": "provider-reported tokens; estimate, not invoice"
+      },
+      "submission": {
+        "sha256": "3a9d7ebece18d9c40de63761190318bb3a88bd31d87d9a0b7b00dc7ea5c28d47",
+        "bytes": 543
+      },
+      "skill_access": {
+        "successful_full_read": null,
+        "deployed": false,
+        "interpretation": "access only; no task quality or benefit implied"
+      },
+      "outcome": "passed",
+      "reference_correct": true,
+      "defects": {
+        "above": 1,
+        "highest": 1,
+        "integer-result": 1,
+        "lowest": 1,
+        "zero": 1
+      }
+    }
+  ],
+  "usage_complete": true,
+  "known_estimated_usd": 0.3922755,
+  "campaign_estimated_usd": 0.3922755
+}
