@@ -66,7 +66,11 @@ class PodmanStorageContract(unittest.TestCase):
             current = registry["profiles"][profile_id]
             parent = registry["profiles"][binding["parent"]]
             self.assertEqual(current, dict(parent, id=profile_id, runtime_digest=binding["runtime_digest"]))
-            purpose_id = profile_id if profile_id.startswith("campaign-") else "skill_effectiveness"
+            purpose_id = profile_id
+            if profile_id.startswith("pester-effectiveness-"):
+                purpose_id = "skill_effectiveness"
+            elif profile_id.startswith("pester-cli-pilot-retained-"):
+                purpose_id = "cli_pilot"
             actual = evidence.custom_input_identities(ROOT, current["skill_id"], purpose=purpose_id)
             self.assertEqual(actual["runtime_digest"], current["runtime_digest"], profile_id)
 
