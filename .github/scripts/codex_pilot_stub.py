@@ -160,6 +160,5 @@ class Refuse(BaseHTTPRequestHandler):
 
 
 with HTTPServer(('127.0.0.1', 8765), Refuse) as server:
-    if sys.argv[2] in ('case-observation', 'case-observation-priced'):
-        record.with_suffix('.ready').touch()
+    record.with_suffix('.ready').touch()
     server.serve_forever()

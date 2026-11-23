@@ -6,7 +6,8 @@
 | --- | --- |
 | Manual benchmark, scheduled planner and local `gh_evaluations.py benchmark` | The benchmark policy selects `gpt-6.2-sol` for Codex 0.171.0, runtime preflight, provider and standard verifier. The agent requests High. The 0.3.0 verifier sends Chat Completions with its reasoning parameter omitted. The three judge aliases and the CLI argument use the same selection. |
 | Single-case observation | The active 0.171.0 selector and the 0.169.1 rollback both send `gpt-6.2-sol` / High. |
-| Pilot, cohort, Boolean and Pester comparisons | Codex 0.167.0 sends `gpt-6.2-sol` / High. Select the campaign ending in `-sol62`. Direct preparation commands resolve to its versioned definition. |
+| New scored campaigns | Select the Codex 0.171.0 scored profile with `gpt-6.2-sol` / High. The first comparison is `pester-return-development-current-v1-1710-sol62`, with SkillEvaluator 0.8.0 and Harbor 0.24.0. |
+| Pilot, cohort and earlier Boolean and Pester comparisons | Their versioned `-sol62` selectors use Codex 0.167.0 with `gpt-6.2-sol` / High. |
 | gh runtime and permission campaigns | The `-sol62` successors use their qualified 0.155.1 CLI and send `gpt-6.2-sol` / High. Their deterministic verifiers make no model calls. |
 | Judge calibration and current-evaluator judge qualification | The 0.9.0 templates send `gpt-6.2-sol` with their configured Medium reasoning. Retry and schema fallback use the same model. |
 | Private skill review | `skill_review.py review` selects `gpt-6.2-sol` for the SDK token count and generation. Explicit authorization is required. Reasoning uses the provider default. |
@@ -63,14 +64,16 @@ metadata and the previous workspace stay protected.
 
 The ordinary `case-observation` selection resolves to the 0.171.0 definition. Select `case-observation-1691` to
 restore 0.169.1 with the same model and effort. Each definition binds its own preparation and protocol.
-Historical 0.155.1 and 0.167.0 campaign records retain their original identities. New scored runs on those CLIs
-use the corresponding `-sol62` selector.
+Historical 0.155.1 and 0.167.0 campaign records retain their original identities.
+[Scored campaign setup and qualification](campaigns/README.md#scored-campaigns-on-codex-cli-01710)
+covers the 0.171.0 successor.
 
 The six-slot Boolean effectiveness protocol, the gh-014 0.169.1 probe, and the retained Boolean slot replay
 all bind shared source bytes. Replay an original record from its producing revision and use the same CLI for
 raw rollouts. The prior default source is `fb9c8a0`. Source-v37 records the CLI-only promotion and source-v38
-records the shared model change. Both inherit their frozen fixture and grader contracts. The retained replay
-also binds the adapter digest for its revision.
+records the shared model change. Source-v39 adds the scored runtime and binds the changed
+shared adapter and workflow for future runs. The fixture and grader contracts carry forward.
+The retained replay also binds the adapter digest for its revision.
 [Upstream rollout replay contract](https://github.com/openai/codex/pull/61199).
 
 The production benchmark uses the SkillEvaluator 0.3.0 Docker dispatch patch. The trusted gh initializer reads the

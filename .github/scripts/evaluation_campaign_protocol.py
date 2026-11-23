@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from evaluation_campaign_selection import binding, location, registration
 
 from evaluation_campaign_core import require, schedule
-from evaluation_runtime import CODEX_OBSERVATION_PROFILES, ROOT, read_profile
+from evaluation_runtime import CODEX_OBSERVATION_PROFILES, CODEX_SCORED_1710_PROFILE, ROOT, read_profile
 import evaluator_profiles as profiles
 import skill_evidence as evidence
 import skill_reports as reports
@@ -124,7 +124,7 @@ def check(reference, staging, task, *, qualified=True):
                 for r in reports.read_json(directory / 'staging.json')}
     require(members(reference) == members(staging), 'Complete staged-member drift')
     if not qualified and read_profile(ROOT / task.definition['runtime_profile'])['profile']['id'] in (
-            'codex-090-diagnostic-v1', 'codex-090-diagnostic-v1-sol62', *CODEX_OBSERVATION_PROFILES):
+            'codex-090-diagnostic-v1', 'codex-090-diagnostic-v1-sol62', *CODEX_OBSERVATION_PROFILES, CODEX_SCORED_1710_PROFILE):
         from evaluation_codex import compare_probe_descriptors
         result = compare_probe_descriptors(reference, staging)
     else:

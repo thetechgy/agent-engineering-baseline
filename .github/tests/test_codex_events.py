@@ -60,6 +60,31 @@ class ExecEvents(unittest.TestCase):
         with self.assertRaisesRegex(UnsupportedCodexProtocol, "Unsupported native shell wrapper"):
             exec_trajectory(raw, self.adapter)
 
+    def test_scored_1710_admits_only_the_reviewed_native_shell_wrappers(self):
+        from evaluation_codex import UnsupportedCodexProtocol
+        from evaluation_runtime import read_profile
+
+        profile = ROOT / '.github/evals/campaigns/codex-1710-scored.json'
+        self.adapter.profile = read_profile(profile)['resolved']
+        self.adapter.task = SimpleNamespace(diagnostic_observation=False)
+        for shell, accepted in (('/bin/sh -c', True), ('/bin/bash -lc', True),
+                                ('/bin/bash -c', False), ('/bin/sh -i', False)):
+            with self.subTest(shell=shell):
+                command = shell + " 'printf fixture'"
+                item = {'id': 'cmd', 'type': 'command_execution', 'command': command}
+                events = self.stream(
+                    {'type': 'item.started', 'item': {**item, 'status': 'in_progress'}},
+                    {'type': 'item.completed', 'item': {**item, 'status': 'completed',
+                                                         'exit_code': 0, 'aggregated_output': 'fixture'}})
+                if accepted:
+                    trace = self.parse(events)
+                    self.assertEqual(trace.agent.version, '0.171.0')
+                    self.assertEqual(trace.extra['source'], 'codex-0.171.0-exec-json')
+                    self.assertEqual(trace.steps[0].tool_calls[0].arguments, {'command': 'printf fixture'})
+                else:
+                    with self.assertRaisesRegex(UnsupportedCodexProtocol, 'Unsupported native shell wrapper'):
+                        self.parse(events)
+
     def edit(self,status='completed',identity='edit',kind='add'):
         return {'id':identity,'type':'file_change','changes':[{'path':'/workspace/output/result.txt','kind':kind}],'status':status}
 
