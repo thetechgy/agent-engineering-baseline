@@ -5,6 +5,7 @@ The existing graders remain the authority. No scheduling or report renderer live
 import copy
 import hashlib
 import json
+import runpy
 from pathlib import Path
 import shlex
 import shutil
@@ -33,11 +34,14 @@ def load(path):
     if definition.get('adapter') == 'batch-summary-static-templates':
         from pester_static_templates_task import StaticTemplateBatchSummary
         adapters['batch-summary-static-templates'] = StaticTemplateBatchSummary
+    if definition.get('adapter') == 'podman-storage':
+        require(path == ROOT / '.github/evals/podman/storage/qualification.json', 'Unregistered Podman definition')
+        adapters['podman-storage'] = runpy.run_path(str(path.with_name('task.py')))['PodmanStorage']
     require(definition.get('adapter') in adapters, 'Unsupported task adapter')
     for key in ('id', 'skill', 'source_case'):
         require(__import__('re').fullmatch('[a-z0-9-]+', definition[key]), 'Invalid task identity')
     require(definition['authorized_live_attempts'] == 0, 'Campaign paid execution disabled')
-    require(path.resolve() == path and path.is_relative_to(ROOT / '.github/evals/campaigns'), 'Unregistered definition path')
+    require(path.resolve() == path and (path.is_relative_to(ROOT / '.github/evals/campaigns') or path == ROOT / '.github/evals/podman/storage/qualification.json'), 'Unregistered definition path')
     variants = definition['variants']
     require(type(variants) is list and len(variants) >= 2 and len({v['id'] for v in variants}) == len(variants)
             and all(__import__('re').fullmatch('[a-z0-9-]+', v['id']) and type(v['present']) is bool for v in variants), 'Invalid campaign variants')

@@ -17,6 +17,8 @@ def registry_path(identity):
         return ROOT / '.github/evals/campaigns/observation-selections.json'
     if identity == 'case-observation-1710':
         return ROOT / '.github/evals/campaigns/observation-1710-selections.json'
+    if identity == 'podman-storage-v1-1710-sol62':
+        return ROOT / '.github/evals/podman/storage/selections.json'
     if identity.endswith('-1710-sol62'):
         return ROOT / '.github/evals/campaigns/selections-1710-sol62.json'
     if identity.endswith('-sol62'):

@@ -1,0 +1,3 @@
+[Container]
+Image=docker.io/library/postgres:18
+Volume=db-data:/var/lib/postgresql/data

@@ -3378,6 +3378,7 @@ CUSTOM_REGISTRY = '.github/evals/custom-metrics.json'
 SOURCE_SUCCESSORS = '.github/evals/source-v37.json'
 MODEL_SUCCESSORS = '.github/evals/source-v38.json'
 SCORED_SUCCESSORS = '.github/evals/source-v39.json'
+CAMPAIGN_SOURCE_SUCCESSORS = '.github/evals/source-v40.json'
 CUSTOM_OUTCOMES = ('passed', 'failed', 'invalid', 'unsupported', 'timeout',
                    'infrastructure_error', 'interrupted', 'unknown')
 CUSTOM_MEASURED = ('passed', 'failed')
@@ -3462,8 +3463,13 @@ def frozen_registry(workspace=ROOT):
     registry = parse_json(read_bytes(workspace / CUSTOM_REGISTRY))
     closed(registry, ('schema_version', 'metrics', 'profiles', 'active_profiles'))
     require(type(registry['schema_version']) is int and registry['schema_version'] == 1, 'Custom registry version')
-    require(type(registry['metrics']) is dict and 0 < len(registry['metrics']) <= 32, 'Metric definition limit')
-    for native, definition in registry['metrics'].items():
+    validate_custom_metrics(registry['metrics'])
+    return registry
+
+
+def validate_custom_metrics(metrics):
+    require(type(metrics) is dict and 0 < len(metrics) <= 32, 'Metric definition limit')
+    for native, definition in metrics.items():
         token(native)
         closed(definition, ('native_name', 'id', 'title', 'definition', 'competency', 'unit', 'basis', 'aggregation', 'role'))
         require(definition['id'] == native, 'Metric identity mismatch')
@@ -3476,7 +3482,6 @@ def frozen_registry(workspace=ROOT):
         require(definition['unit'] == ('fraction' if definition['basis'] == 'ratio' else 'binary_score')
                 and definition['aggregation'] == 'mean_of_applicable_trial_values', 'Unsupported scoring definition')
         enum(definition['role'], ('diagnostic', 'mandatory_with_skill_gate'))
-    return registry
 
 
 def custom_registry(workspace=ROOT):
@@ -3498,7 +3503,7 @@ def custom_registry(workspace=ROOT):
         if 'adapter_sha256' in result.get('campaign', {}):
             result['campaign'] = dict(result['campaign'], adapter_sha256=version['replay_adapter'])
         profiles[successor] = result
-    for version_path in (MODEL_SUCCESSORS, SCORED_SUCCESSORS):
+    for version_path in (MODEL_SUCCESSORS, SCORED_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS):
         version = parse_json(read_bytes(workspace / version_path))
         sha(version['replay_adapter'])
         for successor, update in version['profiles'].items():
@@ -3518,6 +3523,13 @@ def custom_registry(workspace=ROOT):
                                          workspace_profile=parent['runtime']['workspace_profile'] + '-sol62')
             require(successor not in profiles, 'Duplicate runtime successor')
             profiles[successor] = result
+        if version_path == CAMPAIGN_SOURCE_SUCCESSORS:
+            require(not (registry['metrics'].keys() & version['new_metrics'].keys())
+                    and not (profiles.keys() & version['new_profiles'].keys()),
+                    'Duplicate campaign metric or profile')
+            registry['metrics'].update(version['new_metrics'])
+            validate_custom_metrics(registry['metrics'])
+            profiles.update(version['new_profiles'])
     registry['active_profiles']['gh'] = 'gh-deterministic-gate-v8'
     return registry
 
@@ -3577,7 +3589,7 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v42'
+        profile_id = 'pester-effectiveness-v43'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v23'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
@@ -3868,6 +3880,19 @@ def custom_staged_inputs(tasks, purpose):
     return [cases[key] for key in sorted(cases)]
 
 
+def custom_authored_digest(workspace, name, profile):
+    campaign_dataset = profile.get('campaign', {}).get('dataset')
+    if campaign_dataset is None:
+        return digest_bytes(read_bytes(workspace / '.github/evals' / name / 'evals/evals.json'))
+    closed(campaign_dataset, ('path', 'digest'))
+    member = campaign_dataset['path']
+    require(name == 'podman' and member == '.github/evals/podman/storage/eval.json',
+            'Unregistered campaign dataset path')
+    digest = digest_bytes(read_bytes(workspace / member))
+    require(digest == campaign_dataset['digest'] == profile['dataset_digest'], 'Authored dataset drift')
+    return digest
+
+
 def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, agent, execution_policy, numeric_excerpts=(), retrospective=None, scheduler_digest=None):
     """Prospective capture used by shared collection and credential-free qualification."""
     from importlib.metadata import version
@@ -3893,7 +3918,7 @@ def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, age
         src = selected_identity(workspace, profile, src)
     capture = {'schema_version': 1, 'skill': name, 'contract_digest': contract, 'purpose': purpose,
             'source': src, 'inputs': custom_source_manifest(workspace, name, purpose=purpose),
-            'authored_digest': digest_bytes(read_bytes(workspace / '.github/evals' / name / 'evals/evals.json')),
+            'authored_digest': custom_authored_digest(workspace, name, profile),
             'prepared_dataset_digest': identity(prepared),
             'case_ids': ids, 'tasks': sorted(task_rows, key=lambda row: (row['arm'], row['case_id'])),
             'attempts': attempts, 'agent': agent, 'execution_policy': execution_policy, 'numeric_excerpts': list(numeric_excerpts),
@@ -3923,16 +3948,23 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
         (('producer',) if profiles.candidate_revision(capture.get('evaluator_revision')) else ()) +
         (('retrospective',) if replay_purpose(capture.get('purpose')) else ()) +
         (('scheduler_digest',) if 'scheduler_digest' in capture else ()))
+    local_podman = name == 'podman' and campaign_purpose(capture.get('purpose'))
     if captured_state is not None:
         directories, states, members, budget = captured_state
         for source_root in (workspace / '.github/evals' / name, workspace / '.apm/skills' / name
-                            if name == 'powershell-pester-6' else workspace / '.agents/skills' / name):
+                            if name == 'powershell-pester-6' or local_podman else workspace / '.agents/skills' / name):
             for member in safe_tree(source_root, directory_identities=directories, directory_states=states, file_states=members):
                 read_bytes(member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
-        for registry_member in (CUSTOM_REGISTRY, SOURCE_SUCCESSORS, MODEL_SUCCESSORS):
+        for registry_member in (CUSTOM_REGISTRY, SOURCE_SUCCESSORS, MODEL_SUCCESSORS,
+                                SCORED_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS):
             read_bytes(workspace / registry_member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
-        helper = 'pester_evaluations.py' if name == 'powershell-pester-6' else 'gh_evaluations.py'
-        read_bytes(workspace / '.github/scripts' / helper, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
+        if local_podman:
+            for member in ('.apm/skills/podman/evals/evals.json', '.apm/skills/podman/evals/files/vendor-compose.yaml',
+                           '.apm/skills/podman/evals/files/vendor-web/Containerfile'):
+                read_bytes(workspace / member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
+        else:
+            helper = 'pester_evaluations.py' if name == 'powershell-pester-6' else 'gh_evaluations.py'
+            read_bytes(workspace / '.github/scripts' / helper, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
     profile, definitions, contract = custom_contract(name, workspace, purpose=capture.get('purpose'))
     require(bool(profile.get('campaign', {}).get('scheduler')) == ('scheduler_digest' in capture),
             'Missing or unexpected scheduler capture')
@@ -3942,7 +3974,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
     require(capture['inputs'] == custom_source_manifest(workspace, name, purpose=capture['purpose']), 'Approved custom input drift')
     identities = custom_input_identities(workspace, name, capture['inputs'], purpose=capture['purpose'])
     require(all(profile[key] == value for key, value in identities.items()), 'Unregistered grader, fixture or runtime version')
-    require(capture['authored_digest'] == profile['dataset_digest'] == digest_bytes(read_bytes(workspace / '.github/evals' / name / 'evals/evals.json')),
+    require(capture['authored_digest'] == profile['dataset_digest'] == custom_authored_digest(workspace, name, profile),
             'Authored dataset drift')
     producer = profiles.by_revision(capture['evaluator_revision'])
     if profile_family(profile) == 'gh-native-oracle-v1':
@@ -3983,13 +4015,17 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
     mapping = custom_case_mapping(profile, capture['purpose'])
     prepared = custom_prepared_entries(workspace, name, ids, capture['purpose'])
     require(capture['prepared_dataset_digest'] == identity(prepared), 'Prepared dataset identity mismatch')
-    source_root = workspace / ('.apm/skills' if name == 'powershell-pester-6' else '.agents/skills') / name
+    source_root = workspace / ('.apm/skills' if name == 'powershell-pester-6' or local_podman else '.agents/skills') / name
     if 'skill_source' in profile:
         from evaluation_evidence import selected_source
         source_root = selected_source(workspace, profile)
         require(capture['source']['source_path'] == source_root.relative_to(workspace).as_posix(), 'Campaign source path drift')
+    if local_podman:
+        configured = next(row['source'] for row in inventory(workspace)['skills']
+                          if row['source']['skill_id'] == name)
+        require(capture['source'] == configured, 'Podman source identity drift')
     require(capture['source']['skill_id'] == name
-            and capture['source']['owner'] == ('local' if name == 'powershell-pester-6' else 'upstream')
+            and capture['source']['owner'] == ('local' if name == 'powershell-pester-6' or local_podman else 'upstream')
             and (name != 'gh' or capture['source']['repository'] == 'cli/cli'
                  and capture['source']['revision'] == reports.benchmark_policy('gh')['upstream_revision']
                  and capture['source']['source_path'] == 'skills/gh')
@@ -4107,6 +4143,8 @@ def custom_measurements(definitions, case, outcome, native, details, references)
         require(type(details.get('negative_control_correct')) is int
                 and details.get('negative_control_correct') == native['negative_control_correct']
                 and outcome == ('passed' if native['negative_control_correct'] else 'failed'), 'Control outcome mismatch')
+    if measured and 'podman_postgres_storage' in native:
+        require(native['podman_postgres_storage'] == float(outcome == 'passed'), 'Podman storage outcome mismatch')
     if 'gh_gate' in native:
         require(native['gh_gate'] == float(all(value == 1 for key, value in native.items() if key != 'gh_gate')),
                 'Gate consistency')
@@ -4339,7 +4377,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                         'Custom-only trial contains standard judge metrics')
             if matched is not None and matched[1].get('score') is not None:
                 require(matched[1]['score'] == raw.get('overall'), 'Custom native attempt score mismatch')
-            detail = (reward or {}).get('details' if profile_family(profile) in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-retained-v3', 'pester-cli-pilot-retained-v4', 'pester-cli-pilot-retained-v5', 'pester-cli-pilot-retained-v6', 'pester-cli-pilot-v1', 'pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6', 'gh-native-oracle-v1') else 'custom_details', {}).get('outcome', {})
+            detail = (reward or {}).get('details' if profile_family(profile) in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-retained-v3', 'pester-cli-pilot-retained-v4', 'pester-cli-pilot-retained-v5', 'pester-cli-pilot-retained-v6', 'pester-cli-pilot-v1', 'pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6', 'gh-native-oracle-v1', 'podman-storage-v1') else 'custom_details', {}).get('outcome', {})
             outcome = detail.get('classification', 'unknown') if profile['grading'] == 'custom_only' else (
                 'failed' if native_trial_failed(trial, reward) else 'passed' if (reward or {}).get('custom_metrics', {}).get('gh_gate') == 1 else 'failed')
             if profile['grading'] == 'default_plus_custom' and native_trial_failed(trial, reward): outcome = 'unknown'
