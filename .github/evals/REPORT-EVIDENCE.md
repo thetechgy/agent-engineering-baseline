@@ -1381,7 +1381,7 @@ produces zero. Contextual links identify the skill and case where applicable.
 ### Review the retained Codex decisions
 
 Use the same saved-analysis and consolidated renderer with the report-only
-decision entry point. The checked-in reviewer input selects the three development
+decision entry point. The checked-in reviewer input selects four development
 and two transfer Pester pairs, their diagnostic replay, the completed permission
 pilot and the human-reviewed Podman case 4 observation. The opening gives the finding,
 the action and the evidence that would change it. Follow the receipt and run
@@ -1400,6 +1400,7 @@ inputs=(
   --input "$development/data/historical-development-current"
   --input "$development/data/pester-return-development-candidate-v1"
   --input "$development/stage-1-sol62/data"
+  --input "$development/stage-1-1710-sol62/data"
 )
 
 "$SKILL_NEXT_PYTHON" -B .github/scripts/skill_analysis.py \
@@ -1425,8 +1426,9 @@ receipt run and artifact IDs are positive integers. The original artifact
 archives and public bundle bytes were authenticated separately when retained.
 The private report withholds historical development counts when their receipt
 chain is unavailable or mismatched. The historical analysis also covers two excluded
-runs. The GPT-6.2 Sol development pair carries its own live scheduler witness.
-[Stage 1 execution receipt](../../docs/evaluations/pester-return-contract-development/stage-1-sol62/EXECUTION.md).
+runs. Each GPT-6.2 Sol development pair carries its own live scheduler witness.
+[0.167.0 execution receipt](../../docs/evaluations/pester-return-contract-development/stage-1-sol62/EXECUTION.md) ·
+[0.171.0 execution receipt](../../docs/evaluations/pester-return-contract-development/stage-1-1710-sol62/EXECUTION.md).
 
 To add a scheduler-backed pair for the same case, retain its public bundle and
 add a decision-table row sourced to its public record ID. Update the card's

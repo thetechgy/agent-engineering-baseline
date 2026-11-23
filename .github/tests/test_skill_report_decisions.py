@@ -18,8 +18,8 @@ MANIFEST = DOCS / 'report-decisions.json'
 TRANSFER_INPUTS = [TRANSFER / 'current', TRANSFER / 'candidate']
 DEVELOPMENT_INPUTS = [DEVELOPMENT / 'data' / name for name in
                       ('historical-development-current', 'pester-return-development-candidate-v1')]
-STAGE_ONE_INPUT = DEVELOPMENT / 'stage-1-sol62/data'
-ALL_INPUTS = TRANSFER_INPUTS + DEVELOPMENT_INPUTS + [STAGE_ONE_INPUT]
+STAGE_ONE_INPUTS = [DEVELOPMENT / name / 'data' for name in ('stage-1-sol62', 'stage-1-1710-sol62')]
+ALL_INPUTS = TRANSFER_INPUTS + DEVELOPMENT_INPUTS + STAGE_ONE_INPUTS
 analysis = decisions.analysis
 evidence = decisions.evidence
 
@@ -53,28 +53,30 @@ class DecisionReportTests(unittest.TestCase):
         inputs = ALL_INPUTS
         page = self.run_report(inputs)
         opening = page[:page.index(decisions.OVERVIEW_START.decode())]
-        self.assertIn('Keep current guidance. Defer the 22-line revision.', opening)
-        self.assertEqual(opening.count('>3/3<'), 7)
+        self.assertIn('Keep current guidance. Close this case on GPT-6.2 Sol.', opening)
+        self.assertEqual(opening.count('>3/3<'), 9)
         self.assertEqual(opening.count('>0/3<'), 3)
         pester = opening.split('<h3>powershell-pester-6</h3>', 1)[1].split('</article>', 1)[0]
-        self.assertIn('>Current · GPT-6.2 Sol</a></th><td>3/3</td><td>3/3</td>', pester)
+        for cli in ('0.171.0', '0.167.0'):
+            self.assertIn(f'>Current · GPT-6.2 Sol · CLI {cli}</a></th><td>3/3</td><td>3/3</td>', pester)
         self.assertIn('>Current · GPT-6.1 Sol</a></th><td>0/3</td><td>0/3</td>', pester)
         self.assertIn('>22-line revision · GPT-6.1 Sol</a></th><td>3/3</td><td>0/3</td>', pester)
-        self.assertIn('pester-exploratory-004-boolean (five defects) · Codex CLI 0.167.0 / High', pester)
+        self.assertIn('pester-exploratory-004-boolean (five defects)', pester)
+        self.assertIn('<caption>Transfer · GPT-6.1 Sol', pester)
         self.assertIn('On GPT-6.1 Sol, all six submissions in the current pair passed the reference and missed only integer-result.', pester)
         self.assertIn('The three no-skill submissions in the revision pair also passed the reference and missed only integer-result.',
                       pester)
         self.assertIn('The historical development and v6 transfer pairs used gpt-6.1-sol.', pester)
         self.assertIn('600-second deadline. The cause is unknown. That run is excluded from these counts.', pester)
         self.assertIn('Stopped run 42847531876', pester)
-        self.assertIn('On GPT-6.2 Sol, all six submissions passed the reference and caught all five defects, including integer-result.', pester)
-        self.assertIn('Close this comparison on GPT-6.2 Sol and keep the current guidance.', pester)
+        self.assertIn('Both GPT-6.2 Sol pairs passed the reference and caught all five defects, including integer-result, in every submission.', pester)
+        self.assertIn('Close this comparison on Codex CLI 0.171.0 and keep the current guidance.', pester)
         self.assertIn('Should-HaveType -Actual $actual -Expected ([bool])', pester)
         self.assertLess(pester.index('Keep current guidance.'), pester.index('<caption>Development'))
         self.assertLess(pester.index('<caption>Development'), pester.index('<caption>Transfer'))
         self.assertLess(pester.index('<caption>Transfer'), pester.index('All 12 transfer submissions'))
         self.assertEqual(opening.count('<h3>powershell-pester-6</h3>'), 1)
-        self.assertEqual(page.count('Live Codex execution with custom grading.'), 5)
+        self.assertEqual(page.count('Live Codex execution with custom grading.'), 6)
         self.assertNotIn('No agent or model judge was run', page)
         self.assertNotIn('Decision pending complete evidence', pester)
         self.run_report(inputs, name='html-repeat')
@@ -167,7 +169,7 @@ class DecisionReportTests(unittest.TestCase):
                     historical.write_bytes(historical_bytes + b' ')
                 else:
                     # Same admitted record IDs, different raw bytes from those in the historical analysis.
-                    inputs = [*TRANSFER_INPUTS, STAGE_ONE_INPUT]
+                    inputs = [*TRANSFER_INPUTS, *STAGE_ONE_INPUTS]
                     for original_bundle in DEVELOPMENT_INPUTS:
                         bundle = self.root / original_bundle.name
                         shutil.copytree(original_bundle, bundle)
@@ -177,15 +179,15 @@ class DecisionReportTests(unittest.TestCase):
                 page = self.run_report(inputs, path, name=mode)
                 opening = page.split(decisions.OVERVIEW_START.decode(), 1)[0]
                 self.assertEqual(opening.count('>Unknown</td><td>Unknown</td>'), 2)
-                self.assertEqual(opening.count('>3/3<'), 6)
+                self.assertEqual(opening.count('>3/3<'), 8)
                 self.assertIn('Development result</strong> · Decision pending complete evidence.', opening)
-                self.assertIn('Keep current guidance. Defer the 22-line revision.', opening)
+                self.assertIn('Keep current guidance. Close this case on GPT-6.2 Sol.', opening)
                 pester_card = opening.split('<h3>powershell-pester-6</h3>', 1)[1].split('</article>', 1)[0]
                 self.assertNotIn('<strong>Next step</strong> · Keep current guidance.', pester_card)
                 self.assertNotIn('<strong>What would change it</strong> · Keep current guidance.', pester_card)
                 self.assertIn('Synthetic qualification records also appear below.', page)
                 self.assertEqual(page.count('No agent or model judge was run'), 2)
-                self.assertEqual(page.count('Live Codex execution with custom grading.'), 3)
+                self.assertEqual(page.count('Live Codex execution with custom grading.'), 4)
 
     def historical_registration(self):
         registration, = evidence.read_json(MANIFEST)['historical_reports']
@@ -280,13 +282,13 @@ class DecisionReportTests(unittest.TestCase):
         sid = evidence.identity(record)
         manifest['decisions'][0]['rows'][0]['source'] = sid
         path.write_bytes(evidence.encoded(manifest))
-        page = self.run_report([fixture, TRANSFER / 'candidate', *DEVELOPMENT_INPUTS, STAGE_ONE_INPUT], path)
+        page = self.run_report([fixture, TRANSFER / 'candidate', *DEVELOPMENT_INPUTS, *STAGE_ONE_INPUTS], path)
         result = evidence.read_json(self.root / 'analysis/analysis.json')
         run = next(run for skill in result['skills'] for run in skill['behavioral_results'] if run['record_id'] == sid)
         self.assertTrue(run['custom']['complete_paired_population'])
         opening = page.split(decisions.OVERVIEW_START.decode(), 1)[0]
         self.assertIn('>Current</a></th><td>Unknown</td><td>Unknown</td>', opening)
-        self.assertEqual(page.count('Live Codex execution with custom grading.'), 4)
+        self.assertEqual(page.count('Live Codex execution with custom grading.'), 5)
         self.assertIn('Synthetic qualification records also appear below.', page)
         detail = page.split(f'<article class="run" id="{decisions.report.anchor("record", sid)}">', 1)[1]
         self.assertIn('No agent or model judge was run', detail.split('</article>', 1)[0])
@@ -297,7 +299,7 @@ class DecisionReportTests(unittest.TestCase):
         (path.parent / workspace).unlink()
         page = self.run_report(ALL_INPUTS, manifest=path)
         opening = page.split(decisions.OVERVIEW_START.decode(), 1)[0]
-        self.assertIn('Keep current guidance. Defer the 22-line revision.', opening)
+        self.assertIn('Keep current guidance. Close this case on GPT-6.2 Sol.', opening)
         self.assertIn('unlisted_directory', opening)
         self.assertIn('Decision pending complete evidence', opening)
         self.assertIn('Completed workspace comparison unavailable', opening)
@@ -568,5 +570,5 @@ class DecisionReportTests(unittest.TestCase):
         self.assertEqual(opening.count('>Unknown</td><td>Unknown</td>'), 3)
         self.assertEqual(opening.count('>3/3<'), 2)  # The other transfer pair remains measured.
         self.assertIn('Replay receipt missing.', opening)
-        for value in ('>Passed<', '>Failed<', 'Defer the 22-line revision', 'Keep the skill as-is'):
+        for value in ('>Passed<', '>Failed<', 'Close this case on GPT-6.2 Sol.', 'Keep the skill as-is'):
             self.assertNotIn(value, opening)

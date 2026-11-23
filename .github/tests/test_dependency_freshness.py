@@ -174,6 +174,42 @@ class FreshnessTests(unittest.TestCase):
                              "evaluation-runtime compatibility group" if id == "harbor" else "review-runtime compatibility group")
             self.assertTrue(row["policy"]["hold"])
 
+    def test_setup_uv_action_inventory_preserves_evaluation_holds(self):
+        action = "action-astral-sh-setup-uv"
+        _, rows, _ = fresh.inventory(ROOT)
+        routine, held = (next(row for row in rows if row["id"] == key)
+                         for key in (action, action + "-evaluation-hold"))
+        self.assertTrue(fresh.delegated(routine))
+        self.assertFalse(fresh.delegated(held))
+        self.assertTrue(held["policy"]["hold"])
+
+        held_paths = {f".github/workflows/{name}" for name in (
+            "codex-1691-qualification.yml", "codex-pilot.yml", "evaluation-campaign.yml",
+            "pester-return-qualification.yml",
+        )}
+        action_paths = {
+            path.relative_to(ROOT).as_posix() for path in (ROOT / ".github/workflows").glob("*.y*ml")
+            if "uses: astral-sh/setup-uv@" in path.read_text()
+        }
+        self.assertEqual({source["path"] for source in routine["sources"]}, action_paths - held_paths)
+        self.assertEqual({source["path"] for source in held["sources"]}, held_paths)
+
+        root = self.scratch()
+        for group in (routine, held):
+            revision = group["pin"]["revision"]
+            self.assertRegex(revision, r"^[0-9a-f]{40}$")
+            for source in group["sources"]:
+                lines = (root / source["path"]).read_text().splitlines()
+                self.assertIn("uses: astral-sh/setup-uv@" + revision, lines[source["line"] - 1])
+            member = root / group["sources"][0]["path"]
+            original = member.read_text()
+            with self.subTest(group=group["id"]):
+                member.write_text(original.replace("@" + revision, "@" + "0" * 40, 1))
+                _, changed, _ = fresh.inventory(root)
+                self.assertEqual({row["id"]: row["errors"] for row in changed if row["errors"]},
+                                 {group["id"]: ["contradictory_action_pins"]})
+                member.write_text(original)
+
     def test_independent_environments_are_visible_without_production_adoption(self):
         _, rows, _ = fresh.inventory(ROOT)
         by_id = {row['id']: row for row in rows}
