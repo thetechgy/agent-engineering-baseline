@@ -29,7 +29,9 @@ def qualify(root):
     config, _ = launch_config(root, {"position": 1, "trial": 1, "case": "pester-001",
                                      "arm": "with_skill"}, root / "pester-001")
     routes[pilot["cli"]].append(("pester-cohort", pilot, read_json(config)["agent"]["model_name"]))
-    choices = read_json(ROOT / ".github/evals/campaigns/selections-sol62.json")["campaigns"]
+    registries = ("selections-sol62.json", "selections-1710-sol62.json")
+    choices = {name for registry in registries
+               for name in read_json(ROOT / ".github/evals/campaigns" / registry)["campaigns"]}
     import yaml
     workflow = yaml.safe_load((ROOT / ".github/workflows/evaluation-campaign.yml").read_text())
     options = workflow.get("on", workflow.get(True))["workflow_dispatch"]["inputs"]["campaign"]["options"]
