@@ -565,8 +565,8 @@ def native_observation(trial, native, present, row, rows, *, output, live=False,
                 request['path'] == '/v1/responses' and request['model'] == selected['model']
                 and request['reasoning']['effort'] == selected['reasoning_effort']
                 and request['authorization_matches_sentinel'] is True
-                and {'exec_command', 'apply_patch'} <= set(request['tools']) for request in requests),
-                'Scored CLI did not advertise native tools and the expected provider settings')
+                and request['native_tool_route'] == 'functions.exec' for request in requests),
+                'Scored CLI request identity or native tool route drift')
             counts = row['usage']
             require([counts[key] for key in ('n_input_tokens', 'n_cache_tokens', 'n_cache_write_input_tokens',
                                             'n_output_tokens', 'estimated_usd')] == [300, 100, 50, 30, 0.000735],

@@ -523,8 +523,9 @@ six-slot schedule, grader, SkillEvaluator 0.8.0 and Harbor 0.24.0.
 [Decision rule](../pester-return-contract/DECISION-RULE-1710.md).
 
 The release profile verifies the CLI archive, executable and helpers. The
-non-forwarding preparation exercises the bundled catalog, real command and
-file-edit events, deterministic grading, cache reads and writes, and cleanup.
+non-forwarding preparation checks the bundled `functions.exec` tool declaration
+and exercises real command and file-edit events, deterministic grading, cache
+reads and writes, and cleanup.
 The scheduler exercises the ten declared completion and stop scenarios.
 Synthetic fault scenarios retain their fixture labels and native evidence.
 The two older observation selectors retain their existing runtime profiles.

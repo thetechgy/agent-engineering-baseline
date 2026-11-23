@@ -176,8 +176,11 @@ class PilotCodex(Codex):
             payload = base64.b64encode(raw).decode()
             commands = base64.b64encode(json.dumps(self.fixture_commands(payload)).encode()).decode()
             await self.probe_preflight(environment, env)
-            if self.profile['id'] in (CODEX_FIXTURE_PROFILE, CODEX_SCORED_1710_PROFILE) and scenario == 'success':
-                scenario = 'priced-success'
+            if scenario == 'success':
+                if self.profile['id'] == CODEX_SCORED_1710_PROFILE:
+                    scenario = 'scored-priced'
+                elif self.profile['id'] == CODEX_FIXTURE_PROFILE:
+                    scenario = 'priced-success'
             if getattr(self, 'observation_fixture', False):
                 scenario = ('case-observation-priced' if self.profile['id'] in CODEX_OBSERVATION_PROFILES
                             else 'case-observation')
