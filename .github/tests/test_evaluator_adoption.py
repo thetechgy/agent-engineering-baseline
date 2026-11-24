@@ -127,9 +127,14 @@ class AdoptionTests(unittest.TestCase):
         import skill_reports as reports
         import skill_review
         import skill_report_reviews
-        with self.assertRaises(ValueError):
-            reports.validate_benchmark_versions(dict(profiles.candidate_versions(profiles.NEXT), docker_compose='5.7.1'))
-        with self.assertRaises(ValueError):
+        from importlib.metadata import PackageNotFoundError, version
+        candidate = dict(profiles.candidate_versions(profiles.NEXT), skillevaluator=version('skillevaluator'),
+                         docker_compose=reports.POLICY['docker_compose'])
+        with self.assertRaisesRegex(ValueError, 'Installed evaluator/runtime version mismatch'):
+            reports.validate_benchmark_versions(candidate)
+        # The minimal data host omits model SDKs. A complete but mismatched
+        # evaluator environment also has to fail before constructing a client.
+        with self.assertRaises((ValueError, PackageNotFoundError)):
             skill_review.versions()
         with self.assertRaisesRegex(ValueError, 'Pinned validator environment required'):
             skill_report_reviews.load([Path('not-opened.json')], None)

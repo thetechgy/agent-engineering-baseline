@@ -170,7 +170,7 @@ jobs:
       - name: Validate native gh Docker boundary without inference or credentials
         run: '"$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_container_validation.py'
 
-      - name: Install pinned SkillEvaluator 0.9.0 data-only host
+      - name: Install pinned SkillEvaluator 0.9.0 behavioral qualification owner
         run: bash .github/scripts/setup-skillevaluator.sh candidate-next
 
       - name: Verify the trusted gh initializer selects the production Codex CLI
@@ -182,13 +182,19 @@ jobs:
         if: always()
         run: bash .github/scripts/setup-compose.sh cleanup
 
+      - name: Install pinned evaluator for public data
+        run: bash .github/scripts/setup-static-evaluator.sh data-host
+
       - name: Qualify data-only publisher and orchestration with retained rollback
         env:
           EVALUATOR_ADOPTION_CONTROLS: '1'
         run: |
-          "$SKILL_NEXT_PYTHON" -m unittest discover -s .github/tests -p test_skill_pages.py -v
-          "$SKILL_NEXT_PYTHON" -m unittest discover -s .github/tests -p test_skill_orchestration.py -v
-          PYTHONPATH=.github/tests "$SKILL_NEXT_PYTHON" -m unittest -v test_evaluator_adoption.AdoptionTests.test_released_status_keeps_confirmed_failure_and_missing_coverage test_evaluator_adoption.AdoptionTests.test_held_consumers_refuse_candidate_before_execution
+          scripts=$(python3 -B .github/scripts/static_quality_ci.py tools)
+          PUBLIC_REPORTING_SCRIPTS="$scripts" PYTHONPATH=.github/tests "$SKILL_DATA_PYTHON" -B -m unittest -v \
+            test_skill_pages.PagesTests.test_production_prepare_and_offline_cli_rebuild
+          "$SKILL_DATA_PYTHON" -B -m unittest discover -s .github/tests -p test_skill_orchestration.py -v
+          PYTHONPATH=.github/tests "$SKILL_NEXT_PYTHON" -m unittest -v test_evaluator_adoption.AdoptionTests.test_released_status_keeps_confirmed_failure_and_missing_coverage
+          PYTHONPATH=.github/tests "$SKILL_DATA_PYTHON" -m unittest -v test_evaluator_adoption.AdoptionTests.test_held_consumers_refuse_candidate_before_execution
 
       - name: Check candidate broker identity and unscored verifier findings
         env:
@@ -400,7 +406,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0 # Replay the reviewed 0.36.1 reset and rollback source.
+          fetch-depth: 0 # Replay the reviewed bootstrap upgrade and reset sources.
           persist-credentials: false
 
       - name: Acquire latest stable PowerShell
@@ -493,7 +499,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0 # Replay the reviewed 0.36.1 reset and rollback source.
+          fetch-depth: 0 # Replay the reviewed bootstrap upgrade and reset sources.
           persist-credentials: false
 
       - name: Acquire latest stable PowerShell

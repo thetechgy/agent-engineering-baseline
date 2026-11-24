@@ -14,7 +14,7 @@ and incomplete comparisons select every maintained PR check.
 | Native deadlines | Shared runtime, Pester and unknown inputs retain native coverage. The deadline harness and its focused tests select contracts and deadline only. |
 | Pester admission and replay | Shared runtime, Pester and unknown inputs retain admission. The dedicated admission controls and the three original/control/replay campaign definitions select contracts and admission only. |
 | Codex 0.169.1 fixture | Existing separate PR path filter and manual workflow. Its three fixture inputs and workflow select only contracts inside Validate. The fresh runner consumes the producer's exact artifact ID. |
-| Current evaluator | Existing manual workflow for evaluator, backend, oracle/grader, judge/accounting or gh lifecycle qualification. Run with `candidate-next=true` for 0.9.0. Six shards, both oracle cohorts and the fresh report consumer run together. Validate owns the duplicate 0.9.0 Pages and orchestration tests. |
+| Current evaluator | Existing manual workflow for evaluator, backend, oracle/grader, judge/accounting or gh lifecycle qualification. Run with `candidate-next=true` for 0.9.0. Six shards, both oracle cohorts and the fresh report consumer run together. Validate exercises Pages and orchestration with the released data host. |
 | Historical pilot and prospective preparation | Existing manual pilot with empty allocation inputs for changes needing exact CLI/grading replay, scheduler or prospective Pester preparation and fresh consumption. The full historical experiment is outside routine PR feedback. |
 
 Validate on main still feeds the report publisher and orchestration planner.

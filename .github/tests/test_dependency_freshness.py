@@ -152,7 +152,7 @@ class FreshnessTests(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
         for name in (fresh.CONFIG, "apm.yml", "apm.lock.yaml", ".apm-version", ".github/dependabot.yml",
-                     ".github/evals/evaluator-candidate.json", ".github/evals/evaluator-0.9.json", ".github/evals/codex-pilot-sol62.json", ".github/evals/codex-execution-090-sol62.json",
+                     "scripts/Invoke-Validation.ps1", ".github/evals/evaluator-candidate.json", ".github/evals/evaluator-0.9.json", ".github/evals/codex-pilot-sol62.json", ".github/evals/codex-execution-090-sol62.json",
                      ".github/evals/codex-execution-1710.json", ".github/evals/campaigns/case-observation-1710.json",
                      ".github/evals/campaigns/codex-1710-observation.json"):
             target = root / name
@@ -214,6 +214,9 @@ class FreshnessTests(unittest.TestCase):
         _, rows, _ = fresh.inventory(ROOT)
         by_id = {row['id']: row for row in rows}
         self.assertEqual(by_id['skillevaluator']['pin']['version'], '0.3.0')
+        from static_evaluator import REVISION, VERSION
+        self.assertEqual(by_id['released-evaluator']['pin'], {
+            'version': VERSION, 'revision': REVISION, 'value': VERSION})
         production = json.loads(by_id['production-environment']['pin']['value'])
         self.assertEqual((production['openai'], production['pydantic']), ('2.44.0', '2.13.4'))
         candidate = json.loads(by_id['candidate-environment']['pin']['value'])
@@ -263,6 +266,7 @@ class FreshnessTests(unittest.TestCase):
               if 'uses: astral-sh/setup-uv@' in p.read_text()
               and p.name != 'pester-return-qualification.yml'),
             ".github/scripts/setup-skillevaluator.sh",
+            ".github/scripts/setup-static-evaluator.sh",
         })
         for selector in definition["sources"]:
             with self.subTest(source=selector["path"]):
@@ -286,8 +290,9 @@ class FreshnessTests(unittest.TestCase):
         pin, sources = fresh.extract(ROOT, definition)
         self.assertEqual({source["path"] for source in sources}, {
             ".github/workflows/validate.yml", ".github/workflows/update-baseline.yml",
+            "scripts/Invoke-Validation.ps1",
         })
-        self.assertEqual(len(sources), 2)
+        self.assertEqual(len(sources), 3)
         for selector in definition["sources"]:
             for kind in ("missing", "duplicate", "conflicting"):
                 with self.subTest(source=selector["path"], kind=kind):

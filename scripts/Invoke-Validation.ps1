@@ -16,6 +16,7 @@ Windows CI).
 ./scripts/Invoke-Validation.ps1 -Suite Pester
 #>
 #Requires -Version 7.0
+#Requires -Modules @{ ModuleName = 'Pester'; RequiredVersion = '6.2.0' }, @{ ModuleName = 'PSScriptAnalyzer'; RequiredVersion = '1.25.0' }
 [CmdletBinding()]
 param(
     [Parameter()]
@@ -74,7 +75,15 @@ try {
 
     & shellcheck ./scripts/bootstrap.sh ./tests/bootstrap.sh
     if ($LASTEXITCODE -ne 0) { throw 'ShellCheck failed.' }
-    & rumdl check .
+    $rumdlPin = @(Select-String -LiteralPath '.github/requirements/rumdl.txt' -Pattern '^rumdl==([0-9]+\.[0-9]+\.[0-9]+) ')
+    if ($rumdlPin.Count -ne 1) { throw 'Expected one reviewed rumdl version in the Markdown linter lock.' }
+    $rumdlVersion = $rumdlPin[0].Matches[0].Groups[1].Value
+    $rumdl = Get-Command -Name rumdl -CommandType Application -ErrorAction Stop | Select-Object -First 1
+    $reported = & $rumdl.Source --version
+    if ($LASTEXITCODE -ne 0 -or $reported -cne "rumdl $rumdlVersion") {
+        throw "Select rumdl $rumdlVersion from .github/requirements/rumdl.txt before running full validation."
+    }
+    & $rumdl.Source check .
     if ($LASTEXITCODE -ne 0) { throw 'Markdown linting failed.' }
 
     & git diff --check

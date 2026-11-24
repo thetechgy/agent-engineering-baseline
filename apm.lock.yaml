@@ -1,6 +1,6 @@
 lockfile_version: '4'
-generated_at: '2026-11-22T00:29:34.194444+00:00'
-apm_version: 0.37.0
+generated_at: '2026-11-24T01:30:03.554770+00:00'
+apm_version: 0.38.1
 manifest_targets:
 - codex
 - copilot

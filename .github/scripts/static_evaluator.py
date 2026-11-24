@@ -1,4 +1,4 @@
-"""The opt-in Tier 1 producer identity and its frozen owning runtime."""
+"""The released Tier 1 producer identity and its owning runtime."""
 import hashlib
 import importlib.metadata
 import json
@@ -15,14 +15,13 @@ VERSIONS = {'skillevaluator': VERSION, 'evaluator_revision': REVISION, 'python':
             'harbor': '0.25.0', 'lock_sha256': LOCK, 'producer_profile': PRODUCER}
 
 
-def validate_owner(versions):
-    """Authenticate the released checkout and imports before using its native reports."""
+def validate_install():
+    """Authenticate the installed release, interpreter and lock."""
     import skillevaluator
 
-    if (any(versions.get(key) != value for key, value in VERSIONS.items())
-            or platform.python_version() != VERSIONS['python']
-            or any(importlib.metadata.version(key) != VERSIONS[key] for key in ('skillevaluator', 'harbor'))):
-        raise ValueError('Static candidate requires its pinned owning runtime')
+    if (platform.python_version() != VERSIONS['python']
+            or importlib.metadata.version('skillevaluator') != VERSION):
+        raise ValueError('Unexpected released evaluator environment')
     package = Path(skillevaluator.__file__).resolve().parent
     source = package.parent
     members = [path for path in package.rglob('*') if path.is_file() and '__pycache__' not in path.parts]
@@ -32,7 +31,15 @@ def validate_owner(versions):
              for path in members}
     digest = hashlib.sha256(json.dumps(files, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
     if digest != SOURCE or hashlib.sha256((source.parent / 'uv.lock').read_bytes()).hexdigest() != LOCK:
-        raise ValueError('Static candidate implementation or lock differs')
+        raise ValueError('Released evaluator implementation or lock differs')
+
+
+def validate_owner(versions):
+    """Authenticate the native producer and recorded versions."""
+    validate_install()
+    if (any(versions.get(key) != value for key, value in VERSIONS.items())
+            or importlib.metadata.version('harbor') != VERSIONS['harbor']):
+        raise ValueError('Static producer requires its pinned owning runtime')
     return {**VERSIONS, 'version': VERSION}
 
 

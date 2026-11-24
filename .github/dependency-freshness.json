@@ -31,7 +31,7 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Data-only reporting/orchestration adopted pinned 0.9.0 in #138 and complete static quality in merged #141. Offline-v3 finding retention and strict-dataset correction are merged. The focused behavioral-090-offline-v1 path qualifies native collection/recovery, evidence admission, public reporting and simulated history refusal; it does not switch production execution. Benchmarks, contracts/native gh, private reviews and exact historical replay retain their original owners. Frozen 0.8 experiments retain their owners. The retired 0.7.2 qualifier remains reproducible from Git. See EVALUATOR-090-95.md and docs/evaluations/behavioral-evidence-090.md. Merged #142 qualifies offline behavioral evidence only. Explicit gh-runtime-090-v1 prepares 0.9.0 / Harbor 0.25.0 with held production Codex/model settings; hosted preparation does not establish live provider or model-judge compatibility. Default benchmarks stay held; no allocation is reopened. See docs/evaluations/execution-runtime-090.md.",
+      "hold": "Static quality and public data use the released 1.0.1 owner. The 0.9.0 behavioral and judge qualification modes retain their separate locks and patches. Native benchmarks, current review and saved validators still bind the original native and review contracts. A successor must qualify native agent initialization, matched judging and grading, report admission and exact replay. Keep frozen campaigns and their evidence identities.",
       "group": "evaluation-runtime compatibility group",
       "tag_prefix": "v",
       "validation": "Review the versioned offline evidence contract, released semantics, native failure and missingness controls, retained reproduction and final selected CI. Live provider routing, judge accuracy and skill benefit require separate evidence and authorization.",
@@ -158,6 +158,11 @@
           "path": ".github/scripts/setup-skillevaluator.sh",
           "pattern": "^test .*uv --version.* = \\'(?P<version>[^\\']+)\\'$",
           "count": 1
+        },
+        {
+          "path": ".github/scripts/setup-static-evaluator.sh",
+          "pattern": "^test .*uv --version.* = \\'(?P<version>[^\\']+)\\'$",
+          "count": 1
         }
       ],
       "owner": "Maintainer review",
@@ -257,6 +262,11 @@
       "repo": "pester/Pester",
       "sources": [
         {
+          "path": "scripts/Invoke-Validation.ps1",
+          "pattern": "ModuleName = 'Pester'; RequiredVersion = '(?P<version>[^']+)'",
+          "count": 1
+        },
+        {
           "path": ".github/workflows/validate.yml",
           "pattern": "^  PESTER_VERSION: '(?P<version>[^']+)'$",
           "count": 1
@@ -278,6 +288,11 @@
       "label": "PSScriptAnalyzer",
       "repo": "PowerShell/PSScriptAnalyzer",
       "sources": [
+        {
+          "path": "scripts/Invoke-Validation.ps1",
+          "pattern": "ModuleName = 'PSScriptAnalyzer'; RequiredVersion = '(?P<version>[^']+)'",
+          "count": 1
+        },
         {
           "path": ".github/workflows/validate.yml",
           "pattern": "^  PSSCRIPTANALYZER_VERSION: '(?P<version>[^']+)'$",
@@ -325,7 +340,7 @@
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Benchmark execution, contracts/native gh and review/replay 0.3.0 owners retain Harbor 0.13.2. Maintained frozen 0.8 controls require 0.24.0. Data-only hosts and complete static quality already use pinned 0.9.0 / Harbor 0.25.0; the explicit behavioral evidence qualifier uses that same existing group. Production behavioral execution and live provider routing remain held. No forced override or historical rescore. Merged #142 qualifies offline behavioral evidence only. Explicit gh-runtime-090-v1 prepares 0.9.0 / Harbor 0.25.0 with held production Codex/model settings; hosted preparation does not establish live provider or model-judge compatibility. Default benchmarks stay held; no allocation is reopened. See docs/evaluations/execution-runtime-090.md.",
+      "hold": "Benchmark execution, contracts/native gh and review/replay 0.3.0 owners retain Harbor 0.13.2. Maintained frozen 0.8 controls require 0.24.0. Static quality uses SkillEvaluator 1.0.1 / Harbor 0.25.0. Public data jobs use 1.0.1 without Harbor. The explicit 0.9.0 behavioral and judge qualifiers retain Harbor 0.25.0. Production behavioral execution and live provider routing remain held. No forced override or historical rescore. Merged #142 qualifies offline behavioral evidence only. Explicit gh-runtime-090-v1 prepares 0.9.0 / Harbor 0.25.0 with held production Codex/model settings; hosted preparation does not establish live provider or model-judge compatibility. Default benchmarks stay held; no allocation is reopened. See docs/evaluations/execution-runtime-090.md.",
       "group": "evaluation-runtime compatibility group",
       "tag_prefix": "v",
       "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade.",

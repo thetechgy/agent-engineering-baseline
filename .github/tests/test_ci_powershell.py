@@ -259,6 +259,21 @@ class CIPowerShellTests(unittest.TestCase):
                             self.assertIn(f"Import-CIValidationModule -Name {module} -RequiredVersion $env:{variable}", source)
 
 class FrozenRuntimeOwnership(unittest.TestCase):
+    def test_weekly_refresh_uses_the_adopted_validation_runtime(self):
+        import yaml
+        workflow = yaml.safe_load((ROOT / '.github/workflows/update-baseline.yml').read_text())
+        steps = workflow['jobs']['generate']['steps']
+        acquire = next(step for step in steps if step['name'] == 'Acquire latest stable PowerShell')
+        self.assertIn('install_ci_powershell.py', acquire['run'])
+        self.assertIn('--github-env "$GITHUB_ENV"', acquire['run'])
+        self.assertNotIn('--runtime frozen-pester', acquire['run'])
+        for name in ('Install validation tools', 'Validate candidate update with reviewed CLI'):
+            step = next(step for step in steps if step['name'] == name)
+            self.assertLess(steps.index(acquire), steps.index(step))
+            self.assertEqual(step['if'], acquire['if'])
+            self.assertIn('& $env:CI_PWSH', step['run'])
+            self.assertIn('if ($LASTEXITCODE -ne 0) { throw', step['run'])
+
     def test_only_frozen_grader_step_selects_pinned_runtime(self):
         import yaml
         steps=yaml.safe_load((ROOT/'.github/workflows/validate.yml').read_text())['jobs']['linux']['steps']

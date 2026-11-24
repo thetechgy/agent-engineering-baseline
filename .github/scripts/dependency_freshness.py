@@ -315,6 +315,19 @@ def inventory(root):
                              owner="Maintainer environment qualification"),
                         {"version": None, "revision": None, "value": "Unknown"}, [],
                         [str(error) if isinstance(error, DiscoveryError) else "invalid_environment_profile"]))
+    released_path = ".github/scripts/static_evaluator.py"
+    released = dict(id="released-evaluator", label="SkillEvaluator (static quality and public data)",
+                    owner="Maintainer environment qualification", group="Independent runtime profiles",
+                    hold="Public data jobs install the base lock. Static quality also installs the scanner and strict-dataset extras.")
+    try:
+        pin, sources = extract(root, {**released, "sources": [
+            {"path": released_path, "symbol": "VERSION", "key": None, "field": "version"},
+            {"path": released_path, "symbol": "REVISION", "key": None, "field": "revision"},
+        ]})
+        rows.append(row(released, pin, sources))
+    except (DiscoveryError, OSError, SyntaxError) as error:
+        rows.append(row(released, {"version": None, "revision": None, "value": "Unknown"}, [],
+                        [str(error) if isinstance(error, DiscoveryError) else "invalid_source"]))
     # Existing informational rows expose independently owned environments. These
     # are source identities, not a second release/advisory polling mechanism.
     for id, label, path, note in (
@@ -323,10 +336,10 @@ def inventory(root):
          "Merged opt-in path; frozen qualification and experiment inputs remain unchanged. "
          "Harbor/Python/LiteLLM bounds come from the released evaluator manifest. "
          "SDK and other transitive freshness is not polled independently here."),
-        ("candidate-next-environment", "SkillEvaluator 0.9.0 static quality, data hosts and offline behavioral evidence",
+        ("candidate-next-environment", "SkillEvaluator 0.9.0 behavioral qualification and static rollback",
          ".github/evals/evaluator-0.9.json",
-         "Data-only reporting/orchestration adopted in #138; complete static quality adopted in #141. The focused behavioral evidence path is offline qualification only; "
-         "benchmarks/reviews/native replay retain their owners. Retained 0.8.0 and frozen experiments are unchanged. "
+         "The focused behavioral evidence path is offline qualification only. Static 1.0.1 superseded the #141 default. "
+         "The static comparison and explicit quality-next rollback retain 0.9.0. "
          "Harbor 0.25.0 is supported; Python <3.15 and LiteLLM <1.94 still constrain this group. "
          "Credential-free compatibility does not establish provider or skill benefit."),
         ("execution-next-environment", "Opt-in 0.9.0 behavioral execution preparation",
@@ -341,7 +354,8 @@ def inventory(root):
          "Changing this profile requires a new identity and credential-free observer qualification."),
         ("pilot-environment", "Frozen CLI pilot and campaign selectors",
          ".github/evals/codex-pilot-sol62.json",
-         "Active pilot, Boolean and Pester campaign successors select Codex 0.167.0 / gpt-6.2-sol / high. "
+         "The pilot, Boolean and explicitly selected Pester comparisons use Codex 0.167.0 / gpt-6.2-sol / high. "
+         "The qualified scored Pester development successor and Podman storage campaign select 0.171.0 / High. "
          "PRs #130 and #132 remain separate; transfer stopped at unsupported/test_name_template. "
          "Do not resume or repair admission in dependency maintenance."),
         ("scanner-environment", "Independent SkillSpector SDK environment",

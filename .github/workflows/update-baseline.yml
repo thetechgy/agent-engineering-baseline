@@ -44,13 +44,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          release="$(gh api repos/microsoft/apm/releases/latest --jq '[.tag_name, .published_at] | join(" ")')"
+          release="$(gh api repos/microsoft/apm/releases/latest --jq 'select(.draft == false and .prerelease == false) | [.tag_name, .published_at] | join(" ")')"
           [ "$(printf '%s\n' "$release" | awk 'END { print NR }')" -eq 1 ]
           latest="${release%% *}"
           latest="${latest#v}"
           published_at="${release#* }"
           printf '%s\n' "$latest" |
-            grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(a[0-9]+|b[0-9]+|rc[0-9]+)?$'
+            grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'
           printf '%s\n' "$published_at" |
             grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$'
           # Cardinality and the strict allowlists above make these outputs injection-safe.
@@ -198,14 +198,23 @@ jobs:
           fi
           git diff --cached --binary > "$RUNNER_TEMP/baseline.patch"
 
+      - name: Acquire latest stable PowerShell
+        if: steps.changes.outputs.changed == 'true'
+        shell: bash
+        run: python3 -B .github/scripts/install_ci_powershell.py --destination "$RUNNER_TEMP/baseline-ci-pwsh" --github-env "$GITHUB_ENV"
+
       - name: Install validation tools
         timeout-minutes: 5
         if: steps.changes.outputs.changed == 'true'
         shell: pwsh
         run: |
-          . ./scripts/Install-CIValidationModule.ps1
-          Install-CIValidationModule -Name Pester -RequiredVersion $env:PESTER_VERSION
-          Install-CIValidationModule -Name PSScriptAnalyzer -RequiredVersion $env:PSSCRIPTANALYZER_VERSION
+          & $env:CI_PWSH -NoLogo -NoProfile -NonInteractive -Command {
+            $ErrorActionPreference = 'Stop'
+            . ./scripts/Install-CIValidationModule.ps1
+            Install-CIValidationModule -Name Pester -RequiredVersion $env:PESTER_VERSION
+            Install-CIValidationModule -Name PSScriptAnalyzer -RequiredVersion $env:PSSCRIPTANALYZER_VERSION
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Validation tool installation failed.' }
 
       - name: Install hash-locked Markdown linter
         if: steps.changes.outputs.changed == 'true'
@@ -221,10 +230,14 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         shell: pwsh
         run: |
-          . ./scripts/Install-CIValidationModule.ps1
-          Import-CIValidationModule -Name Pester -RequiredVersion $env:PESTER_VERSION
-          Import-CIValidationModule -Name PSScriptAnalyzer -RequiredVersion $env:PSSCRIPTANALYZER_VERSION
-          ./scripts/Invoke-Validation.ps1
+          & $env:CI_PWSH -NoLogo -NoProfile -NonInteractive -Command {
+            $ErrorActionPreference = 'Stop'
+            . ./scripts/Install-CIValidationModule.ps1
+            Import-CIValidationModule -Name Pester -RequiredVersion $env:PESTER_VERSION
+            Import-CIValidationModule -Name PSScriptAnalyzer -RequiredVersion $env:PSSCRIPTANALYZER_VERSION
+            ./scripts/Invoke-Validation.ps1
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate validation failed.' }
 
       - name: Upload candidate patch
         if: steps.changes.outputs.changed == 'true'
@@ -334,7 +347,8 @@ jobs:
             '' \
             'Review the upstream release, all six replacement digests, dependency commits, and generated output diff before merging.' \
             '' \
-            'After reviewing the candidate changes, select **Approve workflows to run** in this pull request to start candidate CLI validation. Require all validation checks to pass before merging.' \
+            'If the CLI pin changed, regenerate with the hash-verified candidate CLI after reviewing it and include the resulting lock and generated outputs in the PR.' \
+            'Select **Approve workflows to run** to start candidate CI. Require all validation checks to pass before merging.' \
             '' \
             '## Changed files' \
             '' \

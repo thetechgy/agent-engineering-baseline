@@ -3,9 +3,10 @@
 `skill_evidence.py` inventories sources, reads selected pinned SkillEvaluator
 reports, and builds a separately validated public projection. It never invokes
 evaluations, graders, scanners, artifact scripts, recovery, or network retrieval.
-Use the existing pinned evaluator environment (Python 3.13, SkillEvaluator
-`0.3.0`, revision `ac0a04905100acdafc6c95829311a9739c340ff6`). No new dependencies
-are required.
+The examples below replay retained 0.3.0 inputs with their owning evaluator
+(Python 3.13, revision `ac0a04905100acdafc6c95829311a9739c340ff6`). For current
+quality artifacts, use the released static environment and isolated projection
+shown under [public bundle commands](#public-bundle-commands).
 
 ## Commands and outputs
 
@@ -219,15 +220,20 @@ retains its 1 MiB output bound; failures do not print partial findings
 summaries. No raw scanner prose, matched sensitive text, diagnostic exceptions,
 prompts or trajectories are added to Actions summaries.
 
-Representative offline commands, run from the checkout with the existing
-evaluator environment, are:
+### Public bundle commands
+
+Run these examples from the checkout. Load `SKILL_QUALITY_PYTHON` from
+`setup-static-evaluator.sh quality-static` for the current native quality
+artifact. Load `SKILL_EVALUATOR_PYTHON` from the benchmark setup for the
+retained 0.3.0 native benchmark.
 
 ```bash
 export GITHUB_WORKSPACE="$(pwd)"
-public_parent="$(mktemp -d /tmp/skill-public.XXXXXXXX)"
+public_parent="$(mktemp -d "${TMPDIR:-/tmp}/skill-public.XXXXXXXX")"
+static_scripts=$(python3 -B .github/scripts/static_quality_ci.py tools)
 
 # Native quality collection must cover every discovered local authored skill.
-"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py public-quality \
+"$SKILL_QUALITY_PYTHON" -B "$static_scripts/skill_reports.py" public-quality \
   /tmp/skill-quality "$public_parent/quality"
 
 # Replay the reviewed ten-case, twenty-attempt Podman extract without inference.
@@ -961,11 +967,11 @@ published metrics, and `gh-pages` remain unchanged by the public artifact handof
 reads data only: no history lookup, “latest” selection, network, inference,
 graders, scanners, subprocesses, skill edits, or publication. Public schema v1,
 native scoring, APM artifacts, workflows, artifact handoff, and history publishing
-remain unchanged. For data-only analysis use the existing `candidate-next` setup
-and `SKILL_NEXT_PYTHON` (SkillEvaluator 0.9.0); no dependency is added.
+remain unchanged. Use the [released data host](#private-offline-html-report)
+and its staged reporting tools for public analysis.
 
 ```bash
-"$SKILL_NEXT_PYTHON" .github/scripts/skill_analysis.py \
+"$SKILL_DATA_PYTHON" -B "$public_scripts/skill_analysis.py" \
   --input /tmp/public-quality \
   --input /tmp/public-benchmark \
   --output /tmp/new-analysis
@@ -1220,14 +1226,17 @@ saved analysis use bounded, strict, no-follow reads. Duplicate JSON keys, corrup
 or stale analysis, contradictory identities, extra public fields and unsafe
 inputs reject before output. Input state guards run again at publication.
 
-From the checkout, run `bash .github/scripts/setup-skillevaluator.sh candidate-next`
-with the setup environment variables described by that script, then load its
-`GITHUB_ENV` exports. Use `SKILL_NEXT_PYTHON` for base public analysis/rendering.
-Keep native normalization on each record's original evaluator interpreter
-(`SKILL_EVALUATOR_PYTHON` for 0.3, `SKILL_CURRENT_PYTHON` for retained 0.8).
-Private `--analyst-review` attachments require their original validator/review
-profile and interpreter; the 0.9 data host does not authorize those paths.
-The `reporting` setup still installs the original 0.3 and review owners.
+Set `GITHUB_WORKSPACE` to this checkout and `RUNNER_TEMP` to a fresh directory
+outside it. With the reviewed uv on `PATH`, run
+`bash .github/scripts/setup-static-evaluator.sh data-host` and load its
+`GITHUB_ENV` export. Stage the reporting tools with
+`public_scripts=$(python3 -B .github/scripts/static_quality_ci.py tools)`.
+Run public analysis and rendering with `SKILL_DATA_PYTHON` from that setup.
+
+Native normalization uses the record's original evaluator interpreter
+(`SKILL_EVALUATOR_PYTHON` for 0.3 and `SKILL_CURRENT_PYTHON` for retained 0.8).
+Private `--analyst-review` attachments require their original profiles and
+interpreters. The `reporting` setup installs the 0.3 and review environments.
 
 Data-only public rendering:
 
@@ -1235,12 +1244,12 @@ Data-only public rendering:
 report_parent="$(mktemp -d /tmp/skill-report.XXXXXXXX)"
 
 # Use previously obtained public bundles, not native diagnostic directories.
-"$SKILL_NEXT_PYTHON" -B .github/scripts/skill_analysis.py \
+"$SKILL_DATA_PYTHON" -B "$public_scripts/skill_analysis.py" \
   --input /tmp/skill-public-quality \
   --input /tmp/skill-public-benchmark \
   --output "$report_parent/analysis"
 
-"$SKILL_NEXT_PYTHON" -B .github/scripts/skill_report.py \
+"$SKILL_DATA_PYTHON" -B "$public_scripts/skill_report.py" \
   --input /tmp/skill-public-quality \
   --input /tmp/skill-public-benchmark \
   --analysis "$report_parent/analysis/analysis.json" \
@@ -1403,11 +1412,11 @@ inputs=(
   --input "$development/stage-1-1710-sol62/data"
 )
 
-"$SKILL_NEXT_PYTHON" -B .github/scripts/skill_analysis.py \
+"$SKILL_DATA_PYTHON" -B "$public_scripts/skill_analysis.py" \
   "${inputs[@]}" \
   --output "$report_parent/analysis"
 
-"$SKILL_NEXT_PYTHON" -B .github/scripts/skill_report_decisions.py \
+"$SKILL_DATA_PYTHON" -B .github/scripts/skill_report_decisions.py \
   "${inputs[@]}" \
   --analysis "$report_parent/analysis/analysis.json" \
   --decisions docs/evaluations/report-decisions.json \
@@ -1490,10 +1499,10 @@ for sample in podman static gh; do
   cp "$demo_parent/inventory/inventory.json" "$demo_parent/$sample/inventory.json"
   cp "$demo_parent/normalized-$sample/public-report.json" "$demo_parent/$sample/public-report.json"
 done
-"$SKILL_NEXT_PYTHON" -B .github/scripts/skill_analysis.py \
+"$SKILL_DATA_PYTHON" -B "$public_scripts/skill_analysis.py" \
   --input "$demo_parent/podman" --input "$demo_parent/static" \
   --input "$demo_parent/gh" --output "$demo_parent/analysis"
-"$SKILL_NEXT_PYTHON" -B .github/scripts/skill_report.py \
+"$SKILL_DATA_PYTHON" -B "$public_scripts/skill_report.py" \
   --input "$demo_parent/podman" --input "$demo_parent/static" \
   --input "$demo_parent/gh" --analysis "$demo_parent/analysis/analysis.json" \
   --output "$demo_parent/html"
@@ -1566,7 +1575,7 @@ not establish that it passed.
 ### Optional private analyst attachments
 
 Select the attachment's original review/validator interpreter instead of
-`SKILL_NEXT_PYTHON` before adding
+`SKILL_DATA_PYTHON` before adding
 `--analyst-review /tmp/private-attachments/podman.json` to the report command;
 repeat for another selected record. There is at most **one analyst report per
 record**, with up to eight separately supplied independent assessments of that
@@ -1807,7 +1816,7 @@ judgment tool over supplied evidence, with no retrieval, shell tools, grading,
 source edits, uploads, repository actions, or automatic publication. Existing
 public schema v1, analysis schema v1, measurements, scoring, workflows and APM
 artifacts are unchanged. For current reviews, use `SKILL_REVIEW_PYTHON` from
-`setup-skillevaluator.sh`: Python 3.13, OpenAI 2.54.0, Pydantic 2.14.2,
+`setup-skillevaluator.sh`: Python 3.13, OpenAI 2.54.0, Pydantic 2.14.3,
 SkillEvaluator 0.3.0. Its separately reviewed lock overlay leaves the evaluator,
 benchmark and historical-validator environments unchanged. See the
 [review-runtime qualification](REVIEW-RUNTIME-95.md).
@@ -2560,16 +2569,15 @@ binding. Unknown provenance and existing comparison restrictions remain explicit
 
 ### Offline reproduction
 
-Use the existing pinned Python 3.13 / SkillEvaluator 0.3.0 environment. CI's
-`bash .github/scripts/setup-skillevaluator.sh reporting` installs the frozen reporting
-dependencies without standalone scanners, Compose preflight, or evaluation execution.
+Use the [released data host and staged reporting tools](#private-offline-html-report).
 Copy the retained tree to a disposable directory outside the repository, then run:
 
 ```bash
+replay=$(mktemp -d "${TMPDIR:-/tmp}/skill-report-replay.XXXXXXXX")
 git clone --single-branch --branch gh-pages \
-  https://github.com/thetechgy/agent-engineering-baseline.git /tmp/skill-report-replay
-"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_pages.py build \
-  --site /tmp/skill-report-replay/benchmarks
+  https://github.com/thetechgy/agent-engineering-baseline.git "$replay/site"
+"$SKILL_DATA_PYTHON" -B "$public_scripts/skill_pages.py" build \
+  --site "$replay/site/benchmarks"
 ```
 
 Once a publication manifest is present, this revalidates bundles and hashes, rebuilds
