@@ -35,6 +35,7 @@ the measurement record.
 | `.github/workflows/evaluation-campaign.yml` | 6 | 2 | Workflow and orchestration | Add the selector and route it through oracle and probe qualification. The new campaign has no experiment preparation or live protocol. Run the qualification contract tests. | Yes. The reviewed selector and available workflow phases could come from registration. |
 | `.github/scripts/qualify_model_callers.py` | 4 | 3 | Workflow and orchestration | Add the new selector registry to the wire-level check run by Validate. | Yes. The approved registry list could be read from the same registration. |
 | `.github/tests/test_judge_calibration.py` | 1 | 1 | Tests | Check the existing profiles against the current source identity. | The expected successor can be resolved from reviewed registration. |
+| `.github/tests/test_pester_return_contract.py` | 15 | 0 | Tests | Exclude only the exact Podman registration, import and path addition from the historical Pester hash. | The expected registration could be data. The original hash check stays executable. |
 | `.github/tests/test_podman_storage.py` | 122 | 0 | Tests | Check the controls, separate inventory and dataset identities, forged capture rejection, and source successors. | The controls are data. The negative checks exercise the admission code. |
 
 | Class | Files | Added | Removed |
@@ -43,10 +44,10 @@ the measurement record.
 | Evidence and registry | 4 | 894 | 16 |
 | Report | 3 | 12 | 10 |
 | Workflow and orchestration | 2 | 10 | 5 |
-| Tests | 2 | 123 | 1 |
-| **Total** | **14** | **1047** | **34** |
+| Tests | 3 | 138 | 1 |
+| **Total** | **15** | **1062** | **34** |
 
-Runner-coupled changes account for 10 of 1081 changed lines. The runner
+Runner-coupled changes account for 10 of 1096 changed lines. The runner
 comparison stays after items 10 through 12.
 
 The five earlier adapters share scheduling, arm matching, and grading
