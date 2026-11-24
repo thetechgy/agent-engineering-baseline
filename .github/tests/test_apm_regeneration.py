@@ -24,7 +24,7 @@ class RegenerationTests(unittest.TestCase):
         self.source.mkdir()
         self.git("init", "--quiet")
         self.git("remote", "add", "origin", "https://github.com/example/baseline.git")
-        self.write("apm.lock.yaml", "locked\n")
+        self.write("apm.lock.yaml", "apm_version: 1.2.3\n")
         self.write("apm.yml", "source\n")
         self.write(".codex/config.toml", "reviewed config\n")
         self.write(".github/instructions/personal.instructions.md", "reviewed\n")
@@ -34,7 +34,9 @@ class RegenerationTests(unittest.TestCase):
         self.git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
                  "commit", "--quiet", "-m", "fixture")
         self.apm = self.root / "apm"
-        self.apm.write_text("#!/bin/sh\nexit 0\n")
+        self.apm.write_text('#!/bin/sh\n'
+                            '[ "$*" = --version ] || exit 23\n'
+                            'printf "%s\\n" "Agent Package Manager (APM) CLI version 1.2.3"\n')
         self.apm.chmod(0o755)
 
     def git(self, *arguments):
@@ -87,6 +89,13 @@ class RegenerationTests(unittest.TestCase):
         self.assertEqual(staged, self.git("diff", "--cached", "--binary"))
         self.assertEqual((self.source / ".apm-local/installation").read_text(), "original identity\n")
         self.assertEqual((self.source / "apm_modules/private").read_text(), "original modules\n")
+
+    def test_validate_rejects_a_stale_lockfile_generator_before_regeneration(self):
+        self.write("apm.lock.yaml", "apm_version: 1.2.4\n")
+        with patch.object(regeneration, "native_checks") as native, self.assertRaisesRegex(
+                RuntimeError, "does not match the recorded lockfile generator"):
+            regeneration.regenerate(self.source, self.apm, "validate")
+        native.assert_not_called()
 
     def test_generated_drift_fails_without_repairing_the_caller(self):
         self.write(".agents/skills/fixture/SKILL.md", "caller edit\n")
