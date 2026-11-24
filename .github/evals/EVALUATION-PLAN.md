@@ -173,20 +173,56 @@ for the legacy validator while it remains supported. Only the review test
 setup installs the hash-locked schema test dependencies. Protected
 evaluation and the production benchmark runtime remain gated separately.
 
+Pester package preparation in Validate now selects the exact 1.0.1
+candidate and its installed source, lock and backend. The former
+`--runtime retained` execution is available at the original Git revision.
+The 0.7.2 and 0.9.0 preparation modes keep their own pins. The later
+native Pester and Codex steps still qualify the current production owner.
+The local release route built the image and verified the pinned package
+versions. Rootless Podman failed automatic sidecar removal, and separate
+cleanup removed the task-owned resources. Hosted Docker teardown remains
+a gate for the replacement path.
+
+The next Podman fixture selects case 1 with one trial in each arm.
+Both arms use the released task projector and the explicit unprivileged
+agent. Its scope receipt binds the Git revision, Podman dataset, candidate
+lock, adapter and installer separately from the historical runtime identity.
+Local Podman trials used the digest-verified Codex 0.171.0 standalone
+archive and Harbor's preinstalled executable path. Both arms completed
+with two loopback Codex requests and three loopback verifier requests.
+
 | Maintained path | Retirement gate |
 | --- | --- |
 | `benchmark-skills.yml`, local `gh_evaluations.py benchmark`, standard and confirmation publication | Qualify the real executable, verifier, recovery and collector under the candidate, then bind its runtime files to the preapproval fingerprint and its publications to a new series. |
 | `setup-skillevaluator.sh` benchmark, reporting and quality, `validate.yml`, feature-branch preapproval | Move each remaining full-suite consumer to its owning runtime, then reject installation and invocation of 0.3.0 through maintained dispatch. |
-| `current-evaluator.yml`, manual candidate qualifiers, retained image preparation, Pester and gh validation | Use authenticated offline receipts for historical comparisons and qualify active native image recipes through their supported owners. |
+| `current-evaluator.yml`, manual candidate qualifiers, Pester and gh validation | Use authenticated offline receipts for historical comparisons and qualify active native image recipes through their supported owners. |
 | Private review generation and saved attachments | Adopt the pinned review setup after registering its future validator identity and replacing test-time historical generation. |
 | Pages, public reports, static quality, historical projections | Verify the mixed history, sealed bundles, expiry and redaction via the 1.0.1 data host. Recheck the reporting patches on a clean archive of the final commit. |
 
 The protected environment has a reviewer gate and no deployment branch
 restriction. The current confirmation input schedules three attempts per
 arm for each selected case. For the smallest maintained suite, that is 30
-task trials before preflight or judge calls. A smaller smoke needs an explicit
-bounded diagnostic selector with scope bound at preapproval and the final
-guard. Authorize that run separately after native fixture qualification.
+task trials before preflight or judge calls.
+
+The temporary `candidate-smoke` mode accepts only an initial manual
+Podman dispatch on the retirement branch, with `expected_revision` set
+to the exact reviewed SHA. The preapproval record and the protected
+job bind the same fingerprint. The protected job prepares the two
+checksummed tasks without credentials and verifies the same-run artifact
+and branch head before the provider step. It retains a bounded diagnostic
+receipt outside canonical history.
+
+The scope is Podman case 1, one Codex 0.171.0 trial in each arm using
+`gpt-6.2-sol` at High. The standard verifier uses the same model with
+reasoning omitted and transport retries disabled. The shared inference
+deadline is 15 minutes, with a five-minute agent phase per arm. The
+second arm requires observed first-arm agent usage at or below 120,000
+input and output tokens combined. The provider host is restricted to
+`api.openai.com`. Native agent requests and billed cost can vary with
+tool use and provider transport. At Standard short-context rates, a
+planning estimate of 400,000 input and 240,000 output tokens costs about
+$3.20. Authorize the exact live scope separately after the credential-free
+qualification gates. [OpenAI API pricing](https://developers.openai.com/api/docs/pricing)
 
 ## Model selection for new executions
 

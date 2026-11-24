@@ -116,8 +116,7 @@ class OfflineCodex(BenchmarkCodex):
         require(result.return_code == 0 and result.stdout.splitlines() == ["codex-cli " + self._version, "1000"],
                 "Agent identity, CLI or broker isolation drift")
 
-    async def install(self, environment):
-        self.record_startup("verify_package")
+    async def verify_package(self, environment):
         profile = read_json(PROFILE)
         expected = {"bin/codex": profile["cli_executable_sha256"], **profile["helper_sha256"]}
         require(self._version == profile["cli"], "Generated dispatch version drift")
@@ -129,6 +128,10 @@ class OfflineCodex(BenchmarkCodex):
         for name, sha in expected.items():
             result = await self.exec_as_root(environment, "sha256sum " + vendor + name)
             require(result.stdout.split()[0] == sha, "Container release bytes differ")
+
+    async def install(self, environment):
+        self.record_startup("verify_package")
+        await self.verify_package(environment)
         self.record_startup(self.identity_stage)
         await self.verify_trial_user(environment)
         self.record_startup("verify_network_isolation")
@@ -137,7 +140,10 @@ class OfflineCodex(BenchmarkCodex):
         require(inspected["HostConfig"]["NetworkMode"] == "none", "Fixture requires isolated networking")
         receipt = self.logs_dir.parent / "fixture-container.json"
         pending = receipt.with_suffix(".tmp")
-        write_json(pending, {"id": container})
+        identity = {"id": container}
+        if isinstance(self, OfflinePodmanCodex):
+            identity["project"] = inspected["Config"]["Labels"]["com.docker.compose.project"]
+        write_json(pending, identity)
         pending.replace(receipt)
 
         self.record_startup("start_loopback_provider")
@@ -160,6 +166,17 @@ class OfflineCodex(BenchmarkCodex):
 
 class OfflinePodmanCodex(OfflineCodex):
     identity_stage = "verify_trial_identity"
+
+    async def verify_package(self, environment):
+        from benchmark_podman import CODEX_ROOT, codex_members
+
+        profile = read_json(PROFILE)
+        require(self._version == profile["cli"], "Generated dispatch version drift")
+        for name, expected in codex_members(profile).items():
+            checked = await self.exec_as_root(environment, shlex.join(["sha256sum", f"{CODEX_ROOT}/{name}"]))
+            require(checked.return_code == 0 and checked.stdout.split()[0] == expected, "Podman Codex bytes differ")
+        # Exercise the released installer's preinstalled branch in the disconnected image.
+        await BenchmarkCodex.install(self, environment)
 
     async def verify_trial_user(self, environment):
         result = await self.exec_as_agent(environment, "codex --version && id -u && test ! -r /tests/entry.json")

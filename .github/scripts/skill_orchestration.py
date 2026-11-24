@@ -30,6 +30,26 @@ SUITES = ('podman', 'gh', 'powershell-pester-6')
 RUNTIME_FILES = ('.github/workflows/benchmark-skills.yml', '.github/scripts/setup-compose.sh',
                  '.github/scripts/setup-skillevaluator.sh', '.github/scripts/skill_reports.py',
                  '.github/patches/')
+CANDIDATE_RUNTIME_FILES = (
+    '.github/workflows/benchmark-skills.yml',
+    '.github/scripts/setup-compose.sh',
+    '.github/scripts/setup-static-evaluator.sh',
+    '.github/scripts/static_evaluator.py',
+    '.github/scripts/evaluator_profiles.py',
+    '.github/scripts/qualify_benchmark_101.py',
+    '.github/scripts/skill_pages.py',
+    '.github/scripts/skill_orchestration.py',
+    '.github/scripts/skill_reports.py',
+    '.github/scripts/qualify_codex_1691.py',
+    '.github/scripts/benchmark_podman.py',
+    '.github/scripts/benchmark_smoke.py',
+    '.github/evals/codex-execution-1710.json',
+    '.github/evals/evaluator-1.0.1-benchmark-candidate-v2.json',
+    '.github/evaluator-backends/build_wheel.py',
+    '.github/evaluator-backends/aeb_gh_fixture/',
+    '.github/evaluator-backends/candidate-101/',
+    '.github/patches/skillevaluator-v1.0.1-benchmark-request.patch',
+)
 SUITE_FILES = {'podman': ('.apm/skills/podman/',),
                'gh': ('.github/evals/gh/evals/', '.github/scripts/gh_evaluations.py',
                       '.github/evals/custom-metrics.json', '.github/scripts/skill_evidence.py'),
@@ -118,6 +138,14 @@ def sources(workspace, revision, files):
         require(set(subset(files, ('.agents/skills/' + name + '/',))) <= set(hashes), 'Unowned deployed file')
         result[name] = identity({'owner': owner['repo_url'], 'path': owner['virtual_path'], 'files': hashes})
     return result
+
+
+def candidate_podman_fingerprint(workspace, revision):
+    """Fingerprint the reviewed candidate inputs without changing historical lookups."""
+    files = manifest(workspace, revision)
+    prefixes = CANDIDATE_RUNTIME_FILES + SUITE_FILES['podman']
+    require(all(subset(files, (prefix,)) for prefix in prefixes), 'Missing candidate benchmark input')
+    return identity(subset(files, prefixes))
 
 
 def snapshots(workspace, revision):

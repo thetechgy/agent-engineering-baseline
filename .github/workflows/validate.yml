@@ -63,21 +63,21 @@ jobs:
         with:
           version: '0.13.9'
           enable-cache: false
-      - name: Install the existing pinned evaluator
+      - name: Install the pinned 1.0.1 package preparation owner
         timeout-minutes: 15
-        run: bash .github/scripts/setup-skillevaluator.sh benchmark
-      - name: Verify retained-runtime image preparation contracts
+        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-candidate
+      - name: Verify release-owned image preparation contracts
         env:
-          IMAGE_PREPARATION_RUNTIME: retained
-        run: '"$SKILL_EVALUATOR_PYTHON" -B -m unittest discover -s .github/tests -p test_image_preparation.py -v'
-      - name: Prepare pinned Pester packages under the retained owning runtime
+          IMAGE_PREPARATION_RUNTIME: release
+        run: '"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B -m unittest discover -s .github/tests -p test_image_preparation.py -v'
+      - name: Prepare pinned Pester packages with the release owner
         timeout-minutes: 23
-        run: '"$SKILL_EVALUATOR_PYTHON" .github/scripts/prepare_candidate_images.py --runtime retained --output "$RUNNER_TEMP/pester-package-preparation.json"'
+        run: '"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/prepare_candidate_images.py --runtime release --output "$RUNNER_TEMP/pester-package-preparation.json"'
       - name: Retain bounded preparation checkpoint
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: retained-pester-package-preparation-${{ github.run_attempt }}
+          name: release-pester-package-preparation-${{ github.run_attempt }}
           path: ${{ runner.temp }}/pester-package-preparation.json
           if-no-files-found: error
           retention-days: 14
@@ -85,6 +85,9 @@ jobs:
         run: |
           printf 'PREPARATION_COMPOSE_PLUGIN_ROOT=%s\n' "$COMPOSE_PLUGIN_ROOT" >> "$GITHUB_ENV"
           bash .github/scripts/setup-compose.sh
+      - name: Install the pinned evaluator for native benchmark regression
+        timeout-minutes: 15
+        run: bash .github/scripts/setup-skillevaluator.sh benchmark
       - name: Qualify native Pester execution and diagnostic containment
         id: qualification
         timeout-minutes: 30

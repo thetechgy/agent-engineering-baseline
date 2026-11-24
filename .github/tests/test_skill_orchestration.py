@@ -265,6 +265,100 @@ class OrchestrationTests(unittest.TestCase):
         self.assertTrue(result['shared_instructions_changed'])
         self.assertFalse(result['requests'])
 
+    def candidate_inputs(self):
+        members = git(ROOT, 'ls-files').splitlines()
+        members += ['.github/scripts/benchmark_podman.py', '.github/scripts/benchmark_smoke.py']
+        for member in orchestration.subset({name: ('100644', 'blob', '') for name in members},
+                                           orchestration.CANDIDATE_RUNTIME_FILES):
+            source = ROOT / member
+            target = self.workspace / member
+            if not target.exists():
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
+        return commit(self.workspace, 'Add candidate-owned inputs')
+
+    def test_candidate_fingerprint_binds_release_and_dataset_without_rewriting_historical_fingerprint(self):
+        before = orchestration.snapshots(self.workspace, self.api.main)[1]
+        revision = self.candidate_inputs()
+        fingerprint = orchestration.candidate_podman_fingerprint(self.workspace, revision)
+        self.assertEqual(before, orchestration.snapshots(self.workspace, revision)[1])
+        for member in ('.github/scripts/setup-static-evaluator.sh',
+                       '.github/evaluator-backends/candidate-101/benchmark_codex.py',
+                       '.apm/skills/podman/evals/evals.json'):
+            with self.subTest(member=member):
+                self.change(member)
+                changed = orchestration.candidate_podman_fingerprint(self.workspace, self.api.main)
+                self.assertNotEqual(fingerprint, changed)
+                fingerprint = changed
+        (self.workspace / '.github/evals/evaluator-1.0.1-benchmark-candidate-v2.json').unlink()
+        revision = commit(self.workspace, 'Remove the candidate release lock identity')
+        with self.assertRaisesRegex(ValueError, 'Missing candidate benchmark input'):
+            orchestration.candidate_podman_fingerprint(self.workspace, revision)
+
+    def test_compatibility_scope_requires_exact_initial_dispatch_and_preapproval(self):
+        import benchmark_smoke as smoke
+
+        revision = self.candidate_inputs()
+        env = dict(os.environ, GITHUB_SHA=revision, GITHUB_EVENT_NAME='workflow_dispatch',
+                   GITHUB_REF='refs/heads/' + smoke.BRANCH)
+        inputs = {'mode': smoke.MODE, 'skill': 'podman', 'expected_revision': revision}
+        record = smoke.reviewed_scope(self.workspace, env, inputs)
+        self.assertEqual(record['scope']['case'], '1')
+        self.assertEqual(record['scope']['arms'], ['with_skill', 'without_skill'])
+        self.assertEqual(record['scope']['planned_trials'], 2)
+        self.assertFalse(record['scope']['history_eligible'])
+        for updates in ({'mode': 'confirmation'}, {'skill': 'gh'}, {'expected_revision': 'f' * 40},
+                        {'request_id': 'autodispatch'}, {'planner_run_id': '20'}):
+            with self.subTest(updates=updates), self.assertRaises(ValueError):
+                smoke.reviewed_scope(self.workspace, env, {**inputs, **updates})
+        for updates in ({'GITHUB_RUN_ATTEMPT': '2'}, {'GITHUB_REF': 'refs/heads/main'},
+                        {'GITHUB_EVENT_NAME': 'push'}):
+            with self.subTest(updates=updates), self.assertRaises(ValueError):
+                smoke.reviewed_scope(self.workspace, {**env, **updates}, inputs)
+        run = self.api.run(30, orchestration.BENCHMARK, revision, status='in_progress')
+        run['head_branch'] = smoke.BRANCH
+        original_get = self.api.get
+        def feature_get(path):
+            if path == 'git/ref/heads/' + smoke.BRANCH:
+                return {'object': {'sha': self.api.main}}
+            return original_get(path)
+        self.api.main = revision
+        with patch.object(self.api, 'get', side_effect=feature_get):
+            with self.assertRaisesRegex(ValueError, 'Operational record unavailable'):
+                smoke.guard(self.api, record)
+            artifact = self.api.artifact(run, smoke.artifact_name(record), record)
+            smoke.guard(self.api, record)
+            altered = {**record, 'provider_policy': {}}
+            with self.assertRaisesRegex(ValueError, 'preapproval scope mismatch'):
+                smoke.guard(self.api, altered)
+            self.api.main = 'f' * 40
+            with self.assertRaisesRegex(ValueError, 'branch changed'):
+                smoke.guard(self.api, record)
+            artifact['expired'] = True
+            with self.assertRaisesRegex(ValueError, 'Operational record unavailable'):
+                smoke.guard(self.api, record)
+
+    def test_compatibility_workflow_is_manual_protected_and_excluded_from_history(self):
+        workflow = yaml.safe_load((ROOT / orchestration.BENCHMARK).read_text())
+        inputs = workflow.get('on', workflow.get(True))['workflow_dispatch']['inputs']
+        self.assertEqual(inputs['mode']['default'], 'standard')
+        self.assertIn('candidate-smoke', inputs['mode']['options'])
+        jobs = workflow['jobs']
+        job = jobs['evaluate-candidate']
+        self.assertEqual(job['environment'], {'name': 'skill-benchmark', 'deployment': False})
+        self.assertEqual(job['permissions'], {'contents': 'read', 'actions': 'read'})
+        self.assertNotIn('evaluate-candidate', jobs['publish-history']['needs'])
+        self.assertIn("inputs.mode != 'candidate-smoke'", jobs['evaluate']['if'])
+        steps = job['steps']
+        index = next(i for i, s in enumerate(steps) if s.get('id') == 'compatibility')
+        self.assertEqual(steps[index - 1]['id'], 'scope')
+        self.assertEqual(steps[index]['if'], "steps.scope.outputs.execute == 'true'")
+        self.assertEqual([s for s in steps if 'OPENAI_API_KEY' in s.get('env', {})], [steps[index]])
+        uploads = [s['with'] for s in steps if s.get('uses', '').startswith('actions/upload-artifact@')]
+        self.assertEqual(len(uploads), 1)
+        self.assertTrue(uploads[0]['name'].startswith('podman-101-compatibility-diagnostic-'))
+        self.assertTrue(uploads[0]['path'].endswith('/diagnostic.json'))
+
     def test_gh_competing_refresh_is_one_canonical_change_and_blocks_unreviewed_pin(self):
         lock_path = self.workspace / 'apm.lock.yaml'
         lock = yaml.safe_load(lock_path.read_text())

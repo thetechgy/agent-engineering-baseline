@@ -17,7 +17,7 @@ RUNTIME = os.environ.get('IMAGE_PREPARATION_RUNTIME',
                          'candidate' if os.environ.get('CANDIDATE_EVIDENCE_CHILD') == '1' else '')
 
 
-@unittest.skipUnless(RUNTIME in ('candidate', 'retained', 'current'), 'explicit owning-runtime qualification only')
+@unittest.skipUnless(RUNTIME in ('candidate', 'current', 'release'), 'explicit owning-runtime qualification only')
 class ImagePreparationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -57,7 +57,7 @@ class ImagePreparationTests(unittest.TestCase):
 
     def test_wrong_runtime_rejects_before_staging_or_docker(self):
         p = self.preparation
-        other = 'retained' if RUNTIME == 'candidate' else 'candidate'
+        other = 'release' if RUNTIME == 'candidate' else 'candidate'
         artifact = self.output / 'status.json'
         with patch.object(p, 'staged_task') as stage, patch.object(p, 'SkillEvaluatorSecureDockerEnvironment') as create:
             with self.assertRaisesRegex(RuntimeError, 'Unqualified'):

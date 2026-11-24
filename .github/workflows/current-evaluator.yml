@@ -388,7 +388,7 @@ jobs:
         run: |
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_podman.py \
-            --output "$RUNNER_TEMP/benchmark-101-podman"
+            --output "$RUNNER_TEMP/benchmark-101-podman" --revision "$GITHUB_SHA"
       - name: Verify offline standard and confirmation publication
         if: ${{ !cancelled() && matrix.suite == 'podman' }}
         run: |

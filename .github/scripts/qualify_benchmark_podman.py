@@ -102,40 +102,26 @@ def verifier():
     return result
 
 
-def run(root, present):
-    from skillevaluator.tier3.harbor.adapter import generate_harbor_tasks
+def run(root, present, case, assets, profile):
     from skillevaluator.tier3.harbor.runner import build_harbor_run_command
 
+    from benchmark_podman import compose_teardown_complete, stage_codex, stage_task
     from qualify_benchmark_101 import ROOT
-    from qualify_benchmark_codex import add_offline_assets
-    from skill_reports import POLICY, benchmark_options, read_json, require, write_json
+    from skill_reports import POLICY, read_json, require, write_json
 
     arm = 'with' if present else 'without'
     work = root / arm
-    options = benchmark_options('podman')
-    tasks = generate_harbor_tasks(ROOT / '.apm/skills/podman', work / 'generated', with_skill=present,
-                                  workspace_mode=options['workspace_mode'], grading_mode=options['grading_mode'],
-                                  custom_dockerfile_mode='disabled')
-    selected, = (task for task in tasks if str(read_json(task / 'tests/entry.json')['id']) == CASE)
-    staged = work / 'tasks'
-    staged.mkdir()
-    task = selected.rename(staged / selected.name)
+    task = stage_task(ROOT / '.apm/skills/podman', work, case=case, with_skill=present)
     descriptor = task / 'task.toml'
-    source = descriptor.read_text()
-    require('network_mode = "public"' in source, 'Unexpected released default networking')
-    require(source.count('[agent]') == 1, 'Unexpected released agent descriptor')
-    descriptor.write_text(source.replace('network_mode = "public"', 'network_mode = "no-network"')
-                          .replace('[agent]', '[agent]\nuser = "agent"'))
+    descriptor.write_text(descriptor.read_text().replace('network_mode = "public"', 'network_mode = "no-network"'))
     image = task / 'environment'
-    # The isolated default image does not carry npm. The normal Codex
-    # installer provisions it, which this fixture replaces.
-    with (image / 'Dockerfile').open('a') as build:
-        build.write('\nRUN apt-get -o Acquire::Retries=3 update && '
-                    'apt-get -o Acquire::Retries=3 install -y --no-install-recommends nodejs npm '
-                    '&& rm -rf /var/lib/apt/lists/*\n'
-                    'RUN useradd --create-home --uid 1000 agent && chown agent:agent /workspace/output\n')
-    add_offline_assets(image)
+    stage_codex(image, assets, profile)
+    (image / 'docker-compose.yaml').write_text('services:\n  main:\n    network_mode: none\n')
+    shutil.copy2(ROOT / '.github/scripts/codex_pilot_stub.py', image / 'reviewed/stub.py')
     shutil.copy2(Path(__file__), image / 'reviewed/podman_fixture.py')
+    with (image / 'Dockerfile').open('a') as build:
+        build.write('\nCOPY --chown=0:0 reviewed/stub.py reviewed/podman_fixture.py /opt/reviewed/\n'
+                    'RUN chmod a+r /opt/reviewed/stub.py /opt/reviewed/podman_fixture.py\n')
     verify = task / 'tests/test.sh'
     require(verify.read_text().splitlines()[-1] == 'python3 -I "${evaluator_dir}/eval.py"',
             'Released default verifier entry point changed')
@@ -146,13 +132,14 @@ def run(root, present):
                if present else 'test ! -e /workspace/skills/podman/SKILL.md && printf baseline')
     write_json(request, {'scenario': 'benchmark-priced', 'commands': [command]})
     job_name = 'podman-codex-' + arm
-    argv = build_harbor_run_command(dataset_path=staged, job_name=job_name, jobs_dir=root / 'jobs',
+    argv = build_harbor_run_command(dataset_path=task.parent, job_name=job_name, jobs_dir=root / 'jobs',
                                     agent='codex', model=MODEL, env_mode='aeb-benchmark-docker', n_concurrent=1)
     index = argv.index('--agent') + 1
     require(argv[index] == 'aeb_gh_fixture.benchmark_codex:BenchmarkCodex' and MODEL == POLICY['model']
             and 'reasoning_effort="high"' in argv, 'Unexpected isolated dispatch')
     argv[index] = 'qualify_benchmark_codex:OfflinePodmanCodex'
-    env = dict(os.environ, PYTHONPATH=str(ROOT / '.github/scripts'), BENCHMARK_CODEX_FIXTURE=str(request))
+    env = dict(os.environ, PYTHONPATH=str(ROOT / '.github/scripts'), PYTHONDONTWRITEBYTECODE='1',
+               BENCHMARK_CODEX_FIXTURE=str(request))
     subprocess.run(argv, env=env, timeout=480, check=True)
     result_path, = (root / 'jobs' / job_name).glob('*/result.json')
     result = read_json(result_path)
@@ -161,9 +148,10 @@ def run(root, present):
         category = exception['exception_type']
         raise ValueError(f'Podman native trial failed: {category}')
     trial = result_path.parent
-    container = read_json(trial / 'fixture-container.json')['id']
-    require(subprocess.run(['docker', 'container', 'inspect', container], capture_output=True).returncode != 0,
+    container = read_json(trial / 'fixture-container.json')
+    require(subprocess.run(['docker', 'container', 'inspect', container['id']], capture_output=True).returncode != 0,
             'Podman trial container survived cleanup')
+    teardown_complete = compose_teardown_complete(container['project'])
     verify_dir = trial / 'verifier'
     reward = read_json(verify_dir / 'skill_evaluator_reward.json')
     requests = read_json(verify_dir / 'judge-requests.json')
@@ -181,15 +169,26 @@ def run(root, present):
                 for step in trajectory['steps'] for call in step.get('tool_calls', [])),
             'Native command absent from collected trajectory')
     return {'codex_requests': len(codex), 'judge_requests': requests, 'accuracy': reward['accuracy'],
-            'skill_execution': reward.get('skill_execution'), 'cleanup': True}
+            'skill_execution': reward.get('skill_execution'), 'main_container_removed': True,
+            'teardown_complete': teardown_complete}
 
 
-def main(output):
+def main(output, case=CASE, revision=None):
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
 
+    from benchmark_podman import CODEX_PROFILE, SMOKE_CASE, scope
     from qualify_benchmark_101 import ROOT, fixture_owner
-    from skill_reports import require, write_json
+    from qualify_codex_1691 import acquire
+    from skill_reports import read_json, require, write_json
 
+    scope_receipt = None
+    if revision is not None:
+        from skill_orchestration import git
+
+        require(revision == git(ROOT, 'rev-parse', 'HEAD').decode().strip()
+                and not git(ROOT, 'status', '--porcelain=v1', '--untracked-files=all', '--ignored')
+                and case == SMOKE_CASE, 'Qualification requires the exact reviewed scope and clean checkout')
+        scope_receipt = scope(ROOT, revision)
     require(not any(os.getenv(key) for key in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'NVIDIA_API_KEY',
                 'SKILL_EVAL_LLM_API_KEY', 'CODEX_AUTH_JSON_PATH', 'CODEX_FORCE_AUTH_JSON', 'CODEX_API_KEY')),
             'Native Podman fixture requires a credential-free environment')
@@ -197,16 +196,23 @@ def main(output):
     require(root.resolve() == root and not root.is_relative_to(ROOT), 'Unsafe native fixture output')
     root.mkdir(exist_ok=False)
     with fixture_owner() as versions:
-        arms = {arm: run(root, present) for arm, present in (('with_skill', True), ('without_skill', False))}
+        assets = root / 'release'
+        assets.mkdir()
+        profile = read_json(CODEX_PROFILE)
+        acquire(profile, assets)
+        arms = {arm: run(root, present, case, assets, profile)
+                for arm, present in (('with_skill', True), ('without_skill', False))}
         collected = collect_harbor_results('podman', ['codex'], root / 'collected', root / 'jobs', expected_cases=1,
-            expected_case_ids=[CASE], expected_trials=1, n_attempts=1,
+            expected_case_ids=[case], expected_trials=1, n_attempts=1,
             agent_models={'codex': {'model': MODEL, 'source': 'fixture'}})
         conditions = collected['agents']['codex']['conditions']
         require(set(conditions) == set(arms) and all(c['execution_status'] == 'succeeded'
                 and c['scored_attempts'] == c['expected_attempts'] == 1 for c in conditions.values()),
                 'Native collector lost a Podman arm')
-    write_json(root / 'qualification.json', {'runtime': versions, 'case': CASE, 'workspace_mode': 'isolated',
-        'grading_mode': 'default', 'inference': False, 'arms': arms, 'collector': conditions})
+    write_json(root / 'qualification.json', {'runtime': versions, 'case': case, 'workspace_mode': 'isolated',
+        'grading_mode': 'default', 'inference': False, 'arms': arms, 'collector': conditions,
+        'codex_release': read_json(assets / 'integrity.json'), 'scope': scope_receipt})
+    require(all(arm['teardown_complete'] for arm in arms.values()), 'Native Podman trial left Compose resources')
 
 
 if __name__ == '__main__':
@@ -214,7 +220,13 @@ if __name__ == '__main__':
     options = parser.add_mutually_exclusive_group(required=True)
     options.add_argument('--verify', action='store_true')
     options.add_argument('--output', type=Path)
+    parser.add_argument('--revision', help='Bind the one-case scope to a clean Git checkout')
     args = parser.parse_args()
     if args.verify:
         raise SystemExit(verifier())
-    main(args.output)
+    if args.revision:
+        from benchmark_podman import SMOKE_CASE
+
+        main(args.output, case=SMOKE_CASE, revision=args.revision)
+    else:
+        main(args.output)

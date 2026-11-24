@@ -20,6 +20,15 @@ PRODUCER_PROFILE = RELEASE_CANDIDATE['id']
 
 
 @contextmanager
+def release_owner():
+    """Require the reviewed release installation in an explicit candidate process."""
+    with patch.object(profiles, 'CANDIDATES', (*profiles.CANDIDATES, RELEASE_CANDIDATE)):
+        versions = profiles.candidate_versions(RELEASE_CANDIDATE)
+        profiles.runtime(versions, owning=True)
+        yield versions
+
+
+@contextmanager
 def fixture_owner():
     """Extend the runtime registry in this credential-free qualification process."""
     import skill_evidence as evidence
@@ -33,10 +42,7 @@ def fixture_owner():
         else:
             native_file_check(path, spec, checks)
 
-    with (patch.object(profiles, 'CANDIDATES', (*profiles.CANDIDATES, RELEASE_CANDIDATE)),
-          patch.object(evals_spec, '_run_file_checks', check_captured_config)):
-        versions = profiles.candidate_versions(RELEASE_CANDIDATE)
-        profiles.runtime(versions, owning=True)
+    with release_owner() as versions, patch.object(evals_spec, '_run_file_checks', check_captured_config):
         yield versions
 
 
@@ -181,7 +187,7 @@ def main():
     with fixture_owner() as versions:
         if args.prepare_pester:
             from prepare_candidate_images import main as prepare
-            prepare(output, runtime='current')
+            prepare(output, runtime='release')
             return
         if args.native == 'gh':
             from gh_oracle_validation import main as qualify
