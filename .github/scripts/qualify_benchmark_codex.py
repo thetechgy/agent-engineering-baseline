@@ -33,7 +33,8 @@ CASE = "gh-001"
 PROFILE = gh.ROOT / ".github/evals/codex-execution-1710.json"
 ENDPOINT = "http://127.0.0.1:8765/v1"
 SENTINEL = "pilot-not-a-credential"
-VENDOR = "/opt/reviewed/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/"
+PACKAGE_ROOT = "/opt/reviewed/node_modules/"
+NATIVE_PACKAGE = "@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/"
 TRIAL_EXCEPTIONS = frozenset({
     "AgentSetupTimeoutError", "AgentTimeoutError", "CalledProcessError", "EnvironmentStartTimeoutError",
     "NonZeroAgentExitCodeError", "PermissionError", "RewardFileNotFoundError", "RuntimeError", "TimeoutError",
@@ -52,22 +53,47 @@ VERIFIER_MEMBERS = {
 }
 
 
-# Run as the trial user. Other UIDs' /proc/exe links are intentionally unreadable.
+def codex_vendor(*, hoisted):
+    prefix = PACKAGE_ROOT if hoisted else PACKAGE_ROOT + "@openai/codex/node_modules/"
+    return prefix + NATIVE_PACKAGE
+
+
+# Run as the trial user. The host may not receive logs until the trial exits.
+INTERRUPT_NOT_READY = 75
 INTERRUPT_AGENT = r"""
+import json
 import os
 from pathlib import Path
 import signal
 
+try:
+    with Path("/logs/agent/codex.txt").open("rb") as trace:
+        lines = trace.read(2 * 1024 * 1024).split(b"\n")[:-1]
+except FileNotFoundError:
+    raise SystemExit(75)
+for line in lines:
+    if not line.startswith(b"{"):
+        continue
+    event = json.loads(line)
+    if event.get("type") == "item.started" and event.get("item", {}).get("type") == "command_execution":
+        break
+else:
+    raise SystemExit(75)
+
 matches = []
 for proc in Path("/proc").glob("[0-9]*"):
     try:
-        if proc.stat().st_uid != os.getuid():
-            continue
         argv = (proc / "cmdline").read_bytes().split(b"\0")
-    except (FileNotFoundError, PermissionError):
-        continue
-    if len(argv) > 2 and argv[0].split(b"/")[-1] == b"codex" and argv[1] == b"exec":
+        if len(argv) <= 2 or argv[0].split(b"/")[-1] != b"codex" or argv[1] != b"exec":
+            continue
+        # /proc directory ownership reflects dumpability, not process identity.
+        uid = next(line.split()[1:3] for line in (proc / "status").read_bytes().splitlines()
+                   if line.startswith(b"Uid:"))
+        if uid != [str(os.getuid()).encode(), str(os.geteuid()).encode()]:
+            continue
         matches.append(int(proc.name))
+    except (FileNotFoundError, PermissionError, StopIteration):
+        continue
 if len(matches) != 1:
     raise RuntimeError(f"Expected one trial Codex exec, found {len(matches)}")
 os.kill(matches[0], signal.SIGINT)
@@ -91,9 +117,10 @@ class OfflineCodex(BenchmarkCodex):
         # npm omits the standalone archive's optional exec-server. Exercise the
         # installed package exactly as published, including its native launcher.
         del expected["bin/codex-exec-server"]
-        await self.exec_as_root(environment, "test ! -e " + VENDOR + "bin/codex-exec-server")
+        vendor = codex_vendor(hoisted=RELEASE)
+        await self.exec_as_root(environment, "test ! -e " + vendor + "bin/codex-exec-server")
         for name, sha in expected.items():
-            result = await self.exec_as_root(environment, "sha256sum " + VENDOR + name)
+            result = await self.exec_as_root(environment, "sha256sum " + vendor + name)
             require(result.stdout.split()[0] == sha, "Container release bytes differ")
         self.record_startup("verify_agent_identity_and_broker")
         result = await self.exec_as_agent(environment, "codex --version && id -u && test -S /run/gh-eval/gh.sock && test ! -r /opt/gh-eval/state/case.json")
@@ -102,7 +129,10 @@ class OfflineCodex(BenchmarkCodex):
         container = (await environment._run_docker_compose_command(["ps", "--quiet", "main"])).stdout.strip()
         inspected, = json.loads(subprocess.check_output(["docker", "inspect", container]))
         require(inspected["HostConfig"]["NetworkMode"] == "none", "Fixture requires isolated networking")
-        write_json(self.logs_dir.parent / "fixture-container.json", {"id": container})
+        receipt = self.logs_dir.parent / "fixture-container.json"
+        pending = receipt.with_suffix(".tmp")
+        write_json(pending, {"id": container})
+        pending.replace(receipt)
 
         self.record_startup("start_loopback_provider")
         # Every byte supplied to the native agent is public fixture data.
@@ -144,11 +174,12 @@ def stage(root, assets, present):
         reviewed.mkdir()
         # Keep packaged executables out of the broker's bounded task tree.
         # Install scripts are disabled and every executable is checked in install().
-        launcher = VENDOR + "bin/codex"
+        vendor = codex_vendor(hoisted=True)
+        launcher = vendor + "bin/codex"
         package = "@openai/codex@" + POLICY["codex"]
         install = ("RUN npm install --prefix /opt/reviewed --no-audit --no-fund --ignore-scripts "
                    "--install-strategy=hoisted --registry=https://registry.npmjs.org/ " + package + "\n"
-                   + "ENV PATH=" + VENDOR + "codex-path:$PATH\n")
+                   + "ENV PATH=" + vendor + "codex-path:$PATH\n")
     else:
         shutil.copytree(assets / "lib/node_modules", image / "reviewed/node_modules", symlinks=True)
         launcher = "/opt/reviewed/node_modules/@openai/codex/bin/codex.js"
@@ -218,7 +249,11 @@ def run(root, assets, present, *, interrupt=False):
         calls = [{"tool": "apply_patch", "expect_failure": False, "input":
             "*** Begin Patch\n*** Add File: output/result.json\n+" + output + "\n*** End Patch"}]
     fixture_file = root / "provider.json"
-    write_json(fixture_file, {"scenario": "benchmark-interruption" if interrupt else "benchmark-priced", "commands": calls})
+    # Hold the follow-up response even when Codex yields a running shell
+    # command to the model before the tool has finished.
+    if interrupt:
+        calls = ["printf pilot-command-started; sleep 120"]
+    write_json(fixture_file, {"scenario": "native-deadline" if interrupt else "benchmark-priced", "commands": calls})
     jobs = root.parent / "jobs"
     job_name = "gh-interrupted" if interrupt else "gh-codex-" + ("with" if present else "without")
     mode = "aeb-gh-fixture" if RELEASE else "docker"
@@ -246,13 +281,17 @@ def run(root, assets, present, *, interrupt=False):
             if interrupt:
                 deadline = time.monotonic() + 420
                 while time.monotonic() < deadline and job.poll() is None:
-                    log = next((jobs / job_name).glob("*/agent/codex.txt"), None)
-                    if log and '"item.started"' in log.read_text(errors="replace"):
-                        container = read_json(log.parent.parent / "fixture-container.json")["id"]
-                        subprocess.run(["docker", "exec", "--user", "agent", container,
-                                        "python3", "-c", INTERRUPT_AGENT], check=True)
-                        break
-                    time.sleep(.25)
+                    receipt = next((jobs / job_name).glob("*/fixture-container.json"), None)
+                    if receipt:
+                        container = read_json(receipt)["id"]
+                        signal_result = subprocess.run(
+                            ["docker", "exec", "--user", "agent", container, "python3", "-c", INTERRUPT_AGENT],
+                            capture_output=True, timeout=15,
+                        )
+                        if signal_result.returncode == 0:
+                            break
+                        require(signal_result.returncode == INTERRUPT_NOT_READY, "Could not confirm the native signal")
+                    time.sleep(.5)
                 else:
                     raise ValueError("No started native command to interrupt")
             require(job.wait(timeout=480) == 0 or interrupt, "Harbor job exited unsuccessfully")

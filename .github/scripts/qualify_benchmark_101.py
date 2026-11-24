@@ -15,7 +15,7 @@ import static_evaluator
 from skill_reports import POLICY, require
 
 ROOT = Path(__file__).resolve().parents[2]
-RELEASE_CANDIDATE = json.loads((ROOT / '.github/evals/evaluator-1.0.1-benchmark-candidate.json').read_text())
+RELEASE_CANDIDATE = json.loads((ROOT / '.github/evals/evaluator-1.0.1-benchmark-candidate-v2.json').read_text())
 PRODUCER_PROFILE = RELEASE_CANDIDATE['id']
 
 

@@ -23,7 +23,7 @@ def package_files(*, candidate_next=False, release_startup=False, benchmark_cand
         predicate = (root / owner / "require_runtime.py").read_text()
         files["backend.py"] = (backend[:start] + predicate + backend[end:]).encode()
         assert files["__init__.py"].count(b'VERSION = "1.0.0"') == 1
-        version = b'1.3.0' if benchmark_candidate else b'1.2.0' if release_startup else b'1.1.0'
+        version = b'1.3.1' if benchmark_candidate else b'1.2.0' if release_startup else b'1.1.0'
         files["__init__.py"] = files["__init__.py"].replace(b'VERSION = "1.0.0"', b'VERSION = "' + version + b'"')
     if benchmark_candidate:
         files["benchmark_codex.py"] = (root / "candidate-101/benchmark_codex.py").read_bytes()
@@ -37,7 +37,7 @@ def package_files(*, candidate_next=False, release_startup=False, benchmark_cand
 def build(destination, *, candidate_next=False, release_startup=False, benchmark_candidate=False):
     if sum((candidate_next, release_startup, benchmark_candidate)) > 1:
         raise ValueError("Select one backend runtime")
-    version = "1.3.0" if benchmark_candidate else "1.2.0" if release_startup else "1.1.0" if candidate_next else "1.0.0"
+    version = "1.3.1" if benchmark_candidate else "1.2.0" if release_startup else "1.1.0" if candidate_next else "1.0.0"
     metadata = f"aeb_gh_fixture-{version}.dist-info"
     files = package_files(candidate_next=candidate_next, release_startup=release_startup,
                           benchmark_candidate=benchmark_candidate)

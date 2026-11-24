@@ -82,6 +82,23 @@ class CandidateHarnessTests(unittest.TestCase):
 
 @unittest.skipUnless(os.environ.get('CANDIDATE_EVIDENCE_CHILD') == '1', 'opt-in candidate qualification only')
 class CandidateEvidenceTests(unittest.TestCase):
+    def test_local_codex_install_and_legacy_global_install_use_distinct_layouts(self):
+        from importlib.metadata import version
+
+        if version("skillevaluator") != "1.0.1":
+            self.skipTest("Requires the 1.0.1 benchmark candidate")
+
+        from qualify_benchmark_codex import codex_vendor
+
+        self.assertEqual(
+            codex_vendor(hoisted=True),
+            "/opt/reviewed/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/",
+        )
+        self.assertEqual(
+            codex_vendor(hoisted=False),
+            "/opt/reviewed/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/",
+        )
+
     def test_codex_setup_failure_without_container_receipt_keeps_primary_error(self):
         from importlib.metadata import version
 

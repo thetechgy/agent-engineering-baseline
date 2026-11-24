@@ -92,14 +92,38 @@ The candidate grader reads a converted trajectory and emits an unmeasured
 reward for the local missing-broker control. The hosted cause remains open.
 [Codex-only retry](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45421531862)
 
-The next Codex-only check requires scoped approval, with
-`benchmark-101-codex=true` and the three other inputs false. A bounded
-failure receipt identifies the staged evidence, exception category and any
-known verifier member involved. Qualification still requires both `gh-001`
-arms and one interrupted attempt. The pinned private-review candidate
-also validated synthetic report and Markdown bytes from a fixed source
-export. Register the new attachment identity separately from the original
-profiles before adopting it.
+The bounded receipt at `c8e26bc` found the Codex event log and no
+`trajectory.json`. The verifier failed opening that file. A local run
+through Harbor, using a verified Docker client and rootless Podman API,
+reproduced the failure after a completed Codex turn. Harbor silently
+discarded a session-copy failure when its whole-directory replacement
+encountered SkillEvaluator's protected `sessions/skills` projection.
+The 1.3.1 backend places native sessions in a separate directory and keeps
+the same Harbor ATIF converter and protected skills. It has its own wheel,
+source and producer identity. Both fixed local arms wrote ATIF, preserved
+the protected skill projection and matched the expected authorization
+verdict and synthetic usage. The interruption control observes command
+start inside the container, since Harbor can defer copying logs until
+exit. The fixed local control preserved the failed exit and unfinished
+trajectory with final usage absent. The earlier producer and reports
+retain their original identities.
+[Hosted diagnostic](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45427100340)
+
+The exact-head Validate run separately failed its 0.3.0 Codex fixture
+because the candidate's hoisted npm path was applied to the legacy global
+installation. The fixture now selects the correct path for each runtime.
+[Validate](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45427050223)
+
+The full local loopback fixture passed on both the 1.0.1 candidate and
+the still-active 0.3.0 owner, including paired authorization, interrupted
+usage, collection and reporting. The rootless Podman API reported a
+sidecar removal error on some candidate trials. Verify complete Compose
+teardown on hosted Docker. The Codex-only hosted run requires scoped
+approval, with `benchmark-101-codex=true` and the three other inputs
+false. The pinned private-review candidate also validated synthetic
+report and Markdown bytes from a fixed source export. Register the new
+attachment identity separately from the original profiles before
+adopting it.
 
 | Maintained path | Retirement gate |
 | --- | --- |
