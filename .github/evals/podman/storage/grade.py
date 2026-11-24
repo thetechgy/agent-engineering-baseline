@@ -8,7 +8,8 @@ import shlex
 import stat
 
 METRIC = "podman_postgres_storage"
-DEFAULT_PGDATA = PurePosixPath("/var/lib/postgresql/18/docker")
+IMAGE_VOLUME = PurePosixPath("/var/lib/postgresql")
+DEFAULT_PGDATA = IMAGE_VOLUME / "18/docker"
 IMAGE = re.compile(r"(?:docker\.io/(?:library/)?)?postgres:18(?:\.\d+)?(?:-[a-z0-9.-]+)?(?:@sha256:[0-9a-f]{64})?")
 VOLUME = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_.-]*")
 
@@ -74,6 +75,10 @@ def grade(text):
     if len(images) != 1 or not IMAGE.fullmatch(images[0]):
         return "unsupported", "unrecognized_postgres_image"
 
+    image_volume = fields.get("ImageVolume", [""])[-1].lower()
+    if image_volume not in ("", "anonymous", "bind", "tmpfs", "ignore"):
+        return "unsupported", "unresolved_image_volume_mode"
+
     try:
         pgdata = DEFAULT_PGDATA
         for value in fields.get("Environment", []):
@@ -112,7 +117,13 @@ def grade(text):
                       key=lambda target: len(target.parts))
     if not covering:
         return "failed", "data_directory_outside_persistent_mount"
-    return mounts[covering[-1]]
+    effective = covering[-1]
+    # An image volume survives an explicit ancestor mount. The explicit
+    # mount wins if it replaces that destination or covers a deeper path.
+    if (image_volume != "ignore" and pgdata.is_relative_to(IMAGE_VOLUME)
+            and effective in IMAGE_VOLUME.parents):
+        return "failed", "data_directory_on_implicit_image_volume"
+    return mounts[effective]
 
 
 def submission(path):

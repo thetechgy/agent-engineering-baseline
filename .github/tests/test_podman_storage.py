@@ -61,6 +61,24 @@ class PodmanStorageContract(unittest.TestCase):
             with self.subTest(mount=mount):
                 self.assertEqual(GRADE(prompt + "Volume=" + mount + "\n"), expected)
 
+    def test_implicit_postgres_image_volume_can_shadow_a_parent_mount(self):
+        unit = "[Container]\nImage=docker.io/library/postgres:18\nVolume=db-data:/var/lib\n"
+        passed = ("passed", "persistent_mount_covers_data_directory")
+        shadowed = ("failed", "data_directory_on_implicit_image_volume")
+        for settings, expected in (
+            ("", shadowed),
+            ("ImageVolume=anonymous\n", shadowed),
+            ("ImageVolume=tmpfs\n", shadowed),
+            ("ImageVolume=ignore\n", passed),
+            ("ImageVolume=ignore\nImageVolume=\n", shadowed),
+            ("Volume=db-data:/var/lib/postgresql\n", passed),
+            ("Volume=db-data:/var/lib/postgresql/18/docker\n", passed),
+            ("Environment=PGDATA=/var/lib/other-cluster\n", passed),
+            ("ImageVolume=unknown\n", ("unsupported", "unresolved_image_volume_mode")),
+        ):
+            with self.subTest(settings=settings):
+                self.assertEqual(GRADE(unit + settings), expected)
+
     def test_dataset_is_pinned_and_separate_from_inventory(self):
         task = selected_task(CAMPAIGN)
         profile, _, _ = evidence.custom_contract("podman", purpose=purpose(task, "oracle"))
