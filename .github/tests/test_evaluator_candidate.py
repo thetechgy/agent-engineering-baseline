@@ -111,6 +111,35 @@ class CandidateEvidenceTests(unittest.TestCase):
                     fixture.run(arm, None, True)
             self.assertEqual(read_json(arm / "startup.json"), {"stage": "verify_package"})
 
+    def test_codex_verifier_failure_receipt_excludes_raw_log_and_unknown_paths(self):
+        from importlib.metadata import version
+
+        if version("skillevaluator") != "1.0.1":
+            self.skipTest("Requires the 1.0.1 benchmark candidate")
+
+        from qualify_benchmark_codex import record_native_failure
+        from skill_reports import read_json
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            trial = root / "trial"
+            stdout = trial / "verifier/test-stdout.txt"
+            stdout.parent.mkdir(parents=True)
+            stdout.write_text(
+                "ignored fixture material\n"
+                "FileNotFoundError: missing '/logs/agent/trajectory.json' from '/private/unused'\n"
+            )
+            record_native_failure(root, trial, "ready", "RewardFileNotFoundError")
+            value = read_json(root / "failure.json")
+            self.assertEqual(value, {
+                "startup": "ready",
+                "harbor_exception": "RewardFileNotFoundError",
+                "observed": {
+                    "codex_events": False, "atif": False, "test_stdout": True, "reward": False, "custom_reward": False,
+                },
+                "verifier_exception": {"category": "FileNotFoundError", "member": "trajectory"},
+            })
+
     def test_only_bundled_offline_verifiers_accept_literal_network_none(self):
         from skillevaluator.tier3.harbor import adapter
         from harbor.environments.docker.docker import DockerEnvironment

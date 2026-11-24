@@ -402,5 +402,7 @@ jobs:
             ${{ runner.temp }}/benchmark-101-codex/with/startup.json
             ${{ runner.temp }}/benchmark-101-codex/without/startup.json
             ${{ runner.temp }}/benchmark-101-codex/interrupted/startup.json
+            ${{ runner.temp }}/benchmark-101-codex/with/failure.json
+            ${{ runner.temp }}/benchmark-101-codex/without/failure.json
           retention-days: 30
           if-no-files-found: error

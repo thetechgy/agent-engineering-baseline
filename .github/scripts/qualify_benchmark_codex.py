@@ -36,8 +36,20 @@ SENTINEL = "pilot-not-a-credential"
 VENDOR = "/opt/reviewed/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/"
 TRIAL_EXCEPTIONS = frozenset({
     "AgentSetupTimeoutError", "AgentTimeoutError", "CalledProcessError", "EnvironmentStartTimeoutError",
-    "NonZeroAgentExitCodeError", "PermissionError", "RuntimeError", "TimeoutError", "ValueError", "VerifierTimeoutError",
+    "NonZeroAgentExitCodeError", "PermissionError", "RewardFileNotFoundError", "RuntimeError", "TimeoutError",
+    "ValueError", "VerifierTimeoutError",
 })
+VERIFIER_EXCEPTIONS = frozenset({
+    "AttributeError", "FileNotFoundError", "ImportError", "JSONDecodeError", "KeyError", "ModuleNotFoundError",
+    "PermissionError", "TypeError", "UnicodeDecodeError", "ValueError",
+})
+VERIFIER_MEMBERS = {
+    "entry": "/tests/entry.json",
+    "trajectory": "/logs/agent/trajectory.json",
+    "grader": "/tests/grader.py",
+    "test_script": "/tests/test.sh",
+    "reward": "/logs/verifier/reward.json",
+}
 
 
 # Run as the trial user. Other UIDs' /proc/exe links are intentionally unreadable.
@@ -160,6 +172,38 @@ def stage(root, assets, present):
     return task
 
 
+def record_native_failure(root, trial, stage, exception):
+    """Retain fixed member names and exception categories from synthetic trials."""
+    from skill_evidence import read_bytes
+
+    observed = {
+        name: (trial / member).is_file() and not (trial / member).is_symlink()
+        for name, member in {
+            "codex_events": "agent/codex.txt",
+            "atif": "agent/trajectory.json",
+            "test_stdout": "verifier/test-stdout.txt",
+            "reward": "verifier/reward.json",
+            "custom_reward": "verifier/custom_reward.json",
+        }.items()
+    }
+    verifier = None
+    if observed["test_stdout"]:
+        try:
+            # Never copy the verifier log or include exception messages.
+            log = read_bytes(trial / "verifier/test-stdout.txt", limit=128 * 1024).decode(errors="replace")
+        except (OSError, ValueError):
+            verifier = {"category": "unavailable"}
+        else:
+            for line in reversed(log.splitlines()):
+                error, separator, detail = line.partition(":")
+                if separator and error in VERIFIER_EXCEPTIONS:
+                    verifier = {"category": error, "member": next(
+                        (name for name, member in VERIFIER_MEMBERS.items() if repr(member) in detail), None)}
+                    break
+    write_json(root / "failure.json", {"startup": stage, "harbor_exception": exception,
+                                      "observed": observed, "verifier_exception": verifier})
+
+
 def run(root, assets, present, *, interrupt=False):
     task = stage(root, assets, present)
     fixture = gh.dataset(selected=[CASE])[0]["contract"]
@@ -223,6 +267,8 @@ def run(root, assets, present, *, interrupt=False):
         reported = result["exception_info"].get("exception_type")
         exception = reported if isinstance(reported, str) and reported in TRIAL_EXCEPTIONS else "unclassified"
         last_stage = read_json(root / "startup.json")["stage"] if RELEASE else "unrecorded"
+        if RELEASE:
+            record_native_failure(root, results[0].parent, last_stage, exception)
         raise ValueError(f"Native Codex trial failed during or after {last_stage}: {exception}")
     trial = results[0].parent
     container = read_json(trial / "fixture-container.json")["id"]

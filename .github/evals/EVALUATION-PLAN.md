@@ -83,13 +83,23 @@ uses that path, verifies the same executable and helper hashes, and writes
 the last startup stage to a bounded receipt.
 [Codex-only run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45419255253)
 
-Repeat the Codex-only check after scoped approval, with
-`benchmark-101-codex=true` and the three other dispatch inputs false.
-Qualification requires both `gh-001` arms and one interrupted attempt
-through the existing non-forwarding loopback responder. The private-review
-candidate also produced and validated a synthetic review offline. The
-attachment reader rejected its new `review-101-v1` identity. Register that
-identity separately from the original profiles before adopting it.
+The retry at `a558b19` passed package, agent identity, broker and
+loopback setup. Harbor entered verification in the first `gh-001` arm and
+reported `RewardFileNotFoundError`. It did not retain verifier output.
+Both completed controls and the interrupted control from earlier
+credential-free Codex execution convert to ATIF using Harbor 0.25.0.
+The candidate grader reads a converted trajectory and emits an unmeasured
+reward for the local missing-broker control. The hosted cause remains open.
+[Codex-only retry](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45421531862)
+
+The next Codex-only check requires scoped approval, with
+`benchmark-101-codex=true` and the three other inputs false. A bounded
+failure receipt identifies the staged evidence, exception category and any
+known verifier member involved. Qualification still requires both `gh-001`
+arms and one interrupted attempt. The pinned private-review candidate
+also validated synthetic report and Markdown bytes from a fixed source
+export. Register the new attachment identity separately from the original
+profiles before adopting it.
 
 | Maintained path | Retirement gate |
 | --- | --- |
