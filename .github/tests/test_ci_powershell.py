@@ -197,15 +197,17 @@ class CIPowerShellTests(unittest.TestCase):
         inputs = workflow.get('on', workflow.get(True))['workflow_dispatch']['inputs']
         self.assertFalse(inputs['benchmark-101-fixtures']['default'])
         self.assertFalse(inputs['benchmark-101-codex']['default'])
+        self.assertFalse(inputs['benchmark-101-podman']['default'])
         jobs = workflow['jobs']
         candidate = jobs['benchmark-101']
         self.assertEqual(candidate['if'], "github.event_name == 'workflow_dispatch'"
-                         " && (inputs.benchmark-101-fixtures || inputs.benchmark-101-codex)")
+                         " && (inputs.benchmark-101-fixtures || inputs.benchmark-101-codex || inputs.benchmark-101-podman)")
         for key in ('cohorts', 'native-gh', 'report', 'startup'):
             self.assertIn('!inputs.benchmark-101-fixtures', jobs[key]['if'])
             self.assertIn('!inputs.benchmark-101-codex', jobs[key]['if'])
+            self.assertIn('!inputs.benchmark-101-podman', jobs[key]['if'])
         self.assertEqual(candidate['strategy']['matrix']['suite'],
-                         '''${{ fromJSON(inputs.benchmark-101-codex && '["codex"]' || '["gh", "pester"]') }}''')
+                         '''${{ fromJSON(inputs.benchmark-101-podman && '["podman"]' || inputs.benchmark-101-codex && '["codex"]' || '["gh", "pester"]') }}''')
         self.assertEqual(workflow['permissions'], {'contents': 'read'})
         self.assertNotIn('environment', candidate)
         self.assertNotIn('secrets.', yaml.safe_dump(candidate))
@@ -214,8 +216,14 @@ class CIPowerShellTests(unittest.TestCase):
         self.assertEqual(steps[0]['with']['ref'], '${{ github.sha }}')
         deterministic = next(step for step in steps if '--native "$FIXTURE_SUITE"' in step.get('run', ''))
         codex = next(step for step in steps if 'qualify_benchmark_codex.py' in step.get('run', ''))
-        self.assertEqual(deterministic['if'], "matrix.suite != 'codex'")
+        self.assertEqual(deterministic['if'], "matrix.suite == 'gh' || matrix.suite == 'pester'")
         self.assertEqual(codex['if'], "matrix.suite == 'codex'")
+        podman = next(step for step in steps if 'qualify_benchmark_podman.py' in step.get('run', ''))
+        publications = next(step for step in steps if 'qualify_benchmark_publication_101.py' in step.get('run', ''))
+        self.assertEqual(podman['if'], "matrix.suite == 'podman'")
+        self.assertEqual(publications['if'], "${{ !cancelled() && matrix.suite == 'podman' }}")
+        self.assertIn('git archive "$GITHUB_SHA"', publications['run'])
+        self.assertIn('benchmark-101-publication.patch', publications['run'])
 
     def test_selected_jobs_feed_an_always_running_gate_without_privileged_calls(self):
         import yaml

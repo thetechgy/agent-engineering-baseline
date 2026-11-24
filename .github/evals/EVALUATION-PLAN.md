@@ -117,12 +117,45 @@ installation. The fixture now selects the correct path for each runtime.
 The full local loopback fixture passed on both the 1.0.1 candidate and
 the still-active 0.3.0 owner, including paired authorization, interrupted
 usage, collection and reporting. The rootless Podman API reported a
-sidecar removal error on some candidate trials. Verify complete Compose
-teardown on hosted Docker. The Codex-only hosted run requires scoped
-approval, with `benchmark-101-codex=true` and the three other inputs
-false. The pinned private-review candidate also validated synthetic
-report and Markdown bytes from a fixed source export. Register the new
-attachment identity separately from the original profiles before
+sidecar removal error on some candidate trials.
+
+The Codex-only hosted run passed at `3011034`. Its digest-verified receipt
+records authorization scores of 1 and 0 in the two arms, two fixture
+requests and the expected synthetic usage per completed arm, and an
+interrupted exit with final usage absent. All main-container teardown
+checks passed. The job log had no Compose teardown errors.
+[Hosted Codex fixture](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45446801863)
+[Automatic Validate](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45446766350)
+
+The isolated Podman fixture completed one trial per arm for case 5
+with Codex 0.171.0 under Harbor 0.25.0. The bare released stage did not
+select a non-root user. The fixture declares UID 1000 in the task and
+provides the user in the image. Each completed arm made two Codex
+requests at High and three standard-verifier requests with reasoning
+omitted through non-forwarding responders. The verifier used its
+canonical OpenAI request builder and returned 0.8 accuracy in each arm.
+Both main containers were removed. The local rootless Podman API failed
+to remove the egress sidecars automatically, and they were removed
+separately. Qualify automatic teardown on hosted Docker before adoption.
+
+The 1.0.1 publication qualifier uses its own offline profile and applies
+the reader patch to a clean export. The release distinguishes unresolved
+cases from failed cases and keeps failed judge observations in a separate
+diagnostic record. The reader verifies both against the retained trial.
+The local standard and confirmation fixtures retained 20 and 60 attempts
+in distinct series. The cancellation fixture retained 19 of 20. The
+publication route rejected mismatched mode, producer and trial identities,
+and the canonical history writer rejected all four fixture reports.
+The candidate is still opt-in. The next hosted credential-free checkpoint
+uses only the manual benchmark-101-podman input for isolated Podman and
+both publication modes. The production owner remains subject to the
+separate provider checkpoint.
+
+A local rehearsal built a fixed private-review source archive at
+`c1d0f61` and verified synthetic Podman, gh and Pester attachments with
+the 1.0.1 overlay. The rehearsal rejected altered archive bytes and
+caller-supplied tooling. Register the new attachment identity and bind
+the documented review commands to the same frozen tooling before
 adopting it.
 
 | Maintained path | Retirement gate |

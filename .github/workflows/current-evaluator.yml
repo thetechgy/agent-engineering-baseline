@@ -20,6 +20,10 @@ on:
         description: Qualify the 1.0.1 benchmark candidate with deterministic gh and Pester fixtures
         type: boolean
         default: false
+      benchmark-101-podman:
+        description: Qualify 1.0.1 isolated Podman and offline publication
+        type: boolean
+        default: false
       benchmark-101-codex:
         description: Qualify the 1.0.1 Codex launch with the non-forwarding loopback fixture
         type: boolean
@@ -33,7 +37,7 @@ env:
 
 jobs:
   cohorts:
-    if: ${{ !inputs.startup-only && !inputs.benchmark-101-fixtures && !inputs.benchmark-101-codex }}
+    if: ${{ !inputs.startup-only && !inputs.benchmark-101-fixtures && !inputs.benchmark-101-codex && !inputs.benchmark-101-podman }}
     name: Candidate native oracle cohorts (no inference)
     runs-on: ubuntu-latest
     timeout-minutes: 180
@@ -159,7 +163,7 @@ jobs:
         run: bash .github/scripts/setup-compose.sh cleanup
 
   native-gh:
-    if: ${{ !inputs.startup-only && !inputs.benchmark-101-fixtures && !inputs.benchmark-101-codex }}
+    if: ${{ !inputs.startup-only && !inputs.benchmark-101-fixtures && !inputs.benchmark-101-codex && !inputs.benchmark-101-podman }}
     name: Candidate gh lifecycle (${{ matrix.arm }}, ${{ matrix.shard }}/3, no inference)
     runs-on: ubuntu-latest
     timeout-minutes: 55
@@ -205,7 +209,7 @@ jobs:
   report:
     name: Candidate native cohorts and consolidated report (no inference)
     needs: [cohorts, native-gh]
-    if: ${{ !cancelled() && !inputs.startup-only && !inputs.benchmark-101-fixtures && !inputs.benchmark-101-codex }}
+    if: ${{ !cancelled() && !inputs.startup-only && !inputs.benchmark-101-fixtures && !inputs.benchmark-101-codex && !inputs.benchmark-101-podman }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -265,7 +269,7 @@ jobs:
     name: Matched gh-007 startup only (no agent or grading)
     if: >-
       github.event_name == 'workflow_dispatch' && inputs.startup-only && !inputs.benchmark-101-fixtures
-      && !inputs.benchmark-101-codex
+      && !inputs.benchmark-101-codex && !inputs.benchmark-101-podman
       && (inputs.candidate-next || inputs.startup-owner == '1.0.1')
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -330,14 +334,16 @@ jobs:
           if-no-files-found: error
 
   benchmark-101:
-    if: github.event_name == 'workflow_dispatch' && (inputs.benchmark-101-fixtures || inputs.benchmark-101-codex)
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      && (inputs.benchmark-101-fixtures || inputs.benchmark-101-codex || inputs.benchmark-101-podman)
     name: 1.0.1 benchmark candidate (${{ matrix.suite }}, no inference)
     runs-on: ubuntu-latest
     timeout-minutes: 55
     strategy:
       fail-fast: false
       matrix:
-        suite: ${{ fromJSON(inputs.benchmark-101-codex && '["codex"]' || '["gh", "pester"]') }}
+        suite: ${{ fromJSON(inputs.benchmark-101-podman && '["podman"]' || inputs.benchmark-101-codex && '["codex"]' || '["gh", "pester"]') }}
     env:
       PYTHONDONTWRITEBYTECODE: '1'
       PYTHON_DOTENV_DISABLED: '1'
@@ -360,7 +366,7 @@ jobs:
         if: matrix.suite == 'gh'
         run: '"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_101.py "$RUNNER_TEMP/benchmark-101-requests.json"'
       - name: Run native deterministic fixtures
-        if: matrix.suite != 'codex'
+        if: matrix.suite == 'gh' || matrix.suite == 'pester'
         run: |
           set -o pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
@@ -377,6 +383,22 @@ jobs:
         run: |
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_codex.py "$RUNNER_TEMP/benchmark-101-codex"
+      - name: Run isolated Podman with local agent and verifier responders
+        if: matrix.suite == 'podman'
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_podman.py \
+            --output "$RUNNER_TEMP/benchmark-101-podman"
+      - name: Verify offline standard and confirmation publication
+        if: ${{ !cancelled() && matrix.suite == 'podman' }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          set -o pipefail
+          publication_source="$(mktemp -d "$RUNNER_TEMP/benchmark-101-publication-source.XXXXXX")"
+          git archive "$GITHUB_SHA" | tar --extract --directory="$publication_source"
+          git -C "$publication_source" apply "$GITHUB_WORKSPACE/.github/patches/benchmark-101-publication.patch"
+          "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B "$publication_source/.github/scripts/qualify_benchmark_publication_101.py" \
+            --workspace "$GITHUB_WORKSPACE" "$RUNNER_TEMP/benchmark-101-publication"
       - name: Verify source integrity
         if: always()
         run: git diff --exit-code
@@ -398,6 +420,10 @@ jobs:
             ${{ runner.temp }}/benchmark-101-pester-command-diagnostics.txt
             ${{ runner.temp }}/benchmark-101-pester/qualification.json
             ${{ runner.temp }}/benchmark-101-pester/cleanup.json
+            ${{ runner.temp }}/benchmark-101-podman/qualification.json
+            ${{ runner.temp }}/benchmark-101-podman/with/startup.json
+            ${{ runner.temp }}/benchmark-101-podman/without/startup.json
+            ${{ runner.temp }}/benchmark-101-publication/qualification.json
             ${{ runner.temp }}/benchmark-101-codex/qualification.json
             ${{ runner.temp }}/benchmark-101-codex/with/startup.json
             ${{ runner.temp }}/benchmark-101-codex/without/startup.json

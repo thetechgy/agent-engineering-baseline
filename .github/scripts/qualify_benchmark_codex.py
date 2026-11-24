@@ -103,11 +103,18 @@ os.kill(matches[0], signal.SIGINT)
 class OfflineCodex(BenchmarkCodex):
     """Replace Internet installation only. Harbor owns execution and log conversion."""
 
+    identity_stage = "verify_agent_identity_and_broker"
+
     @staticmethod
     def record_startup(stage):
         if RELEASE:
             fixture = Path(os.environ["BENCHMARK_CODEX_FIXTURE"])
             write_json(fixture.with_name("startup.json"), {"stage": stage})
+
+    async def verify_trial_user(self, environment):
+        result = await self.exec_as_agent(environment, "codex --version && id -u && test -S /run/gh-eval/gh.sock && test ! -r /opt/gh-eval/state/case.json")
+        require(result.return_code == 0 and result.stdout.splitlines() == ["codex-cli " + self._version, "1000"],
+                "Agent identity, CLI or broker isolation drift")
 
     async def install(self, environment):
         self.record_startup("verify_package")
@@ -122,9 +129,8 @@ class OfflineCodex(BenchmarkCodex):
         for name, sha in expected.items():
             result = await self.exec_as_root(environment, "sha256sum " + vendor + name)
             require(result.stdout.split()[0] == sha, "Container release bytes differ")
-        self.record_startup("verify_agent_identity_and_broker")
-        result = await self.exec_as_agent(environment, "codex --version && id -u && test -S /run/gh-eval/gh.sock && test ! -r /opt/gh-eval/state/case.json")
-        require(result.stdout.splitlines() == ["codex-cli " + self._version, "1000"], "Agent identity or CLI drift")
+        self.record_startup(self.identity_stage)
+        await self.verify_trial_user(environment)
         self.record_startup("verify_network_isolation")
         container = (await environment._run_docker_compose_command(["ps", "--quiet", "main"])).stdout.strip()
         inspected, = json.loads(subprocess.check_output(["docker", "inspect", container]))
@@ -152,19 +158,16 @@ class OfflineCodex(BenchmarkCodex):
         self.record_startup("ready")
 
 
-def stage(root, assets, present):
-    if RELEASE:
-        import gh_candidate
-        bundle = gh_candidate.stage(gh.ROOT, root / "bundle/gh", [CASE], fixture=True)
-    else:
-        bundle = gh.stage(gh.ROOT, root / "bundle/gh", [CASE])
-    task, = stage_native_harbor_tasks(bundle, root / "tasks", with_skill=present, grading_mode="custom_only",
-        workspace_mode="group", workspace_skill_paths=[bundle.parent / gh.COMPETING])
-    descriptor = task / "task.toml"
-    source = descriptor.read_text()
-    require('network_mode = "public"' in source, "Unknown source networking")
-    descriptor.write_text(source.replace('network_mode = "public"', 'network_mode = "no-network"'))
-    image = task / "environment"
+class OfflinePodmanCodex(OfflineCodex):
+    identity_stage = "verify_trial_identity"
+
+    async def verify_trial_user(self, environment):
+        result = await self.exec_as_agent(environment, "codex --version && id -u && test ! -r /tests/entry.json")
+        require(result.return_code == 0 and result.stdout.splitlines() == ["codex-cli " + self._version, "1000"],
+                "Agent identity, CLI or verifier isolation drift")
+
+
+def add_offline_assets(image, assets=None):
     if RELEASE:
         # The operator-owned loopback responder is inside the same network namespace.
         # Harbor must leave this service on loopback instead of joining the egress sidecar.
@@ -188,6 +191,22 @@ def stage(root, assets, present):
     with (image / "Dockerfile").open("a") as build:
         build.write("\nCOPY reviewed /opt/reviewed\n" + install + "RUN chmod -R a+rX /opt/reviewed /workspace/skills"
                     " && ln -s " + launcher + " /usr/local/bin/codex\n")
+
+
+def stage(root, assets, present):
+    if RELEASE:
+        import gh_candidate
+        bundle = gh_candidate.stage(gh.ROOT, root / "bundle/gh", [CASE], fixture=True)
+    else:
+        bundle = gh.stage(gh.ROOT, root / "bundle/gh", [CASE])
+    task, = stage_native_harbor_tasks(bundle, root / "tasks", with_skill=present, grading_mode="custom_only",
+        workspace_mode="group", workspace_skill_paths=[bundle.parent / gh.COMPETING])
+    descriptor = task / "task.toml"
+    source = descriptor.read_text()
+    require('network_mode = "public"' in source, "Unknown source networking")
+    descriptor.write_text(source.replace('network_mode = "public"', 'network_mode = "no-network"'))
+    image = task / "environment"
+    add_offline_assets(image, assets)
     # The production verifier reads real ATIF and the private broker audit. Copy
     # only the loopback request and the produced edit into this local fixture.
     # The standard verifier image carries idna. Custom-only mode omits its
