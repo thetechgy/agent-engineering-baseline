@@ -1,0 +1,106 @@
+diff --git a/.github/scripts/skill_evidence.py b/.github/scripts/skill_evidence.py
+index ed86b0f..f4fc02b 100644
+--- a/.github/scripts/skill_evidence.py
++++ b/.github/scripts/skill_evidence.py
+@@ -2253,6 +2253,27 @@ def validate_summary_rollups(payload, cases, ids, maximum, stop_on_pass, *, vers
+         match(payload, 'avg_attempts_used', round(attempts_used / total, 4) if total else 0.0)
+
+
++def validate_partial_oracle_rollups(payload, cases, ids, maximum):
++    """Reconcile the release's one-attempt oracle counts without inventing a rate."""
++    partial_fields = {'failed_cases', 'unresolved_cases', 'rate', 'rate_interval'}
++    require(maximum == 1 and set(cases) == set(ids)
++            and (partial_fields | {'passed_cases', 'attempts_used'}) <= payload.keys()
++            and payload['rate'] is None and payload['rate_interval'] is None,
++            'Invalid partial oracle rollup')
++    require(all(type(row.get('attempts_recovered')) is int and row['attempts_recovered'] == 0
++                and type(row.get('attempts')) is list and len(row['attempts']) <= 1
++                and type(row.get('passed')) is bool for row in cases.values()),
++            'Unexpected partial oracle attempts')
++    validate_summary_rollups({key: value for key, value in payload.items() if key not in partial_fields},
++                             cases, ids, maximum, False)
++    unresolved = sum(not row['attempts'] for row in cases.values())
++    failed = sum(bool(row['attempts']) and not row['passed'] for row in cases.values())
++    require(0 < unresolved < len(ids) and type(payload['failed_cases']) is int
++            and type(payload['unresolved_cases']) is int
++            and payload['failed_cases'] == failed and payload['unresolved_cases'] == unresolved,
++            'Partial oracle rollup count mismatch')
++
++
+ def reconcile_native_arm(agent, arm, summary, observations, details, *, candidate=False):
+     """Bind retained arm summaries and report metrics to logical trial scores."""
+     from skillevaluator.tier3.harbor.metrics import DEFAULT_METRICS, average_metrics, dimension_scores, overall_score
+@@ -4299,7 +4320,15 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
+         lookup = {}
+         pass_data = summary.get('pass_at_k') or {}
+         require(type(pass_data) is dict, 'Invalid custom native pass data')
+-        if pass_data:
++        release_partial_oracle = (name == 'gh' and capture['purpose'] == 'oracle_qualification'
++                                  and capture['evaluator_version'] == '1.0.1' and 'unresolved_cases' in pass_data)
++        if release_partial_oracle:
++            require(native['execution_status'] != 'succeeded'
++                    and 0 < native['scored_attempts'] < native['expected_attempts']
++                    and pass_data.get('attempts_used') == native['scored_attempts'],
++                    'Partial oracle execution population mismatch')
++            validate_partial_oracle_rollups(pass_data, pass_data.get('cases', {}), capture['case_ids'], capture['attempts'])
++        elif pass_data:
+             validate_summary_rollups(pass_data, pass_data.get('cases', {}), capture['case_ids'], capture['attempts'], False)
+         if arm in (agent.get('pass_at_k') or {}):
+             require(agent['pass_at_k'][arm] == pass_data, 'Custom native pass carrier contradiction')
+@@ -4509,7 +4538,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
+                     'case_details': 'complete' if details_complete else 'partial' if found else 'unavailable'},
+                 'execution_status': native['execution_status'], 'execution_error_count': native_error_count(native),
+                 'rubric': {'passed_cases': None, 'total_cases': None, 'threshold': None}})
+-        # Native custom averages are absent on incomplete arms by design.
++        # Older collectors withhold custom averages on incomplete arms.
+         native_custom = summary.get('custom_scores', {})
+         expected_custom = {}
+         for key, definition in definitions.items():
+@@ -4524,7 +4553,8 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
+                 from skillevaluator.utils.redaction import is_sensitive_key
+                 # 0.8 omits sensitive names, rather than retaining a redacted marker.
+                 # Every restored per-trial value was validated against captured native bytes above.
+-                expected_visible = {k: v for k, v in computed_custom[arm].items() if not is_sensitive_key(k)}
++                visible_scores = expected_custom if release_partial_oracle else computed_custom[arm]
++                expected_visible = {k: v for k, v in visible_scores.items() if not is_sensitive_key(k)}
+                 require(native_custom == expected_visible, 'Native custom average contradiction')
+             else:
+                 require(native_custom == computed_custom[arm], 'Native custom average contradiction')
+diff --git a/.github/scripts/skill_reports.py b/.github/scripts/skill_reports.py
+index 9eb6893..b5513e4 100644
+--- a/.github/scripts/skill_reports.py
++++ b/.github/scripts/skill_reports.py
+@@ -735,9 +735,14 @@ def benchmark_artifacts(workspace, root, name, destination):
+             carrier = evidence.custom_carrier(campaign_profile)
+             evidence.token(carrier)
+     registered_cases = set()
++    gh_oracle_versions = ('0.8.0', '0.9.0', '1.0.1')
++    campaign_versions = ('0.8.0', '0.9.0')
+     if name == 'gh' and (root / 'custom-metric-capture.json').exists():
+         capture = read_json(root / 'custom-metric-capture.json')
+-        if (capture.get('purpose') == 'oracle_qualification' or str(capture.get('purpose','')).startswith('campaign-')) and capture.get('producer', {}).get('skillevaluator') in ('0.8.0', '0.9.0'):
++        producer = capture.get('producer', {}).get('skillevaluator')
++        purpose = capture.get('purpose', '')
++        if ((purpose == 'oracle_qualification' and producer in gh_oracle_versions)
++                or (str(purpose).startswith('campaign-') and producer in campaign_versions)):
+             import skill_evidence as evidence
+             evidence.validate_custom_capture(capture, name, workspace)
+             registered_cases = set(capture['case_ids'])
+@@ -790,10 +795,13 @@ def benchmark_artifacts(workspace, root, name, destination):
+                 require('PESTER_VERIFIER_ONLY_' not in json.dumps(value), 'Protected verifier input in diagnostic artifact')
+             original = value
+             value = redact_sensitive_data(value)
+-            capture = (relative.as_posix() == 'custom-metric-capture.json'
+-                       and original.get('producer', {}).get('skillevaluator') in ('0.8.0', '0.9.0')
+-                       and ((name == 'gh' and original.get('purpose') == 'oracle_qualification')
+-                            or (name in ('gh', 'podman') and str(original.get('purpose', '')).startswith('campaign-'))))
++            capture = False
++            if relative.as_posix() == 'custom-metric-capture.json':
++                producer = original.get('producer', {}).get('skillevaluator')
++                purpose = original.get('purpose', '')
++                capture = ((name == 'gh' and purpose == 'oracle_qualification' and producer in gh_oracle_versions)
++                           or (name in ('gh', 'podman') and str(purpose).startswith('campaign-')
++                               and producer in campaign_versions))
+             if capture:
+                 value = preserve_custom_capture_hashes(original, value, workspace, name)
+             if registered_cases:

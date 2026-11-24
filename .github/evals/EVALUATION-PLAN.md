@@ -36,15 +36,29 @@ revisions. [Issue #95](https://github.com/thetechgy/agent-engineering-baseline/i
   its own evaluator, backend, scoring and collector. Native qualification and
   existing rollback selectors still need their own checks.
 
-The next credential-free hosted checkpoint uses `current-evaluator.yml`
-with `benchmark-101-fixtures=true`, `startup-only=false` and
-`candidate-next=false`. The gh and Pester jobs use the patched 1.0.1 owner
-to run the existing deterministic oracle fixtures. Local staging verified
-48 gh and 52 Pester task identities. The released Pester staging path
-rejects the older verifier Compose override. The fixture uses the existing
-task recipe without that override and still asserts verifier isolation.
-The qualification process registers the diagnostic candidate locally.
-No shared campaign source-successor records were added.
+The credential-free hosted checkpoint at `aa2599f` used
+`current-evaluator.yml` with `benchmark-101-fixtures=true`,
+`startup-only=false` and `candidate-next=false`. Both gh and Pester commands
+completed both arms. The gh report reader rejected redacted staging digests.
+The Pester grader returned an infrastructure error for a known-good case.
+Pester resource cleanup passed.
+[Hosted fixtures](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45360054011)
+
+Automatic Validate's legacy Pester control passed both arms of the same
+known-good case. The CI contracts job rejected the stale inventory count for
+the added uv setup step. All 51 freshness tests passed with that count updated.
+[Validate](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45360027374)
+
+The gh fixture applies its report-reader compatibility patch to a clean
+export of the dispatched source. The matching synthetic collection validated
+all 48 observations, including unresolved outcomes and their partial
+aggregates. Shared campaign source files retain their producing digests.
+Pester uses the existing literal loopback-only verifier Compose setting after
+the release validates its authored task. Local testing verified that Harbor
+selects this setting in both arms and the grader retains its isolation checks.
+The hosted Pester failure did not retain the verifier's prerequisite code.
+The next fixture run records that code from an allowlist if the failure recurs.
+Both suites still require a successful hosted run on the corrected revision.
 
 | Maintained path | Retirement gate |
 | --- | --- |

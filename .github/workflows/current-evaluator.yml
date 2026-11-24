@@ -356,7 +356,14 @@ jobs:
         run: '"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_101.py "$RUNNER_TEMP/benchmark-101-requests.json"'
       - name: Run native deterministic fixtures
         run: |
+          set -o pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          if [[ "$FIXTURE_SUITE" == gh ]]; then
+            fixture_source="$(mktemp -d "$RUNNER_TEMP/benchmark-101-gh-source.XXXXXX")"
+            git archive "$GITHUB_SHA" | tar --extract --directory="$fixture_source"
+            git -C "$fixture_source" apply "$GITHUB_WORKSPACE/.github/patches/benchmark-101-gh-reporting.patch"
+            cd "$fixture_source"
+          fi
           "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_101.py \
             --native "$FIXTURE_SUITE" "$RUNNER_TEMP/benchmark-101-$FIXTURE_SUITE"
       - name: Verify source integrity
@@ -375,6 +382,7 @@ jobs:
             ${{ runner.temp }}/benchmark-101-gh/command-stages.json
             ${{ runner.temp }}/benchmark-101-gh/command-diagnostics.txt
             ${{ runner.temp }}/benchmark-101-gh/qualification.json
+            ${{ runner.temp }}/benchmark-101-gh/cleanup.json
             ${{ runner.temp }}/benchmark-101-pester-command-stages.json
             ${{ runner.temp }}/benchmark-101-pester-command-diagnostics.txt
             ${{ runner.temp }}/benchmark-101-pester/qualification.json

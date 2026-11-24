@@ -122,7 +122,7 @@
         {
           "path": ".github/workflows/current-evaluator.yml",
           "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
-          "count": 4
+          "count": 5
         },
         {
           "path": ".github/workflows/evaluation-campaign.yml",

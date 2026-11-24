@@ -18,6 +18,7 @@ from harbor.agents.installed.codex import Codex
 
 
 ROOT = Path(__file__).resolve().parents[2]
+VERIFIER_NO_NETWORK = 'services:\n  main:\n    network_mode: none\n'
 
 
 def qualification_bundle(root, *, candidate=False):
@@ -29,7 +30,7 @@ def qualification_bundle(root, *, candidate=False):
         # literal offline override; the shared grader still requires only lo.
         for task in (bundle / 'evals/harbor').iterdir():
             if task.is_dir():
-                (task / 'tests/docker-compose.yaml').write_text('services:\n  main:\n    network_mode: none\n')
+                (task / 'tests/docker-compose.yaml').write_text(VERIFIER_NO_NETWORK)
     source = ROOT / pilot.OVERLAY / 'support'
     solutions = {'pester-001': ('classic', 'standalone', 'data'),
                  'pester-002': ('classic', 'data'), 'pester-003': ('external', 'module'),
@@ -155,6 +156,11 @@ def _main(*, candidate=False, artifact=None):
             if len(staged_tasks) != len(fixtures):
                 raise RuntimeError('Native staging coverage mismatch')
             for task in staged_tasks:
+                if release:
+                    # The fixture owner requires loopback-only networking.
+                    # Attach the literal verifier override after authored input validation.
+                    with (task / 'tests/docker-compose.yaml').open('x', encoding='utf-8') as override:
+                        override.write(VERIFIER_NO_NETWORK)
                 if current and version('skillevaluator') == '0.9.0':
                     # Reuse #135's transport correction before any verifier image build.
                     from codex_pilot import bind_verifier_metadata
@@ -251,6 +257,11 @@ def _main(*, candidate=False, artifact=None):
                 outcome = reward.get('details', {}).get('outcome', {})
                 observed.append(outcome.get('classification'))
                 if outcome.get('classification') != fixture['expected']:
+                    if release and outcome.get('code') in ('isolation_environment', 'isolation_network',
+                            'isolation_seccomp', 'isolation_resources', 'isolation_mount',
+                            'worker_permission', 'worker_coreclr', 'worker_memory', 'worker_dependency',
+                            'worker_unclassified', 'incomplete', 'verifier'):
+                        print(f'Pester verifier prerequisite: {outcome["code"]}', flush=True)
                     raise RuntimeError(f'Unexpected outcome ({identity}, {arm}, {outcome.get("classification")})')
                 if fixture['expected'] not in ('passed', 'failed'):
                     if reward.get('evaluation_status') != 'failed' or reward.get('custom_metrics'):
