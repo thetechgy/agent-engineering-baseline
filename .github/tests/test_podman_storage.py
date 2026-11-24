@@ -43,6 +43,24 @@ class PodmanStorageContract(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "cannot enable inference"):
             task.cases("live")
 
+    def test_quadlet_bind_overlay_and_companion_volume_cover_the_data_directory(self):
+        prompt = "[Container]\nImage=docker.io/library/postgres:18\n"
+        passed = ("passed", "persistent_mount_covers_data_directory")
+        ephemeral = ("failed", "data_directory_on_ephemeral_overlay")
+        for mount, expected in (
+            ("/srv/db:/var/lib/postgresql:O", ephemeral),
+            ("./db:/var/lib/postgresql:Z", passed),
+            ("../db.volume:/var/lib/postgresql", passed),
+            ("db-data.volume:/var/lib/postgresql", ("unsupported", "unresolved_quadlet_volume")),
+            ("/srv/db:/var/lib/postgresql:O,upperdir=/srv/upper,workdir=/srv/work",
+             ("unsupported", "unresolved_overlay_options")),
+            ("./%i:/var/lib/postgresql", ("unsupported", "unresolved_storage_settings")),
+            ("db-data:/var/lib/postgresql\nVolume=./db:/var/lib/postgresql/18/docker:O", ephemeral),
+            ("db-data:/var/lib/postgresql\nVolume=./cache:/var/cache:O", passed),
+        ):
+            with self.subTest(mount=mount):
+                self.assertEqual(GRADE(prompt + "Volume=" + mount + "\n"), expected)
+
     def test_dataset_is_pinned_and_separate_from_inventory(self):
         task = selected_task(CAMPAIGN)
         profile, _, _ = evidence.custom_contract("podman", purpose=purpose(task, "oracle"))
@@ -65,14 +83,19 @@ class PodmanStorageContract(unittest.TestCase):
         for profile_id, binding in version_data["profiles"].items():
             current = registry["profiles"][profile_id]
             parent = registry["profiles"][binding["parent"]]
-            self.assertEqual(current, dict(parent, id=profile_id, runtime_digest=binding["runtime_digest"]))
+            fields = {"runtime_digest": binding["runtime_digest"]}
+            if "grader_digest" in binding:
+                self.assertEqual(current["skill_id"], "podman")
+                self.assertNotEqual(binding["grader_digest"], parent["grader_digest"])
+                fields["grader_digest"] = binding["grader_digest"]
+            self.assertEqual(current, dict(parent, id=profile_id, **fields))
             purpose_id = profile_id
             if profile_id.startswith("pester-effectiveness-"):
                 purpose_id = "skill_effectiveness"
             elif profile_id.startswith("pester-cli-pilot-retained-"):
                 purpose_id = "cli_pilot"
             actual = evidence.custom_input_identities(ROOT, current["skill_id"], purpose=purpose_id)
-            self.assertEqual(actual["runtime_digest"], current["runtime_digest"], profile_id)
+            self.assertEqual({key: actual[key] for key in fields}, fields, profile_id)
 
     @unittest.skipUnless(owning_runtime(), "pinned SkillEvaluator and Harbor required for native staging")
     def test_native_capture_refuses_false_origin_and_digest(self):

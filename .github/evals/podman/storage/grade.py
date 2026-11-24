@@ -20,6 +20,25 @@ def absolute_path(value):
     return path
 
 
+def mount_outcome(source, options):
+    bind = source.startswith(("/", "."))
+    if source.startswith("/"):
+        absolute_path(source)
+    elif bind and ("%" in source or "$" in source):
+        raise ValueError("dynamic bind source")
+    elif not bind and source.endswith(".volume"):
+        return "unsupported", "unresolved_quadlet_volume"
+
+    if "O" in options:
+        if bind and options == ["O"]:
+            return "failed", "data_directory_on_ephemeral_overlay"
+        return "unsupported", "unresolved_overlay_options"
+
+    if "ro" in options or not (bind or VOLUME.fullmatch(source)):
+        return "failed", "data_directory_on_non_writable_or_anonymous_mount"
+    return "passed", "persistent_mount_covers_data_directory"
+
+
 def grade(text):
     section = None
     seen_container = False
@@ -85,9 +104,7 @@ def grade(text):
             target = absolute_path(destination)
             if target in mounts:
                 raise ValueError("duplicate mount")
-            named = VOLUME.fullmatch(source) is not None
-            persistent = named or (source.startswith("/") and bool(absolute_path(source)))
-            mounts[target] = persistent and "ro" not in options.split(",")
+            mounts[target] = mount_outcome(source, options.split(","))
     except ValueError:
         return "unsupported", "unresolved_storage_settings"
 
@@ -95,9 +112,7 @@ def grade(text):
                       key=lambda target: len(target.parts))
     if not covering:
         return "failed", "data_directory_outside_persistent_mount"
-    if not mounts[covering[-1]]:
-        return "failed", "data_directory_on_non_writable_or_anonymous_mount"
-    return "passed", "persistent_mount_covers_data_directory"
+    return mounts[covering[-1]]
 
 
 def submission(path):

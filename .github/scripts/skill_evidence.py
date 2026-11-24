@@ -3379,7 +3379,8 @@ SOURCE_SUCCESSORS = '.github/evals/source-v37.json'
 MODEL_SUCCESSORS = '.github/evals/source-v38.json'
 SCORED_SUCCESSORS = '.github/evals/source-v39.json'
 PODMAN_SOURCE_SUCCESSORS = '.github/evals/source-v40.json'
-CAMPAIGN_SOURCE_SUCCESSORS = '.github/evals/source-v41.json'
+PROBE_SOURCE_SUCCESSORS = '.github/evals/source-v41.json'
+CAMPAIGN_SOURCE_SUCCESSORS = '.github/evals/source-v42.json'
 CUSTOM_OUTCOMES = ('passed', 'failed', 'invalid', 'unsupported', 'timeout',
                    'infrastructure_error', 'interrupted', 'unknown')
 CUSTOM_MEASURED = ('passed', 'failed')
@@ -3504,13 +3505,18 @@ def custom_registry(workspace=ROOT):
         if 'adapter_sha256' in result.get('campaign', {}):
             result['campaign'] = dict(result['campaign'], adapter_sha256=version['replay_adapter'])
         profiles[successor] = result
-    for version_path in (MODEL_SUCCESSORS, SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS):
+    for version_path in (MODEL_SUCCESSORS, SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS):
         version = parse_json(read_bytes(workspace / version_path))
         sha(version['replay_adapter'])
         for successor, update in version['profiles'].items():
             parent = profiles[update['parent']]
             sha(update['runtime_digest'])
             result = dict(parent, id=successor, runtime_digest=update['runtime_digest'])
+            if 'grader_digest' in update:
+                require(version_path == CAMPAIGN_SOURCE_SUCCESSORS and parent['skill_id'] == 'podman',
+                        'Unregistered grader successor')
+                sha(update['grader_digest'])
+                result['grader_digest'] = update['grader_digest']
             if 'adapter_sha256' in result.get('campaign', {}):
                 result['campaign'] = dict(result['campaign'], adapter_sha256=version['replay_adapter'])
             if 'definition' in update:
@@ -3590,7 +3596,7 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v44'
+        profile_id = 'pester-effectiveness-v45'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v24'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
@@ -3957,7 +3963,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
             for member in safe_tree(source_root, directory_identities=directories, directory_states=states, file_states=members):
                 read_bytes(member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
         for registry_member in (CUSTOM_REGISTRY, SOURCE_SUCCESSORS, MODEL_SUCCESSORS,
-                                SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS):
+                                SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS):
             read_bytes(workspace / registry_member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
         if local_podman:
             for member in ('.apm/skills/podman/evals/evals.json', '.apm/skills/podman/evals/files/vendor-compose.yaml',
