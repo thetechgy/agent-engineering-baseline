@@ -526,13 +526,6 @@ class WorkflowAndUsageTests(unittest.TestCase):
         self.assertEqual(set(triggers), {'workflow_run', 'schedule', 'workflow_dispatch'})
         self.assertEqual(triggers['schedule'], [{'cron': '37 10 * * 2'}])
         self.assertNotIn('OPENAI_API_KEY', json.dumps(workflow))
-        for name in ('plan', 'dispatch'):
-            steps = workflow['jobs'][name]['steps']
-            setup = next(s for s in steps if 'setup-skillevaluator.sh' in s.get('run', ''))
-            self.assertEqual(setup['run'], 'bash .github/scripts/setup-skillevaluator.sh candidate-next')
-            command = next(s['run'] for s in steps if 'skill_orchestration.py' in s.get('run', ''))
-            self.assertIn('"$SKILL_NEXT_PYTHON"', command)
-            self.assertNotIn('SKILL_EVALUATOR_PYTHON', command)
         self.assertEqual(workflow['jobs']['plan']['permissions'], {'contents': 'read', 'actions': 'read'})
         self.assertEqual(workflow['jobs']['dispatch']['permissions'], {'contents': 'read', 'actions': 'write'})
         benchmark = yaml.safe_load((ROOT / orchestration.BENCHMARK).read_text())
@@ -563,14 +556,31 @@ class WorkflowAndUsageTests(unittest.TestCase):
         self.assertIn('tier3 validate', gate['run'])
         self.assertIn('skill_orchestration.py guard', gate['run'])
 
+    def test_inference_free_jobs_use_the_released_data_host(self):
+        planner = yaml.safe_load((ROOT / orchestration.WORKFLOW).read_text())
+        benchmark = yaml.safe_load((ROOT / orchestration.BENCHMARK).read_text())
+        for jobs, name, command in ((planner['jobs'], 'plan', 'plan'),
+                                    (planner['jobs'], 'dispatch', 'dispatch'),
+                                    (benchmark['jobs'], 'context', 'context')):
+            steps = jobs[name]['steps']
+            setup = next(s for s in steps if 'setup-static-evaluator.sh' in s.get('run', ''))
+            self.assertEqual(setup['run'], 'bash .github/scripts/setup-static-evaluator.sh data-host')
+            caller = next(s for s in steps if 'skill_orchestration.py ' + command in s.get('run', ''))
+            self.assertLess(steps.index(setup), steps.index(caller))
+            self.assertIn('"$SKILL_DATA_PYTHON"', caller['run'])
+        legacy = next(s for s in benchmark['jobs']['context']['steps']
+                      if 'setup-skillevaluator.sh reporting' in s.get('run', ''))
+        self.assertEqual(legacy['if'], "github.ref != 'refs/heads/main'")
+
     def test_mutable_history_is_read_after_setup_and_before_consumption(self):
         planner = yaml.safe_load((ROOT / orchestration.WORKFLOW).read_text())
         benchmark = yaml.safe_load((ROOT / orchestration.BENCHMARK).read_text())
         for job in (planner['jobs']['plan'], planner['jobs']['dispatch'], benchmark['jobs']['context'], benchmark['jobs']['evaluate']):
             steps = job['steps']
             history = next(i for i, step in enumerate(steps) if step.get('with', {}).get('ref') == 'gh-pages')
-            setup = next(i for i, step in enumerate(steps) if 'setup-skillevaluator.sh' in step.get('run', ''))
-            self.assertGreater(history, setup)
+            setups = [i for i, step in enumerate(steps) if 'setup-skillevaluator.sh' in step.get('run', '')
+                      or 'setup-static-evaluator.sh' in step.get('run', '')]
+            self.assertTrue(setups and all(history > i for i in setups))
             features = [i for i, step in enumerate(steps) if '-m unittest discover' in step.get('run', '')]
             self.assertTrue(all(history > i for i in features))
 

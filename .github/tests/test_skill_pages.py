@@ -19,7 +19,9 @@ import zipfile
 import yaml
 
 sys.dont_write_bytecode = True
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+ROOT = Path(__file__).resolve().parents[2]
+SCRIPTS = Path(os.environ.get('PUBLIC_REPORTING_SCRIPTS', ROOT / '.github/scripts'))
+sys.path.insert(0, str(SCRIPTS))
 import skill_analysis as analysis
 import skill_evidence as evidence
 import skill_pages as pages
@@ -27,7 +29,6 @@ import skill_report as report
 import test_skill_analysis as fixtures
 from test_skill_report import Document
 
-ROOT = evidence.ROOT
 PINNED = ROOT / '.github/tests/fixtures/skill_pages'
 
 
@@ -426,7 +427,7 @@ class PagesTests(unittest.TestCase):
         pages.prepare(ROOT, retained, replay, 'workflow_run', {'workflow_run': {'id': 20, 'run_attempt': 1}}, api)
         self.assertEqual(historical['observations'], pages.parse((replay / 'benchmarks/report/history.json').read_bytes())['observations'])
         before = pages.tree(output / 'benchmarks')
-        command = [sys.executable, '-B', str(ROOT / '.github/scripts/skill_pages.py'), 'build', '--site', str(output / 'benchmarks')]
+        command = [sys.executable, '-B', str(SCRIPTS / 'skill_pages.py'), 'build', '--site', str(output / 'benchmarks')]
         run = subprocess.run(command, capture_output=True, text=True)
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertEqual(before, pages.tree(output / 'benchmarks'))
@@ -587,14 +588,14 @@ if 'apply' in args:
         self.assertEqual(workflow['permissions'], {})
         jobs = workflow['jobs']
         self.assertEqual(jobs['prepare']['permissions'], {'contents': 'read', 'actions': 'read'})
-        setup = next(s for s in jobs['prepare']['steps'] if 'setup-skillevaluator.sh' in s.get('run', ''))
-        self.assertEqual(setup['run'], 'bash .github/scripts/setup-skillevaluator.sh candidate-next')
+        setup = next(s for s in jobs['prepare']['steps'] if 'setup-static-evaluator.sh' in s.get('run', ''))
+        self.assertEqual(setup['run'], 'bash .github/scripts/setup-static-evaluator.sh data-host')
         steps = jobs['prepare']['steps']
         staging = next(s for s in steps if 'static_quality_ci.py tools' in s.get('run', ''))
         preparation = next(s for s in steps if s.get('id') == 'preparation')
         self.assertLess(steps.index(staging), steps.index(preparation))
         self.assertEqual(staging['working-directory'], 'trusted')
-        self.assertIn('"$SKILL_NEXT_PYTHON" -B "$STATIC_QUALITY_SCRIPTS/skill_pages.py" prepare', preparation['run'])
+        self.assertIn('"$SKILL_DATA_PYTHON" -B "$STATIC_QUALITY_SCRIPTS/skill_pages.py" prepare', preparation['run'])
         self.assertNotIn('SKILL_EVALUATOR_PYTHON', preparation['run'])
         commit = next(s for s in jobs['commit']['steps'] if s.get('id') == 'commit')
         self.assertIn('python3 .github/scripts/skill_pages.py commit', commit['run'])

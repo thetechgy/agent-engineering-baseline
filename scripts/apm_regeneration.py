@@ -112,15 +112,17 @@ def omit_locked_instruction(root):
 
 def native_checks(apm, root, refresh, environment=None):
     environment = dict(os.environ if environment is None else environment)
+    lock_path = root / "apm.lock.yaml"
+    previous_lock = lock_path.read_bytes() if refresh and lock_path.is_file() else None
 
     def apm_run(*arguments):
         run([str(apm), *arguments], root, env=environment)
 
     if refresh:
         apm_run("update", "--yes")
-        # The reviewed 0.34 updater skips executable assets without this pass.
+        # Update alone leaves consent-gated executables undeployed.
         apm_run("install", "--trust-bin")
-    lock = (root / "apm.lock.yaml").read_bytes()
+    lock = lock_path.read_bytes()
     apm_run("install", "--frozen", "--trust-bin")
     apm_run("compile", "--target", "codex,copilot", "--validate")
     apm_run("compile", "--target", "codex,copilot")
@@ -137,8 +139,14 @@ def native_checks(apm, root, refresh, environment=None):
                      "--query", "users", "--limit", "1"], root, env=environment, stdout=subprocess.PIPE).stdout
         if not smoke.strip():
             raise RuntimeError("Offline msgraph launcher/index smoke test failed")
-    if (root / "apm.lock.yaml").read_bytes() != lock:
+    if lock_path.read_bytes() != lock:
         raise RuntimeError("Frozen regeneration changed lockfile bytes")
+    if previous_lock is not None and previous_lock != lock:
+        # Scratch redeployment can advance APM's timestamp with identical pins
+        # and hashes. Keep the original lock unless its content actually changed.
+        timestamp = re.compile(rb"(?m)^generated_at: [^\r\n]+")
+        if timestamp.sub(b"", previous_lock) == timestamp.sub(b"", lock):
+            lock_path.write_bytes(previous_lock)
 
 
 def publish(source, scratch, before, after):
@@ -177,6 +185,15 @@ def regenerate(source, apm, mode):
     source, apm = source.resolve(), apm.resolve()
     if not apm.is_file():
         raise RuntimeError("The absolute APM executable must exist")
+    if mode == "validate":
+        # A weekly proposal can pin a newer binary before it is reviewed. The
+        # existing lock still records the reviewed executable that generated it.
+        lock = (source / "apm.lock.yaml").read_text(encoding="utf-8")
+        version = re.search(r"(?m)^apm_version: (\S+)$", lock)
+        reported = run([str(apm), "--version"], source, stdout=subprocess.PIPE, text=True).stdout
+        if version is None or not re.search(r"\bversion\s+" + re.escape(version[1]) + r"(?:\s|$)", reported):
+            raise RuntimeError("APM executable does not match the recorded lockfile generator")
+        print(reported.strip(), flush=True)
     before = inventory(source)
     if mode == "refresh":
         dirty = {os.fsdecode(name) for name in git(source, "diff", "--name-only", "-z", "HEAD", "--",

@@ -58,4 +58,21 @@ sys.exit(int(os.environ['BASELINE_FIXTURE_AUDIT_STATUS']))
         Should-Invoke shellcheck -Times 1 -Exactly -Scope It
         $env:APM_EXECUTABLE | Should-Be $script:AuditExecutable
     }
+
+    It 'rejects an older Markdown linter without invoking it for linting' {
+        $env:BASELINE_FIXTURE_AUDIT_STATUS = '0'
+        Mock shellcheck {}
+        $root = Split-Path -Parent (Split-Path -Parent $script:AuditValidation)
+        $requirements = New-Item -ItemType Directory -Path (Join-Path $root '.github/requirements') -Force
+        [IO.File]::WriteAllText((Join-Path $requirements.FullName 'rumdl.txt'), "rumdl==9.7.1 \`n")
+        $linter = Join-Path $root 'rumdl'
+        [IO.File]::WriteAllText($linter, "#!/bin/sh`nif [ `"`$1`" = --version ]; then echo 'rumdl 9.7.0'; else exit 41; fi`n")
+        & chmod +x $linter
+        $previousPath = $env:PATH
+        try {
+            $env:PATH = $root + [IO.Path]::PathSeparator + $previousPath
+            { & $script:AuditValidation } | Should-Throw -ExceptionMessage 'Select rumdl 9.7.1 from .github/requirements/rumdl.txt before running full validation.'
+        }
+        finally { $env:PATH = $previousPath }
+    }
 }

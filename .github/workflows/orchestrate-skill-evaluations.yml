@@ -47,9 +47,9 @@ jobs:
         with: &orchestration-uv
           version: '0.13.9'
           enable-cache: false
-      - name: Install pinned SkillEvaluator 0.9.0 data-only host
+      - name: Install pinned evaluator for public data
         working-directory: trusted
-        run: bash .github/scripts/setup-skillevaluator.sh candidate-next
+        run: bash .github/scripts/setup-static-evaluator.sh data-host
       - name: Read canonical history snapshot
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -63,7 +63,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RETAINED: ${{ github.workspace }}/retained
         run: |
-          "$SKILL_NEXT_PYTHON" .github/scripts/skill_orchestration.py plan \
+          "$SKILL_DATA_PYTHON" .github/scripts/skill_orchestration.py plan \
             --workspace "$PWD" --retained "$RETAINED" --output "$RUNNER_TEMP/skill-plan/record.json"
       - name: Upload immutable plan and dispatch intents
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -94,9 +94,9 @@ jobs:
       - name: Set up pinned uv
         uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
         with: *orchestration-uv
-      - name: Install pinned SkillEvaluator 0.9.0 data-only host
+      - name: Install pinned evaluator for public data
         working-directory: trusted
-        run: bash .github/scripts/setup-skillevaluator.sh candidate-next
+        run: bash .github/scripts/setup-static-evaluator.sh data-host
       - name: Read canonical history snapshot
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -109,7 +109,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RETAINED: ${{ github.workspace }}/retained
         run: |
-          "$SKILL_NEXT_PYTHON" .github/scripts/skill_orchestration.py dispatch \
+          "$SKILL_DATA_PYTHON" .github/scripts/skill_orchestration.py dispatch \
             --workspace "$PWD" --retained "$RETAINED" --output "$RUNNER_TEMP/skill-dispatch/record.json"
       - name: Retain direct dispatch correlations
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

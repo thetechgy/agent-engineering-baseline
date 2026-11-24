@@ -400,12 +400,15 @@ class Scenario:
 
 
 def instruction_regeneration(root, apm):
-    """Exercise the production helper with native APM and no external dependencies."""
+    """Exercise the production helper with native APM and a local pinned dependency."""
     scenario = Scenario(root, apm, False)
     source = scenario.project
     scenario.run(["git", "init", "--quiet"], source)
     scenario.run(["git", "remote", "add", "origin", "https://git.example.invalid/regeneration.git"], source)
-    package(source, "instructions", includes=[".apm/instructions/personal.instructions.md"])
+    package(scenario.repos["graph"], "graph")
+    revision = scenario.commit("graph", "regeneration")
+    package(source, "instructions", {"apm": [scenario.url("graph") + ".git#" + revision]},
+            includes=[".apm/instructions/personal.instructions.md"])
     instructions(source, "original")
     scenario.native("install", "--target", "codex,copilot", "--trust-bin")
     scenario.native("compile", "--target", "codex,copilot")
@@ -703,7 +706,52 @@ def published_scope(root, apm, bootstrap, user):
         verify_imports(scenario, expected_imports, stage)
 
 
-PREVIOUS = "12e0c54bf133bbbd9a3000b619d6deaf371c1403"
+RESET_SOURCE = "12e0c54bf133bbbd9a3000b619d6deaf371c1403"
+PREVIOUS_RELEASE = "b2c2444c0d2748bbc6b95ba5df71361735a1750c"
+
+
+def upgrade_in_place(root, apm, bootstrap, previous, user):
+    scenario = Scenario(root, apm, user, previous)
+    version = scenario.env["VERSION"]
+    scenario.env["VERSION"] = (previous[0] / ".apm-version").read_text().strip()
+    package(scenario.repos["unrelated"], "unrelated")
+    unrelated = scenario.commit("unrelated", "unrelated")
+    scenario.install(scenario.url("unrelated") + ".git#" + unrelated)
+    package(scenario.repos["baseline"], "baseline", {"mcp": [dict(LEARN, targets=["codex"])]})
+    old_revision = scenario.commit("baseline", "previous")
+    scenario.install(scenario.url("baseline") + ".git#" + old_revision)
+
+    codex, copilot = scenario.config_paths()
+    write(codex, 'model = "operator"\n' + codex.read_text(encoding="utf-8"))
+    independent = {"type": "http", "url": "https://example.invalid/operator"}
+    write(copilot, json.dumps({"mcpServers": {"independent": independent}}))
+    record = unrelated_state(scenario)
+    receipts = scenario.home / ".apm/deployment-receipts"
+    check(any(receipts.rglob("*.json")), "previous installation recorded a deployment receipt")
+
+    scenario.bootstrap = bootstrap
+    scenario.env["VERSION"] = version
+    revision = scenario.commit("baseline", "upgraded")
+    ref = scenario.url("baseline") + ".git#" + revision
+    scenario.install(ref)
+    check(scenario.pins()["bootstrap-fixture/baseline"] == revision,
+          "previous installation adopts the reviewed baseline without a reset")
+    check(unrelated_state(scenario)[0][0] == record[0][0]
+          and file_hashes(unrelated_state(scenario)[0][1]) == file_hashes(record[0][1])
+          and unrelated_state(scenario)[1] == record[1],
+          "in-place upgrade preserves unrelated package and deployed hashes")
+    import tomllib
+    config = tomllib.loads(codex.read_text(encoding="utf-8"))
+    check(config["model"] == "operator" and config["mcp_servers"]["microsoft-learn"] ==
+          {"url": LEARN["url"], "enabled_tools": TOOLS}, "in-place upgrade preserves Codex settings and Learn access")
+    check(json.loads(copilot.read_text(encoding="utf-8"))["mcpServers"] == {"independent": independent},
+          "in-place upgrade preserves independent Copilot settings")
+    scenario.instruction_delivery("upgraded")
+    check(any(receipts.rglob("*.json")), "upgraded installation retains deployment receipts")
+    before = scenario.content()
+    scenario.install(ref)
+    check(scenario.content() == before, "reinstall after in-place upgrade preserves deployed and lock bytes")
+
 
 
 def reset_and_rollback(root, apm, bootstrap, previous_bootstrap, user):
@@ -781,12 +829,12 @@ def reset_and_rollback(root, apm, bootstrap, previous_bootstrap, user):
     scenario.instruction_delivery("previous")
 
 
-def previous_fixture(root, member):
+def previous_fixture(root, member, revision):
     checkout = root / "previous-checkout"
     for name in (".apm-version", ".apm-checksums", "scripts/bootstrap.sh", "scripts/Bootstrap-Baseline.ps1"):
         path = checkout / name
         path.parent.mkdir(exist_ok=True, parents=True)
-        path.write_bytes(subprocess.check_output(["git", "show", PREVIOUS + ":" + name], cwd=REPOSITORY))
+        path.write_bytes(subprocess.check_output(["git", "show", revision + ":" + name], cwd=REPOSITORY))
     checksums = dict(line.split()[::-1] for line in (checkout / ".apm-checksums").read_text().splitlines())
     return prepare_bootstrap(root / "previous", member, checksums, checkout)
 
@@ -803,9 +851,12 @@ def main():
     with tempfile.TemporaryDirectory(prefix="apm-lifecycle-") as directory:
         root = Path(directory).resolve()
         bootstrap = prepare_bootstrap(root, member, expected)
-        previous = previous_fixture(root, member)
+        reset_source = previous_fixture(root / "reset-source", member, RESET_SOURCE)
+        previous = previous_fixture(root / "previous-release", member, PREVIOUS_RELEASE)
         for user in (False, True):
-            reset_and_rollback(root / ("reset-user" if user else "reset-project"), apm, bootstrap, previous, user)
+            scope = "user" if user else "project"
+            reset_and_rollback(root / ("reset-" + scope), apm, bootstrap, reset_source, user)
+            upgrade_in_place(root / ("upgrade-" + scope), apm, bootstrap, previous, user)
         if os.environ.get("GITHUB_ACTIONS") == "true":
             for user in (False, True):
                 published_scope(root / ("published-user" if user else "published-repo"), apm, bootstrap, user)

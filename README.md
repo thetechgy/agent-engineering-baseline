@@ -105,9 +105,10 @@ The wrapper uses the APM pins from its own checkout but installs
 keeps the destination's locked baseline commit; it does not adopt newer commits
 on that branch. See [deliberate updates](#install-and-update-deliberately).
 
-Existing 0.36.1 destinations require a one-time
-[scoped reset and rollback backup](docs/apm-0370-qualification.md#reset-an-existing-destination). New installations
-select 0.37.0.
+Both bootstraps select the reviewed version in [`.apm-version`](.apm-version).
+For existing 0.37.0 destinations, rerun bootstrap at the same scope. Destinations
+that still use 0.36.1 follow the one-time
+[scoped reset and rollback backup](docs/apm-0370-qualification.md#reset-an-existing-destination).
 
 Both scopes deploy instructions and skills to Codex and Copilot. Microsoft Learn is available to Codex in trusted
 projects. For the canonical baseline URL, user bootstrap also installs the Copilot Learn package from the local
@@ -139,7 +140,7 @@ an existing multi-package destination rather than treating bootstrap as lock
 repair. Malformed YAML, an invalid dependency section, and unresolved Git
 conflict markers fail validation.
 
-APM 0.37.0 can reconcile a valid lock entry whose resolved commit disagrees
+The reviewed APM CLI can reconcile a valid lock entry whose resolved commit disagrees
 with an exact pin. Keep the destination manifest and lock, rerun bootstrap at
 the same scope with the reviewed baseline commit, and verify the destination
 commit and deployed file hashes against the reviewed values. If bootstrap
@@ -599,10 +600,9 @@ verification, scanner comparisons, and residual MCP dependency risk.
 
 Current evaluation setup pins uv 0.13.9; the immutable return-contract workflow
 retains reviewed uv 0.13.7. Both frozen recipes retain their verified interpreter
-download identities. Current setup retains the managed Python 3.13 selector.
-Fresh installations select a managed Python 3.13 patch release; the exact interpreter version
-is recorded in `versions.json`. Historical evaluation records retain their original
-runtime identities, including Python 3.13.15; they are not rebaselined by this update.
+download identities. Native benchmarks, private reviews and scanner environments use
+managed Python 3.13. Static quality and public data use Python 3.14.10. Native
+receipts record the resolved patch version for replay.
 
 </details>
 <!-- rumdl-enable MD033 -->
@@ -646,10 +646,12 @@ own temporary receipts. Output drift is a failure, not an instruction to repair
 the caller's checkout or use `--force`.
 
 The update workflow uses the same helper in refresh mode with the currently
-reviewed CLI. It refuses pre-existing generated edits, verifies source files
-remain unchanged, and returns only allowlisted generated outputs before the
-existing patch capture and independent publisher checks. The candidate CLI is
-still validated separately in its PR.
+reviewed CLI. It preserves the existing lock when only its generation timestamp
+changes, verifies source files remain unchanged, and returns only allowlisted outputs before the
+existing patch capture and independent publisher checks. When the CLI pin
+changes, regenerate the proposed outputs with the candidate CLI after reviewing
+its digests. Commit the resulting lock and outputs to the candidate PR for platform
+validation.
 
 **Audit caveat:** Native audit replay does not retain launcher trust without a
 terminal. The helper runs `apm audit --ci` in a pseudo-terminal with full drift
@@ -665,7 +667,20 @@ apm compile --global
 Project scope omits `--global` and compiles with `--target codex,copilot`.
 
 On Ubuntu, run the [full validation suite](scripts/Invoke-Validation.ps1) with
-PowerShell 7 and the required Unix tools and validation dependencies installed:
+PowerShell 7 and the required Unix tools. The script requires the declared
+Pester and PSScriptAnalyzer versions and verifies the Markdown linter version
+against the hash lock. Install rumdl into an environment outside the checkout
+with the reviewed uv:
+
+```bash
+lint_env=$(mktemp -d "${TMPDIR:-/tmp}/baseline-lint.XXXXXXXX")
+uv venv --python 3.13 --managed-python "$lint_env"
+uv pip sync --python "$lint_env/bin/python" --require-hashes --only-binary :all: \
+  .github/requirements/rumdl.txt
+export PATH="$lint_env/bin:$PATH"
+```
+
+Run the validation suite with:
 
 ```powershell
 ./scripts/Invoke-Validation.ps1
@@ -693,9 +708,11 @@ not establish exact Windows 11 or Ubuntu 26.04 acceptance.
 ### Evaluate authored skills
 
 A skill can look useful without improving results. I use NVIDIA's
-[SkillEvaluator](https://github.com/NVIDIA/SkillEvaluator/blob/ac0a04905100acdafc6c95829311a9739c340ff6/README.md)
-(pinned at v0.3.0) to evaluate locally maintained skills in `.apm/skills/`, separately
-from installation.
+[SkillEvaluator](https://github.com/NVIDIA/SkillEvaluator/releases/tag/v1.0.1)
+to evaluate locally maintained skills in `.apm/skills/`. Static quality and public
+reporting use the released 1.0.1 runtime. Native benchmarks and private reviews
+use their qualified 0.3.0 environments. Replay uses the original producer
+recorded with each result.
 
 Automated **Skill quality** checks cover security scanners and test-case data; LLM
 checks and Tier 2 are disabled. Findings and incomplete scanner evidence are advisory.

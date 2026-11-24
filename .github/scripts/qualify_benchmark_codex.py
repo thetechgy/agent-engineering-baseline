@@ -208,7 +208,9 @@ def judge_requests():
         responder.requests.append(payload)
         result = {"score": 1, "achieved": True, "reason": "Fixture",
                   "results": [{"step": 1, "passed": True, "reason": "Fixture"}], "summary": "Fixture"}
-        return 200, json.dumps({"choices": [{"message": {"content": json.dumps(result)}}]}).encode()
+        # Each judge receives an invalid first response to exercise its repair route.
+        content = 'invalid fixture response' if len(responder.requests) % 2 else json.dumps(result)
+        return 200, json.dumps({"choices": [{"message": {"content": content}}]}).encode()
 
     with patch.dict(os.environ, settings, clear=True), patch.object(responder, "respond", reply), responder.boundary():
         for judge, args in ((verifier.judge_accuracy, ("Return 42", "42", "42")),
@@ -217,7 +219,7 @@ def judge_requests():
             before = len(responder.requests)
             result = judge(*args)
             require(result.get("score") == 1, "Native judge rejected fixture response: " + judge.__name__)
-            require(len(responder.requests) == before + 1, "Missing native judge request: " + judge.__name__)
+            require(len(responder.requests) == before + 2, "Missing native judge repair request: " + judge.__name__)
     with patch.dict(os.environ, {"LLM_JUDGE_FALLBACK_MODELS": "unapproved-model"}, clear=True):
         require(verifier._selected_judge_model() == POLICY["model"] and
                 verifier._fallback_models(POLICY["model"]) == [POLICY["model"]],
