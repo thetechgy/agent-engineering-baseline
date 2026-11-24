@@ -14,6 +14,7 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import skill_analysis as analysis
 import skill_evidence as evidence
+import private_review_snapshot as snapshot
 
 require = evidence.require
 LIMIT = 1024 * 1024
@@ -316,21 +317,26 @@ def assessment(spec, parent, capture, report, review):
 
 def run_validator(request, modules, capture, roots, registry, profile, assets=None, *, offline_replay=False):
     original = ''
+    release_snapshot = profile == snapshot.PROFILE
     if offline_replay:
         import private_review_runtime
         executable, expected = sys.executable, private_review_runtime.OVERLAY
-        original = evidence.encoded({**historical_pins(profile), 'python': private_review_runtime.PYTHON}).decode()
+        if not release_snapshot:
+            original = evidence.encoded({**historical_pins(profile), 'python': private_review_runtime.PYTHON}).decode()
     else:
         executable, expected = validator_runtime(profile)
     guards = (capture.guard(),)
     temporary = evidence.write_outputs({}, input_paths=roots, input_guards=guards)
     try:
-        evidence.write_outputs({}, temporary / '.github', input_paths=roots, input_guards=guards)
-        scripts = evidence.write_outputs({}, temporary / '.github' / 'scripts', input_paths=roots,
-                                         input_guards=guards, rendered=modules)
-        if registry is not None:
-            evidence.write_outputs({}, temporary / '.github' / 'evals', input_paths=roots,
-                                   input_guards=guards, rendered={'custom-metrics.json': registry, **(assets or {})})
+        if release_snapshot:
+            scripts = snapshot.unpack(temporary)
+        else:
+            evidence.write_outputs({}, temporary / '.github', input_paths=roots, input_guards=guards)
+            scripts = evidence.write_outputs({}, temporary / '.github' / 'scripts', input_paths=roots,
+                                             input_guards=guards, rendered=modules)
+            if registry is not None:
+                evidence.write_outputs({}, temporary / '.github' / 'evals', input_paths=roots,
+                                       input_guards=guards, rendered={'custom-metrics.json': registry, **(assets or {})})
         try:
             response = subprocess.run([executable, '-I', '-B', '-c', RUNNER, str(scripts),
                                        evidence.encoded(expected).decode(), original],
@@ -377,7 +383,9 @@ def load(paths, captured):
                               'review_digest', 'markdown_digest', 'inputs', 'analysis', 'source', 'support',
                               'selection', 'assessments'))
         require(type(spec['schema_version']) is int and spec['schema_version'] == 1, 'Attachment schema mismatch')
-        require(type(spec['profile']) is str and spec['profile'] in PROFILES, 'Unsupported validator profile')
+        release_snapshot = spec['profile'] == snapshot.PROFILE
+        require(type(spec['profile']) is str and (release_snapshot or spec['profile'] in PROFILES), 'Unsupported validator profile')
+        require(not release_snapshot or offline_replay, 'Pinned validator environment required')
         evidence.skill_id(spec['skill']); evidence.sha(spec['record_id'])
         rid = spec['record_id']
         require(rid not in seen and rid in captured.records, 'Duplicate or missing attachment record')
@@ -404,28 +412,32 @@ def load(paths, captured):
         for key, data in (('review_digest', raw), ('markdown_digest', markdown)):
             evidence.sha(spec[key])
             require(spec[key] == evidence.digest_bytes(data), 'Analyst report digest mismatch')
-        require(spec['tooling'] is not None or spec['profile'] in ('current-v2', 'current-v3', 'current-v4'), 'Historical tooling snapshot required')
-        tooling = attachment_path(spec['tooling'], parent) if spec['tooling'] is not None else evidence.ROOT
-        modules = {}
-        revision, hashes = PROFILES[spec['profile']]
-        for name, digest in zip(MODULES, hashes):
-            data = capture.read(tooling / '.github' / 'scripts' / name)
-            require(evidence.digest_bytes(data) == 'sha256:' + digest, 'Unreviewed validator module')
-            modules[name] = data
-        assets = {}
-        for member, digest in SUPPORT_FILES.get(spec['profile'], {}).items():
-            data = capture.read(tooling / member, limit=LIMIT)
-            require(evidence.digest_bytes(data) == 'sha256:' + digest, 'Unreviewed validator supporting file')
-            if member.startswith('.github/scripts/'):
-                modules[Path(member).name] = data
-            else:
-                assets[Path(member).name] = data
-        registry = None
-        if spec['profile'] in REGISTRY_DIGESTS:
-            registry = capture.read(tooling / '.github/evals/custom-metrics.json', limit=LIMIT)
-            require(evidence.digest_bytes(registry) == 'sha256:' + REGISTRY_DIGESTS[spec['profile']],
-                    'Unreviewed metric registry')
-        roots.append(tooling)
+        if release_snapshot:
+            require(spec['tooling'] is None, 'Tooling for this profile is fixed')
+            revision, modules, registry, assets = snapshot.REVISION, {}, None, {}
+        else:
+            require(spec['tooling'] is not None or spec['profile'] in ('current-v2', 'current-v3', 'current-v4'), 'Historical tooling snapshot required')
+            tooling = attachment_path(spec['tooling'], parent) if spec['tooling'] is not None else evidence.ROOT
+            modules = {}
+            revision, hashes = PROFILES[spec['profile']]
+            for name, digest in zip(MODULES, hashes):
+                data = capture.read(tooling / '.github' / 'scripts' / name)
+                require(evidence.digest_bytes(data) == 'sha256:' + digest, 'Unreviewed validator module')
+                modules[name] = data
+            assets = {}
+            for member, digest in SUPPORT_FILES.get(spec['profile'], {}).items():
+                data = capture.read(tooling / member, limit=LIMIT)
+                require(evidence.digest_bytes(data) == 'sha256:' + digest, 'Unreviewed validator supporting file')
+                if member.startswith('.github/scripts/'):
+                    modules[Path(member).name] = data
+                else:
+                    assets[Path(member).name] = data
+            registry = None
+            if spec['profile'] in REGISTRY_DIGESTS:
+                registry = capture.read(tooling / '.github/evals/custom-metrics.json', limit=LIMIT)
+                require(evidence.digest_bytes(registry) == 'sha256:' + REGISTRY_DIGESTS[spec['profile']],
+                        'Unreviewed metric registry')
+            roots.append(tooling)
         require(type(spec['assessments']) is list and len(spec['assessments']) <= MAX_ASSESSMENTS, 'Assessment limit')
         # Capture assessment originals before any temporary output is allocated.
         # This provisional projection confers no authority: original validation
@@ -443,7 +455,8 @@ def load(paths, captured):
         require(result['records'].get(rid) == selected, 'Original and consolidated record mismatch')
         original_records.extend(result['records'].values())
         items.append({'record_id': rid, 'skill': spec['skill'], 'profile': spec['profile'], 'tooling_revision': revision,
-                      **({'validator_execution': 'skillevaluator-1.0.1-private-review-offline-v1'} if offline_replay else {}),
+                      **({'validator_execution': ('skillevaluator-1.0.1-private-review-frozen-v1' if release_snapshot
+                          else 'skillevaluator-1.0.1-private-review-offline-v1')} if offline_replay else {}),
                       'review_digest': spec['review_digest'], 'markdown_digest': spec['markdown_digest'],
                       'reference_deadlines': sorted({evidence.REVIEWED_REFERENCE_EXPIRY[(ref['artifact_id'], ref['artifact_digest'])]
                           for record in result['records'].values() for ref in record['references']

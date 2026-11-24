@@ -146,17 +146,25 @@ The local standard and confirmation fixtures retained 20 and 60 attempts
 in distinct series. The cancellation fixture retained 19 of 20. The
 publication route rejected mismatched mode, producer and trial identities,
 and the canonical history writer rejected all four fixture reports.
-The candidate is still opt-in. The next hosted credential-free checkpoint
-uses only the manual benchmark-101-podman input for isolated Podman and
-both publication modes. The production owner remains subject to the
-separate provider checkpoint.
+The hosted Podman and publication checkpoint passed on `fb1e044` with
+`benchmark-101-podman=true`. The authenticated archive retained both
+startup receipts, one scored trial per arm and the four publication
+controls. The job logged no Compose teardown errors. Production
+retirement requires the separately authorized provider checkpoint.
+[Hosted Podman and publication](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45459299280)
+[Automatic Validate](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45459156356)
 
-A local rehearsal built a fixed private-review source archive at
-`c1d0f61` and verified synthetic Podman, gh and Pester attachments with
-the 1.0.1 overlay. The rehearsal rejected altered archive bytes and
-caller-supplied tooling. Register the new attachment identity and bind
-the documented review commands to the same frozen tooling before
-adopting it.
+The local private-review checkpoint registers `review-101-v1` using a
+fixed source snapshot of `c1d0f61`. The documented operator entry point
+and independent attachment validator use the same producer source.
+Synthetic Podman, gh and Pester contexts passed prepare, validate and
+attachment admission. The tests rejected caller-supplied tooling,
+changed snapshot bytes and output inside the checkout. The 1.0.1
+review interpreter also replayed the ten historical profiles with
+their original scoring and validator provenance. Archived producer
+request tests covered the identical token-count and generation context,
+provider-default reasoning, deadline and failure handling without
+inference. New results retain `not_quality_qualified`.
 
 | Maintained path | Retirement gate |
 | --- | --- |

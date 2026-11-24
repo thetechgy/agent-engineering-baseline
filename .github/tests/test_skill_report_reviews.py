@@ -89,6 +89,90 @@ class AttachmentTests(unittest.TestCase):
                 self.assertIn('not_quality_qualified', output)
                 self.assertNotIn(str(self.root), output)
 
+    def test_release_snapshot_rejects_changed_archive_before_unpacking(self):
+        import private_review_snapshot as snapshot
+
+        changed = self.root / 'changed.zip'
+        changed.write_bytes(snapshot.SNAPSHOT.read_bytes() + b'changed')
+        destination = self.root / 'unpacked'
+        with patch.object(snapshot, 'SNAPSHOT', changed):
+            with self.assertRaisesRegex(ValueError, 'Unreviewed private validator snapshot'):
+                snapshot.unpack(destination)
+        self.assertFalse(destination.exists())
+
+    @unittest.skipUnless(RELEASE_REPLAY, 'Requires the 1.0.1 review owner')
+    def test_release_review_cli_and_attachment_use_the_same_frozen_source(self):
+        import json
+        import shutil
+        from private_review_snapshot import PROFILE, REVISION, unpack
+
+        for key, pester in (('current-v5', False), ('gh-89f46f0', False), (None, True)):
+            with self.subTest(fixture=key or 'pester'), tempfile.TemporaryDirectory() as directory:
+                base = Path(directory)
+                with parity_archive(pester=pester) as archive:
+                    spec, spec_path, _ = restore_parity_case(self, archive, base / 'inputs', key=key)
+                scripts = unpack(base / 'frozen')
+                command = [sys.executable, '-B', str(evidence.ROOT / '.github/scripts/skill_review.py')]
+                args = ['--analysis', spec['analysis'], '--skill', spec['skill'], '--record-id', spec['record_id']]
+                for item in spec['inputs']:
+                    args.extend(['--input', item])
+                for member, flag in (('source', '--source'), ('support', '--support'), ('selection', '--source-selection')):
+                    if spec[member] is not None:
+                        args.extend([flag, spec[member]])
+                env = {key: os.environ[key] for key in ('PATH', 'TMPDIR', 'LANG') if key in os.environ}
+                env.update(HOME=str(base), PYTHON_DOTENV_DISABLED='1', LITELLM_LOCAL_MODEL_COST_MAP='True')
+                planned = base / 'prepared'
+                build = subprocess.run([*command, 'prepare', *args, '--output', str(planned)],
+                    env=env, capture_output=True, text=True, timeout=45)
+                self.assertEqual(build.returncode, 0, build.stderr)
+                emitted = evidence.read_json(planned / 'review-context.json')
+                # Generate a structural fixture from the frozen owner with no SDK call.
+                source = attachments.AUDIT_GUARD + """
+sys.path.insert(0, sys.argv[1])
+import skill_review as review
+sys.path.insert(0, sys.argv[2])
+from test_skill_review import judgment, CONFIG
+args = json.loads(sys.argv[3])
+context = review.prepare([Path(p) for p in args['inputs']], Path(args['analysis']),
+    args['skill'], args['record_id'],
+    **{name: Path(args[name]) if args[name] is not None else None for name in ('source','support','selection')})
+sample = review.make_review(judgment(context), context, review.ModelConfig(**CONFIG),
+    review.Usage(preflight_input_tokens=100, input_tokens=100, output_tokens=25, total_tokens=125))
+target = Path(sys.argv[4])
+(target / 'skill-review.json').write_bytes(review.evidence.encoded(sample))
+(target / 'skill-review.md').write_bytes(review.render_review(sample, context))
+"""
+                fixture = base / 'review'; fixture.mkdir()
+                subprocess.run([sys.executable, '-I', '-B', '-c', source, str(scripts), str(Path(__file__).parent),
+                                json.dumps(spec), str(fixture)], env=env, check=True, timeout=45)
+                save = fixture / 'skill-review.json'
+                release_review = evidence.read_json(save)
+                self.assertEqual(emitted['implementation_digest'], release_review['provenance']['implementation_digest'])
+                self.assertEqual(release_review['provenance']['versions']['skillevaluator'], '1.0.1')
+                self.assertEqual(subprocess.run([*command, 'validate', *args, '--review', str(save)],
+                    env=env, capture_output=True, timeout=45).returncode, 0)
+                if key == 'current-v5':
+                    forbidden = evidence.ROOT / ('.aeb-review-output-' + base.name)
+                    try:
+                        self.assertNotEqual(subprocess.run([*command, 'prepare', *args, '--output', str(forbidden)],
+                            env=env, capture_output=True, timeout=45).returncode, 0)
+                        self.assertFalse(forbidden.exists())
+                    finally:
+                        if forbidden.is_dir() and not forbidden.is_symlink():
+                            shutil.rmtree(forbidden)
+                spec.update(profile=PROFILE, tooling=None, review=str(save),
+                            review_digest=evidence.digest_bytes(save.read_bytes()),
+                            markdown_digest=evidence.digest_bytes((fixture / 'skill-review.md').read_bytes()))
+                write(spec_path, spec)
+                captured = analysis.capture_inputs([Path(name) for name in spec['inputs']])
+                item = attachments.load([spec_path], captured).items[0]
+                self.assertEqual(item['tooling_revision'], REVISION)
+                self.assertEqual(item['validator_execution'], 'skillevaluator-1.0.1-private-review-frozen-v1')
+                spec['tooling'] = str(base / 'frozen')
+                write(spec_path, spec)
+                with self.assertRaisesRegex(ValueError, 'Tooling for this profile is fixed'):
+                    attachments.load([spec_path], captured)
+
     def test_frozen_current_profile_rejects_changed_checkout_and_retains_legacy_host_dispatch(self):
         self.fixture('current-v4')
         self.load()  # Exact retained validator bytes remain supported.

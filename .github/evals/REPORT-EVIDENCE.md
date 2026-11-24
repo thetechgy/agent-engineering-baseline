@@ -1574,11 +1574,14 @@ not establish that it passed.
 
 ### Optional private analyst attachments
 
-Select the attachment's original review/validator interpreter instead of
-`SKILL_DATA_PYTHON` before adding
-`--analyst-review /tmp/private-attachments/podman.json` to the report command;
-repeat for another selected record. There is at most **one analyst report per
-record**, with up to eight separately supplied independent assessments of that
+Use the private-review interpreter before adding
+`--analyst-review /tmp/private-attachments/podman.json` to the report command.
+Repeat for another selected record. The 1.0.1 interpreter validates historical
+attachments against their recorded profiles and original source bytes, and
+identifies the offline validator separately. For new 1.0.1 reviews use
+`"profile": "review-101-v1"` and `"tooling": null`. That profile selects the
+repository's fixed producer and validator source snapshot. Each record can have
+**one analyst report** and up to eight separately supplied independent assessments of that
 exact report. No-attachment generation keeps the existing public-evidence
 dependencies (including Pydantic), without importing the analyst modules or
 OpenAI SDK. Attachment-specific version checks run only when requested.
@@ -1815,12 +1818,14 @@ Issue #60 adds `.github/scripts/skill_review.py`. This is a Linux-first, private
 judgment tool over supplied evidence, with no retrieval, shell tools, grading,
 source edits, uploads, repository actions, or automatic publication. Existing
 public schema v1, analysis schema v1, measurements, scoring, workflows and APM
-artifacts are unchanged. For current reviews, use `SKILL_REVIEW_PYTHON` from
-`setup-skillevaluator.sh`: Python 3.13, OpenAI 2.54.0, Pydantic 2.14.3,
-SkillEvaluator 0.3.0. Its separately reviewed lock overlay leaves the evaluator,
-benchmark and historical-validator environments unchanged. See the
-[review-runtime qualification](REVIEW-RUNTIME-95.md).
-The CLI rejects other dependency versions. No dependencies are installed by it.
+artifacts are unchanged. To use the 1.0.1 review profile, run
+`setup-static-evaluator.sh review-candidate` with the reviewed uv version
+and an external tool directory. The setup exports
+`SKILL_REVIEW_CANDIDATE_PYTHON` via `GITHUB_ENV`. It pins Python 3.13.18,
+OpenAI 2.54.0, Pydantic 2.14.3, and certifi 2026.10.23. The CLI verifies
+the installation and uses the same fixed source snapshot to prepare,
+generate, and validate. New results retain `not_quality_qualified`.
+[Snapshot provenance](retained/README.md)
 
 ### Operations and authorization
 
@@ -1831,7 +1836,7 @@ source identity; current installed source cannot substitute for different bytes.
 
 ```bash
 # Offline: exports a private review-context.json, never invokes the model.
-"$SKILL_REVIEW_PYTHON" .github/scripts/skill_review.py prepare \
+"$SKILL_REVIEW_CANDIDATE_PYTHON" .github/scripts/skill_review.py prepare \
   --input /tmp/public-bundle --analysis /tmp/analysis/analysis.json \
   --skill podman --record-id 'sha256:<selected-record-hash>' \
   --source /tmp/evaluated-source --support /tmp/retained-support \
@@ -1839,7 +1844,7 @@ source identity; current installed source cannot substitute for different bytes.
 
 # Explicitly authorized inference: rebuilds context from originals.
 # Set OPENAI_API_KEY securely in the calling environment; never in arguments/files.
-"$SKILL_REVIEW_PYTHON" .github/scripts/skill_review.py review \
+"$SKILL_REVIEW_CANDIDATE_PYTHON" .github/scripts/skill_review.py review \
   --input /tmp/public-bundle --analysis /tmp/analysis/analysis.json \
   --skill podman --record-id 'sha256:<selected-record-hash>' \
   --source /tmp/evaluated-source --support /tmp/retained-support \
@@ -1847,7 +1852,7 @@ source identity; current installed source cannot substitute for different bytes.
   --output /tmp/new-skill-review
 
 # Offline: independent structural/evidence validation plus exact Markdown check.
-"$SKILL_REVIEW_PYTHON" .github/scripts/skill_review.py validate \
+"$SKILL_REVIEW_CANDIDATE_PYTHON" .github/scripts/skill_review.py validate \
   --input /tmp/public-bundle --analysis /tmp/analysis/analysis.json \
   --skill podman --record-id 'sha256:<selected-record-hash>' \
   --source /tmp/evaluated-source --support /tmp/retained-support \

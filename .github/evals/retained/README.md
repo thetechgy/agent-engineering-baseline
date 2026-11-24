@@ -29,3 +29,12 @@ standard score and Podman inputs were captured at
 
 Exact historical execution uses an explicit checkout of the producing
 revision and the retained setup at that revision.
+
+`private-review-101.zip` holds the fixed public source for the
+`review-101-v1` private review profile. It contains the regular tracked
+files under `.github/scripts` and `.github/evals` from
+`c1d0f61d29e1a2dfad964a4406964ad068cd0a5b`. The launcher verifies the
+archive SHA-256 `376fe25f26672a98a878c6d946a7700a6f463d5ae6d0599fb2b8da7f05c5ba9d`
+before unpacking. The archived files supply the evaluator and campaign
+registries used when reconstructing contexts. Review creation and offline
+attachment validation use the same snapshot.

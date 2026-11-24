@@ -2135,6 +2135,10 @@ def main(argv=None):
 
 if __name__ == "__main__":
     try:
+        if importlib.metadata.version("skillevaluator") == "1.0.1":
+            from private_review_snapshot import run_cli
+
+            sys.exit(run_cli(sys.argv[1:]))
         main()
     except PrivateContractError as error:
         print(str(error), file=sys.stderr)
