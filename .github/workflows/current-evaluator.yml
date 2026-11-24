@@ -399,5 +399,8 @@ jobs:
             ${{ runner.temp }}/benchmark-101-pester/qualification.json
             ${{ runner.temp }}/benchmark-101-pester/cleanup.json
             ${{ runner.temp }}/benchmark-101-codex/qualification.json
+            ${{ runner.temp }}/benchmark-101-codex/with/startup.json
+            ${{ runner.temp }}/benchmark-101-codex/without/startup.json
+            ${{ runner.temp }}/benchmark-101-codex/interrupted/startup.json
           retention-days: 30
           if-no-files-found: error

@@ -1,5 +1,6 @@
 """Opt-in candidate controls supplement the unchanged production evidence cases."""
 
+from contextlib import nullcontext
 import json
 import hashlib
 import importlib.util
@@ -81,6 +82,35 @@ class CandidateHarnessTests(unittest.TestCase):
 
 @unittest.skipUnless(os.environ.get('CANDIDATE_EVIDENCE_CHILD') == '1', 'opt-in candidate qualification only')
 class CandidateEvidenceTests(unittest.TestCase):
+    def test_codex_setup_failure_without_container_receipt_keeps_primary_error(self):
+        from importlib.metadata import version
+
+        if version("skillevaluator") != "1.0.1":
+            self.skipTest("Requires the 1.0.1 benchmark candidate")
+
+        import qualify_benchmark_codex as fixture
+        from skill_reports import read_json, write_json
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            arm = root / "with"
+
+            def launch(argv, *, env):
+                job_name = argv[argv.index("--job-name") + 1]
+                write_json(root / "jobs" / job_name / "trial/result.json", {"exception_info": {
+                    "exception_type": "NonZeroAgentExitCodeError",
+                    "exception_message": "raw output must not be retained",
+                }})
+                with patch.dict(os.environ, {"BENCHMARK_CODEX_FIXTURE": env["BENCHMARK_CODEX_FIXTURE"]}, clear=True):
+                    fixture.OfflineCodex.record_startup("verify_package")
+                return nullcontext(SimpleNamespace(poll=lambda: 0, wait=lambda **_: 0))
+
+            with patch.object(fixture, "stage", return_value=root / "tasks/gh-001"), \
+                 patch("aeb_gh_fixture.manifest.write_manifest", return_value=root / "manifest.json"), \
+                 patch.object(fixture.subprocess, "Popen", side_effect=launch):
+                with self.assertRaisesRegex(ValueError, r"^Native Codex trial failed during or after verify_package: NonZeroAgentExitCodeError$"):
+                    fixture.run(arm, None, True)
+            self.assertEqual(read_json(arm / "startup.json"), {"stage": "verify_package"})
+
     def test_only_bundled_offline_verifiers_accept_literal_network_none(self):
         from skillevaluator.tier3.harbor import adapter
         from harbor.environments.docker.docker import DockerEnvironment

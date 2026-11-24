@@ -33,7 +33,11 @@ CASE = "gh-001"
 PROFILE = gh.ROOT / ".github/evals/codex-execution-1710.json"
 ENDPOINT = "http://127.0.0.1:8765/v1"
 SENTINEL = "pilot-not-a-credential"
-VENDOR = "/opt/reviewed/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/"
+VENDOR = "/opt/reviewed/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/"
+TRIAL_EXCEPTIONS = frozenset({
+    "AgentSetupTimeoutError", "AgentTimeoutError", "CalledProcessError", "EnvironmentStartTimeoutError",
+    "NonZeroAgentExitCodeError", "PermissionError", "RuntimeError", "TimeoutError", "ValueError", "VerifierTimeoutError",
+})
 
 
 # Run as the trial user. Other UIDs' /proc/exe links are intentionally unreadable.
@@ -61,7 +65,14 @@ os.kill(matches[0], signal.SIGINT)
 class OfflineCodex(BenchmarkCodex):
     """Replace Internet installation only. Harbor owns execution and log conversion."""
 
+    @staticmethod
+    def record_startup(stage):
+        if RELEASE:
+            fixture = Path(os.environ["BENCHMARK_CODEX_FIXTURE"])
+            write_json(fixture.with_name("startup.json"), {"stage": stage})
+
     async def install(self, environment):
+        self.record_startup("verify_package")
         profile = read_json(PROFILE)
         expected = {"bin/codex": profile["cli_executable_sha256"], **profile["helper_sha256"]}
         require(self._version == profile["cli"], "Generated dispatch version drift")
@@ -72,13 +83,16 @@ class OfflineCodex(BenchmarkCodex):
         for name, sha in expected.items():
             result = await self.exec_as_root(environment, "sha256sum " + VENDOR + name)
             require(result.stdout.split()[0] == sha, "Container release bytes differ")
+        self.record_startup("verify_agent_identity_and_broker")
         result = await self.exec_as_agent(environment, "codex --version && id -u && test -S /run/gh-eval/gh.sock && test ! -r /opt/gh-eval/state/case.json")
         require(result.stdout.splitlines() == ["codex-cli " + self._version, "1000"], "Agent identity or CLI drift")
+        self.record_startup("verify_network_isolation")
         container = (await environment._run_docker_compose_command(["ps", "--quiet", "main"])).stdout.strip()
         inspected, = json.loads(subprocess.check_output(["docker", "inspect", container]))
         require(inspected["HostConfig"]["NetworkMode"] == "none", "Fixture requires isolated networking")
         write_json(self.logs_dir.parent / "fixture-container.json", {"id": container})
 
+        self.record_startup("start_loopback_provider")
         # Every byte supplied to the native agent is public fixture data.
         fixture = read_json(Path(os.environ["BENCHMARK_CODEX_FIXTURE"]))
         commands = base64.b64encode(json.dumps(fixture["commands"]).encode()).decode()
@@ -93,6 +107,7 @@ class OfflineCodex(BenchmarkCodex):
         else:
             raise ValueError("Loopback responder failed to start")
         self._extra_env.update(OPENAI_API_KEY=SENTINEL, OPENAI_BASE_URL=ENDPOINT)
+        self.record_startup("ready")
 
 
 def stage(root, assets, present):
@@ -120,7 +135,7 @@ def stage(root, assets, present):
         launcher = VENDOR + "bin/codex"
         package = "@openai/codex@" + POLICY["codex"]
         install = ("RUN npm install --prefix /opt/reviewed --no-audit --no-fund --ignore-scripts "
-                   "--registry=https://registry.npmjs.org/ " + package + "\n"
+                   "--install-strategy=hoisted --registry=https://registry.npmjs.org/ " + package + "\n"
                    + "ENV PATH=" + VENDOR + "codex-path:$PATH\n")
     else:
         shutil.copytree(assets / "lib/node_modules", image / "reviewed/node_modules", symlinks=True)
@@ -180,6 +195,8 @@ def run(root, assets, present, *, interrupt=False):
         index = argv.index("--agent-import-path") + 1
     require(argv[index] == BenchmarkCodex.__module__ + ":BenchmarkCodex", "Unexpected benchmark agent")
     argv[index] = "qualify_benchmark_codex:OfflineCodex"
+    if RELEASE:
+        write_json(root / "startup.json", {"stage": "staged"})
     with subprocess.Popen(argv, env=env) as job:
         try:
             if interrupt:
@@ -199,12 +216,18 @@ def run(root, assets, present, *, interrupt=False):
             if job.poll() is None:
                 job.terminate()
                 job.wait(timeout=30)
-    trial, = (jobs / job_name).glob("*/fixture-container.json")
-    container = read_json(trial)["id"]
+    results = list((jobs / job_name).glob("*/result.json"))
+    require(len(results) == 1, "Expected one Harbor trial result")
+    result = read_json(results[0])
+    if not interrupt and result.get("exception_info") is not None:
+        reported = result["exception_info"].get("exception_type")
+        exception = reported if isinstance(reported, str) and reported in TRIAL_EXCEPTIONS else "unclassified"
+        last_stage = read_json(root / "startup.json")["stage"] if RELEASE else "unrecorded"
+        raise ValueError(f"Native Codex trial failed during or after {last_stage}: {exception}")
+    trial = results[0].parent
+    container = read_json(trial / "fixture-container.json")["id"]
     require(subprocess.run(["docker", "container", "inspect", container], capture_output=True).returncode != 0,
             "Native trial container survived teardown")
-    trial = trial.parent
-    result = read_json(trial / "result.json")
     events = [json.loads(line) for line in (trial / "agent/codex.txt").read_text().splitlines() if line.startswith("{")]
     if interrupt:
         require((result.get("exception_info") or {}).get("exception_type") == "NonZeroAgentExitCodeError"
@@ -215,7 +238,6 @@ def run(root, assets, present, *, interrupt=False):
                 "Incomplete usage was presented as a final measurement")
         return {"execution": "interrupted", "exception": result["exception_info"]["exception_type"],
                 "usage": None, "cleanup": True}
-    require(result.get("exception_info") is None, "Trial failed: " + str(result.get("exception_info")))
     native_reward = read_json(trial / "verifier/custom_reward.json")
     require("error" not in native_reward, "Native custom verifier failed: " + str(native_reward.get("error")))
     request = read_json(trial / "verifier/provider.json")

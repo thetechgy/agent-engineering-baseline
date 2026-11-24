@@ -74,11 +74,22 @@ executable out of the broker's bounded task manifest, checks the pinned
 executables in the image and requires a loopback-only container at launch.
 The package build, the real Codex request and interruption path, Podman
 benchmark execution and result publication still require native qualification.
-The next Codex-only check can use `current-evaluator.yml` with
-`benchmark-101-codex=true` and `benchmark-101-fixtures=false`. It qualifies
-both `gh-001` arms and one interrupted attempt through the existing
-non-forwarding loopback responder. Its result is native compatibility
-evidence for those controls.
+The Codex-only run at `c1d0f61` stopped on the first `gh-001` arm.
+Harbor reported `NonZeroAgentExitCodeError`, followed by a missing
+container receipt. A local credential-free reproduction with Codex 0.171.0
+showed that the previous path resolves only in a global npm installation.
+The local install puts the package at the hoisted path. The fixture now
+uses that path, verifies the same executable and helper hashes, and writes
+the last startup stage to a bounded receipt.
+[Codex-only run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45419255253)
+
+Repeat the Codex-only check after scoped approval, with
+`benchmark-101-codex=true` and the three other dispatch inputs false.
+Qualification requires both `gh-001` arms and one interrupted attempt
+through the existing non-forwarding loopback responder. The private-review
+candidate also produced and validated a synthetic review offline. The
+attachment reader rejected its new `review-101-v1` identity. Register that
+identity separately from the original profiles before adopting it.
 
 | Maintained path | Retirement gate |
 | --- | --- |
