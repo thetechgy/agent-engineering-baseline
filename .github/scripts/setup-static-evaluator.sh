@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the released evaluator for static quality or public data processing.
+# Install the released evaluator for static quality, public data, or startup qualification.
 set -euo pipefail
 umask 077
 
@@ -7,12 +7,13 @@ root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 kind=${1:-quality-static}
 case "$kind" in
   quality-next) exec bash "$root/.github/scripts/setup-skillevaluator.sh" quality-next ;;
-  quality-static|data-host) ;;
+  quality-static|data-host|native-startup) ;;
   *) exit 2 ;;
 esac
 : "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}" "${GITHUB_ENV:?}"
 tools="$RUNNER_TEMP/skill-evaluation-tools"
 if [ "$kind" = data-host ]; then tools="$RUNNER_TEMP/skill-data-host"; fi
+if [ "$kind" = native-startup ]; then tools="$RUNNER_TEMP/skill-native-startup"; fi
 case "$(realpath -m "$tools")/" in
   "$(realpath "$GITHUB_WORKSPACE")/"*|"$root/"*) echo 'Tools must be outside the checkout.' >&2; exit 1 ;;
 esac
@@ -37,9 +38,22 @@ test "$(git -C "$evaluator" rev-parse HEAD)" = "$revision"
 printf '%s  %s\n' "$lock" "$evaluator/uv.lock" | sha256sum --check --strict
 extras=()
 if [ "$kind" = quality-static ]; then extras=(--extra security --extra tier3); fi
+if [ "$kind" = native-startup ]; then extras=(--extra tier3); fi
 uv sync --project "$evaluator" --python "$python_version" --managed-python --frozen --no-dev "${extras[@]}"
 python="$evaluator/.venv/bin/python"
 uv pip check --python "$python"
+if [ "$kind" = native-startup ]; then
+  PYTHONPATH="$root/.github/scripts" "$python" -B -c 'import static_evaluator; static_evaluator.validate_install()'
+  "$python" -IB "$root/.github/evaluator-backends/build_wheel.py" "$tools/backend-wheel" --release-startup
+  printf '%s  %s\n' c76a4689f6b59b1b221e4b4fc8445869e9f1c923edbe995f2909cd9d227b1fb3 \
+    "$tools/backend-wheel/aeb_gh_fixture-1.2.0-py3-none-any.whl" | sha256sum --check --strict
+  uv pip install --python "$python" --no-deps --no-index --link-mode copy --require-hashes --only-binary :all: \
+    --requirement "$tools/backend-wheel/requirements.txt"
+  uv pip check --python "$python"
+  "$python" -IB -c 'from aeb_gh_fixture.backend import require_runtime; require_runtime()'
+  printf 'SKILL_NATIVE_STARTUP_PYTHON=%s\n' "$python" >> "$GITHUB_ENV"
+  exit 0
+fi
 if [ "$kind" = data-host ]; then
   PYTHONPATH="$root/.github/scripts" "$python" -B -c 'import static_evaluator; static_evaluator.validate_install()'
   "$evaluator/.venv/bin/skillevaluator" --version

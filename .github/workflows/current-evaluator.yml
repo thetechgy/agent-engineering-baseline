@@ -8,9 +8,14 @@ on:
         type: boolean
         default: false
       startup-only:
-        description: Run matched base/head gh-007 startup only, without agents or grading
+        description: Run gh-007 startup only, without agents or grading
         type: boolean
         default: false
+      startup-owner:
+        description: Evaluator for the startup-only qualification
+        type: choice
+        options: ['0.9.0', '1.0.1']
+        default: '0.9.0'
 
 permissions:
   contents: read
@@ -250,7 +255,7 @@ jobs:
 
   startup:
     name: Matched gh-007 startup only (no agent or grading)
-    if: github.event_name == 'workflow_dispatch' && inputs.startup-only && inputs.candidate-next
+    if: github.event_name == 'workflow_dispatch' && inputs.startup-only && (inputs.candidate-next || inputs.startup-owner == '1.0.1')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     defaults:
@@ -266,6 +271,7 @@ jobs:
           path: startup-head
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: inputs.startup-owner == '0.9.0'
         with:
           ref: 82cdde086fe4d7fad84f21acc614df2adeca1767
           path: startup-base
@@ -275,15 +281,28 @@ jobs:
           version: '0.13.9'
           enable-cache: false
       - name: Acquire the unchanged pinned owner and Compose
+        if: inputs.startup-owner == '0.9.0'
         run: |
           bash .github/scripts/setup-skillevaluator.sh candidate-next
           bash .github/scripts/setup-compose.sh
       - name: Run focused startup regressions
+        if: inputs.startup-owner == '0.9.0'
         run: 'PYTHONPATH=.github/scripts:.github/tests "$SKILL_NEXT_PYTHON" -B -m unittest test_gh_startup_probe -v'
       - name: Start matched gh-007 environments without agent setup
+        if: inputs.startup-owner == '0.9.0'
         run: |
           "$SKILL_NEXT_PYTHON" -I -B -c 'import sys; sys.path.insert(0,".github/scripts"); from gh_initializer_validation import startup_only; startup_only(sys.argv[1],sys.argv[2])' \
             "$RUNNER_TEMP/gh-startup.json" "$GITHUB_WORKSPACE/startup-base"
+      - name: Acquire the 1.0.1 release owner and Compose
+        if: inputs.startup-owner == '1.0.1'
+        run: |
+          bash .github/scripts/setup-static-evaluator.sh native-startup
+          bash .github/scripts/setup-compose.sh
+      - name: Exercise released staging and trusted startup in both arms
+        if: inputs.startup-owner == '1.0.1'
+        run: |
+          PYTHONPATH=.github/scripts:.github/tests "$SKILL_NATIVE_STARTUP_PYTHON" -B -m unittest test_gh_startup_probe -v
+          "$SKILL_NATIVE_STARTUP_PYTHON" -B .github/scripts/qualify_gh_startup_101.py "$RUNNER_TEMP/gh-startup.json"
       - name: Verify source integrity
         if: always()
         run: git diff --exit-code
