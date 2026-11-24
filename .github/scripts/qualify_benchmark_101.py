@@ -169,7 +169,9 @@ def score_comparison():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('output', type=Path)
-    parser.add_argument('--native', choices=('gh', 'pester'), help='Run the existing deterministic Docker fixture suite')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--native', choices=('gh', 'pester'), help='Run the existing deterministic Docker fixture suite')
+    mode.add_argument('--prepare-pester', action='store_true', help='Prepare pinned Pester image packages without running a trial')
     args = parser.parse_args()
     output = args.output.absolute()
     require(output.resolve() == output and not output.is_relative_to(ROOT) and not output.exists(),
@@ -177,6 +179,10 @@ def main():
     require(not any(os.environ.get(key) for key in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'NVIDIA_API_KEY',
         'CODEX_AUTH_JSON_PATH', 'CODEX_FORCE_AUTH_JSON', 'SKILL_EVAL_LLM_API_KEY')), 'Provider credentials forbidden')
     with fixture_owner() as versions:
+        if args.prepare_pester:
+            from prepare_candidate_images import main as prepare
+            prepare(output, runtime='current')
+            return
         if args.native == 'gh':
             from gh_oracle_validation import main as qualify
             qualify(output)

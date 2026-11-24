@@ -14,12 +14,15 @@ from pathlib import Path
 import subprocess
 import sys
 import tarfile
+import zipfile
 
 
 REVISION = 'f878f99a9cd4a85dd04043feb43e5bd6a777f64b'
 PINS = {'aeb-gh-fixture': '1.0.0', 'skillevaluator': '0.7.2', 'harbor': '0.24.0', 'openai': '2.44.0',
         'pydantic': '2.13.4', 'pydantic-core': '2.46.4',
         'typing-inspection': '0.4.2', 'litellm': '1.93.2'}
+RETAINED_PESTER_DIGEST = 'sha256:4adddcd1501c1613675631e0e2a51413658d6ac1f59ef3318dba5f04a2a981e8'
+RETAINED_PESTER_REPORT = 'skills/powershell-pester-6/behavioral/qualification/public-report.json'
 CHILD = '''
 import json, os, sys, unittest
 from pathlib import Path
@@ -100,6 +103,27 @@ def run_native(command, *, env, log, timeout=2400):
                 process.kill()
                 process.wait(timeout=5)
             raise
+
+
+def retained_pester(project):
+    """Validate the original hosted public projection without its old interpreter."""
+    from skill_evidence import digest_bytes, parse_json, read_bytes, require, validate_public
+
+    archive = read_bytes(project / '.github/evals/retained/pester-public-030.zip')
+    require(digest_bytes(archive) == RETAINED_PESTER_DIGEST, 'Retained Pester archive digest mismatch')
+    with zipfile.ZipFile(io.BytesIO(archive)) as bundle:
+        raw = bundle.read(RETAINED_PESTER_REPORT)
+    record = parse_json(raw)
+    validate_public(record)
+    fields = record['policy']['fields']
+    custom = record['custom']
+    require(record['source']['skill_id'] == 'powershell-pester-6'
+            and fields['evaluator_revision'] == 'ac0a04905100acdafc6c95829311a9739c340ff6'
+            and fields['harbor'] == '0.13.2' and fields['grading'] == 'custom_only'
+            and custom['profile_id'] == 'pester-pilot-v3' and custom['agent'] == 'oracle'
+            and custom['purpose'] == 'oracle_qualification' and len(record['observations']) == 52,
+            'Retained Pester qualification identity mismatch')
+    return raw
 
 
 def main():
@@ -304,21 +328,16 @@ def main():
                                      'qualification_context': 'cache_prepared' if args.cache_prepared or metadata.get('pester_preparation', {}).get('success') else 'unprepared'}
         (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
     if args.adoption and controls_ready:
-        legacy_python = os.environ.get('SKILL_LEGACY_REVIEW_PYTHON')
-        if legacy_python and Path(legacy_python).is_absolute():
-            launcher = ("import sys, importlib.metadata; sys.path.insert(0, sys.argv[1]); "
-                        "assert {k: importlib.metadata.version(k) for k in ('skillevaluator','harbor','openai')} == "
-                        "{'skillevaluator':'0.3.0','harbor':'0.13.2','openai':'2.44.0'}; "
-                        "from pester_container_validation import main; main(artifact=sys.argv[2])")
-            legacy_env = {**env, 'DOCKER_CONFIG': compose_config, 'RUNNER_TEMP': str(output),
-                          'PATH': str(Path(legacy_python).parent) + os.pathsep + env['PATH']}
-            with (output / 'legacy-pester.log').open('w') as log:
-                legacy_code = run_native([legacy_python, '-I', '-B', '-c', launcher,
-                    str(project / '.github/scripts'), str(output / 'legacy-pester')], env=legacy_env, log=log)
-            metadata['legacy_pester'] = {'success': legacy_code == 0, 'returncode': legacy_code, 'diagnostic_only': True}
-            returncode = returncode or legacy_code
+        try:
+            raw = retained_pester(project)
+        except (OSError, ValueError, zipfile.BadZipFile):
+            metadata['legacy_pester'] = {'success': False, 'code': 'retained_pester_evidence_invalid'}
         else:
-            metadata['legacy_pester'] = {'success': False, 'code': 'retained_evaluator_python_required'}
+            report = 'legacy-pester.public.json'
+            (output / report).write_bytes(raw)
+            metadata['legacy_pester'] = {'success': True, 'source': 'retained_public_projection',
+                'original_artifact': 14905952006, 'archive_digest': RETAINED_PESTER_DIGEST,
+                'report': report, 'diagnostic_only': True, 'executed': False}
     if args.adoption:
         # No green verdict while required migration boundaries lack evidence.
         blockers = [

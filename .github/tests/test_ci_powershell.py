@@ -196,19 +196,26 @@ class CIPowerShellTests(unittest.TestCase):
         workflow = yaml.safe_load((ROOT / '.github/workflows/current-evaluator.yml').read_text())
         inputs = workflow.get('on', workflow.get(True))['workflow_dispatch']['inputs']
         self.assertFalse(inputs['benchmark-101-fixtures']['default'])
+        self.assertFalse(inputs['benchmark-101-codex']['default'])
         jobs = workflow['jobs']
         candidate = jobs['benchmark-101']
-        self.assertIn("github.event_name == 'workflow_dispatch' && inputs.benchmark-101-fixtures", candidate['if'])
+        self.assertEqual(candidate['if'], "github.event_name == 'workflow_dispatch'"
+                         " && (inputs.benchmark-101-fixtures || inputs.benchmark-101-codex)")
         for key in ('cohorts', 'native-gh', 'report', 'startup'):
             self.assertIn('!inputs.benchmark-101-fixtures', jobs[key]['if'])
-        self.assertEqual(candidate['strategy']['matrix']['suite'], ['gh', 'pester'])
+            self.assertIn('!inputs.benchmark-101-codex', jobs[key]['if'])
+        self.assertEqual(candidate['strategy']['matrix']['suite'],
+                         '''${{ fromJSON(inputs.benchmark-101-codex && '["codex"]' || '["gh", "pester"]') }}''')
         self.assertEqual(workflow['permissions'], {'contents': 'read'})
         self.assertNotIn('environment', candidate)
         self.assertNotIn('secrets.', yaml.safe_dump(candidate))
         steps = candidate['steps']
         self.assertFalse(steps[0]['with']['persist-credentials'])
         self.assertEqual(steps[0]['with']['ref'], '${{ github.sha }}')
-        self.assertTrue(any('--native "$FIXTURE_SUITE"' in step.get('run', '') for step in steps))
+        deterministic = next(step for step in steps if '--native "$FIXTURE_SUITE"' in step.get('run', ''))
+        codex = next(step for step in steps if 'qualify_benchmark_codex.py' in step.get('run', ''))
+        self.assertEqual(deterministic['if'], "matrix.suite != 'codex'")
+        self.assertEqual(codex['if'], "matrix.suite == 'codex'")
 
     def test_selected_jobs_feed_an_always_running_gate_without_privileged_calls(self):
         import yaml

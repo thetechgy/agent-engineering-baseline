@@ -21,6 +21,12 @@ ROOT = Path(__file__).resolve().parents[2]
 VERIFIER_NO_NETWORK = 'services:\n  main:\n    network_mode: none\n'
 
 
+def attach_loopback_verifier(task):
+    """Apply the fixture owner's loopback-only setting after authored input validation."""
+    with (task / 'tests/docker-compose.yaml').open('x', encoding='utf-8') as override:
+        override.write(VERIFIER_NO_NETWORK)
+
+
 def qualification_bundle(root, *, candidate=False):
     """Expand reviewed fixture submissions before native staging, never model data."""
     bundle = pilot.stage(ROOT, root / 'bundle' / pilot.NAME)
@@ -157,10 +163,7 @@ def _main(*, candidate=False, artifact=None):
                 raise RuntimeError('Native staging coverage mismatch')
             for task in staged_tasks:
                 if release:
-                    # The fixture owner requires loopback-only networking.
-                    # Attach the literal verifier override after authored input validation.
-                    with (task / 'tests/docker-compose.yaml').open('x', encoding='utf-8') as override:
-                        override.write(VERIFIER_NO_NETWORK)
+                    attach_loopback_verifier(task)
                 if current and version('skillevaluator') == '0.9.0':
                     # Reuse #135's transport correction before any verifier image build.
                     from codex_pilot import bind_verifier_metadata

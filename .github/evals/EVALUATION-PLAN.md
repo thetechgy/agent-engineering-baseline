@@ -58,7 +58,27 @@ the release validates its authored task. Local testing verified that Harbor
 selects this setting in both arms and the grader retains its isolation checks.
 The hosted Pester failure did not retain the verifier's prerequisite code.
 The next fixture run records that code from an allowlist if the failure recurs.
-Both suites still require a successful hosted run on the corrected revision.
+
+The follow-up at `1b32b5b` passed both credential-free Docker jobs.
+The gh receipt covers 48 outcomes and clean teardown. The Pester receipt
+covers 52 outcomes and clean teardown. All 52 classifications matched the
+authenticated 0.3.0 report by case and arm, including invalid, timeout,
+unsupported and infrastructure-error controls.
+[Follow-up fixture run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45409081795)
+
+The older adoption qualifier can replay the authenticated Pester report
+without starting the original interpreter. Local staging also covers the
+candidate Pester package-preparation entry point and both arms of the
+candidate Codex loopback probe. The probe keeps the packaged Codex
+executable out of the broker's bounded task manifest, checks the pinned
+executables in the image and requires a loopback-only container at launch.
+The package build, the real Codex request and interruption path, Podman
+benchmark execution and result publication still require native qualification.
+The next Codex-only check can use `current-evaluator.yml` with
+`benchmark-101-codex=true` and `benchmark-101-fixtures=false`. It qualifies
+both `gh-001` arms and one interrupted attempt through the existing
+non-forwarding loopback responder. Its result is native compatibility
+evidence for those controls.
 
 | Maintained path | Retirement gate |
 | --- | --- |

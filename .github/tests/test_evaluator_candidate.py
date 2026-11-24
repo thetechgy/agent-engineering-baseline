@@ -59,6 +59,25 @@ class CandidateHarnessTests(unittest.TestCase):
             self.assertIn('Scoring qualification requires the reviewed candidate patch', result.stderr)
             self.assertFalse(output.exists())
 
+    def test_retained_pester_replay_keeps_original_report_and_rejects_archive_changes(self):
+        from zipfile import ZipFile
+
+        project = Path(__file__).resolve().parents[2]
+        relative = Path('.github/evals/retained/pester-public-030.zip')
+        source = project / relative
+        with patch.object(sys, 'path', [str(project / '.github/scripts'), *sys.path]):
+            from qualify_evaluator_candidate import RETAINED_PESTER_REPORT, retained_pester
+
+            with ZipFile(source) as archive:
+                self.assertEqual(retained_pester(project), archive.read(RETAINED_PESTER_REPORT))
+            with tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                candidate = root / relative
+                candidate.parent.mkdir(parents=True)
+                candidate.write_bytes(source.read_bytes() + b'\x00')
+                with self.assertRaisesRegex(ValueError, 'Retained Pester archive digest mismatch'):
+                    retained_pester(root)
+
 
 @unittest.skipUnless(os.environ.get('CANDIDATE_EVIDENCE_CHILD') == '1', 'opt-in candidate qualification only')
 class CandidateEvidenceTests(unittest.TestCase):

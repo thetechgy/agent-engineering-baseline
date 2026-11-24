@@ -20,6 +20,10 @@ on:
         description: Qualify the 1.0.1 benchmark candidate with deterministic gh and Pester fixtures
         type: boolean
         default: false
+      benchmark-101-codex:
+        description: Qualify the 1.0.1 Codex launch with the non-forwarding loopback fixture
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -29,7 +33,7 @@ env:
 
 jobs:
   cohorts:
-    if: ${{ !inputs.startup-only && !inputs.benchmark-101-fixtures }}
+    if: ${{ !inputs.startup-only && !inputs.benchmark-101-fixtures && !inputs.benchmark-101-codex }}
     name: Candidate native oracle cohorts (no inference)
     runs-on: ubuntu-latest
     timeout-minutes: 180
@@ -155,7 +159,7 @@ jobs:
         run: bash .github/scripts/setup-compose.sh cleanup
 
   native-gh:
-    if: ${{ !inputs.startup-only && !inputs.benchmark-101-fixtures }}
+    if: ${{ !inputs.startup-only && !inputs.benchmark-101-fixtures && !inputs.benchmark-101-codex }}
     name: Candidate gh lifecycle (${{ matrix.arm }}, ${{ matrix.shard }}/3, no inference)
     runs-on: ubuntu-latest
     timeout-minutes: 55
@@ -201,7 +205,7 @@ jobs:
   report:
     name: Candidate native cohorts and consolidated report (no inference)
     needs: [cohorts, native-gh]
-    if: ${{ !cancelled() && !inputs.startup-only && !inputs.benchmark-101-fixtures }}
+    if: ${{ !cancelled() && !inputs.startup-only && !inputs.benchmark-101-fixtures && !inputs.benchmark-101-codex }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -261,6 +265,7 @@ jobs:
     name: Matched gh-007 startup only (no agent or grading)
     if: >-
       github.event_name == 'workflow_dispatch' && inputs.startup-only && !inputs.benchmark-101-fixtures
+      && !inputs.benchmark-101-codex
       && (inputs.candidate-next || inputs.startup-owner == '1.0.1')
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -325,14 +330,14 @@ jobs:
           if-no-files-found: error
 
   benchmark-101:
-    if: github.event_name == 'workflow_dispatch' && inputs.benchmark-101-fixtures
+    if: github.event_name == 'workflow_dispatch' && (inputs.benchmark-101-fixtures || inputs.benchmark-101-codex)
     name: 1.0.1 benchmark candidate (${{ matrix.suite }}, no inference)
     runs-on: ubuntu-latest
     timeout-minutes: 55
     strategy:
       fail-fast: false
       matrix:
-        suite: [gh, pester]
+        suite: ${{ fromJSON(inputs.benchmark-101-codex && '["codex"]' || '["gh", "pester"]') }}
     env:
       PYTHONDONTWRITEBYTECODE: '1'
       PYTHON_DOTENV_DISABLED: '1'
@@ -355,6 +360,7 @@ jobs:
         if: matrix.suite == 'gh'
         run: '"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_101.py "$RUNNER_TEMP/benchmark-101-requests.json"'
       - name: Run native deterministic fixtures
+        if: matrix.suite != 'codex'
         run: |
           set -o pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
@@ -366,6 +372,11 @@ jobs:
           fi
           "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_101.py \
             --native "$FIXTURE_SUITE" "$RUNNER_TEMP/benchmark-101-$FIXTURE_SUITE"
+      - name: Run pinned Codex against the non-forwarding loopback fixture
+        if: matrix.suite == 'codex'
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_codex.py "$RUNNER_TEMP/benchmark-101-codex"
       - name: Verify source integrity
         if: always()
         run: git diff --exit-code
@@ -387,5 +398,6 @@ jobs:
             ${{ runner.temp }}/benchmark-101-pester-command-diagnostics.txt
             ${{ runner.temp }}/benchmark-101-pester/qualification.json
             ${{ runner.temp }}/benchmark-101-pester/cleanup.json
+            ${{ runner.temp }}/benchmark-101-codex/qualification.json
           retention-days: 30
           if-no-files-found: error

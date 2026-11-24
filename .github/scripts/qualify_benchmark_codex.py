@@ -2,6 +2,8 @@
 import argparse
 import asyncio
 import base64
+from contextlib import nullcontext
+from importlib.metadata import version
 import json
 import idna
 import os
@@ -12,7 +14,6 @@ import time
 import tempfile
 import subprocess
 
-from skillevaluator.tier3.harbor.benchmark_codex import BenchmarkCodex
 from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
 from skillevaluator.tier3.harbor.collector import collect_harbor_results
 from skillevaluator.tier3.harbor.report import display_findings_report
@@ -22,10 +23,17 @@ import gh_evaluations as gh
 from qualify_codex_1691 import acquire
 from skill_reports import POLICY, read_json, require, write_json
 
+RELEASE = version('skillevaluator') == '1.0.1'
+if RELEASE:
+    from aeb_gh_fixture.benchmark_codex import BenchmarkCodex
+else:
+    from skillevaluator.tier3.harbor.benchmark_codex import BenchmarkCodex
+
 CASE = "gh-001"
 PROFILE = gh.ROOT / ".github/evals/codex-execution-1710.json"
 ENDPOINT = "http://127.0.0.1:8765/v1"
 SENTINEL = "pilot-not-a-credential"
+VENDOR = "/opt/reviewed/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/"
 
 
 # Run as the trial user. Other UIDs' /proc/exe links are intentionally unreadable.
@@ -57,13 +65,12 @@ class OfflineCodex(BenchmarkCodex):
         profile = read_json(PROFILE)
         expected = {"bin/codex": profile["cli_executable_sha256"], **profile["helper_sha256"]}
         require(self._version == profile["cli"], "Generated dispatch version drift")
-        vendor = "/opt/reviewed/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/"
         # npm omits the standalone archive's optional exec-server. Exercise the
         # installed package exactly as published, including its native launcher.
         del expected["bin/codex-exec-server"]
-        await self.exec_as_root(environment, "test ! -e " + vendor + "bin/codex-exec-server")
+        await self.exec_as_root(environment, "test ! -e " + VENDOR + "bin/codex-exec-server")
         for name, sha in expected.items():
-            result = await self.exec_as_root(environment, "sha256sum " + vendor + name)
+            result = await self.exec_as_root(environment, "sha256sum " + VENDOR + name)
             require(result.stdout.split()[0] == sha, "Container release bytes differ")
         result = await self.exec_as_agent(environment, "codex --version && id -u && test -S /run/gh-eval/gh.sock && test ! -r /opt/gh-eval/state/case.json")
         require(result.stdout.splitlines() == ["codex-cli " + self._version, "1000"], "Agent identity or CLI drift")
@@ -89,7 +96,11 @@ class OfflineCodex(BenchmarkCodex):
 
 
 def stage(root, assets, present):
-    bundle = gh.stage(gh.ROOT, root / "bundle/gh", [CASE])
+    if RELEASE:
+        import gh_candidate
+        bundle = gh_candidate.stage(gh.ROOT, root / "bundle/gh", [CASE], fixture=True)
+    else:
+        bundle = gh.stage(gh.ROOT, root / "bundle/gh", [CASE])
     task, = stage_native_harbor_tasks(bundle, root / "tasks", with_skill=present, grading_mode="custom_only",
         workspace_mode="group", workspace_skill_paths=[bundle.parent / gh.COMPETING])
     descriptor = task / "task.toml"
@@ -97,16 +108,36 @@ def stage(root, assets, present):
     require('network_mode = "public"' in source, "Unknown source networking")
     descriptor.write_text(source.replace('network_mode = "public"', 'network_mode = "no-network"'))
     image = task / "environment"
-    shutil.copytree(assets / "lib/node_modules", image / "reviewed/node_modules", symlinks=True)
+    if RELEASE:
+        # The operator-owned loopback responder is inside the same network namespace.
+        # Harbor must leave this service on loopback instead of joining the egress sidecar.
+        with (image / "docker-compose.yaml").open("x", encoding="utf-8") as override:
+            override.write("services:\n  main:\n    network_mode: none\n")
+        reviewed = image / "reviewed"
+        reviewed.mkdir()
+        # Keep packaged executables out of the broker's bounded task tree.
+        # Install scripts are disabled and every executable is checked in install().
+        launcher = VENDOR + "bin/codex"
+        package = "@openai/codex@" + POLICY["codex"]
+        install = ("RUN npm install --prefix /opt/reviewed --no-audit --no-fund --ignore-scripts "
+                   "--registry=https://registry.npmjs.org/ " + package + "\n"
+                   + "ENV PATH=" + VENDOR + "codex-path:$PATH\n")
+    else:
+        shutil.copytree(assets / "lib/node_modules", image / "reviewed/node_modules", symlinks=True)
+        launcher = "/opt/reviewed/node_modules/@openai/codex/bin/codex.js"
+        install = ""
     shutil.copy2(gh.ROOT / ".github/scripts/codex_pilot_stub.py", image / "reviewed/stub.py")
     with (image / "Dockerfile").open("a") as build:
-        build.write("\nCOPY reviewed /opt/reviewed\nRUN chmod -R a+rX /opt/reviewed /workspace/skills && ln -s /opt/reviewed/node_modules/@openai/codex/bin/codex.js /usr/local/bin/codex\n")
+        build.write("\nCOPY reviewed /opt/reviewed\n" + install + "RUN chmod -R a+rX /opt/reviewed /workspace/skills"
+                    " && ln -s " + launcher + " /usr/local/bin/codex\n")
     # The production verifier reads real ATIF and the private broker audit. Copy
     # only the loopback request and the produced edit into this local fixture.
     # The standard verifier image carries idna. Custom-only mode omits its
     # judge dependencies, so stage the same locked pure-Python import.
     shutil.copytree(Path(idna.__file__).parent, task / "tests/idna", ignore=shutil.ignore_patterns("__pycache__"))
     verify = task / "tests/test.sh"
+    if RELEASE:
+        verify.write_text("#!/bin/sh\nset -eu\npython3 -I /tests/grader.py\n")
     with verify.open("a") as script:
         script.write("\ncp /opt/reviewed/request.json /logs/verifier/provider.json\n"
                      "test ! -e /tmp/codex-secrets\ntest -z \"$(find /home/agent -maxdepth 1 -name '.codex-benchmark.*')\"\n"
@@ -131,13 +162,24 @@ def run(root, assets, present, *, interrupt=False):
     write_json(fixture_file, {"scenario": "benchmark-interruption" if interrupt else "benchmark-priced", "commands": calls})
     jobs = root.parent / "jobs"
     job_name = "gh-interrupted" if interrupt else "gh-codex-" + ("with" if present else "without")
+    mode = "aeb-gh-fixture" if RELEASE else "docker"
     argv = build_harbor_run_command(dataset_path=task.parent, job_name=job_name, jobs_dir=jobs,
-        agent="codex", model=POLICY["model"], env_mode="docker", n_concurrent=1)
-    require(argv[argv.index("--ak") + 1] == "version=" + POLICY["codex"], "Workflow dispatch pin drift")
-    index = argv.index("--agent-import-path") + 1
+        agent="codex", model=POLICY["model"], env_mode=mode, n_concurrent=1)
+    env = dict(os.environ, PYTHONPATH=str(gh.ROOT / ".github/scripts"), BENCHMARK_CODEX_FIXTURE=str(fixture_file))
+    if RELEASE:
+        from aeb_gh_fixture.manifest import write_manifest
+        manifest = write_manifest(root / "operator", [task], staged_roots=[root / "tasks", root / "bundle"])
+        env["AEB_GH_MANIFEST"] = str(manifest)
+        require(argv[argv.index("--env") + 1] == "aeb_gh_fixture.backend:TrustedGhEnvironment",
+                "Unexpected benchmark environment")
+        require("version=" + json.dumps(POLICY["codex"]) in argv and 'reasoning_effort="high"' in argv,
+                "Workflow dispatch pin drift")
+        index = argv.index("--agent") + 1
+    else:
+        require(argv[argv.index("--ak") + 1] == "version=" + POLICY["codex"], "Workflow dispatch pin drift")
+        index = argv.index("--agent-import-path") + 1
     require(argv[index] == BenchmarkCodex.__module__ + ":BenchmarkCodex", "Unexpected benchmark agent")
     argv[index] = "qualify_benchmark_codex:OfflineCodex"
-    env = dict(os.environ, PYTHONPATH=str(gh.ROOT / ".github/scripts"), BENCHMARK_CODEX_FIXTURE=str(fixture_file))
     with subprocess.Popen(argv, env=env) as job:
         try:
             if interrupt:
@@ -235,30 +277,45 @@ def main():
     parser.add_argument("output", type=Path)
     root = parser.parse_args().output.resolve()
     require(not any(os.getenv(k) for k in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "CODEX_AUTH_JSON_PATH",
-        "CODEX_FORCE_AUTH_JSON", "NVIDIA_API_KEY")), "Real credentials are prohibited")
+        "CODEX_FORCE_AUTH_JSON", "CODEX_API_KEY", "SKILL_EVAL_LLM_API_KEY", "NVIDIA_API_KEY")),
+        "Real credentials are prohibited")
+    if RELEASE:
+        from qualify_benchmark_101 import fixture_owner, verifier_requests
+    else:
+        fixture_owner, verifier_requests = nullcontext, judge_requests
+    with fixture_owner() as versions:
+        qualify(root, verifier_requests, versions)
+
+
+def qualify(root, verifier_requests, versions):
     root.mkdir()
-    assets = root / "release"
-    assets.mkdir()
-    profile = read_json(PROFILE)
-    acquire(profile, assets)
     npm_prefix = root / "npm"
-    with tempfile.TemporaryDirectory(prefix="codex-npm-cache-") as cache:
-        subprocess.run(["npm", "install", "--global", "--prefix", str(npm_prefix), "--cache", cache,
-            "--no-audit", "--no-fund", "--ignore-scripts", "@openai/codex@" + profile["cli"]], check=True)
+    if not RELEASE:
+        assets = root / "release"
+        assets.mkdir()
+        profile = read_json(PROFILE)
+        acquire(profile, assets)
+        with tempfile.TemporaryDirectory(prefix="codex-npm-cache-") as cache:
+            subprocess.run(["npm", "install", "--global", "--prefix", str(npm_prefix), "--cache", cache,
+                "--no-audit", "--no-fund", "--ignore-scripts", "@openai/codex@" + profile["cli"]], check=True)
     rows = [run(root / arm, npm_prefix, arm == "with") for arm in ("with", "without")]
     partial = run(root / "interrupted", npm_prefix, True, interrupt=True)
     report = root / "report"
+    options = {"env_mode": "aeb-gh-fixture", "grading_mode": "custom_only"} if RELEASE else {"env_mode": "docker"}
     collected = collect_harbor_results("gh", ["codex"], report, root / "jobs", expected_cases=1,
-        expected_case_ids=[CASE], expected_trials=1, n_attempts=1, env_mode="docker", stop_on_pass=False,
-        agent_models={"codex": {"model": POLICY["model"], "source": "cli"}})
+        expected_case_ids=[CASE], expected_trials=1, n_attempts=1, stop_on_pass=False,
+        agent_models={"codex": {"model": POLICY["model"], "source": "cli"}}, **options)
     for arm in ("with", "without"):
         scores = collected["agents"]["codex"]["custom_" + arm + "_skill"]
-        require(scores.get("gh_authorization") == int(arm == "with"), "Native authorization grade drift")
+        if not RELEASE:
+            require(scores.get("gh_authorization") == int(arm == "with"), "Native authorization grade drift")
         if arm == "with":
             require(scores.get("gh_task") == 1 and scores.get("gh_gate") == 1, "Approved gh task failed")
     display_findings_report(collected, "gh", ["codex"], report)
-    summary = {"inference": False, "agent": rows, "judges": judge_requests(), "interruption": partial,
+    summary = {"inference": False, "agent": rows, "judges": verifier_requests(), "interruption": partial,
                "with_skill_gate": collected["agents"]["codex"]["custom_with_skill"]["gh_gate"]}
+    if versions is not None:
+        summary["runtime"] = versions
     write_json(root / "qualification.json", summary)
     print(json.dumps(summary, sort_keys=True), flush=True)
     print("Production dispatch, broker, agent, verifier, collector and report passed", flush=True)

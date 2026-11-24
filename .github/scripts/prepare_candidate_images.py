@@ -64,11 +64,15 @@ def staged_task(root, suite="pester", arm=None, shard=None, runtime="candidate")
         return selected[0]
     if suite != "pester":
         raise ValueError("Unsupported preparation suite")
-    bundle, fixtures = pilot.qualification_bundle(root, candidate=runtime in ("candidate", "current"))
+    release = runtime == "current" and CANDIDATE["version"] == "1.0.1"
+    bundle, fixtures = pilot.qualification_bundle(root, candidate=runtime in ("candidate", "current") and not release)
     tasks = stage_native_harbor_tasks(bundle, root / "tasks", with_skill=True, grading_mode="custom_only")
     if len(tasks) != 26 or len(fixtures) != 26:
         raise RuntimeError("Incomplete package preparation source cohort")
-    return next(task for task in tasks if task.name == "pester-001-classic")
+    selected = next(task for task in tasks if task.name == "pester-001-classic")
+    if release:
+        pilot.attach_loopback_verifier(selected)
+    return selected
 
 
 def transient_snapshot_failure(message):
