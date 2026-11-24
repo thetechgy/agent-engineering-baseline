@@ -166,6 +166,13 @@ request tests covered the identical token-count and generation context,
 provider-default reasoning, deadline and failure handling without
 inference. New results retain `not_quality_qualified`.
 
+Automatic Validate and feature-branch preapproval run the private-review
+suites in the separately pinned 1.0.1 review environment. The contracts
+runner retains the other discovered tests and the four dispatch controls
+for the legacy validator while it remains supported. Only the review test
+setup installs the hash-locked schema test dependencies. Protected
+evaluation and the production benchmark runtime remain gated separately.
+
 | Maintained path | Retirement gate |
 | --- | --- |
 | `benchmark-skills.yml`, local `gh_evaluations.py benchmark`, standard and confirmation publication | Qualify the real executable, verifier, recovery and collector under the candidate, then bind its runtime files to the preapproval fingerprint and its publications to a new series. |

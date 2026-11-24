@@ -158,11 +158,17 @@ jobs:
       - name: Test CI contracts without inference
         run: |
           shellcheck .github/scripts/setup-skillevaluator.sh .github/scripts/setup-skill-scanners.sh .github/scripts/setup-static-evaluator.sh .github/scripts/collect-static-quality.sh .github/scripts/setup-compose.sh
-          "$SKILL_REVIEW_PYTHON" -m unittest discover -s .github/tests -v
+          "$SKILL_REVIEW_PYTHON" -B .github/scripts/test_evaluation_contracts.py contracts
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py validate gh
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py replay gh
           "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py stage gh "$RUNNER_TEMP/gh-eval-bundle/gh"
           skillevaluator tier3 validate "$RUNNER_TEMP/gh-eval-bundle/gh" --strict --json
+
+      - name: Install the pinned private-review test environment
+        run: bash .github/scripts/setup-static-evaluator.sh review-contracts
+
+      - name: Test private review and attachments without inference
+        run: '"$SKILL_REVIEW_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py private-review'
 
       - name: Install verified test-only Docker Compose
         run: bash .github/scripts/setup-compose.sh

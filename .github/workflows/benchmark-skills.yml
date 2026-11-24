@@ -74,7 +74,15 @@ jobs:
         working-directory: trusted
         env:
           SKILL_EVALUATION_KIND: benchmark
-        run: '"$SKILL_REVIEW_PYTHON" -m unittest discover -s .github/tests -v'
+        run: '"$SKILL_REVIEW_PYTHON" -B .github/scripts/test_evaluation_contracts.py contracts'
+      - name: Install the pinned private-review test environment
+        if: github.ref != 'refs/heads/main'
+        working-directory: trusted
+        run: bash .github/scripts/setup-static-evaluator.sh review-contracts
+      - name: Test private review and attachments without inference
+        if: github.ref != 'refs/heads/main'
+        working-directory: trusted
+        run: '"$SKILL_REVIEW_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py private-review'
       - name: Read canonical history snapshot
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

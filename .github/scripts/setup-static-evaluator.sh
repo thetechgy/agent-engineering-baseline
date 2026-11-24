@@ -7,7 +7,7 @@ root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 kind=${1:-quality-static}
 case "$kind" in
   quality-next) exec bash "$root/.github/scripts/setup-skillevaluator.sh" quality-next ;;
-  quality-static|data-host|native-startup|native-benchmark-candidate|review-candidate) ;;
+  quality-static|data-host|native-startup|native-benchmark-candidate|review-candidate|review-contracts) ;;
   *) exit 2 ;;
 esac
 : "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}" "${GITHUB_ENV:?}"
@@ -15,7 +15,7 @@ tools="$RUNNER_TEMP/skill-evaluation-tools"
 if [ "$kind" = data-host ]; then tools="$RUNNER_TEMP/skill-data-host"; fi
 if [ "$kind" = native-startup ]; then tools="$RUNNER_TEMP/skill-native-startup"; fi
 if [ "$kind" = native-benchmark-candidate ]; then tools="$RUNNER_TEMP/skill-native-benchmark-candidate"; fi
-if [ "$kind" = review-candidate ]; then tools="$RUNNER_TEMP/skill-review-candidate"; fi
+if [[ "$kind" == review-* ]]; then tools="$RUNNER_TEMP/skill-$kind"; fi
 case "$(realpath -m "$tools")/" in
   "$(realpath "$GITHUB_WORKSPACE")/"*|"$root/"*) echo 'Tools must be outside the checkout.' >&2; exit 1 ;;
 esac
@@ -32,7 +32,7 @@ import static_evaluator as owner
 print(owner.REVISION, owner.LOCK, owner.VERSIONS["python"])
 ')
 read -r revision lock python_version <<< "$pins"
-if [ "$kind" = review-candidate ]; then
+if [[ "$kind" == review-* ]]; then
   pins=$(PYTHONPATH="$root/.github/scripts" python3 -B -c '
 import private_review_runtime as owner
 print(owner.PYTHON, owner.LOCK)
@@ -51,10 +51,15 @@ if [ "$kind" = native-startup ] || [ "$kind" = native-benchmark-candidate ]; the
 uv sync --project "$evaluator" --python "$python_version" --managed-python --frozen --no-dev "${extras[@]}"
 python="$evaluator/.venv/bin/python"
 uv pip check --python "$python"
-if [ "$kind" = review-candidate ]; then
+if [[ "$kind" == review-* ]]; then
   overlay="$root/.github/requirements/review-101.txt"
   printf '%s  %s\n' "$overlay_digest" "$overlay" | sha256sum --check --strict
   uv pip install --python "$python" --no-deps --only-binary :all: --require-hashes --requirement "$overlay"
+  if [ "$kind" = review-contracts ]; then
+    tests="$root/.github/requirements/review-tests-101.txt"
+    printf '%s  %s\n' d481a93aba488792854fc18b9376d0eafeadc3e25320db8e18ac2c52a1d347d5 "$tests" | sha256sum --check --strict
+    uv pip install --python "$python" --no-deps --only-binary :all: --require-hashes --requirement "$tests"
+  fi
   uv pip check --python "$python"
   PYTHONPATH="$root/.github/scripts" "$python" -B -c 'import private_review_runtime; private_review_runtime.validate_install()'
   printf 'SKILL_REVIEW_CANDIDATE_PYTHON=%s\n' "$python" >> "$GITHUB_ENV"

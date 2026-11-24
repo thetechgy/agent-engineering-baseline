@@ -546,15 +546,48 @@ class WorkflowAndUsageTests(unittest.TestCase):
         workflow = yaml.safe_load((ROOT / orchestration.BENCHMARK).read_text())
         context = workflow['jobs']['context']
         protected = workflow['jobs']['evaluate']
-        self.assertFalse(any('-m unittest discover' in step.get('run', '') for step in protected['steps']))
-        tests = [step for step in context['steps'] if '-m unittest discover' in step.get('run', '')]
-        self.assertEqual(len(tests), 1)
-        self.assertEqual(tests[0]['if'], "github.ref != 'refs/heads/main'")
+        selector = '.github/scripts/test_evaluation_contracts.py'
+        self.assertFalse(any(selector in step.get('run', '') or '-m unittest discover' in step.get('run', '')
+                             for step in protected['steps']))
+        expected = [
+            f'"$SKILL_REVIEW_PYTHON" -B {selector} contracts',
+            f'"$SKILL_REVIEW_CANDIDATE_PYTHON" -B {selector} private-review',
+        ]
+        tests = [step for step in context['steps'] if selector in step.get('run', '')]
+        self.assertEqual([step['run'] for step in tests], expected)
+        self.assertTrue(all(step['if'] == "github.ref != 'refs/heads/main'" for step in tests))
         self.assertEqual(tests[0]['env']['SKILL_EVALUATION_KIND'], 'benchmark')
+        validate = yaml.safe_load((ROOT / '.github/workflows/validate.yml').read_text())
+        validate_steps = validate['jobs']['ci-contracts']['steps']
+        for steps in (context['steps'], validate_steps):
+            setup = next(step for step in steps
+                         if step.get('run') == 'bash .github/scripts/setup-static-evaluator.sh review-contracts')
+            review = next(step for step in steps if step.get('run') == expected[1])
+            self.assertLess(steps.index(setup), steps.index(review))
+            self.assertNotIn('secrets.', json.dumps([setup, review]))
+        self.assertTrue(all(any(command in step.get('run', '') for step in validate_steps) for command in expected))
         gate = next(s for s in protected['steps'] if s.get('id') == 'preparation')
         self.assertEqual(gate['timeout-minutes'], 5)
         self.assertIn('tier3 validate', gate['run'])
         self.assertIn('skill_orchestration.py guard', gate['run'])
+
+    def test_contract_discovery_keeps_nonreview_and_legacy_dispatch_tests(self):
+        from test_evaluation_contracts import LEGACY_VALIDATOR_TESTS, contract_suite
+
+        class Test(unittest.TestCase):
+            def runTest(self):
+                pass
+
+        legacy_dispatch = sorted(LEGACY_VALIDATOR_TESTS)
+        identities = ['test_skill_review.ReviewTests.test_review', 'test_cli.CliTests.test_reports']
+        discovered = []
+        for identity in [*identities, *legacy_dispatch]:
+            entry = Test()
+            entry.id = lambda value=identity: value
+            discovered.append(entry)
+        loader = unittest.TestLoader()
+        loader.discover = lambda _path: unittest.TestSuite([unittest.TestSuite(discovered)])
+        self.assertEqual([case.id() for case in contract_suite(loader)], [identities[1], *legacy_dispatch])
 
     def test_inference_free_jobs_use_the_released_data_host(self):
         planner = yaml.safe_load((ROOT / orchestration.WORKFLOW).read_text())
@@ -581,7 +614,7 @@ class WorkflowAndUsageTests(unittest.TestCase):
             setups = [i for i, step in enumerate(steps) if 'setup-skillevaluator.sh' in step.get('run', '')
                       or 'setup-static-evaluator.sh' in step.get('run', '')]
             self.assertTrue(setups and all(history > i for i in setups))
-            features = [i for i, step in enumerate(steps) if '-m unittest discover' in step.get('run', '')]
+            features = [i for i, step in enumerate(steps) if 'test_evaluation_contracts.py' in step.get('run', '')]
             self.assertTrue(all(history > i for i in features))
 
     def test_usage_conflicts_unknowns_and_cache_accounting(self):
