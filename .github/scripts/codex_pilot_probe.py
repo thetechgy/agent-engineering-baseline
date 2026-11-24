@@ -53,7 +53,7 @@ if sys.argv[1:] == ['--late-network']:
 
 observation = len(sys.argv) == 3 and sys.argv[1] == '--observation'
 skill = sys.argv[2] if observation else sys.argv[1] if len(sys.argv) == 2 else 'powershell-pester-6'
-assert __import__('re').fullmatch('[a-z0-9-]+', skill) if observation else skill in ('powershell-pester-6', 'gh')
+assert __import__('re').fullmatch('[a-z0-9-]+', skill) if observation else skill in ('powershell-pester-6', 'gh', 'podman')
 result = {}
 status = dict(line.split(':', 1) for line in Path('/proc/self/status').read_text().splitlines() if ':' in line)
 assert os.getuid() == 1000 and int(status['CapEff'].strip(), 16) == 0

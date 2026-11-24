@@ -675,15 +675,15 @@ def capture_benchmark_custom(workspace, root, name):
     write_json(root / evidence.CUSTOM_CAPTURE, capture)
 
 
-def preserve_gh_capture_hashes(original, redacted, workspace):
+def preserve_custom_capture_hashes(original, redacted, workspace, skill):
     """Restore typed staging digests, never secret-looking keys or free text."""
     import skill_evidence as evidence
-    evidence.validate_custom_capture(original, 'gh', workspace)
+    evidence.validate_custom_capture(original, skill, workspace)
     for source, target in zip(original['tasks'], redacted['tasks']):
         require((source['case_id'], source['arm']) == (target['case_id'], target['arm']), 'Capture identity changed during redaction')
         for member, value in source['members'].items():
             evidence.sha(value)
-            # Upstream treats secret_redaction.py as a secret-bearing key.
+            # Upstream treats some support-file names as secret-bearing keys.
             # Its validated SHA256 is publication-safe; a dropped key stays dropped.
             if target['members'].get(member) == '<redacted>':
                 target['members'][member] = value
@@ -790,10 +790,12 @@ def benchmark_artifacts(workspace, root, name, destination):
                 require('PESTER_VERIFIER_ONLY_' not in json.dumps(value), 'Protected verifier input in diagnostic artifact')
             original = value
             value = redact_sensitive_data(value)
-            capture = (name == 'gh' and relative.as_posix() == 'custom-metric-capture.json'
-                       and (original.get('purpose') == 'oracle_qualification' or str(original.get('purpose','')).startswith('campaign-')) and original.get('producer', {}).get('skillevaluator') in ('0.8.0', '0.9.0'))
+            capture = (relative.as_posix() == 'custom-metric-capture.json'
+                       and original.get('producer', {}).get('skillevaluator') in ('0.8.0', '0.9.0')
+                       and ((name == 'gh' and original.get('purpose') == 'oracle_qualification')
+                            or (name in ('gh', 'podman') and str(original.get('purpose', '')).startswith('campaign-'))))
             if capture:
-                value = preserve_gh_capture_hashes(original, value, workspace)
+                value = preserve_custom_capture_hashes(original, value, workspace, name)
             if registered_cases:
                 value = preserve_registered_case_keys(original, value, registered_cases)
             if name == "gh":

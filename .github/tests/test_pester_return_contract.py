@@ -49,6 +49,10 @@ class ReturnContract(unittest.TestCase):
                         "if definition.get('adapter') == 'batch-summary-static-templates':\n"
                         "        from pester_static_templates_task import StaticTemplateBatchSummary\n"
                         "        adapters['batch-summary-static-templates'] = StaticTemplateBatchSummary",
+                    "definition.get('adapter') == 'podman-storage'":
+                        "if definition.get('adapter') == 'podman-storage':\n"
+                        "        require(path == ROOT / '.github/evals/podman/storage/qualification.json', 'Unregistered Podman definition')\n"
+                        "        adapters['podman-storage'] = runpy.run_path(str(path.with_name('task.py')))['PodmanStorage']",
                     "definition.get('adapter') == 'gh-permission'":
                         "if definition.get('adapter') == 'gh-permission':\n"
                         "        from gh_permission_task import GhPermission\n"
@@ -73,6 +77,17 @@ class ReturnContract(unittest.TestCase):
                 for node in sorted(hooks, key=lambda n:n.lineno, reverse=True):
                     del lines[node.lineno - 1:node.end_lineno]
                 raw = b''.join(lines)
+                # The Podman registration adds one import and one exact definition path.
+                self.assertEqual(raw.count(b'import runpy\n'), 1)
+                raw = raw.replace(b'import runpy\n', b'')
+                podman_path_guard = (
+                    b"    require(path.resolve() == path and (path.is_relative_to(ROOT / '.github/evals/campaigns') "
+                    b"or path == ROOT / '.github/evals/podman/storage/qualification.json'), 'Unregistered definition path')\n"
+                )
+                self.assertEqual(raw.count(podman_path_guard), 1)
+                raw = raw.replace(podman_path_guard,
+                                  b"    require(path.resolve() == path and path.is_relative_to(ROOT / '.github/evals/campaigns'), "
+                                  b"'Unregistered definition path')\n")
                 for default in (b'    trusted_launch_metadata = False\n', b'    trusted_launch_metadata = True\n',
                                 b'    diagnostic_observation = False\n'):
                     self.assertEqual(raw.count(default), 1)

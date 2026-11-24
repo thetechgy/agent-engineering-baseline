@@ -1,0 +1,16 @@
+{
+  "id": "podman-storage-v1-1710-sol62",
+  "adapter": "podman-storage",
+  "skill": "podman",
+  "source": ".apm/skills/podman",
+  "source_case": "podman-002",
+  "runtime_profile": ".github/evals/campaigns/codex-1710-scored.json",
+  "variants": [
+    {"id": "current", "present": true},
+    {"id": "absent", "present": false}
+  ],
+  "trials": 1,
+  "attempt_limit": 4,
+  "stop_estimate_usd": 5,
+  "authorized_live_attempts": 0
+}

@@ -1,0 +1,5 @@
+{
+  "id": "podman-002",
+  "source_case": 2,
+  "deliverable": "Write the PostgreSQL Quadlet unit to output/postgres.container. Use the supplied PostgreSQL 18 image. Submit one self-contained [Container] configuration so its effective database directory and persistent mount can be read from that file. Do not start services or change the host. This check covers persistent storage for the database unit."
+}

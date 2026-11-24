@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "campaigns": {
+    "podman-storage-v1-1710-sol62": {
+      "definition": ".github/evals/podman/storage/qualification.json",
+      "controls": [".github/evals/podman/storage/qualification.json"],
+      "producers": []
+    }
+  }
+}
