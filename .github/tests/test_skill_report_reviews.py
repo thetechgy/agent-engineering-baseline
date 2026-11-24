@@ -2,6 +2,7 @@
 
 import copy
 from datetime import datetime, timedelta, timezone
+import importlib.metadata
 import os
 from pathlib import Path
 import subprocess
@@ -9,7 +10,6 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
-import zipfile
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
@@ -18,60 +18,12 @@ import skill_evidence as evidence
 import skill_report as report
 import skill_report_reviews as attachments
 import test_skill_review as review_fixtures
-from test_skill_review import judgment, CONFIG
 from test_skill_analysis import write
 from test_skill_report import Document
 
-FIXTURE = Path(__file__).parent / 'fixtures/skill_report_reviews/historical-modules.zip'
+from review_snapshots import parity_archive, restore_parity_case
 
-
-def frozen_tooling(test, tooling, profile):
-    """Restore the exact retained validator and data named by a profile."""
-    scripts = tooling / '.github/scripts'; scripts.mkdir(parents=True)
-    archive_path = (FIXTURE.with_name('review-runtime-v2-modules.zip') if profile == 'current-v5' else
-                    FIXTURE.with_name('pester-packaging-modules.zip') if profile == 'current-v4' else
-                    FIXTURE.with_name('review-runtime-modules.zip') if profile == 'current-v3' else FIXTURE)
-    with zipfile.ZipFile(archive_path) as archive:
-        for name, expected in zip(attachments.MODULES, attachments.PROFILES[profile][1]):
-            raw = archive.read(expected + '.py')
-            test.assertEqual(evidence.digest_bytes(raw), 'sha256:' + expected)
-            (scripts / name).write_bytes(raw)
-        if profile in attachments.REGISTRY_DIGESTS:
-            digest = attachments.REGISTRY_DIGESTS[profile]
-            if profile == 'custom-metrics-v3':
-                with zipfile.ZipFile(FIXTURE.with_name('refresh-95-registry.zip')) as refreshed:
-                    asset = refreshed.read(digest + '.json')
-            else:
-                asset = archive.read(digest + '.json')
-            test.assertEqual(evidence.digest_bytes(asset), 'sha256:' + digest)
-            registry = tooling / '.github/evals/custom-metrics.json'
-            registry.parent.mkdir()
-            registry.write_bytes(asset)
-        for member, digest in attachments.SUPPORT_FILES.get(profile, {}).items():
-            data = archive.read(digest + Path(member).suffix)
-            test.assertEqual(evidence.digest_bytes(data), 'sha256:' + digest)
-            target = tooling / member
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(data)
-    return scripts
-
-
-# Construct synthetic saved envelopes with the original public code, not a provider.
-MAKE = r'''
-import sys, json
-from pathlib import Path
-sys.dont_write_bytecode = True
-sys.path.insert(0, sys.argv[1])
-import skill_review as r
-p=json.loads(sys.stdin.buffer.read())
-c=r.prepare([Path(x) for x in p['inputs']],Path(p['analysis']),p['skill'],p['record_id'],
-    **{k:Path(p[k]) if p[k] else None for k in ('source','support','selection')})
-v=r.make_review(p['judgment'],c,r.ModelConfig(**p['config']),
-    r.Usage(preflight_input_tokens=1000,input_tokens=1000,output_tokens=500,total_tokens=1500))
-d=Path(p['destination']);d.mkdir()
-(d/'skill-review.json').write_bytes(r.evidence.encoded(v))
-(d/'skill-review.md').write_bytes(r.render_review(v,c))
-'''
+RELEASE_REPLAY = importlib.metadata.version('skillevaluator') == '1.0.1'
 
 
 class AttachmentTests(unittest.TestCase):
@@ -84,41 +36,11 @@ class AttachmentTests(unittest.TestCase):
         self.clock.start(); self.addCleanup(self.clock.stop)
 
     def fixture(self, profile='current-v4', category=None, *, unmeasured=False):
-        context = (review_fixtures.ReviewTests.gh_control(self) if unmeasured else
-                   review_fixtures.ReviewTests.control(self))
-        args = self.gh_args if unmeasured else self.args
-        opts = dict(zip(args[::2], args[1::2]))
-        # Every profile names frozen reviewed bytes, including the one named current-v2.
-        # Presentation changes must not silently relabel the checkout as that validator.
-        tooling = self.root / 'tooling'
-        scripts = frozen_tooling(self, tooling, profile)
-        body = judgment(context, category=category)
-        if unmeasured:
-            body['assessment'].update(tested_benefit='Not measured; configuration is not observed benefit.',
-                tested_harm='Unknown without recorded outcomes.', interpretation='Retain the upstream skill; inspect evidence gaps.',
-                uncertainty='Expected cases do not establish completed trials or successful execution.')
-            for scope in (body['assessment'], *body['recommendations']):
-                scope['sufficiency']['behavioral_scope'] = 'No measured trials supplied.'
-            for recommendation in body['recommendations']:
-                recommendation.update(scope='Request exact retained results from the overlay owner.',
-                    expected_benefit='Establish what evidence is available before proposing changes.')
-        request = {'inputs': [opts['--input']], 'analysis': opts['--analysis'], 'skill': opts['--skill'],
-                   'record_id': opts['--record-id'], 'source': opts.get('--source'), 'support': opts.get('--support'),
-                   'selection': opts.get('--selection'), 'judgment': body, 'config': CONFIG,
-                   'destination': str(self.root / 'saved')}
-        result = subprocess.run([attachments.validator_runtime(profile)[0], '-I', '-B', '-c', MAKE, str(tooling / '.github/scripts')],
-            input=evidence.encoded(request), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
-        self.assertEqual(result.returncode, 0, result.stderr.decode())
-        saved = self.root / 'saved/skill-review.json'
-        spec = {'schema_version': 1, 'profile': profile, 'tooling': str(tooling),
-                'skill': request['skill'], 'record_id': request['record_id'], 'review': str(saved),
-                'review_digest': evidence.digest_bytes(saved.read_bytes()),
-                'markdown_digest': evidence.digest_bytes(saved.with_suffix('.md').read_bytes()),
-                'inputs': request['inputs'], 'analysis': request['analysis'], 'source': request['source'],
-                'support': request['support'], 'selection': request['selection'], 'assessments': []}
-        self.path = self.root / 'attachment.json'; write(self.path, spec)
+        key = '-'.join(part for part in (profile, category, 'unmeasured' if unmeasured else None) if part)
+        with parity_archive() as archive:
+            spec, self.path, _ = restore_parity_case(self, archive, self.root, key=key)
         self.spec = spec
-        self.captured = analysis.capture_inputs([Path(opts['--input'])])
+        self.captured = analysis.capture_inputs([Path(name) for name in spec['inputs']])
         self.result = analysis.validate_analysis(None, self.captured)
         return spec
 
@@ -179,13 +101,16 @@ class AttachmentTests(unittest.TestCase):
         self.load()
         output_parent = tempfile.TemporaryDirectory(); self.addCleanup(output_parent.cleanup)
         output_root = Path(output_parent.name)
-        command = [os.environ['SKILL_LEGACY_REVIEW_PYTHON'], '-B',
+        python = sys.executable if RELEASE_REPLAY else os.environ['SKILL_LEGACY_REVIEW_PYTHON']
+        command = [python, '-B',
                    str(evidence.ROOT / '.github/scripts/skill_report.py'),
                    '--input', self.spec['inputs'][0], '--analysis', self.spec['analysis'],
-                   '--analyst-review', str(self.path), '--output', str(output_root / 'legacy-host')]
+                   '--analyst-review', str(self.path), '--output', str(output_root / 'report-host')]
         child = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
         self.assertEqual(child.returncode, 0, child.stderr.decode())
-        self.assertTrue((output_root / 'legacy-host/report.html').is_file())
+        self.assertTrue((output_root / 'report-host/report.html').is_file())
+        if RELEASE_REPLAY:
+            return
         with patch.dict(os.environ, {'SKILL_PREVIOUS_REVIEW_PYTHON': os.environ['SKILL_LEGACY_REVIEW_PYTHON']}):
             command[-1] = str(output_root / 'rejected')
             child = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
@@ -205,6 +130,16 @@ class AttachmentTests(unittest.TestCase):
 
     def test_new_profile_rejects_previous_dependency_environment(self):
         self.fixture('current-v5')
+        if RELEASE_REPLAY:
+            saved = Path(self.spec['review'])
+            value = evidence.read_json(saved)
+            value['provenance']['versions']['pydantic'] = attachments.PREVIOUS_PINS['pydantic']
+            write(saved, value)
+            self.spec['review_digest'] = evidence.digest_bytes(saved.read_bytes())
+            write(self.path, self.spec)
+            with self.assertRaises(ValueError):
+                self.load()
+            return
         temporary = tempfile.TemporaryDirectory(); self.addCleanup(temporary.cleanup)
         output = Path(temporary.name) / 'rejected'
         command = [os.environ['SKILL_LEGACY_REVIEW_PYTHON'], '-B',
@@ -492,11 +427,19 @@ class AttachmentTests(unittest.TestCase):
     def test_missing_legacy_runtime_rejects_without_changing_profile(self):
         self.fixture('current-v2')
         with patch.dict(os.environ, {'SKILL_LEGACY_REVIEW_PYTHON': ''}):
+            if RELEASE_REPLAY:
+                self.assertEqual(self.load().items[0]['profile'], 'current-v2')
+                return
             with self.assertRaisesRegex(ValueError, 'Pinned validator runtime unavailable'):
                 self.load()
 
     def test_wrong_runtime_cannot_validate_legacy_modules(self):
         self.fixture('current-v2')
+        if RELEASE_REPLAY:
+            # An environment alias cannot replace the authenticated replay host.
+            with patch.dict(os.environ, {'SKILL_LEGACY_REVIEW_PYTHON': '/unavailable/python'}):
+                self.assertEqual(self.load().items[0]['profile'], 'current-v2')
+            return
         with patch.dict(os.environ, {'SKILL_LEGACY_REVIEW_PYTHON': sys.executable}):
             with self.assertRaisesRegex(ValueError, 'Original validator rejected attachment'):
                 self.load()
@@ -559,7 +502,7 @@ class AttachmentTests(unittest.TestCase):
         self.assertTrue(all(not path.exists() for path in reserved))
 
     def test_audit_guard_blocks_network_dns_and_process_spawning(self):
-        prefix = attachments.RUNNER.split('import skill_review as review')[0]
+        prefix = attachments.AUDIT_GUARD
         actions = ["__import__('socket').socket()", "__import__('socket').getaddrinfo('example.invalid',443)",
                    "__import__('subprocess').run(['echo','forbidden'])", "__import__('os').system('echo forbidden')"]
         if hasattr(os, 'fork'): actions.append("__import__('os').fork()")

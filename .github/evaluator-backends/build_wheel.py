@@ -10,36 +10,45 @@ import sys
 import zipfile
 
 
-def package_files(*, candidate_next=False, release_startup=False):
+def package_files(*, candidate_next=False, release_startup=False, benchmark_candidate=False):
     root = Path(__file__).resolve().parent
     files = {p.name: p.read_bytes() for p in sorted((root / "aeb_gh_fixture").glob("*.py"))}
-    if release_startup:
+    if release_startup or benchmark_candidate:
         candidate_next = True
     if candidate_next:
         backend = files["backend.py"].decode()
         start = backend.index("def require_runtime():")
         end = backend.index("\n\nclass TrustedGhEnvironment", start)
-        owner = "candidate-101" if release_startup else "candidate-090"
+        owner = "candidate-101" if release_startup or benchmark_candidate else "candidate-090"
         predicate = (root / owner / "require_runtime.py").read_text()
         files["backend.py"] = (backend[:start] + predicate + backend[end:]).encode()
         assert files["__init__.py"].count(b'VERSION = "1.0.0"') == 1
-        version = b'1.2.0' if release_startup else b'1.1.0'
+        version = b'1.3.0' if benchmark_candidate else b'1.2.0' if release_startup else b'1.1.0'
         files["__init__.py"] = files["__init__.py"].replace(b'VERSION = "1.0.0"', b'VERSION = "' + version + b'"')
+    if benchmark_candidate:
+        files["benchmark_codex.py"] = (root / "candidate-101/benchmark_codex.py").read_bytes()
+        files["__init__.py"] = files["__init__.py"].replace(
+            b'agent_import_paths=DOCKER_AGENT_IMPORT_PATHS,',
+            b'agent_import_paths={**DOCKER_AGENT_IMPORT_PATHS,\n'
+            b'                            "codex": "aeb_gh_fixture.benchmark_codex:BenchmarkCodex"},')
     return files
 
 
-def build(destination, *, candidate_next=False, release_startup=False):
-    if candidate_next and release_startup:
+def build(destination, *, candidate_next=False, release_startup=False, benchmark_candidate=False):
+    if sum((candidate_next, release_startup, benchmark_candidate)) > 1:
         raise ValueError("Select one backend runtime")
-    version = "1.2.0" if release_startup else "1.1.0" if candidate_next else "1.0.0"
+    version = "1.3.0" if benchmark_candidate else "1.2.0" if release_startup else "1.1.0" if candidate_next else "1.0.0"
     metadata = f"aeb_gh_fixture-{version}.dist-info"
-    files = package_files(candidate_next=candidate_next, release_startup=release_startup)
+    files = package_files(candidate_next=candidate_next, release_startup=release_startup,
+                          benchmark_candidate=benchmark_candidate)
     contents = {"aeb_gh_fixture/" + name: raw for name, raw in files.items()}
     contents.update({
         metadata + "/METADATA": (f"Metadata-Version: 2.1\nName: aeb-gh-fixture\nVersion: {version}\nRequires-Python: >=3.13,<3.15\n").encode(),
         metadata + "/WHEEL": b"Wheel-Version: 1.0\nGenerator: aeb-stdlib-1\nRoot-Is-Purelib: true\nTag: py3-none-any\n",
         metadata + "/entry_points.txt": b"[skillevaluator.env_modes]\naeb-gh-fixture = aeb_gh_fixture:backend_spec\n",
     })
+    if benchmark_candidate:
+        contents[metadata + "/entry_points.txt"] += b"aeb-benchmark-docker = aeb_gh_fixture.benchmark_codex:backend_spec\n"
     record = io.StringIO(newline="")
     writer = csv.writer(record, lineterminator="\n")
     for name, raw in sorted(contents.items()):
@@ -59,7 +68,9 @@ def build(destination, *, candidate_next=False, release_startup=False):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) not in (2, 3) or len(sys.argv) == 3 and sys.argv[2] not in ('--candidate-next', '--release-startup'):
-        raise SystemExit('usage: build_wheel.py DESTINATION [--candidate-next|--release-startup]')
+    variants = ('--candidate-next', '--release-startup', '--benchmark-candidate')
+    if len(sys.argv) not in (2, 3) or len(sys.argv) == 3 and sys.argv[2] not in variants:
+        raise SystemExit('usage: build_wheel.py DESTINATION [--candidate-next|--release-startup|--benchmark-candidate]')
     print(build(Path(sys.argv[1]), candidate_next='--candidate-next' in sys.argv[2:],
-                release_startup='--release-startup' in sys.argv[2:]))
+                release_startup='--release-startup' in sys.argv[2:],
+                benchmark_candidate='--benchmark-candidate' in sys.argv[2:]))

@@ -122,13 +122,18 @@ def _main(*, candidate=False, artifact=None):
     artifact = Path(artifact) if artifact is not None else Path(os.environ['RUNNER_TEMP']) / 'pester-gate-artifacts'
     from importlib.metadata import version
     current = candidate == 'current'
-    from evaluator_profiles import owning_candidate
-    expected_runtime = (owning_candidate()['version'], owning_candidate()['harbor']) if current else ('0.7.2', '0.24.0') if candidate else ('0.3.0', '0.13.2')
+    release = candidate == 'release'
+    from evaluator_profiles import owning_candidate, runtime, candidate_versions
+    if current or release:
+        owner = owning_candidate()
+        expected_runtime = owner['version'], owner['harbor']
+        if release and owner['version'] != '1.0.1':
+            raise RuntimeError('Release fixture requires the 1.0.1 benchmark candidate')
+        runtime(candidate_versions(owner), owning=True)
+    else:
+        expected_runtime = ('0.7.2', '0.24.0') if candidate else ('0.3.0', '0.13.2')
     if (version('skillevaluator'), version('harbor')) != expected_runtime:
         raise RuntimeError('Qualification runtime mismatch')
-    if current:
-        from evaluator_profiles import runtime, candidate_versions
-        runtime(candidate_versions(owning_candidate()), owning=True)
     def resources(kind):
         command = ['docker', 'ps', '--all', '--quiet'] if kind == 'containers' else ['docker', 'network', 'ls', '--quiet']
         return set(subprocess.check_output(command, text=True, timeout=15).split())
@@ -136,8 +141,9 @@ def _main(*, candidate=False, artifact=None):
     with tempfile.TemporaryDirectory(prefix='pester-container-gate-', dir=os.environ.get('RUNNER_TEMP')) as temporary:
         root = Path(temporary)
         os.environ['SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE'] = str(root / 'private/key')
-        bundle, fixtures = qualification_bundle(root, candidate=candidate)
-        register = Codex(logs_dir=root / 'registration', skills_dir='/workspace/skills', version='0.155.1')._build_register_skills_command()
+        bundle, fixtures = qualification_bundle(root, candidate=candidate and not release)
+        register = Codex(logs_dir=root / 'registration', skills_dir='/workspace/skills',
+                         version=reports.POLICY['codex'] if release else '0.155.1')._build_register_skills_command()
         jobs = root / 'jobs'
         staged_evidence = []
         before_inputs = evidence.custom_source_manifest(ROOT, pilot.NAME)

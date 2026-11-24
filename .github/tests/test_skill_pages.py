@@ -26,6 +26,8 @@ import skill_analysis as analysis
 import skill_evidence as evidence
 import skill_pages as pages
 import skill_report as report
+from qualify_current_evaluator import historical_podman
+from review_snapshots import PESTER_RECORD, parity_archive
 import test_skill_analysis as fixtures
 from test_skill_report import Document
 
@@ -109,20 +111,7 @@ class FixtureAPI:
 class PagesTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        import importlib.metadata
-        if importlib.metadata.version('skillevaluator') == '0.3.0':
-            cls.historical = evidence.project(evidence.normalize_behavioral(fixtures.FIXTURES / 'podman-native', 'podman'))
-        else:
-            # Normalize historical native data under its original owner; exercise
-            # publication preparation and rebuilding under the selected host.
-            python = Path(os.environ.get('SKILL_EVALUATOR_PYTHON', ''))
-            if not python.is_absolute() or not python.is_file():
-                raise ValueError('Historical native fixture requires its owning interpreter')
-            command = 'import sys,json; from pathlib import Path; sys.path.insert(0,sys.argv[1]); import skill_evidence as e; print(json.dumps(e.project(e.normalize_behavioral(Path(sys.argv[2]),"podman"))))'
-            result = subprocess.run([str(python), '-I', '-B', '-c', command, str(ROOT / '.github/scripts'),
-                                     str(fixtures.FIXTURES / 'podman-native')],
-                                    capture_output=True, text=True, check=True, timeout=60)
-            cls.historical = json.loads(result.stdout)
+        cls.historical = evidence.parse_json(historical_podman())
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='pages-test-'); self.addCleanup(self.temp.cleanup)
@@ -365,11 +354,10 @@ class PagesTests(unittest.TestCase):
             pages.acquire(api, api.run, api.jobs, 'benchmark', self.site, self.state, ROOT, self.root / 'failed')
         # Synthetic native custom confirmation contains failed/unscoreable outcomes.
         # Producer workflow success must not turn those outcomes into passes.
-        import test_custom_metrics as custom
-        native, _ = custom.synthetic_native(self.root / 'custom')
-        record = evidence.project(evidence.normalize_behavioral(native, 'powershell-pester-6'))
+        with parity_archive(pester=True) as archive:
+            record = evidence.parse_json(archive.read(PESTER_RECORD))
         source = bundle(self.root / 'confirmation-source', [record])
-        api = FixtureAPI(self.revision, 'f' * 40, source)
+        api = FixtureAPI(record['source']['revision'], 'f' * 40, source)
         api.run.update(workflow_id=200, path=pages.WORKFLOWS['benchmark'], event='workflow_dispatch')
         api.jobs = [api.job('evaluate', evaluation)]
         api.artifacts[0]['name'] = 'skill-public-benchmark-powershell-pester-6-confirmation-20-1'

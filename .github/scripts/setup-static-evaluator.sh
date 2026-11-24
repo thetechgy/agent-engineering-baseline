@@ -7,13 +7,15 @@ root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 kind=${1:-quality-static}
 case "$kind" in
   quality-next) exec bash "$root/.github/scripts/setup-skillevaluator.sh" quality-next ;;
-  quality-static|data-host|native-startup) ;;
+  quality-static|data-host|native-startup|native-benchmark-candidate|review-candidate) ;;
   *) exit 2 ;;
 esac
 : "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}" "${GITHUB_ENV:?}"
 tools="$RUNNER_TEMP/skill-evaluation-tools"
 if [ "$kind" = data-host ]; then tools="$RUNNER_TEMP/skill-data-host"; fi
 if [ "$kind" = native-startup ]; then tools="$RUNNER_TEMP/skill-native-startup"; fi
+if [ "$kind" = native-benchmark-candidate ]; then tools="$RUNNER_TEMP/skill-native-benchmark-candidate"; fi
+if [ "$kind" = review-candidate ]; then tools="$RUNNER_TEMP/skill-review-candidate"; fi
 case "$(realpath -m "$tools")/" in
   "$(realpath "$GITHUB_WORKSPACE")/"*|"$root/"*) echo 'Tools must be outside the checkout.' >&2; exit 1 ;;
 esac
@@ -30,6 +32,13 @@ import static_evaluator as owner
 print(owner.REVISION, owner.LOCK, owner.VERSIONS["python"])
 ')
 read -r revision lock python_version <<< "$pins"
+if [ "$kind" = review-candidate ]; then
+  pins=$(PYTHONPATH="$root/.github/scripts" python3 -B -c '
+import private_review_runtime as owner
+print(owner.PYTHON, owner.LOCK)
+')
+  read -r python_version overlay_digest <<< "$pins"
+fi
 evaluator="$tools/evaluator"
 git init --quiet "$evaluator"
 git -C "$evaluator" fetch --quiet --depth=1 https://github.com/NVIDIA/SkillEvaluator.git "$revision"
@@ -38,20 +47,42 @@ test "$(git -C "$evaluator" rev-parse HEAD)" = "$revision"
 printf '%s  %s\n' "$lock" "$evaluator/uv.lock" | sha256sum --check --strict
 extras=()
 if [ "$kind" = quality-static ]; then extras=(--extra security --extra tier3); fi
-if [ "$kind" = native-startup ]; then extras=(--extra tier3); fi
+if [ "$kind" = native-startup ] || [ "$kind" = native-benchmark-candidate ]; then extras=(--extra tier3); fi
 uv sync --project "$evaluator" --python "$python_version" --managed-python --frozen --no-dev "${extras[@]}"
 python="$evaluator/.venv/bin/python"
 uv pip check --python "$python"
-if [ "$kind" = native-startup ]; then
+if [ "$kind" = review-candidate ]; then
+  overlay="$root/.github/requirements/review-101.txt"
+  printf '%s  %s\n' "$overlay_digest" "$overlay" | sha256sum --check --strict
+  uv pip install --python "$python" --no-deps --only-binary :all: --require-hashes --requirement "$overlay"
+  uv pip check --python "$python"
+  PYTHONPATH="$root/.github/scripts" "$python" -B -c 'import private_review_runtime; private_review_runtime.validate_install()'
+  printf 'SKILL_REVIEW_CANDIDATE_PYTHON=%s\n' "$python" >> "$GITHUB_ENV"
+  exit 0
+fi
+if [ "$kind" = native-startup ] || [ "$kind" = native-benchmark-candidate ]; then
   PYTHONPATH="$root/.github/scripts" "$python" -B -c 'import static_evaluator; static_evaluator.validate_install()'
-  "$python" -IB "$root/.github/evaluator-backends/build_wheel.py" "$tools/backend-wheel" --release-startup
-  printf '%s  %s\n' c76a4689f6b59b1b221e4b4fc8445869e9f1c923edbe995f2909cd9d227b1fb3 \
-    "$tools/backend-wheel/aeb_gh_fixture-1.2.0-py3-none-any.whl" | sha256sum --check --strict
+  wheel_version=1.2.0
+  wheel_kind=--release-startup
+  wheel_digest=c76a4689f6b59b1b221e4b4fc8445869e9f1c923edbe995f2909cd9d227b1fb3
+  python_export=SKILL_NATIVE_STARTUP_PYTHON
+  if [ "$kind" = native-benchmark-candidate ]; then
+    patch="$root/.github/patches/skillevaluator-v1.0.1-benchmark-request.patch"
+    printf '%s  %s\n' 029ac12e32476d83b5a8555291b7c094be7df3262cd862396ddff1b453ec1821 "$patch" | sha256sum --check --strict
+    git -C "$evaluator" apply --check "$patch"
+    git -C "$evaluator" apply "$patch"
+    wheel_version=1.3.0
+    wheel_kind=--benchmark-candidate
+    wheel_digest=d58afc3fc61c36cdc4f64a296bd331fccb94694e64f34c732519089026fe1450
+    python_export=SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON
+  fi
+  "$python" -IB "$root/.github/evaluator-backends/build_wheel.py" "$tools/backend-wheel" "$wheel_kind"
+  printf '%s  %s\n' "$wheel_digest" "$tools/backend-wheel/aeb_gh_fixture-$wheel_version-py3-none-any.whl" | sha256sum --check --strict
   uv pip install --python "$python" --no-deps --no-index --link-mode copy --require-hashes --only-binary :all: \
     --requirement "$tools/backend-wheel/requirements.txt"
   uv pip check --python "$python"
   "$python" -IB -c 'from aeb_gh_fixture.backend import require_runtime; require_runtime()'
-  printf 'SKILL_NATIVE_STARTUP_PYTHON=%s\n' "$python" >> "$GITHUB_ENV"
+  printf '%s=%s\n' "$python_export" "$python" >> "$GITHUB_ENV"
   exit 0
 fi
 if [ "$kind" = data-host ]; then

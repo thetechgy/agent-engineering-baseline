@@ -191,6 +191,25 @@ class CIPowerShellTests(unittest.TestCase):
             self.assertNotIn('run-id', inputs)
             self.assertIn('attempt-${{ github.run_attempt }}', inputs.get('pattern', inputs.get('name', '')))
 
+    def test_release_benchmark_fixture_dispatch_is_explicit_and_credential_free(self):
+        import yaml
+        workflow = yaml.safe_load((ROOT / '.github/workflows/current-evaluator.yml').read_text())
+        inputs = workflow.get('on', workflow.get(True))['workflow_dispatch']['inputs']
+        self.assertFalse(inputs['benchmark-101-fixtures']['default'])
+        jobs = workflow['jobs']
+        candidate = jobs['benchmark-101']
+        self.assertIn("github.event_name == 'workflow_dispatch' && inputs.benchmark-101-fixtures", candidate['if'])
+        for key in ('cohorts', 'native-gh', 'report', 'startup'):
+            self.assertIn('!inputs.benchmark-101-fixtures', jobs[key]['if'])
+        self.assertEqual(candidate['strategy']['matrix']['suite'], ['gh', 'pester'])
+        self.assertEqual(workflow['permissions'], {'contents': 'read'})
+        self.assertNotIn('environment', candidate)
+        self.assertNotIn('secrets.', yaml.safe_dump(candidate))
+        steps = candidate['steps']
+        self.assertFalse(steps[0]['with']['persist-credentials'])
+        self.assertEqual(steps[0]['with']['ref'], '${{ github.sha }}')
+        self.assertTrue(any('--native "$FIXTURE_SUITE"' in step.get('run', '') for step in steps))
+
     def test_selected_jobs_feed_an_always_running_gate_without_privileged_calls(self):
         import yaml
         workflow = yaml.safe_load((ROOT / '.github/workflows/validate.yml').read_text())

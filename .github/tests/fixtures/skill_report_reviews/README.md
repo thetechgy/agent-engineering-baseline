@@ -17,3 +17,15 @@ covered by the repository's license.
 
 Production does not load this fixture: historical callers must explicitly supply
 a tooling snapshot matching the same reviewed hashes.
+
+`retirement-parity.zip` contains 13 synthetic input and saved-output cases
+from the ten original validators at `58cb9698543c546173501887254dc7989d2db396`.
+The capture fixed the review timestamp at 2026-11-23 12:00 UTC. Its catalog
+records expected admission and implementation digests for each case, plus
+relative fixture paths. The snapshots above still identify the original
+validators. The 1.0.1 tests restore the exact saved bytes and verify their
+admission, then exercise substitutions across the authenticated inputs.
+
+`retirement-pester-parity.zip` captures the custom-only Pester public bundle
+and original `current-v4` attachment from the same base. The Pages and review
+tests consume those validated public bytes without building a native result.

@@ -417,8 +417,13 @@ class Capture:
 
 def versions():
     result = {name: importlib.metadata.version(name) for name in PINS}
-    review_require(result == PINS and sys.version_info[:2] == (3, 13), "Pinned environment required",
-                   "runtime_unsupported", ("provenance", "versions"))
+    if result["skillevaluator"] == "1.0.1":
+        import private_review_runtime
+
+        private_review_runtime.validate_install()
+    else:
+        review_require(result == PINS and sys.version_info[:2] == (3, 13), "Pinned environment required",
+                       "runtime_unsupported", ("provenance", "versions"))
     return {**result, "python": ".".join(map(str, sys.version_info[:3]))}
 
 
@@ -632,6 +637,12 @@ def screen_payload(value, *, technical_fields=None, path=(), _budget=None):
         if type(node) is dict:
             result = {}
             for key, item in node.items():
+                if (location == ("provenance", "usage") and type(item) is int
+                        and key in ("preflight_input_tokens", "input_tokens", "output_tokens", "total_tokens")):
+                    # Exact numeric counters are validated by Usage. Rename only
+                    # the screened projection, retaining the saved report fields.
+                    result[key.removesuffix("_tokens") + "_count"] = item
+                    continue
                 # Validated public records and their analysis copies carry policy names, not credentials.
                 record_path = location[2:] if location[:1] == ("records",) else (
                     location[3:] if location[:2] == ("analysis", "behavioral_results") else ()

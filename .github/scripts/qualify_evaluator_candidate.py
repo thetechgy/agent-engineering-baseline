@@ -110,7 +110,7 @@ def main():
     parser.add_argument('--native-gh', action='store_true', help='Qualify all 24 gh cases in both arms using the trusted backend, without inference')
     parser.add_argument('--gh-arm', choices=('with_skill', 'without_skill'), help='Bound native gh qualification to one arm; adoption requires both')
     parser.add_argument('--gh-shard', type=int, choices=(1, 2, 3), help='One fixed eight-case shard of --gh-arm; all three are required')
-    parser.add_argument('--scoring-compatibility', action='store_true', help='Compare fixed standard score vectors under both frozen owning runtimes; never run inference')
+    parser.add_argument('--scoring-compatibility', action='store_true', help='Compare fixed standard score vectors with the authenticated historical receipt; never run inference')
     parser.add_argument('--adoption', action='store_true', help='Run available native gates and report every remaining adoption blocker; never promote implicitly')
     parser.add_argument('--cache-prepared', action='store_true', help='Label native fixtures following a separately retained operator preparation; changes no runtime behavior')
     parser.add_argument('--prepare-gh', action='store_true', help='Prepare the unchanged approved gh image through its trusted backend, without agent setup')
@@ -240,8 +240,7 @@ def main():
     if args.scoring_compatibility:
         sys.path.insert(0, str(project / '.github/scripts'))
         import evaluator_scoring_compatibility as scoring
-        scoring_result = scoring.qualify(sys.executable, snapshot, source / 'uv.lock',
-            os.environ.get('SKILL_LEGACY_REVIEW_PYTHON'))
+        scoring_result = scoring.qualify(sys.executable, snapshot, source / 'uv.lock')
         metadata['scoring_compatibility'] = scoring_result
         metadata['scoring_harness_sha256'] = hashlib.sha256(Path(scoring.__file__).read_bytes()).hexdigest()
         metadata['scoring_controls_sha256'] = hashlib.sha256((project / '.github/tests/test_evaluator_scoring_compatibility.py').read_bytes()).hexdigest()

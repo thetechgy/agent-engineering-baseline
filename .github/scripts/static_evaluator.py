@@ -15,11 +15,11 @@ VERSIONS = {'skillevaluator': VERSION, 'evaluator_revision': REVISION, 'python':
             'harbor': '0.25.0', 'lock_sha256': LOCK, 'producer_profile': PRODUCER}
 
 
-def validate_install():
+def validate_install(*, python=VERSIONS['python']):
     """Authenticate the installed release, interpreter and lock."""
     import skillevaluator
 
-    if (platform.python_version() != VERSIONS['python']
+    if (platform.python_version() != python
             or importlib.metadata.version('skillevaluator') != VERSION):
         raise ValueError('Unexpected released evaluator environment')
     package = Path(skillevaluator.__file__).resolve().parent

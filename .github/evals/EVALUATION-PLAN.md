@@ -1,5 +1,66 @@
 # Evaluation checkpoint
 
+## SkillEvaluator 0.3.0 retirement in progress
+
+The migration starts from `58cb9698543c546173501887254dc7989d2db396`.
+Production benchmarks still use the reviewed 0.3.0 runtime. Keep the
+original scorer, locks and validator snapshots available at their producing
+revisions. [Issue #95](https://github.com/thetechgy/agent-engineering-baseline/issues/95)
+
+- The startup-only checkpoint `dc997a64a5bc54507786f49c1734e9c1887997b7`
+  exercised released SkillEvaluator 1.0.1 staging and Harbor 0.25.0 dispatch
+  through a separately pinned backend. Both gh-007 fixture arms reached
+  readiness, retained the broker identity on repeat start, denied agent
+  access to protected state and completed teardown.
+  [Hosted startup](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45325909769)
+- Local candidate setup uses the released lock and a separate benchmark
+  request patch. The released defaults selected Codex 0.161.0 and sent Medium
+  verifier reasoning. The port dispatches Codex 0.171.0 and High through the
+  released hooks and tests the verifier with its reasoning parameter omitted.
+  Both arms of the Podman, gh and Pester datasets staged locally. Native agent
+  execution, verifier isolation, recovery and collection still require Docker
+  qualification on the candidate revision.
+- The candidate accuracy schema derives 0.8 from four of five satisfied
+  criteria. It rejects the historical scalar fixture. The score comparison
+  found 56 differences across 73 fixed vectors. Future measured records need
+  a separate producer and metric identity. The retained scores and canonical
+  Podman projection are digest-checked comparison inputs.
+- The private review candidate retains Python 3.13.18, OpenAI 2.54.0,
+  Pydantic 2.14.3 and certifi 2026.10.23. It uses the existing explicit inference
+  authorization and keeps the `not_quality_qualified` status. The candidate
+  validated the original bytes across ten attachment profiles and rejected
+  tampered source, registry, context, report and path inputs. Its replay
+  identity is separate from the report's original runtime.
+- The maintained 0.8.0 and 0.9.0 offline qualification commands replayed the
+  canonical Podman projection without a historical interpreter. Each retained
+  its own evaluator, backend, scoring and collector. Native qualification and
+  existing rollback selectors still need their own checks.
+
+The next credential-free hosted checkpoint uses `current-evaluator.yml`
+with `benchmark-101-fixtures=true`, `startup-only=false` and
+`candidate-next=false`. The gh and Pester jobs use the patched 1.0.1 owner
+to run the existing deterministic oracle fixtures. Local staging verified
+48 gh and 52 Pester task identities. The released Pester staging path
+rejects the older verifier Compose override. The fixture uses the existing
+task recipe without that override and still asserts verifier isolation.
+The qualification process registers the diagnostic candidate locally.
+No shared campaign source-successor records were added.
+
+| Maintained path | Retirement gate |
+| --- | --- |
+| `benchmark-skills.yml`, local `gh_evaluations.py benchmark`, standard and confirmation publication | Qualify the real executable, verifier, recovery and collector under the candidate, then bind its runtime files to the preapproval fingerprint and its publications to a new series. |
+| `setup-skillevaluator.sh` benchmark, reporting and quality, `validate.yml`, feature-branch preapproval | Move each remaining full-suite consumer to its owning runtime, then reject installation and invocation of 0.3.0 through maintained dispatch. |
+| `current-evaluator.yml`, manual candidate qualifiers, retained image preparation, Pester and gh validation | Use authenticated offline receipts for historical comparisons and qualify active native image recipes through their supported owners. |
+| Private review generation and saved attachments | Adopt the pinned review setup after registering its future validator identity and replacing test-time historical generation. |
+| Pages, public reports, static quality, historical projections | Verify the mixed history, sealed bundles, expiry and redaction via the 1.0.1 data host. Recheck the reporting patches on a clean archive of the final commit. |
+
+The protected environment has a reviewer gate and no deployment branch
+restriction. The current confirmation input schedules three attempts per
+arm for each selected case. For the smallest maintained suite, that is 30
+task trials before preflight or judge calls. A smaller smoke needs an explicit
+bounded diagnostic selector with scope bound at preapproval and the final
+guard. Authorize that run separately after native fixture qualification.
+
 ## Model selection for new executions
 
 | Operator or workflow | Model dispatch and evidence |
