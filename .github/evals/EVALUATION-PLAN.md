@@ -299,8 +299,10 @@ profile. Earlier records are retained.
 
 The manual oracle qualification uses the released environment to read
 digest-pinned complete and partial synthetic gh controls captured with the
-original 0.3.0 collector. Both public projections reproduce the original
-observations, attempt identities and scores byte for byte. The partial
+original 0.3.0 collector. Replay verifies the original authored Git object
+and matches the captured competitor file order after checking membership.
+Both public projections reproduce the original observations, attempt
+identities and scores byte for byte. The partial
 control also checks unavailable gate measurements and rejects a substituted
 execution-error ledger. Feature-branch benchmark preapproval uses the
 pinned released runtime for native contracts and the original 1.0.1
