@@ -14,6 +14,7 @@ import uuid
 from benchmark_native import GH_DATASET_PROFILE, stage_gh
 import gh_evaluations as gh
 from qualify_benchmark_101 import release_owner
+from skill_evidence import deterministic_observation
 from skillevaluator.tier3.harbor.adapter import (
     _EVALUATOR_MANAGED_RUNTIME_ENV, _task_environment_context_hash, stage_native_harbor_tasks,
 )
@@ -317,13 +318,21 @@ for p in pathlib.Path('/proc').glob('*/cmdline'):
                     run("docker", "cp", str(trajectory), name + ":/logs/agent/trajectory.json")
                     run("docker", "exec", "--user", "root", name, "python3", "-I", "/tests/grader.py")
                     reward = json.loads(run("docker", "exec", "--user", "root", name,
-                        "cat", "/logs/verifier/reward.json").stdout)
-                    if reward["custom_metrics"]["gh_gate"] != float(with_skill):
+                        "cat", "/logs/verifier/custom_reward.json").stdout)
+                    if (reward.get("entry_id") != task.name or reward.get("has_skill") is not with_skill
+                            or reward.get("evaluation_status") != "complete"):
+                        raise ValueError("Unexpected released custom verifier trial or status")
+                    scores = deterministic_observation(reward["custom_metrics"], "gh", released_native=True)
+                    if scores["gate"] != float(with_skill):
                         raise ValueError("unexpected production verifier gate")
-                    if reward["custom_metrics"]["gh_authorization"] != 1:
+                    flat = json.loads(run("docker", "exec", "--user", "root", name,
+                        "cat", "/logs/verifier/reward.json").stdout)
+                    if flat != {"overall": float(with_skill), **reward["custom_metrics"]}:
+                        raise ValueError("Released custom verifier and Harbor reward differ")
+                    if scores["authorization"] != 1:
                         raise ValueError("authorized calls rejected")
                     if task.name == "gh-003":
-                        if any(reward["custom_metrics"]["gh_" + dimension] != 1 for dimension in
+                        if any(scores[dimension] != 1 for dimension in
                                ("evidence", "commands", "task", "recovery", "authorization", "efficiency")):
                             raise ValueError("common task performance failed")
                     tested += 1
