@@ -1585,8 +1585,9 @@ Use the private-review interpreter before adding
 Repeat for another selected record. The 1.0.1 interpreter validates historical
 attachments against their recorded profiles and original source bytes, and
 identifies the offline validator separately. For new 1.0.1 reviews use
-`"profile": "review-101-v1"` and `"tooling": null`. That profile selects the
-repository's fixed producer and validator source snapshot. Each record can have
+`"profile": "review-101-v2"` and `"tooling": null`. That profile selects the
+repository's fixed producer and validator source snapshot. Existing
+`review-101-v1` attachments retain their original snapshot. Each record can have
 **one analyst report** and up to eight separately supplied independent assessments of that
 exact report. No-attachment generation keeps the existing public-evidence
 dependencies (including Pydantic), without importing the analyst modules or

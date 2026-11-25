@@ -301,14 +301,14 @@ def assessment(spec, parent, capture, report, review):
 
 
 def run_validator(request, modules, capture, roots, registry, profile, assets=None):
-    release_snapshot = profile == snapshot.PROFILE
+    release_snapshot = profile in (snapshot.PROFILE, snapshot.ACTIVE_PROFILE)
     original = '' if release_snapshot else evidence.encoded(
         {**historical_pins(profile), 'python': private_review_runtime.PYTHON}).decode()
     guards = (capture.guard(),)
     temporary = evidence.write_outputs({}, input_paths=roots, input_guards=guards)
     try:
         if release_snapshot:
-            scripts = snapshot.unpack(temporary)
+            scripts = snapshot.unpack(temporary, profile)
         else:
             evidence.write_outputs({}, temporary / '.github', input_paths=roots, input_guards=guards)
             scripts = evidence.write_outputs({}, temporary / '.github' / 'scripts', input_paths=roots,
@@ -355,7 +355,7 @@ def load(paths, captured):
                               'review_digest', 'markdown_digest', 'inputs', 'analysis', 'source', 'support',
                               'selection', 'assessments'))
         require(type(spec['schema_version']) is int and spec['schema_version'] == 1, 'Attachment schema mismatch')
-        release_snapshot = spec['profile'] == snapshot.PROFILE
+        release_snapshot = spec['profile'] in (snapshot.PROFILE, snapshot.ACTIVE_PROFILE)
         require(type(spec['profile']) is str and (release_snapshot or spec['profile'] in PROFILES), 'Unsupported validator profile')
         evidence.skill_id(spec['skill']); evidence.sha(spec['record_id'])
         rid = spec['record_id']
@@ -385,8 +385,10 @@ def load(paths, captured):
             require(spec[key] == evidence.digest_bytes(data), 'Analyst report digest mismatch')
         if release_snapshot:
             require(spec['tooling'] is None, 'Tooling for this profile is fixed')
-            revision, modules, registry, assets = snapshot.REVISION, {}, None, {}
+            revision, validator_execution = snapshot.identity(spec['profile'])
+            modules, registry, assets = {}, None, {}
         else:
+            validator_execution = 'skillevaluator-1.0.1-private-review-offline-v1'
             require(spec['tooling'] is not None or spec['profile'] in ('current-v2', 'current-v3', 'current-v4'), 'Historical tooling snapshot required')
             tooling = attachment_path(spec['tooling'], parent) if spec['tooling'] is not None else evidence.ROOT
             modules = {}
@@ -425,8 +427,7 @@ def load(paths, captured):
         require(result['records'].get(rid) == selected, 'Original and consolidated record mismatch')
         original_records.extend(result['records'].values())
         items.append({'record_id': rid, 'skill': spec['skill'], 'profile': spec['profile'], 'tooling_revision': revision,
-                      'validator_execution': ('skillevaluator-1.0.1-private-review-frozen-v1' if release_snapshot
-                                              else 'skillevaluator-1.0.1-private-review-offline-v1'),
+                      'validator_execution': validator_execution,
                       'review_digest': spec['review_digest'], 'markdown_digest': spec['markdown_digest'],
                       'reference_deadlines': sorted({evidence.REVIEWED_REFERENCE_EXPIRY[(ref['artifact_id'], ref['artifact_digest'])]
                           for record in result['records'].values() for ref in record['references']

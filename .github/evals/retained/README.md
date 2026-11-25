@@ -38,3 +38,11 @@ archive SHA-256 `376fe25f26672a98a878c6d946a7700a6f463d5ae6d0599fb2b8da7f05c5ba9
 before unpacking. The archived files supply the evaluator and campaign
 registries used when reconstructing contexts. Review creation and offline
 attachment validation use the same snapshot.
+
+`private-review-101-v2-overlay.zip` binds the ten updated source and registry
+members from `86899d9356c94cead240ec14d8592b53db556b89` to profile
+`review-101-v2`. The archive SHA-256 is
+`73c2dc9059c0b8830a21f611b70fbff00d14ddca8272999c570e743414e9d2eb`.
+The launcher verifies both archives and overlays these members in a new
+temporary source directory. The original archive continues to own every
+`review-101-v1` attachment.

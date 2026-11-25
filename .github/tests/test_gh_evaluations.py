@@ -898,7 +898,7 @@ class GhNativeTests(unittest.TestCase):
 
     def test_prospective_native_prompt_passes_strict_admission_in_both_arms(self):
         from aeb_gh_fixture.manifest import approve, load_manifest
-        from benchmark_native import gh_finalizer, prepare_gh_manifest, stage_gh
+        from benchmark_native import GH_ACCESS_METRIC, gh_finalizer, prepare_gh_manifest, stage_gh
         from click.testing import CliRunner
         from skillevaluator import __version__
         from skillevaluator.cli import cli
@@ -920,7 +920,10 @@ class GhNativeTests(unittest.TestCase):
             changed["prompt"] = "Read issue 12 " + changed["prompt"].removeprefix("Use the gh skill to read issue 12 ")
             self.assertEqual(prospective_entries, expected)
             self.assertEqual(authored.read_bytes(), original_bytes)
-            self.assertEqual((prospective / "evals/grader.py").read_bytes(),
+            grader_export = f'\n    metrics["{GH_ACCESS_METRIC}"] = metrics.pop("gh_authorization")'.encode()
+            prospective_grader = (prospective / "evals/grader.py").read_bytes()
+            self.assertEqual(prospective_grader.count(grader_export), 1)
+            self.assertEqual(prospective_grader.replace(grader_export, b''),
                              (original / "evals/grader.py").read_bytes())
             snapshots = [build_dataset_snapshot(entries, evaluator_version=__version__)
                          for entries in (historical_entries, prospective_entries)]

@@ -88,26 +88,31 @@ class AttachmentTests(unittest.TestCase):
     def test_release_snapshot_rejects_changed_archive_before_unpacking(self):
         import private_review_snapshot as snapshot
 
-        changed = self.root / 'changed.zip'
-        changed.write_bytes(snapshot.SNAPSHOT.read_bytes() + b'changed')
-        destination = self.root / 'unpacked'
-        with patch.object(snapshot, 'SNAPSHOT', changed):
-            with self.assertRaisesRegex(ValueError, 'Unreviewed private validator snapshot'):
-                snapshot.unpack(destination)
-        self.assertFalse(destination.exists())
+        for profile, member in ((snapshot.PROFILE, 'SNAPSHOT'), (snapshot.ACTIVE_PROFILE, 'ACTIVE_OVERLAY')):
+            with self.subTest(profile=profile):
+                changed = self.root / 'changed.zip'
+                changed.write_bytes(getattr(snapshot, member).read_bytes() + b'changed')
+                destination = self.root / 'unpacked'
+                with patch.object(snapshot, member, changed):
+                    with self.assertRaisesRegex(ValueError, 'Unreviewed private validator snapshot'):
+                        snapshot.unpack(destination, profile)
+                self.assertFalse(destination.exists())
 
     def test_release_review_cli_and_attachment_use_the_same_frozen_source(self):
         import json
         import shutil
-        from private_review_snapshot import PROFILE, REVISION, unpack
+        from private_review_snapshot import ACTIVE_PROFILE, ACTIVE_REVISION, PROFILE, REVISION, unpack
 
-        for key, pester in (('current-v5', False), ('gh-89f46f0', False), (None, True)):
-            with self.subTest(fixture=key or 'pester'), tempfile.TemporaryDirectory() as directory:
+        cases = (('current-v5', False, ACTIVE_PROFILE), ('gh-89f46f0', False, ACTIVE_PROFILE),
+                 (None, True, ACTIVE_PROFILE), ('current-v5', False, PROFILE))
+        for key, pester, profile in cases:
+            with self.subTest(fixture=key or 'pester', profile=profile), tempfile.TemporaryDirectory() as directory:
                 base = Path(directory)
                 with parity_archive(pester=pester) as archive:
                     spec, spec_path, _ = restore_parity_case(self, archive, base / 'inputs', key=key)
-                scripts = unpack(base / 'frozen')
-                command = [sys.executable, '-B', str(evidence.ROOT / '.github/scripts/skill_review.py')]
+                scripts = unpack(base / 'frozen', profile)
+                cli = evidence.ROOT / '.github/scripts/skill_review.py' if profile == ACTIVE_PROFILE else scripts / 'skill_review.py'
+                command = [sys.executable, '-B', str(cli)]
                 args = ['--analysis', spec['analysis'], '--skill', spec['skill'], '--record-id', spec['record_id']]
                 for item in spec['inputs']:
                     args.extend(['--input', item])
@@ -146,7 +151,7 @@ target = Path(sys.argv[4])
                 self.assertEqual(release_review['provenance']['versions']['skillevaluator'], '1.0.1')
                 self.assertEqual(subprocess.run([*command, 'validate', *args, '--review', str(save)],
                     env=env, capture_output=True, timeout=45).returncode, 0)
-                if key == 'current-v5':
+                if key == 'current-v5' and profile == ACTIVE_PROFILE:
                     forbidden = evidence.ROOT / ('.aeb-review-output-' + base.name)
                     try:
                         self.assertNotEqual(subprocess.run([*command, 'prepare', *args, '--output', str(forbidden)],
@@ -155,14 +160,16 @@ target = Path(sys.argv[4])
                     finally:
                         if forbidden.is_dir() and not forbidden.is_symlink():
                             shutil.rmtree(forbidden)
-                spec.update(profile=PROFILE, tooling=None, review=str(save),
+                spec.update(profile=profile, tooling=None, review=str(save),
                             review_digest=evidence.digest_bytes(save.read_bytes()),
                             markdown_digest=evidence.digest_bytes((fixture / 'skill-review.md').read_bytes()))
                 write(spec_path, spec)
                 captured = analysis.capture_inputs([Path(name) for name in spec['inputs']])
                 item = attachments.load([spec_path], captured).items[0]
-                self.assertEqual(item['tooling_revision'], REVISION)
-                self.assertEqual(item['validator_execution'], 'skillevaluator-1.0.1-private-review-frozen-v1')
+                self.assertEqual(item['tooling_revision'], ACTIVE_REVISION if profile == ACTIVE_PROFILE else REVISION)
+                expected_execution = ('skillevaluator-1.0.1-private-review-frozen-v2' if profile == ACTIVE_PROFILE
+                                      else 'skillevaluator-1.0.1-private-review-frozen-v1')
+                self.assertEqual(item['validator_execution'], expected_execution)
                 spec['tooling'] = str(base / 'frozen')
                 write(spec_path, spec)
                 with self.assertRaisesRegex(ValueError, 'Tooling for this profile is fixed'):
