@@ -14,7 +14,9 @@ import uuid
 from benchmark_native import GH_DATASET_PROFILE, stage_gh
 import gh_evaluations as gh
 from qualify_benchmark_101 import release_owner
-from skillevaluator.tier3.harbor.adapter import _task_environment_context_hash, stage_native_harbor_tasks
+from skillevaluator.tier3.harbor.adapter import (
+    _EVALUATOR_MANAGED_RUNTIME_ENV, _task_environment_context_hash, stage_native_harbor_tasks,
+)
 
 
 SELECTED = ("gh-001", "gh-003", "gh-007", "gh-010")
@@ -50,24 +52,33 @@ async def compose_lifecycle(root, prefix):
     gh.reports.require(authored.count(marker) == 1, "Unexpected staged fixture network policy")
     descriptor.write_text(authored.replace(marker, 'network_mode = "no-network"'))
     config = Task(task).config
+    expected_env = _EVALUATOR_MANAGED_RUNTIME_ENV
+    if config.environment.env != expected_env:
+        raise ValueError("Unexpected staged fixture environment")
     manifest = write_manifest(root / "operator", [task], staged_roots=[skill.parent, task.parent])
     context_digest = _task_environment_context_hash(task / "environment")
     paths = TrialPaths(root / "trial")
     paths.mkdir()
     mounts = [{"type": "bind", "source": str(paths.agent_dir), "target": "/logs/agent"}]
+    # Harbor 0.25 normally enforces no-network through its egress sidecar.
+    # This fixture requires the main container to have no network namespace peer.
+    disconnected = root / "fixture-disconnected.yaml"
+    disconnected.write_text("services:\n  main:\n    network_mode: none\n")
     environment = TrustedGhEnvironment(
         environment_dir=task / "environment", environment_name=prefix, session_id=prefix,
         trial_paths=paths, task_env_config=config.environment, mounts=mounts,
-        network_policy=config.environment.resolve_baseline(),
+        network_policy=config.environment.resolve_baseline(), extra_docker_compose=[disconnected],
     )
     image_ids = []
     image_name = None
-    override_paths = []
+    override_fields = ("_mounts_compose_path", "_resources_compose_path", "_env_compose_path",
+                       "_egress_control_services_compose_path")
+    override_paths = set()
     prior = os.environ.get(MANIFEST_ENV)
     os.environ[MANIFEST_ENV] = str(manifest)
     try:
         await environment.start(force_build=True)
-        override_paths = [environment._mounts_compose_path, environment._resources_compose_path]
+        override_paths.update(getattr(environment, field) for field in override_fields)
         effective = json.loads((await environment._run_docker_compose_command(
             ["config", "--format", "json"])).stdout)
         main = effective["services"]["main"]
@@ -77,10 +88,11 @@ async def compose_lifecycle(root, prefix):
         if len(volumes) != 1 or any(volume.get(key) != value for volume in volumes
                 for key, value in (("type", "bind"), ("source", str(paths.agent_dir)), ("target", "/logs/agent"))):
             raise ValueError("Unexpected Harbor Compose mount")
-        if main.get("environment"):
+        if main.get("environment") != expected_env:
             raise ValueError("Unexpected container environment inheritance")
-        limits = main["deploy"]["resources"]["limits"]
-        if float(limits["cpus"]) != config.environment.cpus or int(limits["memory"]) != config.environment.memory_mb * 1024**2:
+        # Harbor 0.25 emits Compose service limits directly.
+        limits = {"cpus": float(main["cpus"]), "memory": int(main["mem_limit"])}
+        if limits["cpus"] != config.environment.cpus or limits["memory"] != config.environment.memory_mb * 1024**2:
             raise ValueError("Harbor Compose resource limit mismatch")
         normalized = {"network_mode": main["network_mode"], "limits": limits,
                       "mounts": [{"type": "bind", "target": "/logs/agent"}],
@@ -144,9 +156,7 @@ async def compose_lifecycle(root, prefix):
         else:
             os.environ[MANIFEST_ENV] = prior
         # Harbor logs teardown errors; independently enforce observable cleanup.
-        for path in (environment._mounts_compose_path, environment._resources_compose_path):
-            if path is not None and path not in override_paths:
-                override_paths.append(path)
+        override_paths.update(getattr(environment, field) for field in override_fields)
         try:
             await environment.stop(delete=True)
         finally:
