@@ -391,26 +391,37 @@ class OrchestrationTests(unittest.TestCase):
                             'judge_fallback_used': False, 'score': 0.8} for metric in metrics}
         measured = {**identity, 'judge_contract': 'skill-evaluator-judges-v2', 'details': details}
         private_text = 'private verifier output'
+        blocked = {**identity, 'evaluation_status': 'failed', 'evaluation_errors': {'execution_evidence': private_text}}
         incomplete = (
             ({**identity, 'evaluation_status': 'failed', 'error': 'No trajectory or reconstructible agent log'},
-             'trajectory_unavailable'),
-            ({**identity, 'evaluation_status': 'failed', 'evaluation_errors': {'execution_evidence': private_text}},
-             'unsupported_execution_evidence'),
+             'trajectory_unavailable', {}),
+            (blocked, 'unsupported_execution_evidence', {}),
+            ({**blocked, 'details': {'security': {'findings': [None, {'type': private_text}],
+                                                  'supported': False, 'passed': None}}},
+             'unsupported_execution_evidence', {}),
+            ({**blocked, 'details': {'security': {'findings': [
+                {'type': 'unsupported_tool_wrapper', 'evidence': private_text},
+                {'type': private_text}, {'type': 'unsupported_path_evidence', 'message': private_text},
+                {'type': 'unsupported_tool_wrapper'},
+             ], 'supported': False, 'passed': None}}},
+             'unsupported_execution_evidence',
+             {'execution_evidence_reasons': ['unsupported_path_evidence', 'unsupported_tool_wrapper']}),
+            ({**blocked, 'details': {'security': {'findings': [], 'passed': True, 'score': 1.0}}},
+             'unsupported_execution_evidence', {'execution_evidence_reasons': ['missing_or_ambiguous_tool_result']}),
             ({**measured, 'evaluation_status': 'failed', 'evaluation_errors': {'accuracy': private_text}},
-             'required_judge_failed'),
-            ({**measured, 'has_skill': True}, 'reward_identity'),
-            ({**measured, 'judge_contract': None}, 'judge_contract'),
-            ({**measured, 'details': {**details, 'accuracy': {'score': 0.8}}}, 'judge_observation'),
+             'required_judge_failed', {'failed_judges': ['accuracy']}),
+            ({**measured, 'has_skill': True}, 'reward_identity', {}),
+            ({**measured, 'judge_contract': None}, 'judge_contract', {}),
+            ({**measured, 'details': {**details, 'accuracy': {'score': 0.8}}}, 'judge_observation', {}),
         )
-        for reward, reason in incomplete:
-            with self.subTest(reason=reason):
+        for reward, reason, diagnostic in incomplete:
+            with self.subTest(reason=reason, diagnostic=diagnostic):
                 reports.write_json(reward_path, reward)
                 receipt = {'state': 'started'}
                 with self.assertRaises(ValueError):
                     smoke.trial_receipt(job, arm='without_skill', selected=selected, receipt=receipt)
                 self.assertEqual(receipt, {
-                    'state': 'incomplete', 'agent_usage': usage, 'failure_reason': reason,
-                    **({'failed_judges': ['accuracy']} if reason == 'required_judge_failed' else {}),
+                    'state': 'incomplete', 'agent_usage': usage, 'failure_reason': reason, **diagnostic,
                 })
         reports.write_json(reward_path, measured)
         receipt = {'state': 'started'}

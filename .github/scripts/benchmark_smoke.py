@@ -114,6 +114,26 @@ def prepare(workspace, stage, expected):
             'tasks': task_checksums}
 
 
+def execution_evidence_reasons(reward):
+    """Project bounded reason labels from the pinned verifier's failure sidecar."""
+    details = reward.get('details')
+    security = details.get('security') if isinstance(details, dict) else None
+    findings = security.get('findings') if isinstance(security, dict) else None
+    if not isinstance(findings, list):
+        return []
+    reasons = [
+        name for name in ('unsupported_path_evidence', 'unsupported_tool_wrapper')
+        if any(isinstance(finding, dict) and finding.get('type') == name for finding in findings)
+    ]
+    if security.get('supported') is False:
+        return reasons
+    # With a supported security observation, the pinned verifier's other
+    # execution-evidence rejection is a missing or ambiguous tool result.
+    if not reasons and 'supported' not in security and type(security.get('passed')) is bool:
+        return ['missing_or_ambiguous_tool_result']
+    return []
+
+
 def trial_receipt(job, *, arm, selected, receipt):
     paths = list(job.glob('*/result.json'))
     require(len(paths) == 1, 'Expected one native trial in the selected arm')
@@ -146,6 +166,9 @@ def trial_receipt(job, *, arm, selected, receipt):
             receipt['failure_reason'] = 'trajectory_unavailable'
         elif failed == {'execution_evidence'}:
             receipt['failure_reason'] = 'unsupported_execution_evidence'
+            reasons = execution_evidence_reasons(reward)
+            if reasons:
+                receipt['execution_evidence_reasons'] = reasons
         elif failed == {'environment'}:
             receipt['failure_reason'] = 'verifier_environment'
         elif failed and failed.issubset(JUDGE_METRICS):

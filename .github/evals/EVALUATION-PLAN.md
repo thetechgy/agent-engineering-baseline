@@ -330,6 +330,21 @@ exception. The reader now preserves these outcomes as incomplete using
 fixed failure labels. The native v2 production cutover is still pending.
 [Native v2 smoke](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45695901356)
 
+The baseline retry on `8b86b7e` returned
+`unsupported_execution_evidence` with complete teardown. The pinned verifier
+stopped before judging. The receipt lacked enough detail to identify the
+condition that blocked the live trial.
+[Native v2 retry](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45712351852)
+
+The smoke receipt now projects fixed reason codes from the existing verifier
+sidecar. A sandboxed Codex 0.171.0 loopback run for Podman case 1 carried
+four tool calls through Harbor's native session converter, including
+successful calls with empty stdout. The verifier completed three fixture
+judgments. A separate native trace triggered the unresolved-path code
+before judging. Controlled variants of the successful trajectory
+verified the unsupported-wrapper and missing-or-ambiguous-result codes.
+The diagnostic contains only fixed reason codes for this boundary.
+
 The native 1.0.1 score reader now validates the released dimension means,
 explicit baseline applicability and paired lift against the trial rewards.
 Retained gh and Podman controls replay after redaction with their original
