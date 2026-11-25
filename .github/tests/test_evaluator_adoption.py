@@ -118,10 +118,13 @@ class AdoptionTests(unittest.TestCase):
         self.assertNotIn('tool', findings[0])
         self.assertNotIn('target_skill_used_before', findings[0])
 
-    def test_held_consumers_refuse_candidate_before_execution(self):
+    def test_data_host_replays_history_and_holds_operational_consumers(self):
+        from qualify_current_evaluator import historical_podman
         import skill_evidence as evidence
-        with self.assertRaisesRegex(ValueError, 'producer owning runtime'):
-            evidence.normalize_behavioral(ROOT / '.github/tests/fixtures/skill_evidence/podman-native', 'podman')
+        native = ROOT / '.github/tests/fixtures/skill_evidence/podman-native'
+        public = evidence.project(evidence.normalize_behavioral(native, 'podman'))
+        self.assertEqual(evidence.encoded(public), historical_podman())
+
         import evaluator_profiles as profiles
         import skill_reports as reports
         import skill_review
@@ -135,7 +138,7 @@ class AdoptionTests(unittest.TestCase):
         # evaluator environment also has to fail before constructing a client.
         with self.assertRaises((ValueError, PackageNotFoundError)):
             skill_review.versions()
-        with self.assertRaisesRegex(ValueError, 'Pinned validator environment required'):
+        with self.assertRaisesRegex(ValueError, 'Unexpected released evaluator environment'):
             skill_report_reviews.load([Path('not-opened.json')], None)
 
     @unittest.skipUnless(os.environ.get('EVALUATOR_ADOPTION_SCAN_OUTPUT'), 'requires retained native scanner assessment')
