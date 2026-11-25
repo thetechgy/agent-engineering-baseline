@@ -22,9 +22,9 @@ from skill_reports import (MODES, POLICY, benchmark_options, benchmark_policy, l
 
 
 ROOT = Path(__file__).resolve().parents[2]
-NATIVE_PRODUCER = "skillevaluator-1.0.1-benchmark-native-v1"
-NATIVE_SOURCE_DIGEST = "sha256:21f6252f1c56f85c75762c804f4064085f30160e24695a51c7b21dad372bb1ec"
-NATIVE_PATCH_DIGEST = "0cbf3aa1d0a84ec740d42a5744c41c5a8de4f04c319e4fc6e1b3fe9092c672c9"
+NATIVE_PRODUCER = "skillevaluator-1.0.1-benchmark-native-v2"
+NATIVE_SOURCE_DIGEST = "sha256:78dfd05becd4b4e94882aa0305fc58d28a6ef40c10813b384335fd6a7f0be1ef"
+NATIVE_PATCH_DIGEST = "30a03343d670e2b83aeb5519f009549c6528b3cb8235cffc4522aab64b872f57"
 BACKENDS = {"podman": "aeb-benchmark-docker", "gh": "aeb-gh-fixture"}
 GH_DATASET_PROFILE = "gh-benchmark-101-v1"
 GH_ACCESS_METRIC = "gh_access_policy"

@@ -61,13 +61,13 @@ jobs:
         run: bash .github/scripts/setup-static-evaluator.sh data-host
       - name: Verify retained report presentation without inference
         run: '"$SKILL_DATA_PYTHON" -B .github/scripts/test_evaluation_contracts.py presentation'
-      - name: Install isolated historical reporting runtimes
-        run: bash .github/scripts/setup-skillevaluator.sh reporting
+      - name: Install released native dependencies for custom report admission
+        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-candidate
       - name: Install the pinned private review test environment
         run: bash .github/scripts/setup-static-evaluator.sh review-contracts
       - name: Verify historical report and custom semantics
         run: |
-          "$SKILL_REVIEW_PYTHON" -B -m unittest discover -s .github/tests -p test_custom_metrics.py
+          "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B -m unittest discover -s .github/tests -p test_custom_metrics.py
           PYTHONPATH=.github/scripts:.github/tests "$SKILL_DATA_PYTHON" -B -m unittest \
             test_skill_evidence.EvidenceTests.test_compatible_python_precision_and_historical_policy \
             test_skill_evidence.EvidenceTests.test_policy_runtime_contradictions \
@@ -480,6 +480,12 @@ jobs:
           enable-cache: false
       - name: Install the pinned released launcher owner
         run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-101
+      - name: Verify released execution evidence without inference
+        env:
+          GRADING_PATCH_CHILD: '1'
+          CURRENT_NATIVE_CONTROLS: '1'
+          PYTHONPATH: .github/tests
+        run: '"$SKILL_NATIVE_BENCHMARK_PYTHON" -B -m unittest test_grading_evidence.GradingEvidenceTests -v'
       - name: Verify the paired launcher through its preflight boundary
         run: |
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"

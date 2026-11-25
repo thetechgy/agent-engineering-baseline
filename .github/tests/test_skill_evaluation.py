@@ -720,6 +720,22 @@ class UpstreamTests(unittest.TestCase):
 
     def test_pinned_evaluator_patch_only_pins_codex_for_docker_runs(self):
         from skillevaluator.tier3.harbor import runner
+
+        if importlib.metadata.version('skillevaluator') == '1.0.1':
+            import benchmark_native
+
+            benchmark_native.validate_runtime()
+            build = runner.build_harbor_run_command
+            launcher = 'aeb_gh_fixture.benchmark_codex:BenchmarkCodex'
+            common = {'dataset_path': 'unused', 'job_name': 'keyless-test'}
+            for backend in benchmark_native.BACKENDS.values():
+                command = build(agent='codex', env_mode=backend, **common)
+                self.assertEqual(command[command.index('--agent') + 1], launcher)
+            for agent, environment in (('claude-code', 'aeb-benchmark-docker'), ('codex', 'docker'), ('codex', 'local')):
+                command = build(agent=agent, env_mode=environment, **common)
+                self.assertNotIn(launcher, command)
+            return
+
         from harbor.agents.installed.codex import Codex
         patch_text = (REPO / reports.PATCH).read_text()
         members = re.findall(r"^diff --git a/(\S+)", patch_text, re.MULTILINE)
@@ -1094,16 +1110,24 @@ class WorkflowTests(unittest.TestCase):
             (root / 'skillspector/uv.lock').write_text('scanner lock fixture')
             (root / 'benchmark').mkdir()
             (root / 'benchmark/uv.lock').write_bytes(b'benchmark lock fixture')
+            scanner_packages = {"bandit": "fixture-bandit", "pip-audit": "fixture-pip-audit"}
+            version = importlib.metadata.version
+
+            def package_version(name):
+                return scanner_packages[name] if name in scanner_packages else version(name)
+
             for kind in ("quality", "benchmark"):
                 output = io.StringIO()
                 with self.subTest(kind=kind), patch.object(sys, "argv", ["-", str(root), kind, SHA, str(REPO)]), \
                         patch.object(subprocess, "check_output", return_value="fixture-version\n"), \
+                        patch.object(importlib.metadata, "version", side_effect=package_version), \
                         contextlib.redirect_stdout(output):
                     exec(compile(producer, "setup-provenance", "exec"), {})
                 versions = json.loads(output.getvalue())
                 if kind == "quality":
                     self.assertEqual(versions["skillspector_revision"], SHA)
                     self.assertEqual(versions["scanners"]["skillspector"], "fixture-version")
+                    self.assertEqual({name: versions["scanners"][name] for name in scanner_packages}, scanner_packages)
                     self.assertEqual(versions['scanner_runtime']['skillspector_lock'],
                                      'sha256:' + hashlib.sha256(b'scanner lock fixture').hexdigest())
                 else:

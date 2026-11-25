@@ -297,6 +297,22 @@ required 91 source-only records on 369 lines in `source-v44.json`. Grader,
 fixture and replay adapter identities were checked against each parent
 profile. Earlier records are retained.
 
+The manual oracle qualification uses the released environment to read
+digest-pinned complete and partial synthetic gh controls captured with the
+original 0.3.0 collector. Both public projections reproduce the original
+observations, attempt identities and scores byte for byte. The partial
+control also checks unavailable gate measurements and rejects a substituted
+execution-error ledger.
+
+The released verifier comparison found unsupported command wrappers that
+reached judge calls, a missing trajectory that produced numeric values,
+and a safety improvement attributed against unknown baseline evidence.
+The new release-specific patch restores those fail-closed conditions,
+recognizes explicit Podman socket access and preserves inert text. The
+released native v2 producer binds the new patched tree and score series.
+All 13 credential-free verifier controls passed locally. Run both hosted
+launcher jobs again on the new producer before accepting released scores.
+
 The presentation and analysis tests read their original public Podman and
 synthetic static projections from a digest-checked fixture. The existing
 retained Podman projection also supplies the refreshed expiry control.

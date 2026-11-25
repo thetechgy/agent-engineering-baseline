@@ -1,11 +1,12 @@
 """Synthetic native carriers exercise admission; hosted oracle supplies execution evidence.
 
-These freshly staged controls are not retained oracle runs and make no claims of
-actual Codex/model execution. No provider, judge or container is invoked here.
+The staged and frozen controls use synthetic rewards. No provider, judge or
+container is invoked here.
 """
 import copy
 from datetime import datetime, timezone
 import importlib.util
+from io import BytesIO
 import json
 import os
 import re
@@ -16,6 +17,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from zipfile import ZipFile
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
@@ -126,19 +128,51 @@ def synthetic_native(root, *, complete=False, candidate=False):
     return native, run
 
 
-def synthetic_gh_native(root, *, unscoreable=False, candidate=False, candidate_metrics=None):
+# Captured at 5bdc85e from synthetic rewards using the pinned 0.3.0 collector
+# and original projection rules. The output-directory field in each raw run
+# result was made portable and both projections were reproduced after that edit.
+HISTORICAL_GH_CONTROLS = 'sha256:71eaf1f5ce018bb2bc90151baa04e66066343f4519d8c5ce6fe5ef4864f8169e'
+
+
+def historical_gh_native(root, *, unscoreable=False):
+    path = Path(__file__).parent / 'fixtures/skill_evidence/gh-custom-controls-030.zip'
+    raw = evidence.read_bytes(path)
+    evidence.require(evidence.digest_bytes(raw) == HISTORICAL_GH_CONTROLS, 'Historical gh controls digest mismatch')
+    prefix = 'partial/' if unscoreable else 'complete/'
+    native = root / 'native'
+    native.mkdir()
+    with ZipFile(BytesIO(raw)) as archive:
+        for member in archive.infolist():
+            if not member.filename.startswith(prefix):
+                continue
+            relative = Path(member.filename.removeprefix(prefix))
+            evidence.require(not relative.is_absolute() and '..' not in relative.parts and relative.suffix == '.json',
+                             'Invalid historical gh control path')
+            if relative == Path('public-report.json'):
+                continue
+            destination = native / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with destination.open('xb') as file:
+                file.write(archive.read(member))
+        expected = archive.read(prefix + 'public-report.json')
+    actual = evidence.encoded(evidence.project(evidence.normalize_behavioral(native, 'gh')))
+    evidence.require(actual == expected, 'Historical gh projection differs from the original')
+    return native, native / 'results/gh/synthetic-gh'
+
+
+def synthetic_gh_native(root, *, unscoreable=False, candidate_metrics=None):
     """Pinned collector over synthetic default+custom rewards; no model inference."""
     import gh_evaluations as gh
     from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
     from skillevaluator.tier3.harbor.report_data import build_dataset_snapshot
     from skillevaluator.tier3.dataset_utils import load_dataset_entries
-    from evaluator_profiles import owning_candidate, candidate_versions, CANDIDATE
-    if candidate:
-        CANDIDATE = owning_candidate()
-    candidate_policy = {**reports.benchmark_policy('gh'), 'evaluator_revision': CANDIDATE['revision'], 'harbor': CANDIDATE['harbor'], 'python': CANDIDATE['python']}
+    from evaluator_profiles import owning_candidate, candidate_versions
+    profile = owning_candidate()
+    candidate_policy = {**reports.benchmark_policy('gh'), 'evaluator_revision': profile['revision'],
+                        'harbor': profile['harbor'], 'python': profile['python']}
     from gh_candidate import stage as candidate_stage
-    bundle = (candidate_stage if candidate else gh.stage)(ROOT, root / 'bundle/gh')
+    bundle = candidate_stage(ROOT, root / 'bundle/gh')
     ids = sorted(entry['id'] for entry in gh.dataset(ROOT)); rows = []; jobs = root / 'jobs'
     with patch.dict('os.environ', {'SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE': str(root / 'key')}):
         for present in (True, False):
@@ -177,23 +211,19 @@ def synthetic_gh_native(root, *, unscoreable=False, candidate=False, candidate_m
     collected = collect_harbor_results('gh', ['codex'], run, jobs, expected_cases=len(ids), expected_case_ids=ids,
                                       expected_trials=len(ids), agent_models={'codex': {'model': reports.POLICY['model'], 'source': 'synthetic_control'}})
     config = {'grading': {'mode': 'default_plus_custom'},
-              'judge': {'model': reports.POLICY['model'], 'provider': 'openai', 'enabled': not candidate},
+              'judge': {'model': reports.POLICY['model'], 'provider': 'openai', 'enabled': False},
               'provider': {'name': 'openai', 'model': reports.POLICY['model']},
               'harbor': {'n_attempts': 1, 'n_concurrent': 2, 'timeout_multiplier': 2.0, 'stop_on_pass': False,
                          'environment': {'value': 'docker'}},
               'evaluated_source': {'repository': 'thetechgy/agent-engineering-baseline', 'commit': evidence.git_revision(ROOT)}}
-    snapshot = build_dataset_snapshot(load_dataset_entries(bundle / 'evals/evals.json'), evaluator_version=CANDIDATE['version'] if candidate else '0.3.0')
+    snapshot = build_dataset_snapshot(load_dataset_entries(bundle / 'evals/evals.json'), evaluator_version=profile['version'])
     write(run / 'dataset_snapshot.json', snapshot)
     write(run / 'run_config.json', config)
     write(run / 'result.json', {**collected, 'skill_name': 'gh', 'report_status': 'incomplete' if unscoreable else 'complete', 'run_config': config,
         'dataset_digest': snapshot['dataset_digest'], 'dataset_summary': snapshot['dataset_summary']})
-    write(native / 'versions.json', {'python': '3.13.17', 'skillevaluator': '0.3.0', 'harbor': '0.13.2',
-          'docker_compose': reports.POLICY['docker_compose'], 'evaluator_revision': reports.POLICY['evaluator_revision']})
     write(native / 'provenance.json', {'schema_version': 1, 'skill': 'gh', 'mode': 'standard',
-          'policy': candidate_policy if candidate else reports.benchmark_policy('gh'), 'revision': evidence.git_revision(ROOT),
-          'patch_sha256': CANDIDATE['patch_sha256'] if candidate else evidence.digest_bytes(evidence.read_bytes(ROOT / reports.PATCH)).removeprefix('sha256:')})
-    if candidate:
-        write(native / 'versions.json', candidate_versions(CANDIDATE))
+          'policy': candidate_policy, 'revision': evidence.git_revision(ROOT), 'patch_sha256': profile['patch_sha256']})
+    write(native / 'versions.json', candidate_versions(profile))
     write(native / evidence.CUSTOM_CAPTURE, evidence.custom_capture(ROOT, 'gh', bundle, rows,
         purpose='benchmark', attempts=1, agent='codex', execution_policy={'environment': 'docker',
         'concurrency': 2, 'timeout_multiplier': 2.0, 'stop_on_pass': False},
@@ -326,7 +356,11 @@ class CustomMetricTests(unittest.TestCase):
                          'Structurally validated reported evidence', 'not independently authenticated', 'not collected in custom-only',
                          '18 trials with evaluated custom outcomes', 'Reported custom measurements; paired population incomplete'):
             self.assertIn(expected, text)
-        self.assertIn('Model-backed custom evidence', text)
+        if 'producer_profile' in captured.records[rid]['policy']:
+            self.assertIn('Includes synthetic candidate qualification; candidate quality unavailable', text)
+            self.assertNotIn('Model-backed custom evidence', text)
+        else:
+            self.assertIn('Model-backed custom evidence', text)
         self.assertIn('<th scope="col">Outcome</th><th scope="col">With skill</th><th scope="col">Without skill</th>', text)
         self.assertIn('<summary>Metric definition, applicability and scoring basis</summary>', text)
         markdown = analysis.render_summary(result).decode()
@@ -400,7 +434,7 @@ class CustomMetricTests(unittest.TestCase):
                 with self.assertRaises(ValueError): evidence.validate_public(data)
 
     def test_gh_default_plus_custom_native_admission_preserves_routing_and_gate_semantics(self):
-        native, run = synthetic_gh_native(self.root)
+        native, run = historical_gh_native(self.root)
         data = evidence.normalize_behavioral(native, 'gh')
         public = evidence.project(data)
         evidence.validate_public(public)
@@ -431,7 +465,7 @@ class CustomMetricTests(unittest.TestCase):
 
     def test_incomplete_gh_native_admission_preserves_unavailable_gates_and_exact_error_ledgers(self):
         from skillevaluator.tier3.harbor import report_data as native_reports
-        native, run = synthetic_gh_native(self.root, unscoreable=True)
+        native, run = historical_gh_native(self.root, unscoreable=True)
         data = evidence.normalize_behavioral(native, 'gh')
         self.assertEqual(len(data['observations']), 48)
         self.assertFalse(data['metrics'])
@@ -466,7 +500,7 @@ class CustomMetricTests(unittest.TestCase):
             evidence.normalize_behavioral(native, 'gh')
 
     def test_unavailable_gh_gates_count_only_enforced_with_skill_observations(self):
-        native, _ = synthetic_gh_native(self.root)
+        native, _ = historical_gh_native(self.root)
         # A controlled public-only record exercises the consumer contract. It
         # makes no claim that the edited outcomes passed native admission.
         public = json.loads(evidence.encoded(evidence.project(evidence.normalize_behavioral(native, 'gh'))))

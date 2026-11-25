@@ -247,6 +247,18 @@ class GradingEvidenceTests(unittest.TestCase):
 @unittest.skipIf(os.environ.get('GRADING_PATCH_CHILD') == '1', 'parent-only patch installation')
 class InstalledPatchTests(unittest.TestCase):
     def test_production_patch_against_exact_pinned_source(self):
+        from importlib.metadata import version
+
+        if version('skillevaluator') == '1.0.1':
+            import benchmark_native
+
+            benchmark_native.validate_runtime()
+            environment = {**os.environ, 'GRADING_PATCH_CHILD': '1', 'CURRENT_NATIVE_CONTROLS': '1',
+                           'PYTHONDONTWRITEBYTECODE': '1', 'PYTHON_DOTENV_DISABLED': '1'}
+            subprocess.run([sys.executable, '-B', '-m', 'unittest', 'discover', '-s', str(Path(__file__).parent),
+                            '-p', Path(__file__).name, '-v'], env=environment, check=True)
+            return
+
         import skillevaluator
         source = Path(skillevaluator.__file__).resolve().parents[2]
         revision = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], text=True).strip()

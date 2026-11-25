@@ -202,7 +202,7 @@ def standard_visibility(test, root, source):
     import skill_reports as reports
     from test_custom_metrics import synthetic_gh_native
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
-    native, run = synthetic_gh_native(root, unscoreable=True, candidate=True)
+    native, run = synthetic_gh_native(root, unscoreable=True)
     for arm in ('with', 'without'):
         trial = root / 'jobs' / ('gh-codex-' + arm) / 'gh-001__attempt1'
         shutil.copytree(source / 'verifier', trial / 'verifier')

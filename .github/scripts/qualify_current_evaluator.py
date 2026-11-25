@@ -151,7 +151,7 @@ def worker(output):
         'vectors': len(vectors()), 'synthetic': True, 'quality_measurement': False})
     metrics, diagnostics = replay_controls()
     reports.write_json(output / 'replay-controls.json', diagnostics)
-    gh_root, _ = synthetic_gh_native(output / 'gh', candidate=True, candidate_metrics=metrics)
+    gh_root, _ = synthetic_gh_native(output / 'gh', candidate_metrics=metrics)
     pester_root, _ = synthetic_native(output / 'pester-carriers', candidate=True)
     records = []
     (output / 'projections').mkdir()

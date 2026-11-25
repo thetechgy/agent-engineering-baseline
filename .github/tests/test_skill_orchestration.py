@@ -273,7 +273,8 @@ class OrchestrationTests(unittest.TestCase):
         for member in ('.github/scripts/benchmark_native.py', '.github/scripts/skill_reports.py',
                        '.github/evaluator-backends/candidate-101/fixture.py',
                        '.github/patches/skillevaluator-v1.0.1-benchmark-staging.patch',
-                       '.github/patches/skillevaluator-v1.0.1-benchmark-recovery.patch'):
+                       '.github/patches/skillevaluator-v1.0.1-benchmark-recovery.patch',
+                       '.github/patches/skillevaluator-v1.0.1-benchmark-evidence.patch'):
             with self.subTest(member=member):
                 self.assertNotEqual(orchestration.identity(pinned), orchestration.identity(
                     orchestration.benchmark_runtime_inputs({**files, member: ('100644', 'blob', 'b' * 40)})))

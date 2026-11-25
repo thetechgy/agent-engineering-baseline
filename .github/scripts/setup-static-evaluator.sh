@@ -90,6 +90,10 @@ if [[ "$kind" == native-startup || "$kind" == native-benchmark-* ]]; then
     printf '%s  %s\n' 44a766ab7cb7bcf38bc0769fc8f87fc6edf20997363ec0341d252edc93dca0b5 "$recovery_patch" | sha256sum --check --strict
     git -C "$evaluator" apply --check "$recovery_patch"
     git -C "$evaluator" apply "$recovery_patch"
+    evidence_patch="$root/.github/patches/skillevaluator-v1.0.1-benchmark-evidence.patch"
+    printf '%s  %s\n' 45923e37bf4dd71b0c1b3c38390dd6c32c8f2ea234f9634cb04fbb0f48232c75 "$evidence_patch" | sha256sum --check --strict
+    git -C "$evaluator" apply --check "$evidence_patch"
+    git -C "$evaluator" apply "$evidence_patch"
     python_export=SKILL_NATIVE_BENCHMARK_PYTHON
   fi
   "$python" -IB "$root/.github/evaluator-backends/build_wheel.py" "$tools/backend-wheel" "$wheel_kind"

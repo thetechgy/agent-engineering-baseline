@@ -512,11 +512,15 @@ class GhNativeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from importlib.metadata import version
+        from benchmark_native import validate_runtime
         from evaluator_profiles import RELEASE_BENCHMARK, candidate_versions, runtime
 
         if version("skillevaluator") != RELEASE_BENCHMARK["version"]:
             raise unittest.SkipTest("requires the released native gh owner")
-        runtime(candidate_versions(RELEASE_BENCHMARK), owning=True)
+        try:
+            runtime(candidate_versions(RELEASE_BENCHMARK), owning=True)
+        except ValueError:
+            validate_runtime()
 
     def test_local_gate_recovers_only_confirmed_numeric_authorization(self):
         with tempfile.TemporaryDirectory() as temporary:

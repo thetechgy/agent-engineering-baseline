@@ -75,6 +75,7 @@ NATIVE_RUNTIME_FILES = (
     '.github/patches/skillevaluator-v1.0.1-benchmark-request.patch',
     '.github/patches/skillevaluator-v1.0.1-benchmark-staging.patch',
     '.github/patches/skillevaluator-v1.0.1-benchmark-recovery.patch',
+    '.github/patches/skillevaluator-v1.0.1-benchmark-evidence.patch',
 )
 SUITE_FILES = {'podman': ('.apm/skills/podman/',),
                'gh': ('.github/evals/gh/evals/', '.github/scripts/gh_evaluations.py',
