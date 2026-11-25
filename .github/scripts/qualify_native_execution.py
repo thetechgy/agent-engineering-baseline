@@ -1,6 +1,7 @@
 """Run one bounded pair through the released launcher with isolated fixture providers."""
 
 import argparse
+from copy import deepcopy
 import json
 import os
 from pathlib import Path
@@ -184,12 +185,14 @@ def qualify(output, name, revision):
         require(len(dataset["evals"]) == 1, "Unexpected Podman fixture scope")
         write_json(source, dataset)
 
+    fixture_agent = "qualify_native_execution:" + ("GhFixture" if name == "gh" else "PodmanFixture")
+
     def build_fixture(**kwargs):
         argv = build(**kwargs)
         index = argv.index("--agent") + 1
-        require(argv[index] == "aeb_gh_fixture.benchmark_codex:BenchmarkCodex" and kwargs["job_name"] in fixtures,
+        require(argv[index] == native.CODEX_AGENT and kwargs["job_name"] in fixtures,
                 "Released runner did not choose the reviewed agent or fixture job")
-        argv[index] = "qualify_native_execution:" + ("GhFixture" if name == "gh" else "PodmanFixture")
+        argv[index] = fixture_agent
         return argv + ["--extra-docker-compose", str(disconnected)]
 
     def catalog(provider):
@@ -232,7 +235,27 @@ def qualify(output, name, revision):
     jobs = Path(result["harbor_jobs_dir"])
     observed = {job: inspect_trial(jobs / job, preflight=job == "runtime-preflight-codex", suite=name)
                 for job in fixtures}
-    native.validate_collected_pair(result, root, name, "standard", revision, [CASES[name]])
+    run = Path(result["run_dir"])
+    native.validate_collected_pair(result, run, root, name, "standard", revision, [CASES[name]],
+                                   agent_selector=fixture_agent)
+    invalid = deepcopy(result)
+    invalid["run_dir"] = str(run.with_name("unselected-report"))
+    try:
+        native.validate_collected_pair(invalid, run, root, name, "standard", revision, [CASES[name]],
+                                       agent_selector=fixture_agent)
+    except ValueError as error:
+        require(str(error) == "Missing or unsafe released benchmark report", "Wrong report selection rejection")
+    else:
+        raise ValueError("Released score projection accepted a substituted report path")
+    invalid = deepcopy(result)
+    invalid["agents"]["codex"]["pass_at_k"]["with_skill"]["cases"][CASES[name]]["attempts"][0]["trial"] = "unmatched"
+    try:
+        native.validate_collected_pair(invalid, run, root, name, "standard", revision, [CASES[name]],
+                                       agent_selector=fixture_agent)
+    except ValueError as error:
+        require(str(error) == "Released trial summary differs from the complete arm", "Wrong trial population rejection")
+    else:
+        raise ValueError("Released score projection accepted a substituted trial identity")
     rejection = {"podman": "Prepared benchmark scope differs",
                  "gh": "Released score report requires the full authored gh cohort"}[name]
     try:

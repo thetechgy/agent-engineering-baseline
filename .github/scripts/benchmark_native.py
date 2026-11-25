@@ -26,6 +26,11 @@ NATIVE_PRODUCER = "skillevaluator-1.0.1-benchmark-native-v2"
 NATIVE_SOURCE_DIGEST = "sha256:78dfd05becd4b4e94882aa0305fc58d28a6ef40c10813b384335fd6a7f0be1ef"
 NATIVE_PATCH_DIGEST = "30a03343d670e2b83aeb5519f009549c6528b3cb8235cffc4522aab64b872f57"
 BACKENDS = {"podman": "aeb-benchmark-docker", "gh": "aeb-gh-fixture"}
+ENVIRONMENTS = {
+    "podman": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
+    "gh": "aeb_gh_fixture.backend:TrustedGhEnvironment",
+}
+CODEX_AGENT = "aeb_gh_fixture.benchmark_codex:BenchmarkCodex"
 GH_DATASET_PROFILE = "gh-benchmark-101-v1"
 GH_ACCESS_METRIC = "gh_access_policy"
 GH_ARMS = {"with_skill": True, "without_skill": False}
@@ -284,10 +289,61 @@ def execute(workspace, root, name, mode, revision, key, *, progress_reporter=Non
         )
 
 
-def validate_collected_pair(result, root, name, mode, revision, cases):
-    """Require a complete released pair before any benchmark report is admitted."""
-    from skillevaluator.evaluation import EvaluationService
+def validate_trial_population(run, agent, name, cases, attempts, agent_selector):
+    """Join each released rollup slot to its distinct physical trial."""
+    from skill_evidence import number, read_json, safe_path, token, validate_summary_rollups
 
+    seen = set()
+    for arm, present in GH_ARMS.items():
+        directory = run / "codex" / arm.replace("_", "-")
+        summary = read_json(directory / "summary.json")
+        rollup = summary["pass_at_k"]
+        require(rollup == agent["pass_at_k"][arm] and set(rollup["cases"]) == set(cases)
+                and summary["execution_status"] == "succeeded" and not summary["execution_errors"]
+                and summary["num_trials"] == summary["scored_attempts"] == len(cases) * attempts,
+                "Released trial summary differs from the complete arm")
+        validate_summary_rollups(rollup, rollup["cases"], cases, attempts, False, versioned=True)
+        trials = safe_path(directory / "trials", directory=True)
+        expected = set()
+        for case in cases:
+            rows = rollup["cases"][case]["attempts"]
+            require(len(rows) == attempts, "Released case attempt population differs")
+            for ordinal, row in enumerate(rows, 1):
+                token(row["trial"])
+                trial = row["trial"]
+                require(row["attempt"] == ordinal and trial not in expected,
+                        "Duplicate or misplaced released attempt")
+                expected.add(trial)
+                reward = read_json(trials / trial / "reward.json")
+                result = read_json(trials / trial / "result.json")
+                token(result["id"])
+                require(result["id"] not in seen and result["trial_name"] == reward["trial_id"] == trial
+                        and result["exception_info"] is None and result["finished_at"] is not None
+                        and result["config"]["agent"]["name"] == agent_selector
+                        and result["agent_info"]["name"] == "codex"
+                        and result["agent_info"]["version"] == POLICY["codex"]
+                        and result["config"]["environment"]["import_path"] == ENVIRONMENTS[name]
+                        and result["config"]["timeout_multiplier"] == POLICY["timeout_multiplier"]
+                        and reward["entry_id"] == case and reward["has_skill"] is present
+                        and reward["metric_set"] == "skill-evaluator-default-v2"
+                        and reward["score_policy"] == summary["score_policy"]
+                        and result["task_name"] == (case if name == "gh" else f"nvidia/skillevaluator-{case}-{arm.replace('_', '-')}"),
+                        "Released trial identity or policy differs")
+                seen.add(result["id"])
+                score = reward["overall"]
+                number(score)
+                require(score == row["score"] == result["verifier_result"]["rewards"]["overall"],
+                        "Released trial score differs from its verifier or rollup")
+        require({member.name for member in trials.iterdir()} == expected, "Unexpected released trial member")
+
+
+def validate_collected_pair(result, run, root, name, mode, revision, cases, *, agent_selector=CODEX_AGENT):
+    """Require the selected native report and complete released trial population."""
+    from skillevaluator import __version__
+    from skillevaluator.evaluation import EvaluationService
+    from skillevaluator.tier3.harbor.report_data import load_dataset_snapshot
+
+    from skill_evidence import safe_path
     from skill_pages import REPOSITORY
     from skill_reports import metric_rows
 
@@ -296,8 +352,7 @@ def validate_collected_pair(result, root, name, mode, revision, cases):
             and result["execution_status"] == "succeeded" and result["skill_name"] == name
             and result["score_policy"] == policy["scoring_policy"]
             and result["metric_set"] == "skill-evaluator-default-v2", "Incomplete or incompatible released benchmark")
-    run = Path(result["run_dir"])
-    require(run.resolve() == run and run.parent == root / "results" / name
+    require(Path(result["run_dir"]) == run and run.resolve() == run and run.parent == root / "results" / name
             and (run / "report.html").is_file() and not (run / "report.html").is_symlink(),
             "Missing or unsafe released benchmark report")
     config = read_json(run / "run_config.json")
@@ -315,10 +370,14 @@ def validate_collected_pair(result, root, name, mode, revision, cases):
     require(harbor["environment"]["value"] == BACKENDS[name] and harbor["n_attempts"] == MODES[mode]
             and harbor["n_concurrent"] == POLICY["concurrency"] and harbor["stop_on_pass"] is False
             and harbor["timeout_multiplier"] == POLICY["timeout_multiplier"], "Released benchmark attempt policy differs")
-    snapshot = read_json(run / "dataset_snapshot.json")
+    safe_path(run / "dataset_snapshot.json")
+    snapshot = load_dataset_snapshot(run)
+    require(snapshot is not None and snapshot["evaluator_version"] == __version__,
+            "Missing or incompatible released dataset snapshot")
     ids = [str(entry["id"]) for entry in snapshot["dataset"]]
     require(set(ids) == set(cases) and len(ids) == len(cases) == result["dataset_summary"]["total_tasks"]
-            and snapshot["dataset_digest"] == result["dataset_digest"], "Released benchmark dataset differs")
+            and snapshot["dataset_digest"] == result["dataset_digest"]
+            and snapshot["dataset_summary"] == result["dataset_summary"], "Released benchmark dataset differs")
     require(set(result["agents"]) == {"codex"}, "Released benchmark agent roster differs")
     agent = result["agents"]["codex"]
     require(agent["model"] == POLICY["model"] and set(agent["conditions"]) == set(GH_ARMS),
@@ -327,6 +386,7 @@ def validate_collected_pair(result, root, name, mode, revision, cases):
         require(arm["execution_status"] == "succeeded" and not arm["execution_errors"]
                 and arm["scored_attempts"] == arm["expected_attempts"] == len(cases) * MODES[mode],
                 "Incomplete released benchmark arm")
+    validate_trial_population(run, agent, name, cases, MODES[mode], agent_selector)
     if name == "gh":
         gh.deterministic_gate(run, cases, MODES[mode], authorization_metric=GH_ACCESS_METRIC)
     return metric_rows(agent)
@@ -368,7 +428,7 @@ def score_record(workspace, root, name, mode, revision):
                 "Released score report requires the full authored gh cohort")
     run = select_run(root, name, selected=None)
     result = read_json(run / "result.json")
-    metrics = validate_collected_pair(result, root, name, mode, revision, cases)
+    metrics = validate_collected_pair(result, run, root, name, mode, revision, cases)
     return {"schema_version": 1, "skill": name, "mode": mode, "revision": revision,
             "series": score_series(name, mode), "policy": released_policy(name), "patch_sha256": NATIVE_PATCH_DIGEST,
             "dataset_digest": result["dataset_digest"], "metrics": metrics}
