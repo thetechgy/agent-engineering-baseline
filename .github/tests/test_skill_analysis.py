@@ -2,7 +2,6 @@
 
 import copy
 from datetime import datetime, timezone
-import importlib.metadata
 import json
 import os
 from pathlib import Path
@@ -12,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from zipfile import ZipFile
 from contextlib import ExitStack, redirect_stdout
 from io import StringIO
 from unittest.mock import patch
@@ -20,10 +20,33 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import skill_analysis as analysis
 import skill_evidence as evidence
+import static_evaluator
 
 REPO = evidence.ROOT
 FIXTURES = Path(__file__).parent / 'fixtures/skill_evidence'
 CLOCK = datetime(2026, 10, 12, tzinfo=timezone.utc)
+
+
+# These unchanged public test projections were captured from podman-native
+# and static-synthetic at 58cb969 under SkillEvaluator 0.3.0 / Harbor 0.13.2.
+# Both presentation clocks produced the same bytes. Historical refresh uses
+# the existing authenticated podman-public-030 projection.
+PRESENTATION_PROJECTIONS = {
+    'historical': 'sha256:08ed15f83be4b4cc19d8e7972dd992c4748749593712bb78386045ca82cbcddb',
+    'static': 'sha256:031fceccc8245010ccf60cc531a0a9276765baf96a194d341bf5f73266518106',
+}
+
+
+def presentation_projection(name):
+    with ZipFile(FIXTURES / 'presentation-projections-030.zip') as archive:
+        member = archive.getinfo(name + '.json')
+        evidence.require(member.file_size <= 64 * 1024, 'Presentation fixture exceeds size limit')
+        raw = archive.read(member)
+    evidence.require(evidence.digest_bytes(raw) == PRESENTATION_PROJECTIONS[name],
+                     'Presentation fixture digest mismatch')
+    projection = evidence.parse_json(raw)
+    evidence.validate_public(projection)
+    return projection
 
 
 def write(path, data):
@@ -145,8 +168,8 @@ class AnalysisTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         with patch.object(evidence, 'utc_now', return_value=CLOCK):
-            cls.historical = evidence.project(evidence.normalize_behavioral(FIXTURES / 'podman-native', 'podman'))
-            cls.static = evidence.project(evidence.normalize_static(FIXTURES / 'static-synthetic', 'podman'))
+            cls.historical = presentation_projection('historical')
+            cls.static = presentation_projection('static')
         cls.gh = evidence.read_json(FIXTURES / 'gh-no-model.json')
 
     def setUp(self):
@@ -201,7 +224,9 @@ class AnalysisTests(unittest.TestCase):
         self.assertEqual(identities, (evidence.identity(result), evidence.identity(captured.records)))
 
     def test_pinned_environment(self):
-        self.assertEqual(importlib.metadata.version('skillevaluator'), '0.3.0')
+        static_evaluator.validate_install()
+        self.assertEqual(self.historical['policy']['fields']['evaluator_revision'],
+                         evidence.profiles.HISTORICAL_REVISION)
 
     def test_static_summary_preserves_native_outcome_and_coverage_semantics(self):
         for state, flags in (('passed', ()), ('failed', (('SECURITY', 'RA1', 'high'),)),
@@ -273,7 +298,6 @@ class AnalysisTests(unittest.TestCase):
         self.assertIn('totals withheld; no single snapshot per skill is established', output)
         self.assertIn('HIGH · `SECURITY` / `RA1`', output)
         self.assertEqual(len(result['skills'][0]['static_results']), 2)
-        self.assertEqual(sys.version_info[:2], (3, 13))
 
     def test_historical_native_metrics_regressions_and_denominators(self):
         configs = [configuration('podman', self.historical['dataset']['case_ids']),
@@ -769,11 +793,13 @@ class AnalysisTests(unittest.TestCase):
                 self.assertIn(f'Detail preview: {shown} shown; {size - shown} omitted', markdown)
 
     def test_stale_expiry_rejects_refreshed_projection_preserves_scores(self):
+        from qualify_current_evaluator import historical_podman
+
         root = self.bundle('old', [self.historical])
         later = datetime(2026, 10, 20, tzinfo=timezone.utc)
         with patch.object(evidence, 'utc_now', return_value=later):
             with self.assertRaisesRegex(ValueError, 'expired'): self.analyze(root)
-            refreshed = evidence.project(evidence.normalize_behavioral(FIXTURES / 'podman-native', 'podman'))
+            refreshed = evidence.parse_json(historical_podman())
             result, _ = self.analyze(self.bundle('refresh', [refreshed]))
         run = result['skills'][0]['behavioral_results'][0]
         self.assertEqual(run['native_metrics'], self.historical['metrics'])

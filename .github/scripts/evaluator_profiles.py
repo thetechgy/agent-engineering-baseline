@@ -12,7 +12,8 @@ CANDIDATE = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-c
 NEXT = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-0.9.json').read_text())
 RETAINED_NEXT = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-0.9-offline-v2.json').read_text())
 ACCOUNTING = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-0.9-accounting-v1.json').read_text())
-CANDIDATES = (CANDIDATE, NEXT, RETAINED_NEXT, ACCOUNTING)
+RELEASE_BENCHMARK = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-1.0.1-benchmark-candidate-v2.json').read_text())
+CANDIDATES = (CANDIDATE, NEXT, RETAINED_NEXT, ACCOUNTING, RELEASE_BENCHMARK)
 BENCHMARK_ACCOUNTING = json.loads((Path(__file__).resolve().parents[1] / 'evals/benchmark-090-accounting-v1.json').read_text())
 
 
@@ -77,32 +78,37 @@ def runtime(versions, *, owning=False):
         if any(versions.get(key) != value for key, value in expected.items()):
             raise ValueError('Incomplete or contradictory candidate provenance')
     if owning:
-        if importlib.metadata.version('skillevaluator') != profile['version']:
-            raise ValueError('Use the producer owning runtime for native normalization')
-        if is_candidate(profile) and ('.'.join(map(str,sys.version_info[:3])) != profile['python'] or
-                any(importlib.metadata.version(k) != v for k,v in profile['dependencies'].items())):
-            raise ValueError('Candidate owning dependencies differ')
-        if profile.get('backend_source_digest'):
-            backend = Path(importlib.metadata.distribution('aeb-gh-fixture').locate_file('aeb_gh_fixture'))
-            members = list(backend.glob('*.py'))
-            if len(members) > 20 or any(p.is_symlink() for p in members):
-                raise ValueError('Unsafe candidate backend tree')
-            files = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in members}
-            digest = 'sha256:' + hashlib.sha256(json.dumps(files, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
-            if digest != profile['backend_source_digest']:
-                raise ValueError('Candidate backend implementation differs')
-        if is_candidate(profile):
-            import skillevaluator
-            package = Path(skillevaluator.__file__).resolve().parent
-            source = package.parents[1]
-            members = [f for f in package.rglob('*') if f.is_file() and '__pycache__' not in f.parts]
-            if len(members) > 2000 or any(f.is_symlink() for f in members):
-                raise ValueError('Unsafe candidate implementation tree')
-            files = {f.relative_to(source / 'src').as_posix(): hashlib.sha256(f.read_bytes()).hexdigest() for f in members}
-            digest = 'sha256:' + hashlib.sha256(json.dumps(files,sort_keys=True,separators=(',',':')).encode()).hexdigest()
-            if digest != profile['source_tree_digest'] or hashlib.sha256((source / 'uv.lock').read_bytes()).hexdigest() != profile['lock_sha256']:
-                raise ValueError('Candidate implementation or lock differs')
+        validate_install(profile)
     return profile
+
+
+def validate_install(profile):
+    """Authenticate an installation against its separately selected producer pins."""
+    if importlib.metadata.version('skillevaluator') != profile['version']:
+        raise ValueError('Use the producer owning runtime for native normalization')
+    if 'dependencies' in profile and ('.'.join(map(str,sys.version_info[:3])) != profile['python'] or
+            any(importlib.metadata.version(k) != v for k,v in profile['dependencies'].items())):
+        raise ValueError('Candidate owning dependencies differ')
+    if profile.get('backend_source_digest'):
+        backend = Path(importlib.metadata.distribution('aeb-gh-fixture').locate_file('aeb_gh_fixture'))
+        members = list(backend.glob('*.py'))
+        if len(members) > 20 or any(p.is_symlink() for p in members):
+            raise ValueError('Unsafe candidate backend tree')
+        files = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in members}
+        digest = 'sha256:' + hashlib.sha256(json.dumps(files, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+        if digest != profile['backend_source_digest']:
+            raise ValueError('Candidate backend implementation differs')
+    if 'source_tree_digest' in profile:
+        import skillevaluator
+        package = Path(skillevaluator.__file__).resolve().parent
+        source = package.parents[1]
+        members = [f for f in package.rglob('*') if f.is_file() and '__pycache__' not in f.parts]
+        if len(members) > 2000 or any(f.is_symlink() for f in members):
+            raise ValueError('Unsafe candidate implementation tree')
+        files = {f.relative_to(source / 'src').as_posix(): hashlib.sha256(f.read_bytes()).hexdigest() for f in members}
+        digest = 'sha256:' + hashlib.sha256(json.dumps(files,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+        if digest != profile['source_tree_digest'] or hashlib.sha256((source / 'uv.lock').read_bytes()).hexdigest() != profile['lock_sha256']:
+            raise ValueError('Candidate implementation or lock differs')
 
 
 def candidate_versions(profile=None):

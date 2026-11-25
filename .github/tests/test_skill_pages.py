@@ -420,12 +420,6 @@ class PagesTests(unittest.TestCase):
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertEqual(before, pages.tree(output / 'benchmarks'))
         self.assertEqual(seal, pages.verify_candidate(output))
-        # Roll back only the data host: preserve every public byte and its seal.
-        legacy = os.environ.get('SKILL_EVALUATOR_PYTHON', sys.executable)
-        run = subprocess.run([legacy, *command[1:]], capture_output=True, text=True)
-        self.assertEqual(run.returncode, 0, run.stderr)
-        self.assertEqual(before, pages.tree(output / 'benchmarks'))
-        self.assertEqual(seal, pages.verify_candidate(output))
 
     def test_pages_excludes_analyst_attachments(self):
         captured = analysis.capture_inputs([self.site / 'report/current'])
@@ -511,61 +505,62 @@ class PagesTests(unittest.TestCase):
             report.render_report(result, captured, pages_context=context)
 
     def test_reporting_setup_entry_point_never_dispatches_scanners_compose_or_evaluation(self):
-        if sys.version_info[:2] != (3, 13): self.skipTest('Pinned Python 3.13 setup contract')
-        # Command fixtures exercise the real Bash routing; they are not an install qualification.
-        bin_dir = self.root / 'bin'; bin_dir.mkdir()
-        log = self.root / 'calls'
-        uv = """import os,pathlib,sys,shlex
-args=sys.argv[1:]
-with open(os.environ['CALL_LOG'],'a') as f: f.write('uv '+ ' '.join(args)+'\\n')
-if args==['--version']: print('uv 0.13.9')
-elif args[0]=='sync':
- root=pathlib.Path(args[args.index('--project')+1])/'.venv/bin'; root.mkdir(parents=True)
- (root/'python').write_text('#!/bin/sh\\nexec '+shlex.quote(sys.executable)+' \"$@\"\\n'); (root/'python').chmod(0o700)
- (root/'skillevaluator').write_text('#!/bin/sh\\n[ "$#" -eq 1 ] && [ "$1" = --version ] || exit 1\\necho skillevaluator-0.3.0\\n'); (root/'skillevaluator').chmod(0o700)
-elif args[:2]==['pip','list']: print('[]')
-elif args[:2]==['pip','check']:
- assert args[2:] in [['--python',str(pathlib.Path(os.environ['RUNNER_TEMP'])/('skill-evaluation-tools/'+name+'/.venv/bin/python'))] for name in ('review','review-previous')]
-else: raise SystemExit('Unexpected reporting setup dependency operation')
+        from static_evaluator import LOCK, REVISION, VERSIONS, validate_install
+
+        validate_install()
+        lock = Path(sys.executable).parents[2] / 'uv.lock'
+        self.assertEqual(evidence.digest_bytes(lock.read_bytes()), 'sha256:' + LOCK)
+        binary = self.root / 'bin'
+        binary.mkdir()
+        temporary = self.root / 'tools'
+        temporary.mkdir()
+        script = """
+import os, pathlib, shlex, shutil, sys
+
+name = pathlib.Path(sys.argv[0]).name
+args = sys.argv[1:]
+if name == 'uv' and args == ['--version']:
+    print('uv 0.13.9')
+elif name == 'uv' and args[:2] == ['sync', '--project']:
+    assert args[3:] == ['--python', os.environ['RELEASE_PYTHON'], '--managed-python', '--frozen', '--no-dev']
+    bin_dir = pathlib.Path(args[2]) / '.venv/bin'
+    bin_dir.mkdir(parents=True)
+    python = bin_dir / 'python'
+    python.write_text('#!/bin/sh\\nexec ' + shlex.quote(sys.executable) + ' "$@"\\n')
+    cli = bin_dir / 'skillevaluator'
+    cli.write_text('#!/bin/sh\\n[ "$#" -eq 1 ] && [ "$1" = --version ]\\n')
+    python.chmod(0o700)
+    cli.chmod(0o700)
+elif name == 'uv' and args[:3] == ['pip', 'check', '--python']:
+    assert pathlib.Path(args[3]).is_file()
+elif name == 'git' and args[:2] == ['init', '--quiet']:
+    pathlib.Path(args[-1]).mkdir()
+elif name == 'git' and args[:2] == ['-C', os.environ['EVALUATOR']]:
+    command = args[2:]
+    if command == ['fetch', '--quiet', '--depth=1', 'https://github.com/NVIDIA/SkillEvaluator.git', os.environ['RELEASE_REVISION']]:
+        pass
+    elif command == ['checkout', '--quiet', '--detach', 'FETCH_HEAD']:
+        shutil.copyfile(os.environ['RELEASE_LOCK'], pathlib.Path(args[1]) / 'uv.lock')
+    elif command == ['rev-parse', 'HEAD']:
+        print(os.environ['RELEASE_REVISION'])
+    else:
+        raise SystemExit('Unexpected Git operation')
+else:
+    raise SystemExit('Unexpected data-host setup operation')
 """
-        git = """import os,pathlib,sys,subprocess,shutil
-args=sys.argv[1:]
-with open(os.environ['CALL_LOG'],'a') as f: f.write('git '+ ' '.join(args)+'\\n')
-if args[0]=='init': pathlib.Path(args[-1]).mkdir(parents=True)
-if 'rev-parse' in args: print('ac0a04905100acdafc6c95829311a9739c340ff6')
-if 'worktree' in args:
- target=pathlib.Path(args[-2]); target.mkdir(parents=True)
- shutil.copyfile(os.environ['BASE_LOCK'],target/'uv.lock')
-if 'apply' in args:
- allowed={str(pathlib.Path(os.environ['RUNNER_TEMP'])/('skill-evaluation-tools/'+name)):os.environ[key] for name,key in [('review','REVIEW_PATCH'),('review-previous','PREVIOUS_REVIEW_PATCH')]}
- assert args[0]=='-C' and args[1] in allowed, 'Reporting must not patch evaluator execution'
- patch=allowed[args[1]]
- assert args[2:] in (['apply','--check',patch], ['apply',patch]), 'Only the matching reviewed dependency lock patch is allowed'
- subprocess.run([os.environ['REAL_GIT'],*args],check=True)
-"""
-        for name, source in [('uv', uv), ('git', git), *[(name, "raise SystemExit('Forbidden reporting operation')") for name in ('curl', 'docker', 'semgrep', 'skillspector')]]:
-            path = bin_dir / name; path.write_text('#!' + sys.executable + '\n' + source); path.chmod(0o700)
-        environment = {**os.environ, 'PATH': str(bin_dir) + os.pathsep + os.environ['PATH'], 'CALL_LOG': str(log),
-            'RUNNER_TEMP': str(self.root / 'tools'), 'GITHUB_WORKSPACE': str(ROOT),
-            'GITHUB_ENV': str(self.root / 'env'), 'GITHUB_PATH': str(self.root / 'path'),
-            'REAL_GIT': shutil.which('git'),
-            'BASE_LOCK': str(Path(os.environ['SKILL_LEGACY_REVIEW_PYTHON']).parents[2] / 'uv.lock'),
-            'REVIEW_PATCH': str(ROOT / '.github/patches/skillevaluator-v0.3.0-review-runtime.patch'),
-            'PREVIOUS_REVIEW_PATCH': str(ROOT / '.github/patches/skillevaluator-v0.3.0-review-runtime-v1.patch')}
-        run = subprocess.run(['bash', str(ROOT / '.github/scripts/setup-skillevaluator.sh'), 'reporting'], env=environment,
-                             capture_output=True, text=True, timeout=30)
+        for name in ('uv', 'git', 'curl', 'docker', 'semgrep', 'skillspector'):
+            executable = binary / name
+            executable.write_text('#!' + sys.executable + '\n' + script)
+            executable.chmod(0o700)
+        evaluator = temporary / 'skill-data-host/evaluator'
+        environment_file = self.root / 'env'
+        env = {'PATH': str(binary) + os.pathsep + os.environ['PATH'], 'RUNNER_TEMP': str(temporary),
+               'GITHUB_WORKSPACE': str(ROOT), 'GITHUB_ENV': str(environment_file), 'EVALUATOR': str(evaluator),
+               'RELEASE_REVISION': REVISION, 'RELEASE_LOCK': str(lock), 'RELEASE_PYTHON': VERSIONS['python']}
+        run = subprocess.run(['bash', str(ROOT / '.github/scripts/setup-static-evaluator.sh'), 'data-host'],
+                             env=env, capture_output=True, text=True, timeout=30)
         self.assertEqual(run.returncode, 0, run.stderr)
-        self.assertIn('SKILL_EVALUATION_KIND=reporting', (self.root / 'env').read_text())
-        calls = log.read_text()
-        self.assertNotIn('semgrep', calls); self.assertNotIn('skillspector', calls); self.assertNotIn('benchmark', calls)
-        self.assertNotIn('pin-codex.patch', calls)
-        self.assertIn(environment['REVIEW_PATCH'], calls)
-        self.assertIn(environment['PREVIOUS_REVIEW_PATCH'], calls)
-        self.assertIn('pip check --python', calls)
-        self.assertIn('SKILL_REVIEW_PYTHON=', (self.root / 'env').read_text())
-        self.assertIn('SKILL_LEGACY_REVIEW_PYTHON=', (self.root / 'env').read_text())
-        self.assertIn('SKILL_PREVIOUS_REVIEW_PYTHON=', (self.root / 'env').read_text())
-        self.assertIn('--frozen --no-dev --extra security --extra tier3', calls)
+        self.assertEqual(environment_file.read_text(), f'SKILL_DATA_PYTHON={evaluator}/.venv/bin/python\n')
 
     def test_workflow_permissions_queue_and_trusted_checkout(self):
         workflow = yaml.safe_load((ROOT / '.github/workflows/publish-skill-report.yml').read_text())

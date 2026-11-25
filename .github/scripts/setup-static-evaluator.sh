@@ -7,14 +7,14 @@ root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 kind=${1:-quality-static}
 case "$kind" in
   quality-next) exec bash "$root/.github/scripts/setup-skillevaluator.sh" quality-next ;;
-  quality-static|data-host|native-startup|native-benchmark-candidate|review-candidate|review-contracts) ;;
+  quality-static|data-host|native-startup|native-benchmark-candidate|native-benchmark-101|review-candidate|review-contracts) ;;
   *) exit 2 ;;
 esac
 : "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}" "${GITHUB_ENV:?}"
 tools="$RUNNER_TEMP/skill-evaluation-tools"
 if [ "$kind" = data-host ]; then tools="$RUNNER_TEMP/skill-data-host"; fi
 if [ "$kind" = native-startup ]; then tools="$RUNNER_TEMP/skill-native-startup"; fi
-if [ "$kind" = native-benchmark-candidate ]; then tools="$RUNNER_TEMP/skill-native-benchmark-candidate"; fi
+if [[ "$kind" == native-benchmark-* ]]; then tools="$RUNNER_TEMP/skill-$kind"; fi
 if [[ "$kind" == review-* ]]; then tools="$RUNNER_TEMP/skill-$kind"; fi
 case "$(realpath -m "$tools")/" in
   "$(realpath "$GITHUB_WORKSPACE")/"*|"$root/"*) echo 'Tools must be outside the checkout.' >&2; exit 1 ;;
@@ -47,7 +47,7 @@ test "$(git -C "$evaluator" rev-parse HEAD)" = "$revision"
 printf '%s  %s\n' "$lock" "$evaluator/uv.lock" | sha256sum --check --strict
 extras=()
 if [ "$kind" = quality-static ]; then extras=(--extra security --extra tier3); fi
-if [ "$kind" = native-startup ] || [ "$kind" = native-benchmark-candidate ]; then extras=(--extra tier3); fi
+if [[ "$kind" == native-startup || "$kind" == native-benchmark-* ]]; then extras=(--extra tier3); fi
 uv sync --project "$evaluator" --python "$python_version" --managed-python --frozen --no-dev "${extras[@]}"
 python="$evaluator/.venv/bin/python"
 uv pip check --python "$python"
@@ -65,13 +65,13 @@ if [[ "$kind" == review-* ]]; then
   printf 'SKILL_REVIEW_CANDIDATE_PYTHON=%s\n' "$python" >> "$GITHUB_ENV"
   exit 0
 fi
-if [ "$kind" = native-startup ] || [ "$kind" = native-benchmark-candidate ]; then
+if [[ "$kind" == native-startup || "$kind" == native-benchmark-* ]]; then
   PYTHONPATH="$root/.github/scripts" "$python" -B -c 'import static_evaluator; static_evaluator.validate_install()'
   wheel_version=1.2.0
   wheel_kind=--release-startup
   wheel_digest=c76a4689f6b59b1b221e4b4fc8445869e9f1c923edbe995f2909cd9d227b1fb3
   python_export=SKILL_NATIVE_STARTUP_PYTHON
-  if [ "$kind" = native-benchmark-candidate ]; then
+  if [[ "$kind" == native-benchmark-* ]]; then
     patch="$root/.github/patches/skillevaluator-v1.0.1-benchmark-request.patch"
     printf '%s  %s\n' 029ac12e32476d83b5a8555291b7c094be7df3262cd862396ddff1b453ec1821 "$patch" | sha256sum --check --strict
     git -C "$evaluator" apply --check "$patch"
@@ -81,12 +81,26 @@ if [ "$kind" = native-startup ] || [ "$kind" = native-benchmark-candidate ]; the
     wheel_digest=8558a0ece14d6555835fa992560b65b767410c9828c379198ca9981e2c74bd10
     python_export=SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON
   fi
+  if [ "$kind" = native-benchmark-101 ]; then
+    staging_patch="$root/.github/patches/skillevaluator-v1.0.1-benchmark-staging.patch"
+    printf '%s  %s\n' a997da90485a79696b83481e403359d4ad33cd40300986b499efc8c3cc70cbd6 "$staging_patch" | sha256sum --check --strict
+    git -C "$evaluator" apply --check "$staging_patch"
+    git -C "$evaluator" apply "$staging_patch"
+    recovery_patch="$root/.github/patches/skillevaluator-v1.0.1-benchmark-recovery.patch"
+    printf '%s  %s\n' 44a766ab7cb7bcf38bc0769fc8f87fc6edf20997363ec0341d252edc93dca0b5 "$recovery_patch" | sha256sum --check --strict
+    git -C "$evaluator" apply --check "$recovery_patch"
+    git -C "$evaluator" apply "$recovery_patch"
+    python_export=SKILL_NATIVE_BENCHMARK_PYTHON
+  fi
   "$python" -IB "$root/.github/evaluator-backends/build_wheel.py" "$tools/backend-wheel" "$wheel_kind"
   printf '%s  %s\n' "$wheel_digest" "$tools/backend-wheel/aeb_gh_fixture-$wheel_version-py3-none-any.whl" | sha256sum --check --strict
   uv pip install --python "$python" --no-deps --no-index --link-mode copy --require-hashes --only-binary :all: \
     --requirement "$tools/backend-wheel/requirements.txt"
   uv pip check --python "$python"
   "$python" -IB -c 'from aeb_gh_fixture.backend import require_runtime; require_runtime()'
+  if [ "$kind" = native-benchmark-101 ]; then
+    "$python" -B "$root/.github/scripts/benchmark_native.py" verify-runtime
+  fi
   printf '%s=%s\n' "$python_export" "$python" >> "$GITHUB_ENV"
   exit 0
 fi

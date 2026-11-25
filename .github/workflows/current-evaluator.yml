@@ -28,6 +28,10 @@ on:
         description: Qualify the 1.0.1 Codex launch with the non-forwarding loopback fixture
         type: boolean
         default: false
+      benchmark-101-launcher:
+        description: Qualify the released paired launcher with isolated non-forwarding Docker fixtures
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -37,7 +41,7 @@ env:
 
 jobs:
   cohorts:
-    if: ${{ !inputs.startup-only && !inputs.benchmark-101-fixtures && !inputs.benchmark-101-codex && !inputs.benchmark-101-podman }}
+    if: ${{ !inputs.startup-only && !inputs.benchmark-101-fixtures && !inputs.benchmark-101-codex && !inputs.benchmark-101-podman && !inputs.benchmark-101-launcher }}
     name: Candidate native oracle cohorts (no inference)
     runs-on: ubuntu-latest
     timeout-minutes: 180
@@ -53,18 +57,18 @@ jobs:
         with:
           version: '0.13.9'
           enable-cache: false
-      - name: Install isolated historical reporting runtimes and selected scanners
-        run: |
-          if [ "$CANDIDATE_SETUP_KIND" = candidate-next ]; then
-            bash .github/scripts/setup-skillevaluator.sh quality
-          else
-            bash .github/scripts/setup-skillevaluator.sh reporting
-          fi
+      - name: Install pinned evaluator for public data
+        run: bash .github/scripts/setup-static-evaluator.sh data-host
+      - name: Verify retained report presentation without inference
+        run: '"$SKILL_DATA_PYTHON" -B .github/scripts/test_evaluation_contracts.py presentation'
+      - name: Install isolated historical reporting runtimes
+        run: bash .github/scripts/setup-skillevaluator.sh reporting
+      - name: Install the pinned private review test environment
+        run: bash .github/scripts/setup-static-evaluator.sh review-contracts
       - name: Verify historical report and custom semantics
         run: |
-          "$SKILL_REVIEW_PYTHON" -B -m unittest discover -s .github/tests -p test_skill_report.py
           "$SKILL_REVIEW_PYTHON" -B -m unittest discover -s .github/tests -p test_custom_metrics.py
-          PYTHONPATH=.github/scripts:.github/tests "$SKILL_REVIEW_PYTHON" -B -m unittest \
+          PYTHONPATH=.github/scripts:.github/tests "$SKILL_DATA_PYTHON" -B -m unittest \
             test_skill_evidence.EvidenceTests.test_compatible_python_precision_and_historical_policy \
             test_skill_evidence.EvidenceTests.test_policy_runtime_contradictions \
             test_skill_evidence.EvidenceTests.test_missing_runtime_metadata_and_attempt_fallback \
@@ -72,15 +76,25 @@ jobs:
             test_skill_evidence.EvidenceTests.test_inventory_cli_rejects_real_aggregate_without_allocating_output \
             test_skill_evidence.EvidenceTests.test_normalization_optional_members_use_captured_entries \
             test_skill_evidence.EvidenceTests.test_standalone_cli_disables_repository_bytecode_writes \
-            test_skill_evidence.EvidenceTests.test_yaml_alias_graph_has_bounded_depth_work \
-            test_skill_report_reviews.AttachmentTests.test_frozen_current_profile_rejects_changed_checkout_and_retains_legacy_host_dispatch
+            test_skill_evidence.EvidenceTests.test_yaml_alias_graph_has_bounded_depth_work
+      - name: Verify the frozen attachment through the released validator host
+        env:
+          PYTHONPATH: .github/scripts:.github/tests
+        run: >-
+          "$SKILL_REVIEW_CANDIDATE_PYTHON" -B -m unittest
+          test_skill_report_reviews.AttachmentTests.test_frozen_current_profile_rejects_changed_checkout_and_replays_on_release_host
       - name: Verify retained 0.8.0 offline admission when qualifying 0.9.0
         if: inputs.candidate-next
         run: |
           bash .github/scripts/setup-skillevaluator.sh candidate-current
           "$RUNNER_TEMP/current-evaluator/.venv/bin/python" -B .github/scripts/qualify_current_evaluator.py --output "$RUNNER_TEMP/retained-080-controls"
-      - name: Install the frozen opt-in replacement
-        run: bash .github/scripts/setup-skillevaluator.sh "$CANDIDATE_SETUP_KIND"
+      - name: Install the frozen opt-in evaluator and selected scanners
+        run: |
+          if [ "$CANDIDATE_SETUP_KIND" = candidate-next ]; then
+            bash .github/scripts/setup-skillevaluator.sh quality-next
+          else
+            bash .github/scripts/setup-skillevaluator.sh candidate-current
+          fi
       - name: Qualify the standard judge HTTP contract without credentials
         if: inputs.candidate-next
         run: '"$SKILL_QUALIFICATION_PYTHON" -B .github/scripts/qualify_standard_judges.py qualify --output "$RUNNER_TEMP/standard-judge-090"'
@@ -119,8 +133,8 @@ jobs:
         run: |
           scanner_scripts=$(python3 -B .github/scripts/static_quality_ci.py tools)
           "$SKILL_QUALIFICATION_PYTHON" -B "$scanner_scripts/qualify_scanners.py" \
-            --workspace "$GITHUB_WORKSPACE" --tools "$RUNNER_TEMP/skill-evaluation-tools" \
-            --evaluator-next --output "$RUNNER_TEMP/adoption-scanner-controls"
+            --workspace "$GITHUB_WORKSPACE" --tools "$SKILL_QUALITY_TOOLS" \
+            --output "$RUNNER_TEMP/adoption-scanner-controls"
           EVALUATOR_ADOPTION_SCAN_OUTPUT="$RUNNER_TEMP/adoption-scanner-controls" \
             "$SKILL_QUALIFICATION_PYTHON" -B -m unittest discover -s .github/tests -p test_evaluator_adoption.py -v
       - name: Retain static adoption controls
@@ -163,7 +177,7 @@ jobs:
         run: bash .github/scripts/setup-compose.sh cleanup
 
   native-gh:
-    if: ${{ !inputs.startup-only && !inputs.benchmark-101-fixtures && !inputs.benchmark-101-codex && !inputs.benchmark-101-podman }}
+    if: ${{ !inputs.startup-only && !inputs.benchmark-101-fixtures && !inputs.benchmark-101-codex && !inputs.benchmark-101-podman && !inputs.benchmark-101-launcher }}
     name: Candidate gh lifecycle (${{ matrix.arm }}, ${{ matrix.shard }}/3, no inference)
     runs-on: ubuntu-latest
     timeout-minutes: 55
@@ -209,7 +223,7 @@ jobs:
   report:
     name: Candidate native cohorts and consolidated report (no inference)
     needs: [cohorts, native-gh]
-    if: ${{ !cancelled() && !inputs.startup-only && !inputs.benchmark-101-fixtures && !inputs.benchmark-101-codex && !inputs.benchmark-101-podman }}
+    if: ${{ !cancelled() && !inputs.startup-only && !inputs.benchmark-101-fixtures && !inputs.benchmark-101-codex && !inputs.benchmark-101-podman && !inputs.benchmark-101-launcher }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -269,7 +283,7 @@ jobs:
     name: Matched gh-007 startup only (no agent or grading)
     if: >-
       github.event_name == 'workflow_dispatch' && inputs.startup-only && !inputs.benchmark-101-fixtures
-      && !inputs.benchmark-101-codex && !inputs.benchmark-101-podman
+      && !inputs.benchmark-101-codex && !inputs.benchmark-101-podman && !inputs.benchmark-101-launcher
       && (inputs.candidate-next || inputs.startup-owner == '1.0.1')
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -336,6 +350,7 @@ jobs:
   benchmark-101:
     if: >-
       github.event_name == 'workflow_dispatch'
+      && !inputs.benchmark-101-launcher
       && (inputs.benchmark-101-fixtures || inputs.benchmark-101-codex || inputs.benchmark-101-podman)
     name: 1.0.1 benchmark candidate (${{ matrix.suite }}, no inference)
     runs-on: ubuntu-latest
@@ -365,6 +380,9 @@ jobs:
       - name: Verify the request and scoring contracts
         if: matrix.suite == 'gh'
         run: '"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_101.py "$RUNNER_TEMP/benchmark-101-requests.json"'
+      - name: Install the pinned private-review owner for the Pester report control
+        if: matrix.suite == 'pester'
+        run: bash .github/scripts/setup-static-evaluator.sh review-candidate
       - name: Run native deterministic fixtures
         if: matrix.suite == 'gh' || matrix.suite == 'pester'
         run: |
@@ -432,3 +450,64 @@ jobs:
             ${{ runner.temp }}/benchmark-101-codex/without/failure.json
           retention-days: 30
           if-no-files-found: error
+
+  benchmark-101-launcher:
+    if: github.event_name == 'workflow_dispatch' && inputs.benchmark-101-launcher
+    name: Released benchmark launcher qualification (${{ matrix.suite }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: podman
+            mode: standard
+          - suite: gh
+            mode: confirmation
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHON_DOTENV_DISABLED: '1'
+      QUALIFICATION_SKILL: ${{ matrix.suite }}
+      QUALIFICATION_MODE: ${{ matrix.mode }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          version: '0.13.9'
+          enable-cache: false
+      - name: Install the pinned released launcher owner
+        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-101
+      - name: Verify the paired launcher through its preflight boundary
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/qualify_native_benchmark.py \
+            "$RUNNER_TEMP/released-benchmark-launcher" "$QUALIFICATION_SKILL" "$QUALIFICATION_MODE" "$GITHUB_SHA"
+      - name: Install pinned test-only Docker Compose
+        run: bash .github/scripts/setup-compose.sh
+      - name: Run Docker preflight and both arms against isolated fixtures
+        timeout-minutes: 25
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          timeout --signal=INT --kill-after=30s 1200s "$SKILL_NATIVE_BENCHMARK_PYTHON" -B \
+            .github/scripts/qualify_native_execution.py "$RUNNER_TEMP/released-benchmark-execution" \
+            "$QUALIFICATION_SKILL" "$GITHUB_SHA"
+      - name: Remove the task-owned Compose plugin
+        if: always()
+        run: bash .github/scripts/setup-compose.sh cleanup
+      - name: Verify the checkout remains unchanged
+        if: always()
+        run: test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"
+      - name: Retain bounded launcher qualification
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: benchmark-101-launcher-${{ matrix.suite }}-attempt-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/released-benchmark-launcher/qualification.json
+            ${{ runner.temp }}/released-benchmark-execution/qualification.json
+            ${{ runner.temp }}/released-benchmark-execution/failure.json
+          if-no-files-found: error
+          retention-days: 30

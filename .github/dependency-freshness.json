@@ -3,7 +3,7 @@
   "dependencies": [
     {
       "id": "skillevaluator",
-      "label": "SkillEvaluator (benchmark/review/replay owner)",
+      "label": "SkillEvaluator (production native benchmark)",
       "repo": "NVIDIA/SkillEvaluator",
       "sources": [
         {
@@ -16,22 +16,10 @@
           "symbol": "POLICY",
           "key": "evaluator_revision",
           "field": "revision"
-        },
-        {
-          "path": ".github/scripts/skill_review.py",
-          "symbol": "PINS",
-          "key": "skillevaluator",
-          "field": "version"
-        },
-        {
-          "path": ".github/scripts/skill_report_reviews.py",
-          "symbol": "PINS",
-          "key": "skillevaluator",
-          "field": "version"
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Static quality and public data use the released 1.0.1 owner. The 0.9.0 behavioral and judge qualification modes retain their separate locks and patches. Native benchmarks, current review and saved validators still bind the original native and review contracts. A successor must qualify native agent initialization, matched judging and grading, report admission and exact replay. Keep frozen campaigns and their evidence identities.",
+      "hold": "The ordinary native benchmark still installs and runs the reviewed 0.3.0 owner. Static quality, public data and private review use separately pinned 1.0.1 roles. The 0.8.0 and 0.9.0 cohorts keep their own runtimes, locks and patches. Preserve the original scores and validator identities during adoption.",
       "group": "evaluation-runtime compatibility group",
       "tag_prefix": "v",
       "validation": "Review the versioned offline evidence contract, released semantics, native failure and missingness controls, retained reproduction and final selected CI. Live provider routing, judge accuracy and skill benefit require separate evidence and authorization.",
@@ -122,7 +110,7 @@
         {
           "path": ".github/workflows/current-evaluator.yml",
           "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
-          "count": 5
+          "count": 6
         },
         {
           "path": ".github/workflows/evaluation-campaign.yml",
@@ -356,25 +344,19 @@
       "repo": "openai/openai-python",
       "sources": [
         {
-          "path": ".github/scripts/skill_review.py",
-          "symbol": "PINS",
-          "key": "openai",
+          "path": ".github/scripts/private_review_runtime.py",
+          "symbol": "OPENAI_VERSION",
+          "key": null,
           "field": "version"
         },
         {
-          "path": ".github/scripts/skill_report_reviews.py",
-          "symbol": "PINS",
-          "key": "openai",
-          "field": "version"
-        },
-        {
-          "path": ".github/patches/skillevaluator-v0.3.0-review-runtime.patch",
-          "pattern": "^ name = \"openai\"\\n-version = \"[^\"\\n]+\"\\n\\+version = \"(?P<version>[^\"\\n]+)\"$",
+          "path": ".github/requirements/review-101.txt",
+          "pattern": "^openai==(?P<version>[0-9.]+) --hash=sha256:[0-9a-f]{64}$",
           "count": 1
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Active review lock uses the latest compatible 2.x release: LiteLLM 1.88.5 requires OpenAI <3.0.0. The frozen candidate uses LiteLLM 1.93.2 with the same bound; the independent SkillSpector scanner uses 3.x. Exit: a supported evaluator/LiteLLM group or a separately qualified minimal review environment, not an SDK override.",
+      "hold": "The private review overlay pins OpenAI 2.54.0 with its matching Pydantic, HTTPX and trust-store dependencies. Historical attachment profiles retain their recorded SDK and original validation rules.",
       "group": "review-runtime compatibility group",
       "tag_prefix": "v",
       "validation": "Qualify the review lock overlay, current API/schema and redaction contracts, exact historical validators through their retained runtime, and a new reviewed attachment profile. Evaluator/Harbor/Codex upgrades are separate qualifications.",
@@ -389,20 +371,14 @@
       "repo": "pydantic/pydantic",
       "sources": [
         {
-          "path": ".github/scripts/skill_review.py",
-          "symbol": "PINS",
-          "key": "pydantic",
+          "path": ".github/scripts/private_review_runtime.py",
+          "symbol": "PYDANTIC_VERSION",
+          "key": null,
           "field": "version"
         },
         {
-          "path": ".github/scripts/skill_report_reviews.py",
-          "symbol": "PINS",
-          "key": "pydantic",
-          "field": "version"
-        },
-        {
-          "path": ".github/patches/skillevaluator-v0.3.0-review-runtime.patch",
-          "pattern": "^ name = \"pydantic\"\\n-version = \"[^\"\\n]+\"\\n\\+version = \"(?P<version>[^\"\\n]+)\"$",
+          "path": ".github/requirements/review-101.txt",
+          "pattern": "^pydantic==(?P<version>[0-9.]+) --hash=sha256:[0-9a-f]{64}$",
           "count": 1
         }
       ],

@@ -1,0 +1,55 @@
+--- a/src/skillevaluator/tier3/harbor/runner.py
++++ b/src/skillevaluator/tier3/harbor/runner.py
+@@ -2917,6 +2917,16 @@
+     host_env = os.environ
+     environment = _selected_host_environment(_HARBOR_BASE_ENV_VARS, host_env)
+     environment.update(_selected_host_environment(_env_mode_host_env_vars(env_mode), host_env))
++    if env_mode in {"aeb-benchmark-docker", "aeb-gh-fixture"}:
++        # These reviewed backends run Docker on the Harbor host. Keep the
++        # operator's pinned Compose plugin and local Docker socket available.
++        if docker_config := host_env.get("DOCKER_CONFIG"):
++            environment["DOCKER_CONFIG"] = _absolute_host_path(docker_config)
++        if docker_host := host_env.get("DOCKER_HOST"):
++            socket_path = docker_host.removeprefix("unix://")
++            if socket_path == docker_host or not Path(socket_path).is_absolute():
++                raise ValueError("AEB benchmark backends require a local Unix Docker socket")
++            environment["DOCKER_HOST"] = docker_host
+     for name in _env_mode_host_path_env_vars(env_mode) & environment.keys():
+         environment[name] = _absolute_host_path(environment[name])
+     if provider.provider == "bedrock":
+@@ -5486,6 +5496,7 @@
+     _decoy_workspace_source_paths: list[Path] | None = None,
+     _decoy_manifest: dict[str, Any] | None = None,
+     _monotonic_start: float | None = None,
++    _operator_task_finalizer: Callable[[Mapping[str, Mapping[str, Sequence[Path]]]], None] | None = None,
+ ) -> dict[str, Any]:
+     """Run a public Harbor evaluation with and without the target skill."""
+     forwarded = dict(locals()) if _evaluator_skill_path is None else None
+@@ -6378,6 +6389,19 @@
+                     emitted_tasks[agent],
+                     private_agent_paths[agent][0],
+                 )
++        if _operator_task_finalizer is not None:
++            if (
++                env_mode not in {"aeb-benchmark-docker", "aeb-gh-fixture"}
++                or agents != ["codex"]
++                or not is_dual_arm
++                or reuse_baseline is not None
++                or max_cases is not None
++                or comparison_plan is not None
++            ):
++                raise ValueError("The operator task finalizer requires a fresh paired benchmark")
++            _operator_task_finalizer(emitted_tasks)
++            if staged_environment_error := _staged_task_environment_error(env_mode, staged_task_paths):
++                raise ValueError(staged_environment_error)
+         if not skip_baseline:
+             reporter.emit(ProgressEvent(stage="baseline-tasks", state="ready", detail="baseline inputs staged"))
+         else:
+@@ -6942,6 +6966,7 @@
+                 run_dir,
+                 env_mode=env_mode,
+                 engine_result=results,
++                use_llm_judge=_operator_task_finalizer is None,
+                 include_benchmark=True,
+             )
+             if candidate.is_file():

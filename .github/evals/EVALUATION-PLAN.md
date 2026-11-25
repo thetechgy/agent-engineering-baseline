@@ -201,11 +201,112 @@ the diagnostic was excluded from canonical history. Provider billing and
 judge token usage were unavailable in the receipt.
 [Protected compatibility smoke](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45510362606)
 
-The follow-up selector accepts one without-skill trial of the same case
-through the existing protected diagnostic job. The fixture verified the
-selected launcher, release collector and skipped comparison. The paired
-control still stops at the original token gate. A live follow-up requires
-separate approval at its reviewed revision.
+The separately approved follow-up at `cafe3bf` completed one without-skill
+trial for Podman case 1. GitHub's exact preapproval context and diagnostic
+artifact were digest-verified. The receipt recorded 167,788 input tokens
+and 9,107 output tokens, including 144,728 cached input tokens, along with
+all three verifier observations and complete teardown. The two runs used
+the same evaluator and backend pins, Codex assets, request policy and
+matching staged task inputs. Together they qualify this integration for
+both arms. The receipts remain diagnostic evidence outside benchmark
+history. They do not establish skill uplift or grader quality.
+[Baseline compatibility smoke](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45523933675)
+
+The released strict validator flags the original `gh-001` prompt because
+it tells the baseline to use the absent skill. The approved prospective
+`gh-benchmark-101-v1` recipe describes the same issue-reading task and
+projects the edit into both the dataset entry and authored task instruction.
+All 24 cases pass strict validation and stage the same prompt in both arms.
+The new dataset digest is distinct. The original dataset, grader and
+historical score and validator identities are preserved.
+
+The grouped production staging probe matched all 48 released task arms
+against the independently sealed prospective manifest and rejected a
+changed baseline instruction before launch. The manifest binds the image
+recipe that checks the pinned npm platform executable and helpers, and the
+allowed provider host.
+
+Hosted Podman qualification on `e95d525` completed case 1 in both arms
+with the same scope fingerprint as protected preapproval. Each arm reached
+the released collector with one scored fixture result and complete Docker
+teardown. Offline publication collected 20 standard attempts and 60
+confirmation attempts. The interrupted control retained 19 of 20, and all
+four fixtures remained outside canonical history.
+[Hosted Podman qualification](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45487420261)
+
+The local cutover probe uses the released runner's own projectors, with a
+small explicit operator callback for both staged arms. The Podman probe
+staged ten cases per arm. Its independently prepared case 1 smoke tasks
+still match both protected receipts after factoring the shared preparation.
+The grouped gh probe matched both released `gh-002` tasks to the operator
+manifest prepared before runtime preflight. Both probes stopped after
+staging, with credential-catalog and Harbor execution replaced by local
+controls. The production runner, protected workflow and new publication
+series still require end-to-end qualification together.
+
+The credential-free gh validation and replay commands also passed on the
+released owner. Replay accepted all 24 good traces and rejected all 13
+fault traces. The remaining Docker lifecycle check needs hosted proof.
+The Pester qualification entry point now selects the released fixture by
+default. Its other explicit maintained selectors keep their pinned owners.
+
+The released launcher verifies its source tree after applying the pinned
+request, staging and recovery patches. Clean local setup authenticated
+Python 3.14.10, SkillEvaluator 1.0.1, Harbor 0.25.0 and the 1.3.1 backend
+wheel. `benchmark_native.py` prepares the two suites before credential
+handoff and invokes the released paired runner with runtime preflight.
+The local controls intercepted preflight after staging 20 planned standard
+Podman trials and 144 planned confirmation gh trials. Neither control
+started Docker or contacted a provider. Both retained the initiating
+preflight error and stayed incomplete during recovery.
+
+In the simulated interrupted Podman job, the unmodified collector kept
+10 baseline scores and omitted nine completed with-skill scores because
+the with-skill job was pending. The recovery-only patch checks the job
+counters and each finished trial against its physical result before
+collecting those scores. It retained 19 of 20 attempts, rejected a changed
+trial identity, and kept the result outside history. Standard and
+confirmation use distinct prospective series, separate from the recorded
+historical series. Three retained-reader controls passed on the newly
+pinned installation.
+
+Local credential-free Docker runs reached real Harbor and Codex preflight
+and collected both arms for one Podman case and one gh case. The with-skill
+agent could read the staged skill and the baseline omitted it. Each arm
+received two loopback Codex responses and three verifier responses. The
+released accuracy contract produced 0.8 from four of five criteria. The gh
+verifier exported the unchanged authorization measurement as
+`gh_access_policy` because the released collector drops the original field
+name. The with-skill and baseline values were 1 and 0. The existing grader
+and historical metric identity are preserved.
+
+The Docker handoff forwards the pinned Compose configuration and a local
+Unix socket for the two reviewed backends. The released launcher renders
+reports without generation calls. Local rootless Podman left Compose
+resources after some trials and the receipts record incomplete teardown.
+The launcher-only workflow is prepared for credential-free hosted Docker
+qualification. Ordinary production keeps its current owner while teardown
+and integrated history admission await qualification.
+
+The source changes required 89 source-only successor records on 361 lines
+in `source-v44.json`. Grader, fixture and replay adapter identities were
+checked against each parent profile. Earlier records are retained.
+
+The presentation and analysis tests read their original public Podman and
+synthetic static projections from a digest-checked fixture. The existing
+retained Podman projection also supplies the refreshed expiry control.
+The 1.0.1 data host also rebuilt the sealed Pages fixture and reproduced
+the original native Podman and static projections byte for byte. The
+retained-reader checks cover original metric rounding, failed trial
+carriers and a synthetic expansion to 6,000 attempts. Native static
+collection and private review retain dedicated runtime checks.
+
+The documented private review CLI uses the fixed 1.0.1 producer snapshot.
+Attachment admission replays the original profiles in the pinned 1.0.1
+review environment and preserves their producer and validator provenance.
+All 165 review and replay tests passed without legacy interpreter aliases.
+Native fixture controls that import review preparation remain part of the
+separate native migration.
 
 | Maintained path | Retirement gate |
 | --- | --- |

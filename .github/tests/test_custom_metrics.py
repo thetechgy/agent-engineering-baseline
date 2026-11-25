@@ -7,6 +7,7 @@ import copy
 from datetime import datetime, timezone
 import importlib.util
 import json
+import os
 import re
 from pathlib import Path
 import shutil
@@ -22,7 +23,6 @@ import skill_evidence as evidence
 import skill_analysis as analysis
 import skill_report as report
 import skill_reports as reports
-import skill_review as review
 import pester_evaluations as pester
 
 ROOT = evidence.ROOT
@@ -32,6 +32,23 @@ NAME = pester.NAME
 def write(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(evidence.encoded(value))
+
+
+def review_context(public, analysis_file, name, record_id):
+    python = Path(os.environ['SKILL_REVIEW_CANDIDATE_PYTHON'])
+    if not python.is_absolute() or not python.is_file():
+        raise ValueError('Pinned private-review interpreter unavailable')
+    with tempfile.TemporaryDirectory(prefix='custom-metric-review-') as scratch:
+        output = Path(scratch) / 'prepared'
+        environment = {'PATH': os.defpath, 'HOME': scratch, 'PYTHON_DOTENV_DISABLED': '1', 'GIT_NO_LAZY_FETCH': '1'}
+        if 'TMPDIR' in os.environ:
+            environment['TMPDIR'] = os.environ['TMPDIR']
+        subprocess.run(
+            [str(python), '-I', '-B', str(ROOT / '.github/scripts/skill_review.py'), 'prepare',
+             '--input', str(public), '--analysis', str(analysis_file), '--skill', name, '--record-id', record_id,
+             '--output', str(output)], env=environment, capture_output=True, check=True, timeout=120,
+        )
+        return evidence.read_json(output / 'review-context.json')
 
 
 def synthetic_native(root, *, complete=False, candidate=False):
@@ -297,12 +314,12 @@ class CustomMetricTests(unittest.TestCase):
         saved = self.root / 'analysis/analysis.json'; write(saved, result)
         rid = next(key for key, row in captured.records.items() if row['kind'] == 'behavioral')
         html = report.render_report(result, captured)
-        context = review.prepare([public], saved, NAME, rid)
+        context = review_context(public, saved, NAME, rid)
         shutil.rmtree(native)
         again = analysis.capture_inputs([public])
         self.assertEqual(analysis.validate_analysis(result, again), result)
         self.assertEqual(report.render_report(result, again), html)
-        self.assertEqual(review.prepare([public], saved, NAME, rid).value, context.value)
+        self.assertEqual(review_context(public, saved, NAME, rid), context)
         output = report.generate([public], saved, self.root / 'rendered')
         text = (output / 'report.html').read_text()
         for expected in ('Seeded mutation detection', 'Reference correctness', 'not_applicable', 'unsupported',
@@ -405,7 +422,7 @@ class CustomMetricTests(unittest.TestCase):
         reports.public_benchmark(ROOT, native, 'gh', 'standard', output)
         captured = analysis.capture_inputs([output]); checked = analysis.validate_analysis(None, captured)
         saved = self.root / 'gh-analysis/analysis.json'; write(saved, checked)
-        review.prepare([output], saved, 'gh', evidence.identity(public))
+        review_context(output, saved, 'gh', evidence.identity(public))
         with self.assertRaises(ValueError):
             path = next(run.glob('codex/with-skill/trials/*/reward.json'))
             payload = evidence.read_json(path); payload['custom_metrics']['gh_authorization'] = 0; payload['custom_metrics']['gh_gate'] = 0; write(path, payload)
@@ -435,7 +452,7 @@ class CustomMetricTests(unittest.TestCase):
         self.assertEqual(row['gates']['passed_observations'], 23)
         self.assertTrue(all(metric['with_minus_without'] is None for metric in row['custom']['metrics']))
         saved = self.root / 'partial-analysis/analysis.json'; write(saved, result)
-        review.prepare([public], saved, 'gh', evidence.identity(evidence.project(data)))
+        review_context(public, saved, 'gh', evidence.identity(evidence.project(data)))
         self.assertIn('Mandatory gates: 0 failed, 23 passed, 1 unknown.', report.render_report(result, captured).decode())
         # The pinned loader adds structured job/trial diagnostics. Admit that
         # exact ledger too, while rejecting arbitrary same-count replacements.
@@ -538,7 +555,7 @@ class CustomMetricTests(unittest.TestCase):
                 if change == 'id': data['id'] = evidence.read_json(paths[0])['id']; write(paths[1], data)
                 elif change == 'case': data['task_name'] = 'pester-005'; data['config']['task']['path'] = '/tasks/pester-005'; write(paths[1], data)
                 elif change == 'ordinal':
-                    destination = paths[1].parent.with_name('pester-001__attempt1-copy')
+                    destination = paths[1].parent.with_name('pester-001__attempt001')
                     paths[1].parent.rename(destination)
                     data['trial_name'] = destination.name; write(destination / 'result.json', data)
                     reward = evidence.read_json(destination / 'reward.json'); reward['trial_id'] = destination.name; write(destination / 'reward.json', reward)
@@ -593,8 +610,8 @@ class CustomMetricTests(unittest.TestCase):
         self.assertEqual([obs['custom']['measurements'] for obs in record['observations']], values)
         self.assertIn('Original support is unavailable', report.render_report(result, captured).decode())
         rid = evidence.identity(record); saved = self.root / 'analysis/analysis.json'; write(saved, result)
-        context = review.prepare([public], saved, NAME, rid)
-        self.assertEqual(context.value['analysis']['behavioral_results'][0]['custom']['assurance']['execution_authentication'], 'not_established')
+        context = review_context(public, saved, NAME, rid)
+        self.assertEqual(context['analysis']['behavioral_results'][0]['custom']['assurance']['execution_authentication'], 'not_established')
 
     def test_changed_runtime_policy_and_unknown_namespace_fail_admission(self):
         for change in ('policy', 'agent', 'evaluator', 'namespace', 'unscoreable-zero', 'cache'):
@@ -672,14 +689,6 @@ class CustomMetricTests(unittest.TestCase):
         changed[0]['members']['environment/input/README.md'] = evidence.identity('changed case input')
         with self.assertRaisesRegex(ValueError, 'input drift'):
             evidence.custom_staged_inputs(changed, capture['purpose'])
-
-    def test_ai_numeric_gate_exception_does_not_allow_credentials_or_other_locations(self):
-        for value in ('secret', '<redacted>', True, 2):
-            with self.subTest(value=value), self.assertRaises(ValueError):
-                review.screen_payload({'records': {'id': {'observations': [
-                    {'deterministic_scores': {'authorization': value}}]}}})
-        with self.assertRaises(ValueError):
-            review.screen_payload({'authorization': 1})
 
     def test_history_and_custom_cross_run_stay_disabled(self):
         native, public = self.public_bundle(True)

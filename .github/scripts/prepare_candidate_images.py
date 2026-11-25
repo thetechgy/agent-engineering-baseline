@@ -33,7 +33,9 @@ RUNTIME_COMMAND = (
 from evaluator_profiles import CANDIDATE, owning_candidate
 from qualify_benchmark_101 import RELEASE_CANDIDATE, release_owner
 try:
-    CANDIDATE = owning_candidate()
+    installed = owning_candidate()
+    if installed is not RELEASE_CANDIDATE:
+        CANDIDATE = installed
 except ValueError:
     pass
 

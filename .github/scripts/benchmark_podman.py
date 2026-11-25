@@ -1,4 +1,4 @@
-"""Stage one reviewed Podman case through the released benchmark projector."""
+"""Stage Podman benchmark cases through the released evaluator projector."""
 
 from pathlib import Path
 import re
@@ -13,19 +13,30 @@ CODEX_PROFILE = Path(__file__).resolve().parents[1] / "evals/codex-execution-171
 SMOKE_CASE = "1"
 
 
-def stage_task(skill: Path, work: Path, *, case: str, with_skill: bool) -> Path:
+def stage_tasks(skill: Path, work: Path, *, cases: tuple[str, ...], with_skill: bool) -> tuple[Path, ...]:
     from skillevaluator.tier3.harbor.adapter import generate_harbor_tasks
 
     options = benchmark_options("podman")
     require((options["workspace_mode"], options["grading_mode"]) == ("isolated", "default"),
             "Unexpected Podman benchmark policy")
-    tasks = generate_harbor_tasks(skill, work / "generated", with_skill=with_skill,
-                                  workspace_mode=options["workspace_mode"], grading_mode=options["grading_mode"],
-                                  custom_dockerfile_mode="disabled")
-    selected, = (task for task in tasks if str(read_json(task / "tests/entry.json")["id"]) == case)
+    generated = generate_harbor_tasks(skill, work / "generated", with_skill=with_skill,
+                                      workspace_mode=options["workspace_mode"], grading_mode=options["grading_mode"],
+                                      custom_dockerfile_mode="disabled")
+    by_case = {str(read_json(task / "tests/entry.json")["id"]): task for task in generated}
+    require(len(by_case) == len(generated) and cases and len(set(cases)) == len(cases)
+            and set(cases) <= by_case.keys(), "Unexpected staged Podman case population")
     staged = work / "tasks"
     staged.mkdir()
-    task = selected.rename(staged / selected.name)
+    tasks = []
+    for case in cases:
+        selected = by_case[case]
+        task = selected.rename(staged / selected.name)
+        configure_agent(task, case=case, with_skill=with_skill)
+        tasks.append(task)
+    return tuple(tasks)
+
+
+def configure_agent(task: Path, *, case: str, with_skill: bool):
     descriptor = task / "task.toml"
     source = descriptor.read_text()
     config = tomllib.loads(source)
@@ -34,11 +45,15 @@ def stage_task(skill: Path, work: Path, *, case: str, with_skill: bool) -> Path:
     require(config["environment"]["network_mode"] == "public" and "user" not in config["agent"]
             and source.count("[agent]") == 1, "Unexpected released Podman task descriptor")
     descriptor.write_text(source.replace("[agent]", '[agent]\nuser = "agent"'))
-    with (task / "environment/Dockerfile").open("a") as dockerfile:
-        dockerfile.write("\nRUN useradd --create-home --uid 1000 agent "
-                         "&& chown agent:agent /workspace/output\n")
-    return task
+    with (task / "environment/Dockerfile").open("a") as build:
+        build.write("\nRUN useradd --create-home --uid 1000 agent "
+                    "&& chown agent:agent /workspace/output "
+                    "&& chgrp -R agent /workspace/skills && chmod -R g+rX,go-w /workspace/skills\n")
 
+
+def stage_task(skill: Path, work: Path, *, case: str, with_skill: bool) -> Path:
+    task, = stage_tasks(skill, work, cases=(case,), with_skill=with_skill)
+    return task
 
 def codex_members(profile):
     require(profile["cli"] == POLICY["codex"], "Unexpected benchmark Codex pin")
@@ -64,6 +79,23 @@ def stage_codex(image: Path, source: Path, profile: dict):
                     f"&& chmod -R a+rX,go-w {CODEX_ROOT} "
                     f"&& ln -s {CODEX_ROOT}/bin/codex /usr/local/bin/codex\n"
                     f"ENV PATH={CODEX_ROOT}/codex-path:$PATH\n")
+
+
+def configure_openai_task(task: Path, assets: Path, profile: dict):
+    """Bind the published API endpoint and the verified, preinstalled CLI."""
+    from harbor.models.task.task import Task
+
+    descriptor = task / "task.toml"
+    source = descriptor.read_text()
+    marker = 'network_mode = "public"'
+    require(source.count(marker) == 1, "Unexpected staged network policy")
+    descriptor.write_text(source.replace(marker, 'network_mode = "allowlist"\nallowed_hosts = ["api.openai.com"]'))
+    stage_codex(task / "environment", assets, profile)
+    native = Task(task)
+    network = native.config.environment.resolve_baseline()
+    require(network.network_mode.value == "allowlist" and network.allowed_hosts == ["api.openai.com"]
+            and native.config.agent.user == "agent", "Unexpected released Podman network or agent policy")
+    return native
 
 
 def compose_teardown_complete(project: str) -> bool:

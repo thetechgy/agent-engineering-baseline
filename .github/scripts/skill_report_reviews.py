@@ -3,7 +3,6 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-import importlib.metadata
 import os
 from pathlib import Path
 import shutil
@@ -14,6 +13,7 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import skill_analysis as analysis
 import skill_evidence as evidence
+import private_review_runtime
 import private_review_snapshot as snapshot
 
 require = evidence.require
@@ -95,21 +95,6 @@ REGISTRY_DIGESTS['current-v5'] = '4fb8cd3f8455428b5eaeb92fb3b77873f917b6fc78f8d8
 
 # Exact supporting code/data required by the newer validator modules.
 SUPPORT_FILES = {'current-v5': {'.github/scripts/evaluator_profiles.py': '4343ef13d8ee21e6abda83942a3b1a0a5f25f5d35671f5932d5d34c22346b9d9', '.github/evals/evaluator-candidate.json': '9049293fbee7e2518a57a66ab3bfdb90d5412fd105d9115b6b6d5a951c0cd871'}}
-
-# Profile selection never accepts executable identities from attachment data.
-# Only setup/operator configuration supplies the two reviewed environments.
-def validator_runtime(profile):
-    require(profile in PROFILES, 'Unsupported validator profile')
-    expected = historical_pins(profile)
-    installed = {name: importlib.metadata.version(name) for name in PINS}
-    if installed == expected:
-        return sys.executable, expected
-    variable = ('SKILL_REVIEW_PYTHON' if profile == 'current-v5' else
-                'SKILL_PREVIOUS_REVIEW_PYTHON' if expected is PREVIOUS_PINS else 'SKILL_LEGACY_REVIEW_PYTHON')
-    executable = Path(os.environ.get(variable, ''))
-    require(executable.is_absolute() and executable.is_file(), 'Pinned validator runtime unavailable')
-    return str(executable), expected
-
 
 def historical_pins(profile):
     if profile == 'current-v5':
@@ -315,16 +300,10 @@ def assessment(spec, parent, capture, report, review):
     return value
 
 
-def run_validator(request, modules, capture, roots, registry, profile, assets=None, *, offline_replay=False):
-    original = ''
+def run_validator(request, modules, capture, roots, registry, profile, assets=None):
     release_snapshot = profile == snapshot.PROFILE
-    if offline_replay:
-        import private_review_runtime
-        executable, expected = sys.executable, private_review_runtime.OVERLAY
-        if not release_snapshot:
-            original = evidence.encoded({**historical_pins(profile), 'python': private_review_runtime.PYTHON}).decode()
-    else:
-        executable, expected = validator_runtime(profile)
+    original = '' if release_snapshot else evidence.encoded(
+        {**historical_pins(profile), 'python': private_review_runtime.PYTHON}).decode()
     guards = (capture.guard(),)
     temporary = evidence.write_outputs({}, input_paths=roots, input_guards=guards)
     try:
@@ -338,8 +317,8 @@ def run_validator(request, modules, capture, roots, registry, profile, assets=No
                 evidence.write_outputs({}, temporary / '.github' / 'evals', input_paths=roots,
                                        input_guards=guards, rendered={'custom-metrics.json': registry, **(assets or {})})
         try:
-            response = subprocess.run([executable, '-I', '-B', '-c', RUNNER, str(scripts),
-                                       evidence.encoded(expected).decode(), original],
+            response = subprocess.run([sys.executable, '-I', '-B', '-c', RUNNER, str(scripts),
+                                       evidence.encoded(private_review_runtime.OVERLAY).decode(), original],
                 input=evidence.encoded(request), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                 cwd=temporary, env={'PATH': os.defpath, 'PYTHONDONTWRITEBYTECODE': '1', 'GIT_NO_LAZY_FETCH': '1'},
                 timeout=120, check=False)
@@ -361,16 +340,9 @@ def load(paths, captured):
     """Independently validate all supplied attachments or fail without report output."""
     require(0 < len(paths) <= analysis.MAX_REPORTS, 'Analyst attachment limit')
     try:
-        versions = {k: importlib.metadata.version(k) for k in PINS}
-    except importlib.metadata.PackageNotFoundError:
-        raise ValueError('Pinned validator environment required') from None
-    offline_replay = versions['skillevaluator'] == '1.0.1'
-    if offline_replay:
-        import private_review_runtime
         private_review_runtime.validate_install()
-    else:
-        require(sys.version_info[:2] == (3, 13) and versions in (PINS, PREVIOUS_PINS, LEGACY_PINS),
-                'Pinned validator environment required')
+    except ImportError:
+        raise ValueError('Pinned validator environment required') from None
     import skill_review as review  # Optional dependency, never needed by a base report.
     capture = review.Capture()
     items = []; roots = []; original_records = []; seen = set()
@@ -385,7 +357,6 @@ def load(paths, captured):
         require(type(spec['schema_version']) is int and spec['schema_version'] == 1, 'Attachment schema mismatch')
         release_snapshot = spec['profile'] == snapshot.PROFILE
         require(type(spec['profile']) is str and (release_snapshot or spec['profile'] in PROFILES), 'Unsupported validator profile')
-        require(not release_snapshot or offline_replay, 'Pinned validator environment required')
         evidence.skill_id(spec['skill']); evidence.sha(spec['record_id'])
         rid = spec['record_id']
         require(rid not in seen and rid in captured.records, 'Duplicate or missing attachment record')
@@ -447,16 +418,15 @@ def load(paths, captured):
         require(len({row['provenance']['assessment_digest'] for row in assessments}) == len(assessments), 'Duplicate assessment document')
         require(len(capture.members) + len(capture.states) <= analysis.MAX_ENTRIES, 'Attachment entry limit')
         require(len(evidence.encoded(request)) <= LIMIT, 'Validator request limit')
-        result = run_validator(request, modules, capture, tuple((*roots, *capture.roots)), registry, spec['profile'],
-                               assets, offline_replay=offline_replay)
+        result = run_validator(request, modules, capture, tuple((*roots, *capture.roots)), registry, spec['profile'], assets)
         require(result['review_digest'] == spec['review_digest'] and result['markdown_digest'] == spec['markdown_digest'],
                 'Validated report capture mismatch')
         require(evidence.encoded(result['report']) == evidence.encoded(evidence.parse_json(raw, limit=LIMIT)), 'Validated report changed')
         require(result['records'].get(rid) == selected, 'Original and consolidated record mismatch')
         original_records.extend(result['records'].values())
         items.append({'record_id': rid, 'skill': spec['skill'], 'profile': spec['profile'], 'tooling_revision': revision,
-                      **({'validator_execution': ('skillevaluator-1.0.1-private-review-frozen-v1' if release_snapshot
-                          else 'skillevaluator-1.0.1-private-review-offline-v1')} if offline_replay else {}),
+                      'validator_execution': ('skillevaluator-1.0.1-private-review-frozen-v1' if release_snapshot
+                                              else 'skillevaluator-1.0.1-private-review-offline-v1'),
                       'review_digest': spec['review_digest'], 'markdown_digest': spec['markdown_digest'],
                       'reference_deadlines': sorted({evidence.REVIEWED_REFERENCE_EXPIRY[(ref['artifact_id'], ref['artifact_digest'])]
                           for record in result['records'].values() for ref in record['references']

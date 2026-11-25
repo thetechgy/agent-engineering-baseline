@@ -29,7 +29,6 @@ require = evidence.require
 METHOD = "grounded-skill-review/2"
 PRIVATE_SCHEMA = 2
 ENDPOINT = "https://api.openai.com/v1"
-PINS = {"openai": "2.54.0", "pydantic": "2.14.3", "skillevaluator": "0.3.0"}
 CONTEXT_LIMIT = 8 * 1024 * 1024
 REPORT_LIMIT = 1024 * 1024
 MAX_SUPPORT = 128
@@ -416,15 +415,13 @@ class Capture:
 
 
 def versions():
-    result = {name: importlib.metadata.version(name) for name in PINS}
-    if result["skillevaluator"] == "1.0.1":
-        import private_review_runtime
+    import private_review_runtime
 
+    try:
         private_review_runtime.validate_install()
-    else:
-        review_require(result == PINS and sys.version_info[:2] == (3, 13), "Pinned environment required",
-                       "runtime_unsupported", ("provenance", "versions"))
-    return {**result, "python": ".".join(map(str, sys.version_info[:3]))}
+    except ValueError:
+        raise ReviewRejection("Pinned environment required", "runtime_unsupported", ("provenance", "versions")) from None
+    return {**private_review_runtime.PINS, "python": private_review_runtime.PYTHON}
 
 
 def checked_text(raw, *, technical_spans=(), path=()):
@@ -2135,11 +2132,9 @@ def main(argv=None):
 
 if __name__ == "__main__":
     try:
-        if importlib.metadata.version("skillevaluator") == "1.0.1":
-            from private_review_snapshot import run_cli
+        from private_review_snapshot import run_cli
 
-            sys.exit(run_cli(sys.argv[1:]))
-        main()
+        sys.exit(run_cli(sys.argv[1:]))
     except PrivateContractError as error:
         print(str(error), file=sys.stderr)
         sys.exit(1)

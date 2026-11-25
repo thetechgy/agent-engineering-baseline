@@ -5,15 +5,10 @@ import sys
 import unittest
 
 TESTS = Path(__file__).resolve().parents[1] / 'tests'
-REVIEW_MODULES = ('test_skill_review', 'test_skill_report_reviews')
-LEGACY_VALIDATOR_TESTS = frozenset(
-    'test_skill_report_reviews.AttachmentTests.' + name
-    for name in (
-        'test_frozen_current_profile_rejects_changed_checkout_and_retains_legacy_host_dispatch',
-        'test_new_profile_rejects_previous_dependency_environment',
-        'test_missing_legacy_runtime_rejects_without_changing_profile',
-        'test_wrong_runtime_cannot_validate_legacy_modules',
-    )
+REVIEW_MODULES = ('test_skill_review', 'test_skill_report_reviews', 'test_historical_review_replay')
+PRESENTATION_MODULES = (
+    'test_skill_analysis', 'test_skill_report', 'test_skill_pages', 'test_public_reports',
+    'test_evaluator_scoring_compatibility',
 )
 
 
@@ -26,12 +21,11 @@ def cases(suite):
 
 
 def contract_suite(loader):
-    # Keep the established discovery rule and the legacy dispatch tests while
-    # older validator entry points are still supported during the migration.
+    # Keep the established discovery rule for suites outside the released owners.
     discovered = loader.discover(str(TESTS))
     return unittest.TestSuite(
         case for case in cases(discovered)
-        if case.id().partition('.')[0] not in REVIEW_MODULES or case.id() in LEGACY_VALIDATOR_TESTS
+        if case.id().partition('.')[0] not in (*REVIEW_MODULES, *PRESENTATION_MODULES)
     )
 
 
@@ -43,12 +37,21 @@ def review_suite(loader):
     return loader.loadTestsFromNames(REVIEW_MODULES)
 
 
+def presentation_suite(loader):
+    import static_evaluator
+
+    static_evaluator.validate_install()
+    sys.path.insert(0, str(TESTS))
+    return loader.loadTestsFromNames(PRESENTATION_MODULES)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('owner', choices=('contracts', 'private-review'))
+    suites = {'contracts': contract_suite, 'private-review': review_suite, 'presentation': presentation_suite}
+    parser.add_argument('owner', choices=suites)
     owner = parser.parse_args().owner
     loader = unittest.TestLoader()
-    suite = contract_suite(loader) if owner == 'contracts' else review_suite(loader)
+    suite = suites[owner](loader)
     if not suite.countTestCases():
         raise ValueError('No evaluation tests selected')
     return not unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful()

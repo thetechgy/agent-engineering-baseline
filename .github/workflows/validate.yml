@@ -85,16 +85,17 @@ jobs:
         run: |
           printf 'PREPARATION_COMPOSE_PLUGIN_ROOT=%s\n' "$COMPOSE_PLUGIN_ROOT" >> "$GITHUB_ENV"
           bash .github/scripts/setup-compose.sh
-      - name: Install the pinned evaluator for native benchmark regression
-        timeout-minutes: 15
-        run: bash .github/scripts/setup-skillevaluator.sh benchmark
+      - name: Install the private-review owner for the Pester report control
+        run: bash .github/scripts/setup-static-evaluator.sh review-candidate
       - name: Qualify native Pester execution and diagnostic containment
         id: qualification
         timeout-minutes: 30
-        run: '"$SKILL_EVALUATOR_PYTHON" .github/scripts/pester_container_validation.py'
-      - name: Qualify the production Codex benchmark against the loopback fixture
+        run: >-
+          "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_101.py
+          --native pester "$RUNNER_TEMP/pester-gate-artifacts"
+      - name: Qualify the released Codex benchmark against the loopback fixture
         timeout-minutes: 18
-        run: '"$SKILL_EVALUATOR_PYTHON" -B .github/scripts/qualify_benchmark_codex.py "$RUNNER_TEMP/benchmark-codex"'
+        run: '"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_codex.py "$RUNNER_TEMP/benchmark-codex"'
       - name: Verify checkout integrity
         id: pester-integrity
         if: always()
@@ -158,17 +159,18 @@ jobs:
       - name: Install evaluator and security scanners with Python 3.13
         run: bash .github/scripts/setup-skillevaluator.sh quality
 
+      - name: Install the pinned private-review test environment
+        run: bash .github/scripts/setup-static-evaluator.sh review-contracts
+
+      - name: Install the pinned released owner for native gh contracts
+        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-candidate
+
       - name: Test CI contracts without inference
         run: |
           shellcheck .github/scripts/setup-skillevaluator.sh .github/scripts/setup-skill-scanners.sh .github/scripts/setup-static-evaluator.sh .github/scripts/collect-static-quality.sh .github/scripts/setup-compose.sh
           "$SKILL_REVIEW_PYTHON" -B .github/scripts/test_evaluation_contracts.py contracts
-          "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py validate gh
-          "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py replay gh
-          "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py stage gh "$RUNNER_TEMP/gh-eval-bundle/gh"
-          skillevaluator tier3 validate "$RUNNER_TEMP/gh-eval-bundle/gh" --strict --json
-
-      - name: Install the pinned private-review test environment
-        run: bash .github/scripts/setup-static-evaluator.sh review-contracts
+          "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/gh_evaluations.py validate gh
+          "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/gh_evaluations.py replay gh
 
       - name: Test private review and attachments without inference
         run: '"$SKILL_REVIEW_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py private-review'
@@ -176,8 +178,13 @@ jobs:
       - name: Install verified test-only Docker Compose
         run: bash .github/scripts/setup-compose.sh
 
+      - name: Verify released gh native task and verifier contracts
+        env:
+          PYTHONPATH: .github/scripts:.github/tests
+        run: '"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B -m unittest test_gh_evaluations.GhNativeTests -v'
+
       - name: Validate native gh Docker boundary without inference or credentials
-        run: '"$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_container_validation.py'
+        run: '"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/gh_container_validation.py'
 
       - name: Install pinned SkillEvaluator 0.9.0 behavioral qualification owner
         run: bash .github/scripts/setup-skillevaluator.sh candidate-next
@@ -194,7 +201,10 @@ jobs:
       - name: Install pinned evaluator for public data
         run: bash .github/scripts/setup-static-evaluator.sh data-host
 
-      - name: Qualify data-only publisher and orchestration with retained rollback
+      - name: Verify retained report presentation without inference
+        run: '"$SKILL_DATA_PYTHON" -B .github/scripts/test_evaluation_contracts.py presentation'
+
+      - name: Qualify data-only publisher and orchestration with retained evidence
         env:
           EVALUATOR_ADOPTION_CONTROLS: '1'
         run: |
@@ -307,6 +317,8 @@ jobs:
       - name: Qualify scanner controls and consolidated reporting without credentials
         run: |
           "$SKILL_QUALITY_PYTHON" -B -m unittest discover -s .github/tests -p test_static_quality.py -v
+          PYTHONPATH=.github/tests "$SKILL_QUALITY_PYTHON" -B -m unittest -v \
+            test_public_reports.PublicReportsTests.test_pinned_native_quality_cli_provenance_titles_and_public_handoff
           "$SKILL_QUALITY_PYTHON" -B "$STATIC_QUALITY_SCRIPTS/qualify_scanners.py" \
             --workspace "$GITHUB_WORKSPACE" --tools "$SKILL_QUALITY_TOOLS" --redact \
             --output "$RUNNER_TEMP/scanner-controls"

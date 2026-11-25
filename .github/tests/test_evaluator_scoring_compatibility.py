@@ -57,6 +57,18 @@ class ScoringGateTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Unsupported executable scoring runtime'):
             scoring.probe(sys.executable, '0.3.0')
 
+    def test_released_legacy_policy_matches_original_recorded_scores(self):
+        import static_evaluator
+        from skillevaluator.tier3.harbor import metrics
+
+        static_evaluator.validate_install()
+        retained = scoring.retained_probe()
+        policy = 'skill-evaluator-metric-mean-v1'
+        self.assertEqual(metrics.LEGACY_SCORE_POLICY, policy)
+        scores = [metrics.overall_score({**vector, 'score_policy': policy})
+                  for vector in scoring.vectors()]
+        self.assertEqual(scores, retained['scores'])
+
     def test_wrong_runtime_lock_source_metric_set_and_activity_reject(self):
         mutations = [
             ('runtime', {'skillevaluator': '0.7.2', **scoring.PINS['0.3.0']}),

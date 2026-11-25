@@ -421,6 +421,8 @@ def main():
     if output.resolve() != output or output.exists() or output.is_relative_to(ROOT):
         parser.error('Use a new persistent resolved output directory outside the checkout')
     p = profiles.owning_candidate()
+    reports.require(p is profiles.CANDIDATE or p is profiles.NEXT,
+                    'Use the separately pinned 0.8.0 or 0.9.0 cohort owner')
     import aeb_gh_fixture
     backend = Path(aeb_gh_fixture.__file__).parent
     assert {f.name: f.read_bytes() for f in backend.glob('*.py')} == backend_sources(), 'Installed backend source differs'

@@ -198,14 +198,17 @@ class CIPowerShellTests(unittest.TestCase):
         self.assertFalse(inputs['benchmark-101-fixtures']['default'])
         self.assertFalse(inputs['benchmark-101-codex']['default'])
         self.assertFalse(inputs['benchmark-101-podman']['default'])
+        self.assertFalse(inputs['benchmark-101-launcher']['default'])
         jobs = workflow['jobs']
         candidate = jobs['benchmark-101']
         self.assertEqual(candidate['if'], "github.event_name == 'workflow_dispatch'"
+                         " && !inputs.benchmark-101-launcher"
                          " && (inputs.benchmark-101-fixtures || inputs.benchmark-101-codex || inputs.benchmark-101-podman)")
         for key in ('cohorts', 'native-gh', 'report', 'startup'):
             self.assertIn('!inputs.benchmark-101-fixtures', jobs[key]['if'])
             self.assertIn('!inputs.benchmark-101-codex', jobs[key]['if'])
             self.assertIn('!inputs.benchmark-101-podman', jobs[key]['if'])
+            self.assertIn('!inputs.benchmark-101-launcher', jobs[key]['if'])
         self.assertEqual(candidate['strategy']['matrix']['suite'],
                          '''${{ fromJSON(inputs.benchmark-101-podman && '["podman"]' || inputs.benchmark-101-codex && '["codex"]' || '["gh", "pester"]') }}''')
         self.assertEqual(workflow['permissions'], {'contents': 'read'})

@@ -8,7 +8,7 @@ from pathlib import Path
 import signal
 import time
 
-from benchmark_podman import CODEX_PROFILE, SMOKE_CASE, compose_teardown_complete, scope, stage_codex, stage_task
+from benchmark_podman import CODEX_PROFILE, SMOKE_CASE, compose_teardown_complete, configure_openai_task, scope, stage_task
 from skill_orchestration import BENCHMARK, REPOSITORY, git, read_artifact
 import skill_pages as pages
 from skill_reports import outputs, read_json, require, summary, write_json
@@ -90,8 +90,6 @@ def guard(api, expected):
 
 
 def prepare(workspace, stage, expected):
-    from harbor.models.task.task import Task
-
     from qualify_benchmark_101 import release_owner
     from qualify_codex_1691 import acquire
 
@@ -106,22 +104,10 @@ def prepare(workspace, stage, expected):
         for arm in selected['arms']:
             task = stage_task(workspace / '.apm/skills/podman', stage / arm, case=SMOKE_CASE,
                               with_skill=arm == 'with_skill')
-            descriptor = task / 'task.toml'
-            source = descriptor.read_text()
-            marker = 'network_mode = "public"'
-            require(source.count(marker) == 1, 'Unexpected staged network policy')
-            descriptor.write_text(source.replace(marker, 'network_mode = "allowlist"\nallowed_hosts = ["api.openai.com"]'))
-            stage_codex(task / 'environment', assets, profile)
-            native = Task(task)
-            config = native.config
+            native = configure_openai_task(task, assets, profile)
             task_checksums[arm] = native.checksum
-            network = config.environment.resolve_baseline()
-            require(network.network_mode.value == 'allowlist'
-                    and network.allowed_hosts == [PROVIDER_POLICY['host']],
-                    'Candidate trial did not select the reviewed endpoint allowlist')
-            require(config.agent.user == 'agent'
-                    and config.agent.timeout_sec == PROVIDER_POLICY['agent_seconds_per_arm'],
-                    'Candidate agent execution settings changed')
+            require(native.config.agent.timeout_sec == PROVIDER_POLICY['agent_seconds_per_arm'],
+                    'Candidate agent execution timeout changed')
         return {'scope': expected, 'runtime': owner, 'codex': read_json(assets / 'integrity.json'),
                 'tasks': task_checksums}
 

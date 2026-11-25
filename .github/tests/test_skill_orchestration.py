@@ -265,6 +265,23 @@ class OrchestrationTests(unittest.TestCase):
         self.assertTrue(result['shared_instructions_changed'])
         self.assertFalse(result['requests'])
 
+    def test_production_release_fingerprint_requires_all_runtime_members(self):
+        files = {name.removesuffix('/') + ('/fixture.py' if name.endswith('/') else ''):
+                 ('100644', 'blob', 'a' * 40)
+                 for name in orchestration.NATIVE_RUNTIME_FILES + orchestration.RUNTIME_FILES}
+        pinned = orchestration.benchmark_runtime_inputs(files)
+        for member in ('.github/scripts/benchmark_native.py', '.github/scripts/skill_reports.py',
+                       '.github/evaluator-backends/candidate-101/fixture.py',
+                       '.github/patches/skillevaluator-v1.0.1-benchmark-staging.patch',
+                       '.github/patches/skillevaluator-v1.0.1-benchmark-recovery.patch'):
+            with self.subTest(member=member):
+                self.assertNotEqual(orchestration.identity(pinned), orchestration.identity(
+                    orchestration.benchmark_runtime_inputs({**files, member: ('100644', 'blob', 'b' * 40)})))
+                with self.assertRaisesRegex(ValueError, 'Missing runtime input'):
+                    orchestration.benchmark_runtime_inputs({key: value for key, value in files.items() if key != member})
+        files.pop(orchestration.NATIVE_BENCHMARK_POLICY)
+        self.assertEqual(orchestration.benchmark_runtime_inputs(files), orchestration.subset(files, orchestration.RUNTIME_FILES))
+
     def candidate_inputs(self):
         members = git(ROOT, 'ls-files').splitlines()
         members += ['.github/scripts/benchmark_podman.py', '.github/scripts/benchmark_smoke.py']
@@ -648,6 +665,30 @@ class WorkflowAndUsageTests(unittest.TestCase):
         publisher = yaml.safe_load((ROOT / '.github/workflows/publish-skill-report.yml').read_text())
         self.assertEqual(publisher.get('on', publisher.get(True))['workflow_run']['workflows'], ['Validate', 'Benchmark skills'])
 
+    def test_released_launcher_qualification_is_isolated_from_protected_execution(self):
+        workflow = yaml.safe_load((ROOT / '.github/workflows/current-evaluator.yml').read_text())
+        jobs = workflow['jobs']
+        harness = jobs['benchmark-101-launcher']
+        self.assertNotIn('environment', harness)
+        self.assertNotIn('secrets.', json.dumps(harness))
+        self.assertEqual(workflow['permissions'], {'contents': 'read'})
+        self.assertEqual(harness['strategy']['matrix']['include'], [
+            {'suite': 'podman', 'mode': 'standard'}, {'suite': 'gh', 'mode': 'confirmation'}])
+        for name in ('cohorts', 'native-gh', 'report', 'startup', 'benchmark-101'):
+            self.assertIn('!inputs.benchmark-101-launcher', jobs[name]['if'])
+        steps = [step.get('run', '') for step in harness['steps']]
+        setup = steps.index('bash .github/scripts/setup-static-evaluator.sh native-benchmark-101')
+        qualify = next(index for index, step in enumerate(steps) if 'qualify_native_benchmark.py' in step)
+        self.assertLess(setup, qualify)
+        self.assertIn('"$SKILL_NATIVE_BENCHMARK_PYTHON"', steps[qualify])
+        self.assertIn('"$GITHUB_SHA"', steps[qualify])
+        installed = steps.index('bash .github/scripts/setup-compose.sh')
+        executed = next(index for index, step in enumerate(steps) if 'qualify_native_execution.py' in step)
+        self.assertLess(qualify, installed)
+        self.assertLess(installed, executed)
+        self.assertIn('"$SKILL_NATIVE_BENCHMARK_PYTHON"', steps[executed])
+        self.assertIn('"$GITHUB_SHA"', steps[executed])
+
     def test_full_regression_validation_is_reused_on_main_and_preapproval_on_features(self):
         workflow = yaml.safe_load((ROOT / orchestration.BENCHMARK).read_text())
         context = workflow['jobs']['context']
@@ -658,6 +699,7 @@ class WorkflowAndUsageTests(unittest.TestCase):
         expected = [
             f'"$SKILL_REVIEW_PYTHON" -B {selector} contracts',
             f'"$SKILL_REVIEW_CANDIDATE_PYTHON" -B {selector} private-review',
+            f'"$SKILL_DATA_PYTHON" -B {selector} presentation',
         ]
         tests = [step for step in context['steps'] if selector in step.get('run', '')]
         self.assertEqual([step['run'] for step in tests], expected)
@@ -671,29 +713,42 @@ class WorkflowAndUsageTests(unittest.TestCase):
             review = next(step for step in steps if step.get('run') == expected[1])
             self.assertLess(steps.index(setup), steps.index(review))
             self.assertNotIn('secrets.', json.dumps([setup, review]))
+            release = next(step for step in steps if step.get('run') ==
+                           'bash .github/scripts/setup-static-evaluator.sh native-benchmark-candidate')
+            gh = next(step for step in steps if 'test_gh_evaluations.GhNativeTests' in step.get('run', ''))
+            self.assertLess(steps.index(release), steps.index(gh))
+            self.assertIn('"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON"', gh['run'])
+            self.assertNotIn('secrets.', json.dumps([release, gh]))
         self.assertTrue(all(any(command in step.get('run', '') for step in validate_steps) for command in expected))
+        qualifier = yaml.safe_load((ROOT / '.github/workflows/current-evaluator.yml').read_text())
+        for steps in (context['steps'], validate_steps, qualifier['jobs']['cohorts']['steps']):
+            data_setup = next(s for s in steps if 'setup-static-evaluator.sh data-host' in s.get('run', ''))
+            presentation = next(s for s in steps if s.get('run') == expected[2])
+            self.assertLess(steps.index(data_setup), steps.index(presentation))
+            self.assertNotIn('secrets.', json.dumps([data_setup, presentation]))
         gate = next(s for s in protected['steps'] if s.get('id') == 'preparation')
         self.assertEqual(gate['timeout-minutes'], 5)
         self.assertIn('tier3 validate', gate['run'])
         self.assertIn('skill_orchestration.py guard', gate['run'])
 
-    def test_contract_discovery_keeps_nonreview_and_legacy_dispatch_tests(self):
-        from test_evaluation_contracts import LEGACY_VALIDATOR_TESTS, contract_suite
+    def test_contract_discovery_keeps_tests_outside_the_released_owners(self):
+        from test_evaluation_contracts import contract_suite
 
         class Test(unittest.TestCase):
             def runTest(self):
                 pass
 
-        legacy_dispatch = sorted(LEGACY_VALIDATOR_TESTS)
-        identities = ['test_skill_review.ReviewTests.test_review', 'test_cli.CliTests.test_reports']
+        identities = ['test_skill_review.ReviewTests.test_review', 'test_skill_report.ReportTests.test_deterministic',
+                      'test_historical_review_replay.HistoricalReviewReplayTests.test_saved_bytes',
+                      'test_skill_analysis.AnalysisTests.test_pinned_environment', 'test_cli.CliTests.test_reports']
         discovered = []
-        for identity in [*identities, *legacy_dispatch]:
+        for identity in identities:
             entry = Test()
             entry.id = lambda value=identity: value
             discovered.append(entry)
         loader = unittest.TestLoader()
         loader.discover = lambda _path: unittest.TestSuite([unittest.TestSuite(discovered)])
-        self.assertEqual([case.id() for case in contract_suite(loader)], [identities[1], *legacy_dispatch])
+        self.assertEqual([case.id() for case in contract_suite(loader)], [identities[-1]])
 
     def test_inference_free_jobs_use_the_released_data_host(self):
         planner = yaml.safe_load((ROOT / orchestration.WORKFLOW).read_text())

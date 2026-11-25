@@ -15,17 +15,16 @@ import static_evaluator
 from skill_reports import POLICY, require
 
 ROOT = Path(__file__).resolve().parents[2]
-RELEASE_CANDIDATE = json.loads((ROOT / '.github/evals/evaluator-1.0.1-benchmark-candidate-v2.json').read_text())
+RELEASE_CANDIDATE = profiles.RELEASE_BENCHMARK
 PRODUCER_PROFILE = RELEASE_CANDIDATE['id']
 
 
 @contextmanager
 def release_owner():
     """Require the reviewed release installation in an explicit candidate process."""
-    with patch.object(profiles, 'CANDIDATES', (*profiles.CANDIDATES, RELEASE_CANDIDATE)):
-        versions = profiles.candidate_versions(RELEASE_CANDIDATE)
-        profiles.runtime(versions, owning=True)
-        yield versions
+    versions = profiles.candidate_versions(RELEASE_CANDIDATE)
+    profiles.runtime(versions, owning=True)
+    yield versions
 
 
 @contextmanager

@@ -2,7 +2,6 @@
 
 import copy
 from datetime import datetime, timedelta, timezone
-import importlib.metadata
 import os
 from pathlib import Path
 import subprocess
@@ -22,9 +21,6 @@ from test_skill_analysis import write
 from test_skill_report import Document
 
 from review_snapshots import parity_archive, restore_parity_case
-
-RELEASE_REPLAY = importlib.metadata.version('skillevaluator') == '1.0.1'
-
 
 class AttachmentTests(unittest.TestCase):
     bundle = review_fixtures.ReviewTests.bundle
@@ -100,7 +96,6 @@ class AttachmentTests(unittest.TestCase):
                 snapshot.unpack(destination)
         self.assertFalse(destination.exists())
 
-    @unittest.skipUnless(RELEASE_REPLAY, 'Requires the 1.0.1 review owner')
     def test_release_review_cli_and_attachment_use_the_same_frozen_source(self):
         import json
         import shutil
@@ -173,7 +168,7 @@ target = Path(sys.argv[4])
                 with self.assertRaisesRegex(ValueError, 'Tooling for this profile is fixed'):
                     attachments.load([spec_path], captured)
 
-    def test_frozen_current_profile_rejects_changed_checkout_and_retains_legacy_host_dispatch(self):
+    def test_frozen_current_profile_rejects_changed_checkout_and_replays_on_release_host(self):
         self.fixture('current-v4')
         self.load()  # Exact retained validator bytes remain supported.
         tooling = self.spec['tooling']
@@ -185,21 +180,13 @@ target = Path(sys.argv[4])
         self.load()
         output_parent = tempfile.TemporaryDirectory(); self.addCleanup(output_parent.cleanup)
         output_root = Path(output_parent.name)
-        python = sys.executable if RELEASE_REPLAY else os.environ['SKILL_LEGACY_REVIEW_PYTHON']
-        command = [python, '-B',
+        command = [sys.executable, '-B',
                    str(evidence.ROOT / '.github/scripts/skill_report.py'),
                    '--input', self.spec['inputs'][0], '--analysis', self.spec['analysis'],
                    '--analyst-review', str(self.path), '--output', str(output_root / 'report-host')]
         child = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
         self.assertEqual(child.returncode, 0, child.stderr.decode())
         self.assertTrue((output_root / 'report-host/report.html').is_file())
-        if RELEASE_REPLAY:
-            return
-        with patch.dict(os.environ, {'SKILL_PREVIOUS_REVIEW_PYTHON': os.environ['SKILL_LEGACY_REVIEW_PYTHON']}):
-            command[-1] = str(output_root / 'rejected')
-            child = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
-        self.assertEqual(child.returncode, 1)
-        self.assertFalse((output_root / 'rejected').exists())
 
     def test_new_profile_requires_exact_supporting_code_and_data(self):
         self.fixture('current-v5')
@@ -212,28 +199,16 @@ target = Path(sys.argv[4])
             path.write_bytes(original)
         self.load()
 
-    def test_new_profile_rejects_previous_dependency_environment(self):
+    def test_saved_profile_rejects_substituted_dependency_version(self):
         self.fixture('current-v5')
-        if RELEASE_REPLAY:
-            saved = Path(self.spec['review'])
-            value = evidence.read_json(saved)
-            value['provenance']['versions']['pydantic'] = attachments.PREVIOUS_PINS['pydantic']
-            write(saved, value)
-            self.spec['review_digest'] = evidence.digest_bytes(saved.read_bytes())
-            write(self.path, self.spec)
-            with self.assertRaises(ValueError):
-                self.load()
-            return
-        temporary = tempfile.TemporaryDirectory(); self.addCleanup(temporary.cleanup)
-        output = Path(temporary.name) / 'rejected'
-        command = [os.environ['SKILL_LEGACY_REVIEW_PYTHON'], '-B',
-                   str(evidence.ROOT / '.github/scripts/skill_report.py'),
-                   '--input', self.spec['inputs'][0], '--analysis', self.spec['analysis'],
-                   '--analyst-review', str(self.path), '--output', str(output)]
-        with patch.dict(os.environ, {'SKILL_REVIEW_PYTHON': os.environ['SKILL_PREVIOUS_REVIEW_PYTHON']}):
-            child = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
-        self.assertEqual(child.returncode, 1)
-        self.assertFalse(output.exists())
+        saved = Path(self.spec['review'])
+        value = evidence.read_json(saved)
+        value['provenance']['versions']['pydantic'] = attachments.PREVIOUS_PINS['pydantic']
+        write(saved, value)
+        self.spec['review_digest'] = evidence.digest_bytes(saved.read_bytes())
+        write(self.path, self.spec)
+        with self.assertRaises(ValueError):
+            self.load()
 
     def test_custom_profile_requires_exact_retained_metric_registry(self):
         self.fixture('custom-metrics-v2')
@@ -503,30 +478,21 @@ target = Path(sys.argv[4])
 
     def test_pinned_dependency_and_extra_descriptor_fields_reject(self):
         self.fixture()
-        with patch.object(attachments.importlib.metadata, 'version', return_value='unreviewed'):
+        with patch.object(attachments.private_review_runtime.importlib.metadata, 'version', return_value='unreviewed'):
             with self.assertRaises(ValueError): self.load()
         self.spec['command'] = 'never execute descriptor commands'; write(self.path, self.spec)
         with self.assertRaises(ValueError): self.load()
 
-    def test_missing_legacy_runtime_rejects_without_changing_profile(self):
+    def test_historical_attachment_replays_without_legacy_interpreter(self):
         self.fixture('current-v2')
-        with patch.dict(os.environ, {'SKILL_LEGACY_REVIEW_PYTHON': ''}):
-            if RELEASE_REPLAY:
-                self.assertEqual(self.load().items[0]['profile'], 'current-v2')
-                return
-            with self.assertRaisesRegex(ValueError, 'Pinned validator runtime unavailable'):
-                self.load()
+        with patch.dict(os.environ, {'SKILL_LEGACY_REVIEW_PYTHON': '', 'SKILL_PREVIOUS_REVIEW_PYTHON': '',
+                                     'SKILL_REVIEW_PYTHON': ''}):
+            self.assertEqual(self.load().items[0]['profile'], 'current-v2')
 
-    def test_wrong_runtime_cannot_validate_legacy_modules(self):
+    def test_historical_runtime_alias_cannot_replace_release_host(self):
         self.fixture('current-v2')
-        if RELEASE_REPLAY:
-            # An environment alias cannot replace the authenticated replay host.
-            with patch.dict(os.environ, {'SKILL_LEGACY_REVIEW_PYTHON': '/unavailable/python'}):
-                self.assertEqual(self.load().items[0]['profile'], 'current-v2')
-            return
-        with patch.dict(os.environ, {'SKILL_LEGACY_REVIEW_PYTHON': sys.executable}):
-            with self.assertRaisesRegex(ValueError, 'Original validator rejected attachment'):
-                self.load()
+        with patch.dict(os.environ, {'SKILL_LEGACY_REVIEW_PYTHON': '/unavailable/python'}):
+            self.assertEqual(self.load().items[0]['validator_execution'], 'skillevaluator-1.0.1-private-review-offline-v1')
 
     def test_duplicate_json_keys_and_linked_documents_reject(self):
         self.fixture(); self.supplied()

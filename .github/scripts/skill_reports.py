@@ -385,7 +385,7 @@ def validate_benchmark_versions(versions):
             "Installed evaluator/runtime version mismatch")
 
 
-def recover_benchmark(workspace, root, name, mode, outcome, *, evidence_profile=None):
+def recover_benchmark(workspace, root, name, mode, outcome, *, evidence_profile=None, environment="docker"):
     """Collect retained trials with the pinned native collector; never certify a run."""
     from skillevaluator.tier3.case_ids import validate_case_ids
     from skillevaluator.tier3.dataset_utils import load_dataset_entries
@@ -453,12 +453,19 @@ def recover_benchmark(workspace, root, name, mode, outcome, *, evidence_profile=
         if not jobs.exists():
             continue  # No retained diagnostics are available for native collection.
         require(jobs.is_dir() and not jobs.is_symlink(), "Linked or invalid retained jobs directory")
+        if environment != "docker" and result.exists() and not any(jobs.iterdir()):
+            # The launcher already recorded the preflight failure. With no jobs
+            # to collect, preserve its cause and mark the run unrecoverable.
+            write_json(result, {**read_json(result), "report_status": "incomplete", "diagnostic_only": True})
+            continue
         collected = collect_harbor_results(
             skill_name=name, agents=["codex"], output_dir=run, jobs_dir=jobs,
             n_attempts=MODES[mode], stop_on_pass=False, expected_cases=cases,
             expected_case_ids=case_ids,
-            expected_trials=cases * MODES[mode], env_mode="docker",
+            expected_trials=cases * MODES[mode], env_mode=environment,
             agent_models={"codex": {"model": recovery_model, "source": "cli"}},
+            **({"grading_mode": benchmark_options(name)["grading_mode"], "recover_interrupted": True}
+               if environment != "docker" else {}),
         )
         # Native diagnostics may include completed trials but are never a completed evaluation.
         write_json(run / "result.json", {**collected, "skill_name": name,

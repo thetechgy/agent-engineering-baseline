@@ -50,6 +50,32 @@ CANDIDATE_RUNTIME_FILES = (
     '.github/evaluator-backends/candidate-101/',
     '.github/patches/skillevaluator-v1.0.1-benchmark-request.patch',
 )
+NATIVE_BENCHMARK_POLICY = '.github/evals/benchmark-native-101-v1.json'
+NATIVE_RUNTIME_FILES = (
+    NATIVE_BENCHMARK_POLICY,
+    '.github/workflows/benchmark-skills.yml',
+    '.github/scripts/benchmark_native.py',
+    '.github/scripts/benchmark_podman.py',
+    '.github/scripts/setup-compose.sh',
+    '.github/scripts/setup-static-evaluator.sh',
+    '.github/scripts/static_evaluator.py',
+    '.github/scripts/evaluator_profiles.py',
+    '.github/scripts/gh_candidate.py',
+    '.github/scripts/qualify_codex_1691.py',
+    '.github/scripts/skill_evidence.py',
+    '.github/scripts/skill_orchestration.py',
+    '.github/scripts/skill_pages.py',
+    '.github/scripts/skill_reports.py',
+    '.github/scripts/skill_history.py',
+    '.github/evals/codex-execution-1710.json',
+    '.github/evals/evaluator-1.0.1-benchmark-candidate-v2.json',
+    '.github/evaluator-backends/build_wheel.py',
+    '.github/evaluator-backends/aeb_gh_fixture/',
+    '.github/evaluator-backends/candidate-101/',
+    '.github/patches/skillevaluator-v1.0.1-benchmark-request.patch',
+    '.github/patches/skillevaluator-v1.0.1-benchmark-staging.patch',
+    '.github/patches/skillevaluator-v1.0.1-benchmark-recovery.patch',
+)
 SUITE_FILES = {'podman': ('.apm/skills/podman/',),
                'gh': ('.github/evals/gh/evals/', '.github/scripts/gh_evaluations.py',
                       '.github/evals/custom-metrics.json', '.github/scripts/skill_evidence.py'),
@@ -148,12 +174,20 @@ def candidate_podman_fingerprint(workspace, revision):
     return identity(subset(files, prefixes))
 
 
+def benchmark_runtime_inputs(files):
+    # A historical reference is recomputed against its own Git tree. A new
+    # production namespace must bind every released runtime input before it can
+    # share any qualification, reference, or dispatch intent.
+    prefixes = NATIVE_RUNTIME_FILES if NATIVE_BENCHMARK_POLICY in files else RUNTIME_FILES
+    runtime = subset(files, prefixes)
+    require(all(subset(runtime, (prefix,)) for prefix in prefixes), 'Missing runtime input')
+    return runtime
+
+
 def snapshots(workspace, revision):
     files = manifest(workspace, revision)
     catalog = sources(workspace, revision, files)
-    runtime = subset(files, RUNTIME_FILES)
-    require(all(any(name.startswith(p) if p.endswith('/') else name == p for name in runtime) for p in RUNTIME_FILES),
-            'Missing runtime input')
+    runtime = benchmark_runtime_inputs(files)
     suites = {}
     for name in SUITES:
         root = '.apm/skills/podman' if name == 'podman' else '.github/evals/' + name

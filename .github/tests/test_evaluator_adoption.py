@@ -62,8 +62,7 @@ class AdoptionTests(unittest.TestCase):
             self.assertTrue(any(row['scanner'] == 'SECURITY' and row['status'] == 'failed' for row in public['scans']))
             self.assertTrue(any(row['scanner'] == 'skillspector' and row['status'] == 'incomplete' for row in public['scans']))
             self.assertTrue(any(row['check'] == 'known_violation' for row in public['findings']))
-            # Hand current public evidence to the existing publisher, then rebuild
-            # with the retained host. Neither build normalizes or rescores records.
+            # Confirm the 1.0.1 data host rebuilds the 0.9.0 projection byte for byte.
             import skill_pages as pages
             from test_skill_pages import bundle, prov
             site = Path(directory) / 'site'
@@ -83,8 +82,8 @@ class AdoptionTests(unittest.TestCase):
             self.assertIn('0 with no incompleteness reported', html)
             self.assertIn('known_violation', html)
             before = pages.tree(site)
-            legacy = os.environ['SKILL_EVALUATOR_PYTHON']
-            run = subprocess.run([legacy, '-B', str(ROOT / '.github/scripts/skill_pages.py'),
+            data_python = os.environ['SKILL_DATA_PYTHON']
+            run = subprocess.run([data_python, '-B', str(ROOT / '.github/scripts/skill_pages.py'),
                                   'build', '--site', str(site)], capture_output=True, text=True, timeout=60)
             self.assertEqual(run.returncode, 0, run.stderr)
             self.assertEqual(before, pages.tree(site))

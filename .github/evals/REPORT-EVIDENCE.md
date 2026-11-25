@@ -3,23 +3,27 @@
 `skill_evidence.py` inventories sources, reads selected pinned SkillEvaluator
 reports, and builds a separately validated public projection. It never invokes
 evaluations, graders, scanners, artifact scripts, recovery, or network retrieval.
-The examples below replay retained 0.3.0 inputs with their owning evaluator
-(Python 3.13, revision `ac0a04905100acdafc6c95829311a9739c340ff6`). For current
-quality artifacts, use the released static environment and isolated projection
-shown under [public bundle commands](#public-bundle-commands).
+Use the pinned SkillEvaluator 1.0.1 data host for the retained static and
+default behavioral inputs below. The reader verifies the original snapshot
+format, producer, metric means and rounding. It preserves the recorded
+scores and references. For an exact rerun of the original scorer, use the
+reviewed producing checkout and its frozen evaluator revision
+`ac0a04905100acdafc6c95829311a9739c340ff6`. Current quality artifacts use
+the released static environment and isolated projection shown under
+[public bundle commands](#public-bundle-commands).
 
 ## Commands and outputs
 
 ```bash
-"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_evidence.py inventory
+"$SKILL_DATA_PYTHON" .github/scripts/skill_evidence.py inventory
 
-"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_evidence.py normalize \
+"$SKILL_DATA_PYTHON" .github/scripts/skill_evidence.py normalize \
   --kind behavioral --skill podman --input /tmp/podman-artifact
 
-"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_evidence.py normalize \
+"$SKILL_DATA_PYTHON" .github/scripts/skill_evidence.py normalize \
   --kind static --skill podman --input /tmp/skill-quality
 
-"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_evidence.py project \
+"$SKILL_DATA_PYTHON" .github/scripts/skill_evidence.py project \
   --input .github/tests/fixtures/skill_evidence/gh-no-model.json
 ```
 
@@ -1518,7 +1522,9 @@ table headers/captions, theme contrast, corrupted input, private permissions,
 input replacement and output confinement. Run all offline contracts together:
 
 ```bash
-"$SKILL_REVIEW_PYTHON" -B -m unittest discover -s .github/tests -v
+"$SKILL_REVIEW_PYTHON" -B .github/scripts/test_evaluation_contracts.py contracts
+"$SKILL_DATA_PYTHON" -B .github/scripts/test_evaluation_contracts.py presentation
+"$SKILL_REVIEW_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py private-review
 pwsh -NoLogo -NoProfile -File ./scripts/Invoke-Validation.ps1
 ```
 
@@ -1677,21 +1683,14 @@ judgment, substitute current source bytes, or override provenance, availability,
 or expiry checks. If the exact original tooling or evidence is unavailable,
 retain that limitation rather than treating the refreshed profile as compatible.
 
-Only those four hash-verified modules are copied to a fresh protected temporary
-layout. Descriptors cannot supply commands, interpreters, import search paths,
-environment settings, or new executable profiles. The fixed launcher uses the
-profile's pinned Python executable with `-I -B`, a neutral working directory, and
-a small clean environment without inference credentials. `current-v3` uses Python
-3.13, OpenAI 2.54.0, Pydantic 2.14.2, and SkillEvaluator 0.3.0. Older profiles
-retain OpenAI 2.44.0 and Pydantic 2.13.4; original provenance validation also
-requires the saved report's exact Python patch version. Setup exports
-`SKILL_REVIEW_PYTHON` and `SKILL_LEGACY_REVIEW_PYTHON` for these two environments.
-The repository-owned profile selects the required version set. If the host
-interpreter differs, only operator/setup configuration supplies the other
-absolute interpreter path; the child verifies its versions again before reading
-the saved review. Missing or mismatched runtimes reject validation without
-fallback. Attachment data cannot select executables or environment settings.
-There is no installer, provider client invocation, token count, or inference.
+The pinned 1.0.1 private review environment launches a child with
+`-I -B`, a neutral working directory, and a minimal environment.
+It loads the exact hash-verified historical modules and any required registry
+and supporting files. The attachment descriptor selects a known profile.
+The validator verifies the saved producer versions separately from the
+running interpreter. The rendered attachment records the original profile
+and the current validator execution identity. Historical validation is
+offline and keeps the original saved report, source digests, and judgments.
 
 An audit hook installed before historical imports rejects audited Python socket
 operations (including DNS) and process spawning. Each validation has a 120-second

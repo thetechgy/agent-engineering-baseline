@@ -22,9 +22,9 @@ class StaticQualityRoutingTests(unittest.TestCase):
 
         lock = ROOT / '.github/requirements/semgrep.txt'
         self.assertEqual(owner.SEMGREP_LOCK, evidence.digest_bytes(lock.read_bytes()))
-        if ISOLATED_SCRIPTS:
-            self.assertEqual(evidence.SCANNER_RUNTIME_STATIC_CANDIDATE['semgrep_lock'], owner.SEMGREP_LOCK)
-            self.assertEqual(evidence.SCANNER_RUNTIME_NEXT['semgrep_lock'], owner.SEMGREP_LOCK)
+        self.assertEqual(evidence.SCANNER_RUNTIME_STATIC_CANDIDATE['semgrep_lock'], owner.SEMGREP_LOCK)
+        self.assertEqual(evidence.SCANNER_RUNTIME_NEXT['semgrep_lock'], owner.SEMGREP_LOCK)
+        self.assertNotEqual(evidence.SCANNER_2136_INITIAL_NEXT['semgrep_lock'], owner.SEMGREP_LOCK)
 
     def test_static_consumer_and_retained_native_boundary_have_explicit_separate_owners(self):
         jobs = yaml.safe_load((ROOT / '.github/workflows/validate.yml').read_text())['jobs']
@@ -51,7 +51,10 @@ class StaticQualityRoutingTests(unittest.TestCase):
                   if 'gh_container_validation.py' in step.get('run', '')]
         self.assertEqual(len(native), 1)
         self.assertIn(native[0], contracts['steps'])
-        self.assertIn('"$SKILL_EVALUATOR_PYTHON"', native[0]['run'])
+        self.assertIn('"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON"', native[0]['run'])
+        released_setup = next(step for step in contracts['steps']
+                              if 'setup-static-evaluator.sh native-benchmark-candidate' in step.get('run', ''))
+        self.assertLess(contracts['steps'].index(released_setup), contracts['steps'].index(native[0]))
         self.assertEqual(quality['permissions'], {'contents': 'read'})
         self.assertEqual(quality['if'], "needs.plan.outputs.quality == 'true'")
 

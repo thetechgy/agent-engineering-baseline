@@ -3,15 +3,17 @@
 
 import asyncio
 import json
+import os
 from pathlib import Path
 import shlex
 import signal
 import subprocess
 import tempfile
-import tomllib
 import uuid
 
+from benchmark_native import GH_DATASET_PROFILE, stage_gh
 import gh_evaluations as gh
+from qualify_benchmark_101 import release_owner
 from skillevaluator.tier3.harbor.adapter import _task_environment_context_hash, stage_native_harbor_tasks
 
 
@@ -31,28 +33,38 @@ def install_private_tests(container, tests):
 
 async def compose_lifecycle(root, prefix):
     """One real staged Harbor task, without an agent, credentials or inference."""
-    from harbor.environments.docker.docker import DockerEnvironment
-    from harbor.models.task.config import NetworkMode, NetworkPolicy, TaskConfig
+    from aeb_gh_fixture import MANIFEST_ENV
+    from aeb_gh_fixture.backend import TrustedGhEnvironment
+    from aeb_gh_fixture.manifest import write_manifest
+    from harbor.models.task.task import Task
     from harbor.models.trial.paths import TrialPaths
 
-    skill = gh.stage(gh.ROOT, root / "bundle/gh", ["gh-003"])
+    skill = stage_gh(gh.ROOT, root / "bundle/gh", ["gh-003"], fixture=True)
     task, = stage_native_harbor_tasks(
-        skill, root / "tasks", with_skill=True, grading_mode="default_plus_custom",
+        skill, root / "tasks", with_skill=True, grading_mode="custom_only",
         workspace_mode="group", workspace_skill_paths=[skill.parent / gh.COMPETING],
     )
-    config = TaskConfig.model_validate(tomllib.loads((task / "task.toml").read_text()))
+    descriptor = task / "task.toml"
+    authored = descriptor.read_text()
+    marker = 'network_mode = "public"'
+    gh.reports.require(authored.count(marker) == 1, "Unexpected staged fixture network policy")
+    descriptor.write_text(authored.replace(marker, 'network_mode = "no-network"'))
+    config = Task(task).config
+    manifest = write_manifest(root / "operator", [task], staged_roots=[skill.parent, task.parent])
     context_digest = _task_environment_context_hash(task / "environment")
     paths = TrialPaths(root / "trial")
     paths.mkdir()
     mounts = [{"type": "bind", "source": str(paths.agent_dir), "target": "/logs/agent"}]
-    environment = DockerEnvironment(
+    environment = TrustedGhEnvironment(
         environment_dir=task / "environment", environment_name=prefix, session_id=prefix,
         trial_paths=paths, task_env_config=config.environment, mounts=mounts,
-        network_policy=NetworkPolicy(network_mode=NetworkMode.NO_NETWORK),
+        network_policy=config.environment.resolve_baseline(),
     )
     image_ids = []
     image_name = None
     override_paths = []
+    prior = os.environ.get(MANIFEST_ENV)
+    os.environ[MANIFEST_ENV] = str(manifest)
     try:
         await environment.start(force_build=True)
         override_paths = [environment._mounts_compose_path, environment._resources_compose_path]
@@ -90,8 +102,9 @@ async def compose_lifecycle(root, prefix):
             raise ValueError("Harbor container resource limit mismatch")
         if (await environment.exec("id -u", user="agent")).stdout.strip() != "1000":
             raise ValueError("Harbor agent is privileged")
-        if (await environment.exec(gh.SETUP, user="root")).return_code:
-            raise ValueError("Harbor fixture setup failed")
+        receipt = json.loads((paths.trial_dir / "gh-initialization.jsonl").read_text())
+        if receipt["status"] != "ready" or receipt["case"] != "gh-003" or receipt["arm"] != "with_skill":
+            raise ValueError("Harbor trusted initialization failed")
         for forbidden in ("cat /opt/gh-eval/state/case.json", "cat /opt/gh-eval/state/audit.jsonl"):
             if (await environment.exec(forbidden, user="agent")).return_code == 0:
                 raise ValueError("Harbor exposed private fixture data")
@@ -108,6 +121,10 @@ async def compose_lifecycle(root, prefix):
         repeated = (await environment._run_docker_compose_command(["ps", "--quiet", "main"])).stdout.strip()
         if container != repeated:
             raise ValueError("Unchanged Compose up recreated the Harbor container")
+        await environment.start(force_build=False)
+        ready = (paths.trial_dir / "gh-initialization.jsonl").read_text().splitlines()
+        if len(ready) != 2 or json.loads(ready[1]) != receipt:
+            raise ValueError("Repeated startup changed the trusted broker")
         # End through an actual nonzero Compose command, then the same finally path.
         try:
             await environment._run_docker_compose_command(["exec", "-T", "main", "sh", "-c", "exit 9"])
@@ -122,6 +139,10 @@ async def compose_lifecycle(root, prefix):
                 "configuration": normalized, "repeated_up": "same-container",
                 "task_context_digest": context_digest}
     finally:
+        if prior is None:
+            os.environ.pop(MANIFEST_ENV, None)
+        else:
+            os.environ[MANIFEST_ENV] = prior
         # Harbor logs teardown errors; independently enforce observable cleanup.
         for path in (environment._mounts_compose_path, environment._resources_compose_path):
             if path is not None and path not in override_paths:
@@ -151,6 +172,15 @@ async def compose_lifecycle(root, prefix):
 
 
 def validate():
+    from benchmark_smoke import PROVIDER_CREDENTIALS
+
+    gh.reports.require(not any(os.environ.get(name) for name in PROVIDER_CREDENTIALS),
+                       "Native gh regression forbids provider credentials")
+    with release_owner():
+        validate_docker()
+
+
+def validate_docker():
     if run("docker", "compose", "version", "--short").stdout.strip() != gh.reports.POLICY["docker_compose"]:
         raise ValueError("Reviewed Docker Compose runtime required")
     prefix = "gh-eval-validation-" + uuid.uuid4().hex[:12]
@@ -166,13 +196,13 @@ def validate():
             lifecycle_root = root / "compose"
             lifecycle_root.mkdir()
             print(json.dumps(asyncio.run(compose_lifecycle(lifecycle_root, prefix + "-compose"))), flush=True)
-            skill = gh.stage(gh.ROOT, root / "bundle/gh", list(SELECTED))
+            skill = stage_gh(gh.ROOT, root / "bundle/gh", list(SELECTED), fixture=True)
             entries = {e["id"]: e for e in gh.dataset(selected=SELECTED)}
             tested = 0
             for with_skill in (True, False):
                 tasks = stage_native_harbor_tasks(
                     skill, root / str(with_skill), with_skill=with_skill,
-                    grading_mode="default_plus_custom", workspace_mode="group",
+                    grading_mode="custom_only", workspace_mode="group",
                     workspace_skill_paths=[skill.parent / gh.COMPETING],
                 )
                 for task in tasks:
@@ -275,7 +305,7 @@ for p in pathlib.Path('/proc').glob('*/cmdline'):
                     trajectory.write_text(json.dumps({"steps": steps}))
                     run("docker", "exec", "--user", "root", name, "mkdir", "-p", "/logs/agent", "/logs/verifier")
                     run("docker", "cp", str(trajectory), name + ":/logs/agent/trajectory.json")
-                    run("docker", "exec", "--user", "root", name, "python3", "/tests/grader.py")
+                    run("docker", "exec", "--user", "root", name, "python3", "-I", "/tests/grader.py")
                     reward = json.loads(run("docker", "exec", "--user", "root", name,
                         "cat", "/logs/verifier/reward.json").stdout)
                     if reward["custom_metrics"]["gh_gate"] != float(with_skill):
@@ -288,6 +318,7 @@ for p in pathlib.Path('/proc').glob('*/cmdline'):
                             raise ValueError("common task performance failed")
                     tested += 1
             print(json.dumps({"evidence": "credential-free native Docker boundary", "containers_passed": tested,
+                "dataset_profile": GH_DATASET_PROFILE,
                 "model_trials": 0, "network": "none", "task_build": gh.reports.GH_TASK_BUILD}))
     finally:
         for name in reversed(resources):

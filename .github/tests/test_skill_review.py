@@ -820,6 +820,14 @@ class ReviewTests(unittest.TestCase):
             with self.subTest(control=repr(control)), self.assertRaisesRegex(ValueError, "Control"):
                 review.selected_lines("safe" + control + "suffix", 1, 1)
 
+    def test_ai_numeric_gate_exception_does_not_allow_credentials_or_other_locations(self):
+        for value in ('secret', '<redacted>', True, 2):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                review.screen_payload({'records': {'id': {'observations': [
+                    {'deterministic_scores': {'authorization': value}}]}}})
+        with self.assertRaises(ValueError):
+            review.screen_payload({'authorization': 1})
+
     def test_nested_json_sensitive_literals_reject_at_report_boundaries(self):
         context = self.control()
         original = evidence.encoded(context.value)
