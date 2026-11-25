@@ -146,13 +146,26 @@ def gh_finalizer(manifest, emitted):
     require(actual == approved["tasks"], "Released gh task staging differs from the prepared approval")
 
 
-def validate_runtime():
-    """Verify the launcher owner without changing the prior smoke producer."""
-    from evaluator_profiles import RELEASE_BENCHMARK, candidate_versions, validate_install
+def native_profile():
+    from evaluator_profiles import RELEASE_BENCHMARK
 
-    validate_install({**RELEASE_BENCHMARK, "id": NATIVE_PRODUCER, "source_tree_digest": NATIVE_SOURCE_DIGEST})
+    return {**RELEASE_BENCHMARK, "id": NATIVE_PRODUCER, "source_tree_digest": NATIVE_SOURCE_DIGEST,
+            "patch_sha256": NATIVE_PATCH_DIGEST}
+
+
+def native_versions():
+    from evaluator_profiles import RELEASE_BENCHMARK, candidate_versions
+
     return {**candidate_versions(RELEASE_BENCHMARK), "patch_sha256": NATIVE_PATCH_DIGEST,
             "source_tree_digest": NATIVE_SOURCE_DIGEST, "producer_profile": NATIVE_PRODUCER}
+
+
+def validate_runtime():
+    """Verify the launcher owner without changing the prior smoke producer."""
+    from evaluator_profiles import validate_install
+
+    validate_install(native_profile())
+    return native_versions()
 
 
 def dataset_sha256(skill):
@@ -294,6 +307,7 @@ def validate_trial_population(run, agent, name, cases, attempts, agent_selector)
     from skill_evidence import number, read_json, safe_path, token, validate_summary_rollups
 
     seen = set()
+    rewards = {arm: [] for arm in GH_ARMS}
     for arm, present in GH_ARMS.items():
         directory = run / "codex" / arm.replace("_", "-")
         summary = read_json(directory / "summary.json")
@@ -334,7 +348,43 @@ def validate_trial_population(run, agent, name, cases, attempts, agent_selector)
                 number(score)
                 require(score == row["score"] == result["verifier_result"]["rewards"]["overall"],
                         "Released trial score differs from its verifier or rollup")
+                rewards[arm].append(reward)
         require({member.name for member in trials.iterdir()} == expected, "Unexpected released trial member")
+    return rewards
+
+
+def validate_released_aggregates(agent, rewards, cases):
+    """Recompute released aggregates from matched rewards, including explicit N/A metrics."""
+    from skillevaluator.tier3.harbor import metrics
+    from skillevaluator.tier3.harbor.collector import _average_overall, _compute_lift
+
+    not_applicable = {}
+    for arm, population in rewards.items():
+        condition = agent["conditions"][arm]
+        require(len(population) == condition["expected_attempts"] == condition["scored_attempts"],
+                "Incomplete released aggregate population")
+        for reward in population:
+            score = metrics.overall_score(reward)
+            require(reward["score_policy"] == metrics.DEFAULT_SCORE_POLICY and score is not None
+                    and reward["overall"] == round(score, 4), "Released trial metric disagreement")
+        means, metric_set, active = metrics.average_metrics(population)
+        skipped = not_applicable[arm] = metrics.not_applicable_metrics(population, active)
+        require(metric_set == "skill-evaluator-default-v2" and agent[arm] == means
+                and agent["not_applicable_metrics"][arm] == skipped
+                and agent["dimensions_" + arm] == metrics.dimension_scores(means, skipped),
+                "Released arm metric or applicability disagreement")
+
+    with_rewards, without_rewards = (rewards[arm] for arm in GH_ARMS)
+    lift = _compute_lift(agent["with_skill"], agent["without_skill"], with_rewards, without_rewards, cases,
+                         score_policy=metrics.DEFAULT_SCORE_POLICY,
+                         with_not_applicable=not_applicable["with_skill"],
+                         without_not_applicable=not_applicable["without_skill"])
+    if ("judge_mixed_cases" not in lift and not lift["basis"]["excluded_case_entries"]
+            and not lift["basis"]["excluded_metrics"]):
+        with_score, without_score = map(_average_overall, (with_rewards, without_rewards))
+        lift["overall"] = {"with_skill": with_score, "without_skill": without_score,
+                           "delta": round(with_score - without_score, 4)}
+    require(agent["lift"] == lift, "Released lift differs from its paired rewards")
 
 
 def validate_collected_pair(result, run, root, name, mode, revision, cases, *, agent_selector=CODEX_AGENT):
@@ -386,7 +436,8 @@ def validate_collected_pair(result, run, root, name, mode, revision, cases, *, a
         require(arm["execution_status"] == "succeeded" and not arm["execution_errors"]
                 and arm["scored_attempts"] == arm["expected_attempts"] == len(cases) * MODES[mode],
                 "Incomplete released benchmark arm")
-    validate_trial_population(run, agent, name, cases, MODES[mode], agent_selector)
+    rewards = validate_trial_population(run, agent, name, cases, MODES[mode], agent_selector)
+    validate_released_aggregates(agent, rewards, cases)
     if name == "gh":
         gh.deterministic_gate(run, cases, MODES[mode], authorization_metric=GH_ACCESS_METRIC)
     return metric_rows(agent)
@@ -412,7 +463,7 @@ def score_series(name, mode):
     return hashlib.sha256(material).hexdigest()[:16]
 
 
-def score_record(workspace, root, name, mode, revision):
+def score_record(workspace, root, name, mode, revision, *, selected=None):
     """Project complete released scores into their own versioned record."""
     from skillevaluator.tier3.dataset_utils import load_dataset_entries
 
@@ -426,7 +477,7 @@ def score_record(workspace, root, name, mode, revision):
     if name == "gh":
         require(cases == [entry["id"] for entry in gh.dataset(workspace)],
                 "Released score report requires the full authored gh cohort")
-    run = select_run(root, name, selected=None)
+    run = select_run(root, name, selected)
     result = read_json(run / "result.json")
     metrics = validate_collected_pair(result, run, root, name, mode, revision, cases)
     return {"schema_version": 1, "skill": name, "mode": mode, "revision": revision,

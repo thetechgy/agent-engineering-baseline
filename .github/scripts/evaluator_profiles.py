@@ -56,6 +56,16 @@ def by_revision(revision):
 
 
 def runtime(versions, *, owning=False):
+    if versions.get('skillevaluator') == RELEASE_BENCHMARK['version'] and 'producer_profile' in versions:
+        from benchmark_native import NATIVE_PRODUCER, native_profile, native_versions
+
+        if versions['producer_profile'] == NATIVE_PRODUCER:
+            if versions != native_versions():
+                raise ValueError('Contradictory released benchmark runtime provenance')
+            profile = native_profile()
+            if owning:
+                validate_install(profile)
+            return profile
     by_version(versions.get('skillevaluator'))
     revision = versions.get('evaluator_revision')
     if revision is None and versions.get('skillevaluator') in (None, '0.3.0'):

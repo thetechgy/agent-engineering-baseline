@@ -111,7 +111,7 @@ class PodmanStorageContract(unittest.TestCase):
                         fields["grader_digest"] = binding["grader_digest"]
                     self.assertEqual(current, dict(parent, id=profile_id, **fields))
                     if member == evidence.RETIREMENT_SOURCE_SUCCESSORS:
-                        purpose_id = {"pester-effectiveness-v47": "skill_effectiveness",
+                        purpose_id = {"pester-effectiveness-v48": "skill_effectiveness",
                                       "gh-deterministic-gate-v9": "benchmark",
                                       "gh-native-oracle-v5": "oracle_qualification"}.get(profile_id, profile_id)
                         actual = evidence.custom_input_identities(ROOT, current["skill_id"], purpose=purpose_id)

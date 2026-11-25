@@ -285,6 +285,92 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(data[0]["value"], -0.1)
         self.assertRegex(self.output.read_text(), r"^history_dir=benchmarks/podman/[0-9a-f]{16}\n$")
 
+    def test_released_publisher_checks_each_exact_mode_and_series(self):
+        from benchmark_native import NATIVE_PATCH_DIGEST, released_policy, score_series
+
+        directory = self.root / "metrics"
+        legacy = self.metrics()
+        candidate = {**legacy, "policy": released_policy("podman"), "patch_sha256": NATIVE_PATCH_DIGEST,
+                     "series": score_series("podman", "standard")}
+        confirmation = {**candidate, "mode": "confirmation", "series": score_series("podman", "confirmation")}
+        reports.validate_released_metrics(confirmation, self.workspace, "podman", SHA, mode="confirmation")
+        self.assertNotEqual(candidate["series"], confirmation["series"])
+
+        reports.write_json(directory / "metrics.json", legacy)
+        with patch.dict(os.environ, {"GITHUB_EVENT_NAME": "workflow_dispatch", "GITHUB_REF": "refs/heads/main",
+                                    "BENCHMARK_MODE": "standard"}):
+            reports.publish_metrics(self.workspace, directory, "podman")
+            old_series = self.output.read_text().splitlines()[-1]
+            for supplied in (confirmation, {**candidate, "series": "0" * 16},
+                             {**candidate, "policy": legacy["policy"]}, {**candidate, "patch_sha256": "0" * 64},
+                             {**candidate, "revision": "b" * 40}, {**candidate, "dataset_digest": "../invalid"}):
+                with self.subTest(supplied=supplied):
+                    reports.write_json(directory / "released-scores.json", supplied)
+                    with self.assertRaises(ValueError):
+                        reports.publish_metrics(self.workspace, directory, "podman", released=True)
+                    self.assertEqual(self.output.read_text().splitlines()[-1], old_series)
+            reports.write_json(directory / "released-scores.json", candidate)
+            reports.publish_metrics(self.workspace, directory, "podman", released=True)
+        new_series = self.output.read_text().splitlines()[-1]
+        self.assertNotEqual(old_series, new_series)
+        self.assertEqual(new_series, f"history_dir=benchmarks/podman/{candidate['series']}")
+        result = reports.read_json(directory / "benchmark.json")
+        self.assertEqual([row["value"] for row in result], [row["value"] for row in candidate["metrics"]])
+
+    def test_released_runtime_receipt_cannot_alias_the_compatibility_owner(self):
+        import benchmark_native as native
+        import evaluator_profiles as profiles
+
+        candidate = profiles.candidate_versions(profiles.RELEASE_BENCHMARK)
+        receipt = native.native_versions()
+        self.assertEqual(profiles.runtime(receipt), native.native_profile())
+        self.assertIs(profiles.runtime(candidate), profiles.RELEASE_BENCHMARK)
+        for supplied in ({**candidate, "producer_profile": native.NATIVE_PRODUCER},
+                         {**receipt, "patch_sha256": candidate["patch_sha256"]},
+                         {**receipt, "source_tree_digest": "sha256:" + "0" * 64}):
+            with self.assertRaises(ValueError):
+                profiles.runtime(supplied)
+
+    def test_released_policy_uses_its_own_closed_identity(self):
+        import skill_evidence as evidence
+        from benchmark_native import NATIVE_PATCH_DIGEST, released_policy, score_series
+
+        for suite in ("podman", "gh"):
+            policy = released_policy(suite)
+            fields = {key: policy[key] for key in evidence.POLICY_FIELDS if key in policy}
+            judge = {"model": policy["model"], "provider": policy["provider"], "enabled": True}
+            for mode, maximum in reports.MODES.items():
+                attempts = {"mode": mode, "maximum": maximum, "stop_on_pass": False, "pass_threshold": 0.5}
+                published_id = score_series(suite, mode)
+                result = evidence.make_policy(fields, "sha256:" + NATIVE_PATCH_DIGEST, "skill-evaluator-default-v2",
+                                              judge, attempts, "runtime_recorded", published_id)
+                evidence.validate_policy(result)
+                self.assertNotIn("producer_profile", result)
+                for altered in ({**result, "published_id": score_series(suite, "confirmation" if mode == "standard" else "standard")},
+                                {**result, "judge": {**judge, "enabled": False}},
+                                {**result, "attempts": {**attempts, "pass_threshold": 0.7}},
+                                {**result, "patch_digest": "sha256:" + "0" * 64},
+                                {**result, "producer_profile": "skillevaluator-1.0.1-benchmark-candidate-v2"}):
+                    with self.subTest(suite=suite, mode=mode), self.assertRaises(ValueError):
+                        evidence.validate_policy(altered)
+
+    def test_released_gh_access_metric_is_bound_to_its_producer(self):
+        import skill_evidence as evidence
+
+        historical = {"gh_" + field: 1 for field in evidence.GATE_FIELDS}
+        released = {key: value for key, value in historical.items() if key != "gh_authorization"}
+        released["gh_access_policy"] = 1
+        self.assertEqual(evidence.deterministic_observation(historical, "gh"),
+                         evidence.deterministic_observation(released, "gh", released_native=True))
+        denied = {**released, "gh_access_policy": 0, "gh_gate": 0}
+        self.assertEqual(evidence.deterministic_observation(denied, "gh", released_native=True)["authorization"], 0)
+        for metrics, current in ((historical, True), (released, False), ({**released, "gh_authorization": 1}, True),
+                                 ({**released, "gh_access_policy": True}, True), ({**denied, "gh_gate": 1}, True)):
+            with self.subTest(metrics=metrics, released_native=current), self.assertRaises(ValueError):
+                evidence.deterministic_observation(metrics, "gh", released_native=current)
+        with self.assertRaises(ValueError):
+            evidence.deterministic_observation(released, "podman", released_native=True)
+
     def test_confirmation_artifact_cannot_masquerade_as_standard(self):
         data = self.metrics()
         data["mode"] = "confirmation"
@@ -1076,7 +1162,7 @@ class WorkflowTests(unittest.TestCase):
                         env = {'PATH': str(tools) + os.pathsep + os.defpath,
                                'RUNNER_TEMP': str(temporary), 'GITHUB_WORKSPACE': str(workspace),
                                'GITHUB_ENV': str(root / 'environment'), 'GITHUB_PATH': str(root / 'path')}
-                        result = subprocess.run(['bash', str(script), 'reporting'], cwd=root, env=env,
+                        result = subprocess.run(['bash', str(script), 'benchmark'], cwd=root, env=env,
                                                 text=True, capture_output=True, timeout=10)
                         if inside:
                             self.assertNotEqual(result.returncode, 0)
@@ -1085,6 +1171,17 @@ class WorkflowTests(unittest.TestCase):
                         else:
                             self.assertEqual(result.returncode, 0, result.stderr)
                             self.assertEqual(result.stdout.strip(), str(checkout.resolve()))
+
+    def test_retired_reporting_selector_exits_before_install(self):
+        setup = REPO / '.github/scripts/setup-skillevaluator.sh'
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            env = {'PATH': os.defpath, 'RUNNER_TEMP': str(root / 'tools'), 'GITHUB_WORKSPACE': str(REPO),
+                   'GITHUB_ENV': str(root / 'environment'), 'GITHUB_PATH': str(root / 'path')}
+            result = subprocess.run(['bash', str(setup), 'reporting'], cwd=root, env=env,
+                                    text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+            self.assertEqual(list(root.iterdir()), [])
 
     def test_setup_private_tool_root_for_provenance_key(self):
         setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()

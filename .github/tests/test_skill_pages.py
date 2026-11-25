@@ -198,6 +198,48 @@ class PagesTests(unittest.TestCase):
         self.assertEqual([r['detail'] for r in pages.build(self.site)], ['public_detail_available', 'ledger_only'])
         self.assertIn('standard--podman', pages.load_state(self.site)['slots'])
 
+    def test_released_standard_series_retains_legacy_and_confirmation_is_diagnostic(self):
+        from benchmark_native import NATIVE_PATCH_DIGEST, released_policy, score_series
+        import skill_history as history
+
+        def fixture(mode):
+            settings = released_policy('podman')
+            maximum = evidence.reports.MODES[mode]
+            record = fixtures.synthetic(name='podman', run='fixture-' + mode, maximum=maximum)
+            record['source'].update(repository=pages.REPOSITORY, revision=self.revision)
+            fields = {key: settings[key] for key in evidence.POLICY_FIELDS if key in settings}
+            judge = {'model': settings['model'], 'provider': settings['provider'], 'enabled': True}
+            record['policy'] = evidence.make_policy(fields, 'sha256:' + NATIVE_PATCH_DIGEST,
+                'skill-evaluator-default-v2', judge,
+                {'mode': mode, 'maximum': maximum, 'stop_on_pass': False, 'pass_threshold': 0.5},
+                'runtime_recorded', score_series('podman', mode))
+            for arm in record['arms']:
+                condition = arm['condition']
+                condition['execution']['environment'] = settings['environment']
+                condition['id'] = evidence.identity({key: value for key, value in condition.items() if key != 'id'})
+            return record
+
+        standard, confirmation = (fixture(mode) for mode in ('standard', 'confirmation'))
+        latest = prov(self.revision, 21, kind='benchmark')
+        limited = copy.deepcopy(standard)
+        limited['availability'].update(status='incomplete', reasons=['coverage_missing'])
+        with self.assertRaisesRegex(ValueError, 'authenticated complete cohort'):
+            self.admit('standard--podman', [limited], latest, suffix='limited')
+        with self.assertRaisesRegex(ValueError, 'Behavioral purpose mismatch'):
+            self.admit('standard--podman', [confirmation], latest, suffix='confirmation')
+        self.assertTrue(self.admit('standard--podman', [standard], latest))
+        self.assertTrue(self.admit('confirmation--podman', [confirmation], latest))
+        member, raw = ledger_data(standard)
+        self.assertNotEqual(member, self.member)
+        pages.write(self.site, member, raw)
+        rows = {row['policy']: row for row in pages.build(self.site)}
+        self.assertEqual(rows[score_series('podman', 'standard')]['detail'], 'public_detail_available')
+        self.assertFalse(rows[pages.published_policy(self.historical)]['record_id'])
+        self.assertNotIn(score_series('podman', 'confirmation'), rows)
+        item = history.observation(confirmation, 'confirmation--podman', latest, '2026-11-25T15:00:00Z')
+        self.assertEqual(item['class'], 'diagnostic')
+        self.assertEqual((self.site / self.member).read_bytes(), self.raw_ledger)
+
     def test_conflicting_standard_values_block_and_preserve_generated_index(self):
         self.admit('standard--podman', [self.historical], prov(self.historical['source']['revision'], kind='benchmark'))
         pages.build(self.site)

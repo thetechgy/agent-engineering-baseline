@@ -21,7 +21,7 @@ from benchmark_smoke import PROVIDER_CREDENTIALS
 import gh_evaluations as gh
 from qualify_benchmark_101 import restrict_network
 from qualify_benchmark_codex import OfflineCodex, OfflinePodmanCodex
-from skill_reports import POLICY, read_json, require, write_json
+from skill_reports import POLICY, benchmark_artifacts, read_json, require, write_json
 
 
 CASES = {"podman": "1", "gh": "gh-001"}
@@ -155,6 +155,29 @@ def inspect_trial(job, *, preflight, suite):
             "custom": custom, "teardown_complete": teardown}
 
 
+def qualify_publication(root, destination, name):
+    """Check the artifact boundary without creating a candidate history record."""
+    import skill_evidence as evidence
+
+    benchmark_artifacts(native.ROOT, root, name, destination)
+    original = evidence.project(evidence.normalize_behavioral(root, name, native_layout=True))
+    retained = evidence.project(evidence.normalize_behavioral(destination, name))
+    for key in ("dataset", "policy", "metrics", "availability"):
+        require(retained[key] == original[key], "Redacted released report changed its measured claims")
+    for observed, published in zip(original["observations"], retained["observations"], strict=True):
+        keys = ("id", "score", "scores", "deterministic_gate", "deterministic_scores")
+        require(all(observed[key] == published[key] for key in keys),
+                "Redaction changed a released trial's measurements")
+    require(retained["dataset"]["case_ids"] == [CASES[name]], "Unexpected released publication fixture scope")
+    try:
+        evidence.require_released_report_population(retained)
+    except ValueError as error:
+        require(str(error) == "Released benchmark requires an authenticated complete cohort",
+                "Released fixture was rejected at the wrong publication boundary")
+    else:
+        raise ValueError("Scoped released fixture entered public history")
+
+
 def qualify(output, name, revision):
     require(not any(os.getenv(key) for key in PROVIDER_CREDENTIALS), "Docker fixture requires absent provider credentials")
     native.require_revision(native.ROOT, revision)
@@ -264,6 +287,7 @@ def qualify(output, name, revision):
         require(str(error) == rejection, "Native fixture was rejected at the wrong report boundary")
     else:
         raise ValueError("Partial native fixture entered the full-cohort score report")
+    qualify_publication(root, output / "retained", name)
     if name == "gh":
         require(observed["gh-codex-with"]["custom"] == {"gh_evidence": 1, "gh_activation": 1, native.GH_ACCESS_METRIC: 1, "gh_gate": 1}
                 and observed["gh-codex-without"]["custom"] == {
@@ -272,7 +296,8 @@ def qualify(output, name, revision):
     receipt = {"schema_version": 1, "revision": revision, "producer": native.NATIVE_PRODUCER,
                "patch_sha256": native.NATIVE_PATCH_DIGEST, "suite": name, "case": CASES[name], "observed": observed,
                "scored_attempts": 2, "provider_requests": 0, "history_eligible": False,
-               "full_cohort_report_rejected": True, "origin": "non_forwarding_fixture"}
+               "full_cohort_report_rejected": True, "redacted_replay_verified": True,
+               "origin": "non_forwarding_fixture"}
     if not all(trial["teardown_complete"] for trial in observed.values()):
         write_json(output / "failure.json", {**receipt, "status": "teardown_incomplete"})
         raise ValueError("Fixture left Compose resources")

@@ -134,7 +134,7 @@ def synthetic_native(root, *, complete=False, candidate=False):
 HISTORICAL_GH_CONTROLS = 'sha256:71eaf1f5ce018bb2bc90151baa04e66066343f4519d8c5ce6fe5ef4864f8169e'
 
 
-def historical_gh_native(root, add_cleanup, *, unscoreable=False):
+def historical_gh_native(root, *, unscoreable=False):
     import gh_evaluations as gh
 
     path = Path(__file__).parent / 'fixtures/skill_evidence/gh-custom-controls-030.zip'
@@ -158,9 +158,7 @@ def historical_gh_native(root, add_cleanup, *, unscoreable=False):
                 file.write(archive.read(member))
         expected = archive.read(prefix + 'public-report.json')
     run = native / 'results/gh/synthetic-gh'
-    # The original prepared digest includes the directory-entry ordering used
-    # to append the competitor's files. Match that order for this frozen
-    # control only and still require identical file membership.
+    # Reproduce a filesystem traversal that differs from the frozen capture.
     competition = ROOT / '.agents/skills' / gh.COMPETING
     staged = evidence.read_json(run / 'dataset_snapshot.json')['dataset']
     skill_prefix = f'skills/{gh.COMPETING}/'
@@ -168,19 +166,17 @@ def historical_gh_native(root, add_cleanup, *, unscoreable=False):
              if item.startswith(skill_prefix)]
     walk = gh.reports.regular_tree
 
-    def captured_walk(directory, **options):
+    def reverse_walk(directory, **options):
         members = walk(directory, **options)
         if directory == competition:
             by_name = {member.relative_to(directory).as_posix(): member for member in members}
             evidence.require(len(order) == len(members) and set(order) == set(by_name),
                              'Historical gh competitor membership differs')
-            return [by_name[item] for item in order]
+            return [by_name[item] for item in reversed(order)]
         return members
 
-    restore_walk = patch.object(gh.reports, 'regular_tree', captured_walk)
-    restore_walk.start()
-    add_cleanup(restore_walk.stop)
-    actual = evidence.encoded(evidence.project(evidence.normalize_behavioral(native, 'gh')))
+    with patch.object(gh.reports, 'regular_tree', reverse_walk):
+        actual = evidence.encoded(evidence.project(evidence.normalize_behavioral(native, 'gh')))
     evidence.require(actual == expected, 'Historical gh projection differs from the original')
     return native, run
 
@@ -459,7 +455,7 @@ class CustomMetricTests(unittest.TestCase):
                 with self.assertRaises(ValueError): evidence.validate_public(data)
 
     def test_gh_default_plus_custom_native_admission_preserves_routing_and_gate_semantics(self):
-        native, run = historical_gh_native(self.root, self.addCleanup)
+        native, run = historical_gh_native(self.root)
         data = evidence.normalize_behavioral(native, 'gh')
         public = evidence.project(data)
         evidence.validate_public(public)
@@ -490,7 +486,7 @@ class CustomMetricTests(unittest.TestCase):
 
     def test_incomplete_gh_native_admission_preserves_unavailable_gates_and_exact_error_ledgers(self):
         from skillevaluator.tier3.harbor import report_data as native_reports
-        native, run = historical_gh_native(self.root, self.addCleanup, unscoreable=True)
+        native, run = historical_gh_native(self.root, unscoreable=True)
         data = evidence.normalize_behavioral(native, 'gh')
         self.assertEqual(len(data['observations']), 48)
         self.assertFalse(data['metrics'])
@@ -525,7 +521,7 @@ class CustomMetricTests(unittest.TestCase):
             evidence.normalize_behavioral(native, 'gh')
 
     def test_unavailable_gh_gates_count_only_enforced_with_skill_observations(self):
-        native, _ = historical_gh_native(self.root, self.addCleanup)
+        native, _ = historical_gh_native(self.root)
         # A controlled public-only record exercises the consumer contract. It
         # makes no claim that the edited outcomes passed native admission.
         public = json.loads(evidence.encoded(evidence.project(evidence.normalize_behavioral(native, 'gh'))))

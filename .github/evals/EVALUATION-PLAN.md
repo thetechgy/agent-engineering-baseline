@@ -315,8 +315,20 @@ and a safety improvement attributed against unknown baseline evidence.
 The new release-specific patch restores those fail-closed conditions,
 recognizes explicit Podman socket access and preserves inert text. The
 released native v2 producer binds the new patched tree and score series.
-All 13 credential-free verifier controls passed locally. Run both hosted
-launcher jobs again on the new producer before accepting released scores.
+All 13 credential-free verifier controls passed locally. The hosted launcher
+completed pinned Codex preflight, both arms, collection and teardown for gh
+and Podman on `908502a`. [Hosted receipts](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45655584119)
+
+The native 1.0.1 score reader now validates the released dimension means,
+explicit baseline applicability and paired lift against the trial rewards.
+Retained gh and Podman controls replay after redaction with their original
+scores and deterministic measurements. Both scoped runs fail the full-cohort
+publication gate. Disposable Pages controls admit the new standard series
+beside immutable historical scores and retain confirmation as diagnostic
+detail. This change adds 89 source-only records across 361 lines in
+`source-v45.json` with the same grader, fixture and replay identities as
+their parents. Confirm this publication path on the hosted revision before
+selecting the 1.0.1 production runtime.
 
 The presentation and analysis tests read their original public Podman and
 synthetic static projections from a digest-checked fixture. The existing

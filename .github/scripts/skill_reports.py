@@ -629,7 +629,10 @@ def validate_metrics(data, workspace, name, revision, *, mode="standard"):
     require(data["policy"] == benchmark_policy(name), "Benchmark policy mismatch")
     require(data["patch_sha256"] == hashlib.sha256((workspace / PATCH).read_bytes()).hexdigest(), "Patch mismatch")
     require(bool(re.fullmatch(r"sha256:[0-9a-f]{64}", data["dataset_digest"])), "Invalid dataset digest")
-    rows = data["metrics"]
+    validate_history_metric_rows(data["metrics"])
+
+
+def validate_history_metric_rows(rows):
     require(isinstance(rows, list) and len(rows) == len(METRICS), "Wrong metric count")
     for row, name in zip(rows, METRICS):
         require(set(row) == {"name", "unit", "value"} and row["name"] == name and row["unit"] == "score",
@@ -639,14 +642,40 @@ def validate_metrics(data, workspace, name, revision, *, mode="standard"):
                 and (-1 if name == "Skill Lift" else 0) <= value <= 1, "Invalid numeric metric")
 
 
-def publish_metrics(workspace, root, name):
+def validate_released_metrics(data, workspace, name, revision, *, mode):
+    """Validate the released score projection on the lean publication host."""
+    from benchmark_native import NATIVE_PATCH_DIGEST, released_policy, score_series
+
+    required = {"schema_version", "skill", "mode", "revision", "series", "policy", "patch_sha256",
+                "dataset_digest", "metrics"}
+    require(type(data) is dict and set(data) == required, "Unexpected released history artifact fields")
+    require(type(data["schema_version"]) is int and data["schema_version"] == 1
+            and data["skill"] == name and data["mode"] == mode and mode in MODES,
+            "Released history identity or mode differs")
+    benchmark_skill(workspace, name)
+    require(bool(re.fullmatch(r"[0-9a-f]{40}", revision)) and data["revision"] == revision,
+            "Released history revision differs")
+    require(data["policy"] == released_policy(name) and data["patch_sha256"] == NATIVE_PATCH_DIGEST,
+            "Released history producer or policy differs")
+    require(data["series"] == score_series(name, mode), "Released history series differs")
+    require(isinstance(data["dataset_digest"], str) and re.fullmatch(r"sha256:[0-9a-f]{64}", data["dataset_digest"]),
+            "Invalid released history dataset digest")
+    validate_history_metric_rows(data["metrics"])
+
+
+def publish_metrics(workspace, root, name, *, released=False):
     require(not benchmark_options(name)['diagnostic_only'], 'Diagnostic-only suite cannot publish history')
     require(os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch"
             and os.environ.get("GITHUB_REF") == "refs/heads/main"
             and os.environ.get("BENCHMARK_MODE") == "standard", "History requires a main standard dispatch")
-    data = read_json(root / "metrics.json", limit=16384)
-    validate_metrics(data, workspace, name, os.environ["GITHUB_SHA"])
-    policy_id = hashlib.sha256(json.dumps([benchmark_policy(name), data["patch_sha256"]], sort_keys=True).encode()).hexdigest()[:16]
+    if released:
+        data = read_json(root / "released-scores.json", limit=16384)
+        validate_released_metrics(data, workspace, name, os.environ["GITHUB_SHA"], mode="standard")
+        policy_id = data["series"]
+    else:
+        data = read_json(root / "metrics.json", limit=16384)
+        validate_metrics(data, workspace, name, os.environ["GITHUB_SHA"])
+        policy_id = hashlib.sha256(json.dumps([benchmark_policy(name), data["patch_sha256"]], sort_keys=True).encode()).hexdigest()[:16]
     rows = [{**row, "extra": f"Dataset {data['dataset_digest']}; policy {policy_id}"} for row in data["metrics"]]
     write_json(root / "benchmark.json", rows)
     outputs(history_dir=f"benchmarks/{name}/{policy_id}")
@@ -720,7 +749,6 @@ def benchmark_artifacts(workspace, root, name, destination):
     from skillevaluator.utils.redaction import redact_sensitive_data, redact_sensitive_text
 
     benchmark_skill(workspace, name)
-    capture_benchmark_custom(workspace, root, name)
     root = root.absolute()
     destination = destination.absolute()
     for path in (root, destination):
@@ -728,6 +756,16 @@ def benchmark_artifacts(workspace, root, name, destination):
                 "Benchmark artifacts must use real paths outside the checkout")
     require(not destination.is_relative_to(root) and not root.is_relative_to(destination),
             "Artifact staging must be separate from raw results")
+    preparation = root / "native-preparation.json"
+    released = preparation.exists()
+    if released:
+        from benchmark_native import native_versions
+
+        require(read_json(root / "versions.json") == native_versions()
+                and read_json(preparation)["skill"] == name and not (root / "custom-metric-capture.json").exists(),
+                "Released benchmark artifact producer differs")
+    else:
+        capture_benchmark_custom(workspace, root, name)
     files = regular_tree(
         root,
         excluded_dirs={"_harbor-jobs", "_harbor-tasks"},
@@ -742,7 +780,11 @@ def benchmark_artifacts(workspace, root, name, destination):
             carrier = evidence.custom_carrier(campaign_profile)
             evidence.token(carrier)
     registered_cases = set()
-    if name == 'gh' and (root / 'custom-metric-capture.json').exists():
+    if released and name == "gh":
+        from gh_evaluations import dataset
+
+        registered_cases = {row["id"] for row in dataset(workspace)}
+    elif name == 'gh' and (root / 'custom-metric-capture.json').exists():
         capture = read_json(root / 'custom-metric-capture.json')
         if (capture.get('purpose') == 'oracle_qualification' or str(capture.get('purpose','')).startswith('campaign-')) and capture.get('producer', {}).get('skillevaluator') in ('0.8.0', '0.9.0'):
             import skill_evidence as evidence
@@ -750,6 +792,8 @@ def benchmark_artifacts(workspace, root, name, destination):
             registered_cases = set(capture['case_ids'])
     metadata = {"versions.json", "dataset-validation.json", "provenance.json",
                 "docker-version.json", "docker-images.jsonl", "custom-metric-capture.json", "campaign-scheduler.json"}
+    if released:
+        metadata.add(preparation.name)
     if name == "gh":
         metadata.update({"deterministic.json", "selection.json"})
     # Preserve the historical layout; registered campaigns declare their carrier.
@@ -976,6 +1020,14 @@ def public_benchmark(workspace, root, name, mode, destination, selected=None):
     qualification = evidence.campaign_purpose(data.get('custom', {}).get('purpose')) or data.get('custom', {}).get('purpose') in ('oracle_qualification', 'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control')
     require(qualification or attempts["mode"] in (mode, "unknown") and attempts["maximum"] in (None, MODES[mode]),
             "Public benchmark mode mismatch")
+    if evidence.released_policy_identity(data['policy'], custom_only=False, static=False):
+        from benchmark_native import score_record
+
+        scores = score_record(workspace, Path(root), name, mode, os.environ["GITHUB_SHA"], selected=data["run_id"])
+        require(scores["series"] == data["policy"]["published_id"] and scores["metrics"] == data["metrics"]
+                and scores["dataset_digest"] == data["dataset"]["staged_digest"],
+                "Released public report differs from its validated scores")
+        evidence.require_released_report_population(data)
     public = evidence.project(data)
     count = stage_public(workspace, root, destination, [
         ("inventory/inventory.json", inv),
@@ -1015,6 +1067,7 @@ def main():
     publish = commands.add_parser("publish")
     publish.add_argument("root", type=Path)
     publish.add_argument("skill")
+    publish.add_argument("--released", action="store_true")
     artifacts = commands.add_parser("artifacts")
     artifacts.add_argument("root", type=Path)
     artifacts.add_argument("skill")
@@ -1081,7 +1134,7 @@ def main():
     elif args.command == "artifacts":
         benchmark_artifacts(workspace, args.root, args.skill, args.destination)
     else:
-        publish_metrics(workspace, args.root, args.skill)
+        publish_metrics(workspace, args.root, args.skill, released=args.released)
     return 0
 
 
