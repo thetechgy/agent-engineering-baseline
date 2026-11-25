@@ -107,12 +107,12 @@ def compose_teardown_complete(project: str) -> bool:
 
 
 
-def scope(workspace: Path, revision: str):
+def scope(workspace: Path, revision: str, *, released=False):
     from skill_orchestration import candidate_podman_fingerprint
 
     return {
         "revision": revision,
-        "fingerprint": candidate_podman_fingerprint(workspace, revision),
+        "fingerprint": candidate_podman_fingerprint(workspace, revision, released=released),
         "skill": "podman",
         "case": SMOKE_CASE,
         "arms": ["with_skill", "without_skill"],

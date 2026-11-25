@@ -8,6 +8,7 @@ from pathlib import Path
 import signal
 import time
 
+from benchmark_native import native_versions, validate_runtime
 from benchmark_podman import CODEX_PROFILE, SMOKE_CASE, compose_teardown_complete, configure_openai_task, scope, stage_task
 from skill_orchestration import BENCHMARK, REPOSITORY, git, read_artifact
 import skill_pages as pages
@@ -59,12 +60,12 @@ def reviewed_scope(workspace, env, inputs):
             'Candidate checkout differs from the dispatched revision')
     arms = inputs.get('candidate_smoke_arms') or 'paired'
     require(arms in ('paired', 'without-skill'), 'Unknown candidate arm selection')
-    selected = scope(workspace, revision)
+    selected = scope(workspace, revision, released=True)
     baseline_only = arms == 'without-skill'
     if baseline_only:
         selected.update(arms=['without_skill'], planned_trials=1)
-    return {'schema_version': 1, 'kind': 'podman_101_compatibility', 'run_id': pages.number(int(env['GITHUB_RUN_ID'])),
-            'attempt': 1, 'scope': selected, 'provider_policy': PROVIDER_POLICY,
+    return {'schema_version': 2, 'kind': 'podman_101_compatibility', 'run_id': pages.number(int(env['GITHUB_RUN_ID'])),
+            'attempt': 1, 'scope': selected, 'provider_policy': PROVIDER_POLICY, 'runtime': native_versions(),
             'cost_estimate': estimate_cost(baseline_only=baseline_only)}
 
 
@@ -90,26 +91,26 @@ def guard(api, expected):
 
 
 def prepare(workspace, stage, expected):
-    from qualify_benchmark_101 import release_owner
     from qualify_codex_1691 import acquire
 
+    owner = validate_runtime()
+    require(owner == expected['runtime'], 'Candidate preparation runtime differs from the reviewed scope')
     selected = expected['scope']
     stage.mkdir(mode=0o700, parents=True, exist_ok=False)
     assets = stage / 'archive'
     assets.mkdir()
-    with release_owner() as owner:
-        profile = read_json(CODEX_PROFILE)
-        acquire(profile, assets)
-        task_checksums = {}
-        for arm in selected['arms']:
-            task = stage_task(workspace / '.apm/skills/podman', stage / arm, case=SMOKE_CASE,
-                              with_skill=arm == 'with_skill')
-            native = configure_openai_task(task, assets, profile)
-            task_checksums[arm] = native.checksum
-            require(native.config.agent.timeout_sec == PROVIDER_POLICY['agent_seconds_per_arm'],
-                    'Candidate agent execution timeout changed')
-        return {'scope': expected, 'runtime': owner, 'codex': read_json(assets / 'integrity.json'),
-                'tasks': task_checksums}
+    profile = read_json(CODEX_PROFILE)
+    acquire(profile, assets)
+    task_checksums = {}
+    for arm in selected['arms']:
+        task = stage_task(workspace / '.apm/skills/podman', stage / arm, case=SMOKE_CASE,
+                          with_skill=arm == 'with_skill')
+        native = configure_openai_task(task, assets, profile)
+        task_checksums[arm] = native.checksum
+        require(native.config.agent.timeout_sec == PROVIDER_POLICY['agent_seconds_per_arm'],
+                'Candidate agent execution timeout changed')
+    return {'scope': expected, 'runtime': owner, 'codex': read_json(assets / 'integrity.json'),
+            'tasks': task_checksums}
 
 
 def trial_receipt(job, *, arm, selected, receipt):
@@ -169,10 +170,10 @@ def execute(stage, expected, output, key):
         _HarborRunCancellation, _run_bounded_harbor_process, build_harbor_run_command,
     )
 
-    from qualify_benchmark_101 import release_owner
-
     # Only the selected provider key enters the Harbor process. All checked-in
     # and retained records refer to the key by placeholder.
+    owner = validate_runtime()
+    require(owner == expected['runtime'], 'Protected candidate runtime differs from the reviewed scope')
     env = {name: os.environ[name] for name in ('PATH', 'TMPDIR', 'DOCKER_CONFIG', 'COMPOSE_PLUGIN_ROOT')
            if name in os.environ}
     home = stage / 'operator-home'
@@ -191,40 +192,38 @@ def execute(stage, expected, output, key):
     cancellation = _HarborRunCancellation()
     old = {kind: signal.signal(kind, lambda *_: cancellation.requested.set()) for kind in (signal.SIGTERM, signal.SIGINT)}
     deadline = time.monotonic() + PROVIDER_POLICY['inference_seconds']
-    evidence = {'context': expected, 'history_eligible': False, 'status': 'incomplete', 'arms': {}}
+    evidence = {'context': expected, 'runtime': owner, 'history_eligible': False, 'status': 'incomplete', 'arms': {}}
     jobs = stage / 'jobs'
     try:
-        with release_owner() as owner:
-            evidence['runtime'] = owner
-            for arm in selected['arms']:
-                receipt = {'state': 'started', 'agent_usage': None}
-                evidence['arms'][arm] = receipt
-                write_json(output, evidence)
-                task = stage / arm / 'tasks'
-                job_name = JOB_NAMES[arm]
-                command = build_harbor_run_command(dataset_path=task, job_name=job_name, jobs_dir=jobs, agent='codex',
-                    env_mode='aeb-benchmark-docker', n_attempts=1, n_concurrent=1,
-                    model=selected['agent']['model'], verifier_env=judge)
-                remaining = deadline - time.monotonic() - 30
-                require(remaining > 0, 'Candidate deadline exhausted')
-                process = _run_bounded_harbor_process(command, env=env, cwd=stage, stdin_text=None,
-                    timeout_seconds=remaining, max_output_bytes=8 * 1024 * 1024, diagnostic_tail_chars=1024,
-                    secret_values={key}, cancellation=cancellation)
-                require(process.returncode == 0 and not process.output_exceeded, 'Native launcher failed')
-                job = jobs / job_name
-                trial_receipt(job, arm=arm, selected=selected, receipt=receipt)
-                trial, = job.glob('*/result.json')
-                project = trial.parent.name.lower() + '__env'
-                receipt['teardown_complete'] = compose_teardown_complete(project)
-                require(receipt['teardown_complete'], 'Native trial left Compose resources')
-                if arm == 'with_skill':
-                    used = receipt['agent_usage']
-                    if (used['n_input_tokens'] + used['n_output_tokens']
-                            > PROVIDER_POLICY['max_observed_agent_tokens_before_next_arm']):
-                        evidence['stop_reason'] = 'second_arm_token_threshold'
-                        raise ValueError('First-arm agent tokens exceeded the second-arm threshold')
-            collect_candidate(stage, jobs, selected)
-            evidence['status'] = 'complete'
+        for arm in selected['arms']:
+            receipt = {'state': 'started', 'agent_usage': None}
+            evidence['arms'][arm] = receipt
+            write_json(output, evidence)
+            task = stage / arm / 'tasks'
+            job_name = JOB_NAMES[arm]
+            command = build_harbor_run_command(dataset_path=task, job_name=job_name, jobs_dir=jobs, agent='codex',
+                env_mode='aeb-benchmark-docker', n_attempts=1, n_concurrent=1,
+                model=selected['agent']['model'], verifier_env=judge)
+            remaining = deadline - time.monotonic() - 30
+            require(remaining > 0, 'Candidate deadline exhausted')
+            process = _run_bounded_harbor_process(command, env=env, cwd=stage, stdin_text=None,
+                timeout_seconds=remaining, max_output_bytes=8 * 1024 * 1024, diagnostic_tail_chars=1024,
+                secret_values={key}, cancellation=cancellation)
+            require(process.returncode == 0 and not process.output_exceeded, 'Native launcher failed')
+            job = jobs / job_name
+            trial_receipt(job, arm=arm, selected=selected, receipt=receipt)
+            trial, = job.glob('*/result.json')
+            project = trial.parent.name.lower() + '__env'
+            receipt['teardown_complete'] = compose_teardown_complete(project)
+            require(receipt['teardown_complete'], 'Native trial left Compose resources')
+            if arm == 'with_skill':
+                used = receipt['agent_usage']
+                if (used['n_input_tokens'] + used['n_output_tokens']
+                        > PROVIDER_POLICY['max_observed_agent_tokens_before_next_arm']):
+                    evidence['stop_reason'] = 'second_arm_token_threshold'
+                    raise ValueError('First-arm agent tokens exceeded the second-arm threshold')
+        collect_candidate(stage, jobs, selected)
+        evidence['status'] = 'complete'
     except Exception as error:
         category = type(error).__name__
         evidence['failure'] = category if category in (
@@ -302,6 +301,7 @@ def main():
         arms = ', '.join(selected['arms'])
         summary(['## Candidate compatibility smoke', '',
                  f'Revision {selected["revision"]}. Podman case {selected["case"]}. One trial in each selected arm ({arms}).',
+                 f'Runtime {value["runtime"]["producer_profile"]}. Patch SHA-256 {value["runtime"]["patch_sha256"]}.',
                  'Codex 0.171.0 uses gpt-6.2-sol at High. The default verifier uses gpt-6.2-sol with reasoning omitted.',
                  'The protected evaluation has a 15-minute deadline. Judge transport retries are disabled.',
                  *(['The second arm requires recorded first-arm usage within the declared threshold.']
@@ -324,7 +324,8 @@ def main():
         from harbor.models.task.task import Task
 
         preparation = read_json(args.preparation)
-        require(preparation['scope'] == value, 'Prepared scope changed')
+        require(preparation['scope'] == value and preparation['runtime'] == value['runtime'] == validate_runtime(),
+                'Prepared scope or runtime changed')
         for arm in value['scope']['arms']:
             staged, = (args.stage / arm / 'tasks').iterdir()
             require(not staged.is_symlink() and Task(staged).checksum == preparation['tasks'][arm],

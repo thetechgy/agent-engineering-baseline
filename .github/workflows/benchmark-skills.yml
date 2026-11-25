@@ -468,11 +468,11 @@ jobs:
         timeout-minutes: 15
         run: |
           bash .github/scripts/setup-compose.sh
-          bash .github/scripts/setup-static-evaluator.sh native-benchmark-candidate
+          bash .github/scripts/setup-static-evaluator.sh native-benchmark-101
       - name: Prepare the two candidate trials without inference
         timeout-minutes: 7
         run: |
-          "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/benchmark_smoke.py prepare \
+          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_smoke.py prepare \
             --stage "$RUNNER_TEMP/podman-101-stage" --output "$RUNNER_TEMP/podman-101/prepared.json"
       - name: Verify the approved compatibility scope
         id: scope
@@ -480,7 +480,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/benchmark_smoke.py guard \
+          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_smoke.py guard \
             --stage "$RUNNER_TEMP/podman-101-stage" --preparation "$RUNNER_TEMP/podman-101/prepared.json" \
             --output "$RUNNER_TEMP/podman-101/authorization.json"
       - name: Run the bounded compatibility smoke
@@ -490,14 +490,14 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/benchmark_smoke.py run \
+          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_smoke.py run \
             --stage "$RUNNER_TEMP/podman-101-stage" --preparation "$RUNNER_TEMP/podman-101/prepared.json" \
             --authorization "$RUNNER_TEMP/podman-101/authorization.json" --output "$RUNNER_TEMP/podman-101/diagnostic.json"
       - name: Verify candidate teardown and recover task-owned resources
         if: always() && steps.compatibility.outcome != 'skipped'
         timeout-minutes: 3
         run: |
-          "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/benchmark_smoke.py cleanup \
+          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_smoke.py cleanup \
             --stage "$RUNNER_TEMP/podman-101-stage" --output "$RUNNER_TEMP/podman-101/diagnostic.json"
       - name: Retain only the bounded compatibility receipt
         if: always() && steps.compatibility.outcome != 'skipped'

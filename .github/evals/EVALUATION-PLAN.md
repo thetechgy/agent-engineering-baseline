@@ -330,6 +330,14 @@ detail. This change adds 89 source-only records across 361 lines in
 their parents. Confirm this publication path on the hosted revision before
 selecting the 1.0.1 production runtime.
 
+Registry validation checks the recorded lineage of v44 and recomputes the
+active v45 source identities. The unchanged gh profiles still check their
+current inputs. The released launcher now runs the declared mode through
+collection and redacted replay. A local gh confirmation recorded three
+attempts per arm with zero provider requests. Its scoped report stayed
+outside canonical history. Rootless teardown required manual cleanup of
+the seven task-owned Compose projects.
+
 The presentation and analysis tests read their original public Podman and
 synthetic static projections from a digest-checked fixture. The existing
 retained Podman projection also supplies the refreshed expiry control.
@@ -342,6 +350,8 @@ collection and private review retain dedicated runtime checks.
 The documented private review CLI uses the fixed 1.0.1 producer snapshot.
 Attachment admission replays the original profiles in the pinned 1.0.1
 review environment and preserves their producer and validator provenance.
+The v3 snapshot accepts the released benchmark projection and binds 12
+members from `cbfec6e`. V1 and v2 retain their original snapshots.
 All 165 review and replay tests passed without legacy interpreter aliases.
 Native fixture controls that import review preparation remain part of the
 separate native migration.

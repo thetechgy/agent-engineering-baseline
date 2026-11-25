@@ -301,7 +301,7 @@ def assessment(spec, parent, capture, report, review):
 
 
 def run_validator(request, modules, capture, roots, registry, profile, assets=None):
-    release_snapshot = profile in (snapshot.PROFILE, snapshot.ACTIVE_PROFILE)
+    release_snapshot = profile in snapshot.RELEASE_PROFILES
     original = '' if release_snapshot else evidence.encoded(
         {**historical_pins(profile), 'python': private_review_runtime.PYTHON}).decode()
     guards = (capture.guard(),)
@@ -355,7 +355,7 @@ def load(paths, captured):
                               'review_digest', 'markdown_digest', 'inputs', 'analysis', 'source', 'support',
                               'selection', 'assessments'))
         require(type(spec['schema_version']) is int and spec['schema_version'] == 1, 'Attachment schema mismatch')
-        release_snapshot = spec['profile'] in (snapshot.PROFILE, snapshot.ACTIVE_PROFILE)
+        release_snapshot = spec['profile'] in snapshot.RELEASE_PROFILES
         require(type(spec['profile']) is str and (release_snapshot or spec['profile'] in PROFILES), 'Unsupported validator profile')
         evidence.skill_id(spec['skill']); evidence.sha(spec['record_id'])
         rid = spec['record_id']

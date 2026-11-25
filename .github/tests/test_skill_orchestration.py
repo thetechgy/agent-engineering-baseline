@@ -283,11 +283,14 @@ class OrchestrationTests(unittest.TestCase):
         files.pop(orchestration.NATIVE_BENCHMARK_POLICY)
         self.assertEqual(orchestration.benchmark_runtime_inputs(files), orchestration.subset(files, orchestration.RUNTIME_FILES))
 
-    def candidate_inputs(self):
+    def candidate_inputs(self, *, released=False):
         members = git(ROOT, 'ls-files').splitlines()
         members += ['.github/scripts/benchmark_podman.py', '.github/scripts/benchmark_smoke.py']
+        prefixes = orchestration.CANDIDATE_RUNTIME_FILES
+        if released:
+            prefixes += orchestration.NATIVE_RUNTIME_FILES
         for member in orchestration.subset({name: ('100644', 'blob', '') for name in members},
-                                           orchestration.CANDIDATE_RUNTIME_FILES):
+                                           prefixes):
             source = ROOT / member
             target = self.workspace / member
             if not target.exists():
@@ -315,12 +318,16 @@ class OrchestrationTests(unittest.TestCase):
 
     def test_compatibility_scope_requires_exact_initial_dispatch_and_preapproval(self):
         import benchmark_smoke as smoke
+        from benchmark_native import native_versions
 
-        revision = self.candidate_inputs()
+        revision = self.candidate_inputs(released=True)
         env = dict(os.environ, GITHUB_SHA=revision, GITHUB_EVENT_NAME='workflow_dispatch',
                    GITHUB_REF='refs/heads/' + smoke.BRANCH)
         inputs = {'mode': smoke.MODE, 'skill': 'podman', 'expected_revision': revision}
         record = smoke.reviewed_scope(self.workspace, env, inputs)
+        self.assertEqual(record['runtime'], native_versions())
+        self.assertEqual(record['scope']['fingerprint'],
+                         orchestration.candidate_podman_fingerprint(self.workspace, revision, released=True))
         self.assertEqual(record['scope']['case'], '1')
         self.assertEqual(record['scope']['arms'], ['with_skill', 'without_skill'])
         self.assertEqual(record['scope']['planned_trials'], 2)
@@ -354,6 +361,9 @@ class OrchestrationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'preapproval scope mismatch'):
                 smoke.guard(self.api, baseline)
             altered = {**record, 'provider_policy': {}}
+            with self.assertRaisesRegex(ValueError, 'preapproval scope mismatch'):
+                smoke.guard(self.api, altered)
+            altered = {**record, 'runtime': {**record['runtime'], 'patch_sha256': 'a' * 64}}
             with self.assertRaisesRegex(ValueError, 'preapproval scope mismatch'):
                 smoke.guard(self.api, altered)
             self.api.main = 'f' * 40
@@ -663,6 +673,16 @@ class WorkflowAndUsageTests(unittest.TestCase):
         self.assertEqual(steps[guard + 1]['if'], "steps.preparation.outputs.execute == 'true'")
         self.assertEqual(benchmark['concurrency'], {'group': 'benchmark-skills', 'queue': 'max', 'cancel-in-progress': False})
         self.assertIn("needs.evaluate.outputs.execution_success == 'true'", benchmark['jobs']['publish-history']['if'])
+        candidate = benchmark['jobs']['evaluate-candidate']
+        self.assertEqual(candidate['environment'], evaluate['environment'])
+        setup = [step['run'] for step in candidate['steps'] if 'native-benchmark-101' in step.get('run', '')]
+        self.assertEqual(len(setup), 1)
+        steps = candidate['steps']
+        guarded = next(index for index, step in enumerate(steps) if step.get('id') == 'scope')
+        self.assertIn('benchmark_smoke.py guard', steps[guarded]['run'])
+        self.assertNotIn('OPENAI_API_KEY', steps[guarded]['env'])
+        self.assertIn('"$SKILL_NATIVE_BENCHMARK_PYTHON"', steps[guarded + 1]['run'])
+        self.assertEqual(steps[guarded + 1]['if'], "steps.scope.outputs.execute == 'true'")
         publisher = yaml.safe_load((ROOT / '.github/workflows/publish-skill-report.yml').read_text())
         self.assertEqual(publisher.get('on', publisher.get(True))['workflow_run']['workflows'], ['Validate', 'Benchmark skills'])
 
@@ -689,6 +709,7 @@ class WorkflowAndUsageTests(unittest.TestCase):
         self.assertLess(installed, executed)
         self.assertIn('"$SKILL_NATIVE_BENCHMARK_PYTHON"', steps[executed])
         self.assertIn('"$GITHUB_SHA"', steps[executed])
+        self.assertIn('--mode "$QUALIFICATION_MODE"', steps[executed])
 
     def test_full_regression_validation_is_reused_on_main_and_preapproval_on_features(self):
         workflow = yaml.safe_load((ROOT / orchestration.BENCHMARK).read_text())

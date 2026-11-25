@@ -1,14 +1,17 @@
 diff --git a/.github/scripts/skill_reports.py b/.github/scripts/skill_reports.py
-index 9eb6893..b5513e4 100644
 --- a/.github/scripts/skill_reports.py
 +++ b/.github/scripts/skill_reports.py
-@@ -735,9 +735,14 @@ def benchmark_artifacts(workspace, root, name, destination):
+@@ -780,13 +780,18 @@
              carrier = evidence.custom_carrier(campaign_profile)
              evidence.token(carrier)
      registered_cases = set()
 +    gh_oracle_versions = ('0.8.0', '0.9.0', '1.0.1')
 +    campaign_versions = ('0.8.0', '0.9.0')
-     if name == 'gh' and (root / 'custom-metric-capture.json').exists():
+     if released and name == "gh":
+         from gh_evaluations import dataset
+
+         registered_cases = {row["id"] for row in dataset(workspace)}
+     elif name == 'gh' and (root / 'custom-metric-capture.json').exists():
          capture = read_json(root / 'custom-metric-capture.json')
 -        if (capture.get('purpose') == 'oracle_qualification' or str(capture.get('purpose','')).startswith('campaign-')) and capture.get('producer', {}).get('skillevaluator') in ('0.8.0', '0.9.0'):
 +        producer = capture.get('producer', {}).get('skillevaluator')
@@ -18,7 +21,7 @@ index 9eb6893..b5513e4 100644
              import skill_evidence as evidence
              evidence.validate_custom_capture(capture, name, workspace)
              registered_cases = set(capture['case_ids'])
-@@ -790,10 +795,13 @@ def benchmark_artifacts(workspace, root, name, destination):
+@@ -841,10 +846,13 @@
                  require('PESTER_VERIFIER_ONLY_' not in json.dumps(value), 'Protected verifier input in diagnostic artifact')
              original = value
              value = redact_sensitive_data(value)

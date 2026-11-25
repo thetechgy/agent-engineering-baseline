@@ -500,7 +500,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           timeout --signal=INT --kill-after=30s 1200s "$SKILL_NATIVE_BENCHMARK_PYTHON" -B \
             .github/scripts/qualify_native_execution.py "$RUNNER_TEMP/released-benchmark-execution" \
-            "$QUALIFICATION_SKILL" "$GITHUB_SHA"
+            "$QUALIFICATION_SKILL" "$GITHUB_SHA" --mode "$QUALIFICATION_MODE"
       - name: Remove the task-owned Compose plugin
         if: always()
         run: bash .github/scripts/setup-compose.sh cleanup

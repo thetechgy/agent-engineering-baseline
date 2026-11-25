@@ -167,10 +167,13 @@ def sources(workspace, revision, files):
     return result
 
 
-def candidate_podman_fingerprint(workspace, revision):
+def candidate_podman_fingerprint(workspace, revision, *, released=False):
     """Fingerprint the reviewed candidate inputs without changing historical lookups."""
     files = manifest(workspace, revision)
     prefixes = CANDIDATE_RUNTIME_FILES + SUITE_FILES['podman']
+    if released:
+        # Pre-merge qualification binds the released implementation before the adoption marker exists.
+        prefixes += tuple(member for member in NATIVE_RUNTIME_FILES if member != NATIVE_BENCHMARK_POLICY)
     require(all(subset(files, (prefix,)) for prefix in prefixes), 'Missing candidate benchmark input')
     return identity(subset(files, prefixes))
 

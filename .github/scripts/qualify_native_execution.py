@@ -21,7 +21,7 @@ from benchmark_smoke import PROVIDER_CREDENTIALS
 import gh_evaluations as gh
 from qualify_benchmark_101 import restrict_network
 from qualify_benchmark_codex import OfflineCodex, OfflinePodmanCodex
-from skill_reports import POLICY, benchmark_artifacts, read_json, require, write_json
+from skill_reports import MODES, POLICY, benchmark_artifacts, read_json, require, write_json
 
 
 CASES = {"podman": "1", "gh": "gh-001"}
@@ -116,8 +116,7 @@ def controls(root, name):
     return fixtures
 
 
-def inspect_trial(job, *, preflight, suite):
-    result_path, = job.glob("*/result.json")
+def inspect_trial(result_path, *, preflight, suite):
     result = read_json(result_path)
     require(result["exception_info"] is None and result["agent_info"]["version"] == POLICY["codex"],
             "Fixture trial or installed Codex failed")
@@ -178,8 +177,9 @@ def qualify_publication(root, destination, name):
         raise ValueError("Scoped released fixture entered public history")
 
 
-def qualify(output, name, revision):
+def qualify(output, name, revision, *, mode="standard"):
     require(not any(os.getenv(key) for key in PROVIDER_CREDENTIALS), "Docker fixture requires absent provider credentials")
+    attempts = MODES[mode]
     native.require_revision(native.ROOT, revision)
     output = output.absolute()
     require(output.resolve() == output and not output.is_relative_to(native.ROOT), "Unsafe Docker fixture output")
@@ -240,14 +240,14 @@ def qualify(output, name, revision):
           patch.object(native, "local_skill", return_value=subset),
           patch.object(native, "configure_gh_task", side_effect=configure_gh),
           patch.object(native, "configure_openai_task", side_effect=configure_podman)):
-        native.prepare(workspace, root, name, "standard", revision)
+        native.prepare(workspace, root, name, mode, revision)
         sys.addaudithook(restrict_network)
         with (patch.object(runtime_preflight, "probe_model", side_effect=catalog),
               patch.object(runner, "build_harbor_run_command", side_effect=build_fixture),
               patch.object(runtime_preflight, "build_harbor_run_command", side_effect=build_fixture),
               patch.object(runner, "_harbor_launch_environment", side_effect=launch_env),
               patch.object(runtime_preflight, "_harbor_launch_environment", side_effect=launch_env)):
-            result = native.execute(workspace, root, name, "standard", revision, SENTINEL,
+            result = native.execute(workspace, root, name, mode, revision, SENTINEL,
                                     progress_reporter=PlainProgressReporter())
     failure = EvaluationService.failure_reason(result)
     if failure is not None or result.get("report_status") != "complete":
@@ -256,15 +256,19 @@ def qualify(output, name, revision):
             "execution_status": result.get("execution_status"), "report_status": result.get("report_status")})
         raise ValueError("Released launcher fixture failed. Inspect the bounded native progress output.")
     jobs = Path(result["harbor_jobs_dir"])
-    observed = {job: inspect_trial(jobs / job, preflight=job == "runtime-preflight-codex", suite=name)
-                for job in fixtures}
+    observed = {}
+    for job in fixtures:
+        preflight = job == "runtime-preflight-codex"
+        results = sorted((jobs / job).glob("*/result.json"))
+        require(len(results) == (1 if preflight else attempts), "Released fixture attempt count differs")
+        observed[job] = [inspect_trial(path, preflight=preflight, suite=name) for path in results]
     run = Path(result["run_dir"])
-    native.validate_collected_pair(result, run, root, name, "standard", revision, [CASES[name]],
+    native.validate_collected_pair(result, run, root, name, mode, revision, [CASES[name]],
                                    agent_selector=fixture_agent)
     invalid = deepcopy(result)
     invalid["run_dir"] = str(run.with_name("unselected-report"))
     try:
-        native.validate_collected_pair(invalid, run, root, name, "standard", revision, [CASES[name]],
+        native.validate_collected_pair(invalid, run, root, name, mode, revision, [CASES[name]],
                                        agent_selector=fixture_agent)
     except ValueError as error:
         require(str(error) == "Missing or unsafe released benchmark report", "Wrong report selection rejection")
@@ -273,7 +277,7 @@ def qualify(output, name, revision):
     invalid = deepcopy(result)
     invalid["agents"]["codex"]["pass_at_k"]["with_skill"]["cases"][CASES[name]]["attempts"][0]["trial"] = "unmatched"
     try:
-        native.validate_collected_pair(invalid, run, root, name, "standard", revision, [CASES[name]],
+        native.validate_collected_pair(invalid, run, root, name, mode, revision, [CASES[name]],
                                        agent_selector=fixture_agent)
     except ValueError as error:
         require(str(error) == "Released trial summary differs from the complete arm", "Wrong trial population rejection")
@@ -282,23 +286,23 @@ def qualify(output, name, revision):
     rejection = {"podman": "Prepared benchmark scope differs",
                  "gh": "Released score report requires the full authored gh cohort"}[name]
     try:
-        native.score_record(workspace, root, name, "standard", revision)
+        native.score_record(workspace, root, name, mode, revision)
     except ValueError as error:
         require(str(error) == rejection, "Native fixture was rejected at the wrong report boundary")
     else:
         raise ValueError("Partial native fixture entered the full-cohort score report")
     qualify_publication(root, output / "retained", name)
     if name == "gh":
-        require(observed["gh-codex-with"]["custom"] == {"gh_evidence": 1, "gh_activation": 1, native.GH_ACCESS_METRIC: 1, "gh_gate": 1}
-                and observed["gh-codex-without"]["custom"] == {
-                    "gh_evidence": 1, "gh_activation": 0, native.GH_ACCESS_METRIC: 0, "gh_gate": 0},
-                "Released grouped custom grader changed its expected authorization outcomes")
-    receipt = {"schema_version": 1, "revision": revision, "producer": native.NATIVE_PRODUCER,
+        for arm, gate in (("with", 1), ("without", 0)):
+            expected = {"gh_evidence": 1, "gh_activation": gate, native.GH_ACCESS_METRIC: gate, "gh_gate": gate}
+            require(all(trial["custom"] == expected for trial in observed["gh-codex-" + arm]),
+                    "Released grouped custom grader changed its expected authorization outcomes")
+    receipt = {"schema_version": 2, "revision": revision, "producer": native.NATIVE_PRODUCER,
                "patch_sha256": native.NATIVE_PATCH_DIGEST, "suite": name, "case": CASES[name], "observed": observed,
-               "scored_attempts": 2, "provider_requests": 0, "history_eligible": False,
+               "mode": mode, "scored_attempts": 2 * attempts, "provider_requests": 0, "history_eligible": False,
                "full_cohort_report_rejected": True, "redacted_replay_verified": True,
                "origin": "non_forwarding_fixture"}
-    if not all(trial["teardown_complete"] for trial in observed.values()):
+    if not all(trial["teardown_complete"] for trials in observed.values() for trial in trials):
         write_json(output / "failure.json", {**receipt, "status": "teardown_incomplete"})
         raise ValueError("Fixture left Compose resources")
     write_json(output / "qualification.json", receipt)
@@ -309,8 +313,9 @@ def main():
     parser.add_argument("output", type=Path)
     parser.add_argument("suite", choices=CASES)
     parser.add_argument("revision")
+    parser.add_argument("--mode", choices=MODES, default="standard")
     args = parser.parse_args()
-    qualify(args.output, args.suite, args.revision)
+    qualify(args.output, args.suite, args.revision, mode=args.mode)
 
 
 if __name__ == "__main__":

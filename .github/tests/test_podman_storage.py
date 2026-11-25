@@ -97,7 +97,11 @@ class PodmanStorageContract(unittest.TestCase):
 
     def test_successors_preserve_historical_grading_and_bind_current_sources(self):
         registry = evidence.custom_registry()
-        for member in (evidence.CAMPAIGN_SOURCE_SUCCESSORS, evidence.RETIREMENT_SOURCE_SUCCESSORS):
+        active_purposes = {"pester-effectiveness-v48": "skill_effectiveness",
+                           "gh-deterministic-gate-v9": "benchmark",
+                           "gh-native-oracle-v5": "oracle_qualification"}
+        for member in (evidence.CAMPAIGN_SOURCE_SUCCESSORS, evidence.RETIREMENT_SOURCE_SUCCESSORS,
+                       evidence.PUBLICATION_SOURCE_SUCCESSORS):
             version_data = reports.read_json(ROOT / member)
             for profile_id, binding in version_data["profiles"].items():
                 with self.subTest(profile=profile_id):
@@ -110,10 +114,10 @@ class PodmanStorageContract(unittest.TestCase):
                         self.assertNotEqual(binding["grader_digest"], parent["grader_digest"])
                         fields["grader_digest"] = binding["grader_digest"]
                     self.assertEqual(current, dict(parent, id=profile_id, **fields))
-                    if member == evidence.RETIREMENT_SOURCE_SUCCESSORS:
-                        purpose_id = {"pester-effectiveness-v48": "skill_effectiveness",
-                                      "gh-deterministic-gate-v9": "benchmark",
-                                      "gh-native-oracle-v5": "oracle_qualification"}.get(profile_id, profile_id)
+                    if member == evidence.PUBLICATION_SOURCE_SUCCESSORS or profile_id in active_purposes:
+                        purpose_id = active_purposes.get(profile_id, profile_id)
+                        selected, _, _ = evidence.custom_contract(current["skill_id"], ROOT, purpose=purpose_id)
+                        self.assertEqual(selected["id"], profile_id)
                         actual = evidence.custom_input_identities(ROOT, current["skill_id"], purpose=purpose_id)
                         self.assertEqual(actual, {key: current[key] for key in actual})
 

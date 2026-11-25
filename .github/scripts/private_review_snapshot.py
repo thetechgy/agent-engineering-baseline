@@ -15,18 +15,26 @@ SNAPSHOT = evidence.ROOT / ".github/evals/retained/private-review-101.zip"
 DIGEST = "sha256:376fe25f26672a98a878c6d946a7700a6f463d5ae6d0599fb2b8da7f05c5ba9d"
 
 
-ACTIVE_PROFILE = "review-101-v2"
-ACTIVE_REVISION = "86899d9356c94cead240ec14d8592b53db556b89"
-ACTIVE_OVERLAY = evidence.ROOT / ".github/evals/retained/private-review-101-v2-overlay.zip"
-ACTIVE_DIGEST = "sha256:73c2dc9059c0b8830a21f611b70fbff00d14ddca8272999c570e743414e9d2eb"
+V2_PROFILE = "review-101-v2"
+V2_REVISION = "86899d9356c94cead240ec14d8592b53db556b89"
+V2_OVERLAY = evidence.ROOT / ".github/evals/retained/private-review-101-v2-overlay.zip"
+V2_DIGEST = "sha256:73c2dc9059c0b8830a21f611b70fbff00d14ddca8272999c570e743414e9d2eb"
+
+ACTIVE_PROFILE = "review-101-v3"
+ACTIVE_REVISION = "cbfec6eec2dfce00b2234624a62cf88e88014780"
+ACTIVE_OVERLAY = evidence.ROOT / ".github/evals/retained/private-review-101-v3-overlay.zip"
+ACTIVE_DIGEST = "sha256:9e28a852608b8249d390c4521c58653a05695d66ee173a96f0906caf549fba60"
+RELEASE_PROFILES = (PROFILE, V2_PROFILE, ACTIVE_PROFILE)
 
 
 def identity(profile):
     """Return the fixed producer source and execution identity for a release profile."""
-    evidence.require(profile in (PROFILE, ACTIVE_PROFILE), "Unsupported validator profile")
+    evidence.require(profile in RELEASE_PROFILES, "Unsupported validator profile")
     if profile == PROFILE:
         return REVISION, "skillevaluator-1.0.1-private-review-frozen-v1"
-    return ACTIVE_REVISION, "skillevaluator-1.0.1-private-review-frozen-v2"
+    if profile == V2_PROFILE:
+        return V2_REVISION, "skillevaluator-1.0.1-private-review-frozen-v2"
+    return ACTIVE_REVISION, "skillevaluator-1.0.1-private-review-frozen-v3"
 
 
 def snapshot_members(source, digest, count):
@@ -51,8 +59,10 @@ def snapshot_members(source, digest, count):
 def unpack(destination, profile=PROFILE):
     identity(profile)
     contents = snapshot_members(SNAPSHOT, DIGEST, 490)
+    if profile in (V2_PROFILE, ACTIVE_PROFILE):
+        contents.update(snapshot_members(V2_OVERLAY, V2_DIGEST, 10))
     if profile == ACTIVE_PROFILE:
-        contents.update(snapshot_members(ACTIVE_OVERLAY, ACTIVE_DIGEST, 10))
+        contents.update(snapshot_members(ACTIVE_OVERLAY, ACTIVE_DIGEST, 12))
     for member, raw in contents.items():
         target = destination / member
         target.parent.mkdir(parents=True, exist_ok=True)

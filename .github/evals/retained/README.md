@@ -46,3 +46,10 @@ members from `86899d9356c94cead240ec14d8592b53db556b89` to profile
 The launcher verifies both archives and overlays these members in a new
 temporary source directory. The original archive continues to own every
 `review-101-v1` attachment.
+
+`private-review-101-v3-overlay.zip` binds 12 reporting and registry members
+from `cbfec6eec2dfce00b2234624a62cf88e88014780` to `review-101-v3`. The
+archive SHA-256 is
+`9e28a852608b8249d390c4521c58653a05695d66ee173a96f0906caf549fba60`.
+The launcher verifies all three archives for v3. Earlier review profiles
+select their own verified source and registry.
