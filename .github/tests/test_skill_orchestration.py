@@ -373,6 +373,50 @@ class OrchestrationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Operational record unavailable'):
                 smoke.guard(self.api, record)
 
+    def test_compatibility_receipt_requires_a_complete_verifier_measurement(self):
+        import benchmark_smoke as smoke
+
+        job = self.root / 'job'
+        trial = job / 'podman-1__fixture'
+        usage = {'n_input_tokens': 11, 'n_output_tokens': 5, 'n_cache_tokens': None}
+        reports.write_json(trial / 'result.json', {
+            'exception_info': None, 'finished_at': stamp(0),
+            'agent_info': {'version': '0.171.0'}, 'agent_result': usage,
+        })
+        selected = {'case': '1', 'agent': {'cli': '0.171.0'}, 'verifier': {'model': 'gpt-6.2-sol'}}
+        reward_path = trial / 'verifier' / 'skill_evaluator_reward.json'
+        identity = {'entry_id': '1', 'has_skill': False, 'score_policy': 'skill-evaluator-dimension-mean-v1'}
+        metrics = ('accuracy', 'behavior_check', 'goal_accuracy')
+        details = {metric: {'judge_model_used': 'gpt-6.2-sol', 'judge_reasoning_effort': None,
+                            'judge_fallback_used': False, 'score': 0.8} for metric in metrics}
+        measured = {**identity, 'judge_contract': 'skill-evaluator-judges-v2', 'details': details}
+        private_text = 'private verifier output'
+        incomplete = (
+            ({**identity, 'evaluation_status': 'failed', 'error': 'No trajectory or reconstructible agent log'},
+             'trajectory_unavailable'),
+            ({**identity, 'evaluation_status': 'failed', 'evaluation_errors': {'execution_evidence': private_text}},
+             'unsupported_execution_evidence'),
+            ({**measured, 'evaluation_status': 'failed', 'evaluation_errors': {'accuracy': private_text}},
+             'required_judge_failed'),
+            ({**measured, 'has_skill': True}, 'reward_identity'),
+            ({**measured, 'judge_contract': None}, 'judge_contract'),
+            ({**measured, 'details': {**details, 'accuracy': {'score': 0.8}}}, 'judge_observation'),
+        )
+        for reward, reason in incomplete:
+            with self.subTest(reason=reason):
+                reports.write_json(reward_path, reward)
+                receipt = {'state': 'started'}
+                with self.assertRaises(ValueError):
+                    smoke.trial_receipt(job, arm='without_skill', selected=selected, receipt=receipt)
+                self.assertEqual(receipt, {
+                    'state': 'incomplete', 'agent_usage': usage, 'failure_reason': reason,
+                    **({'failed_judges': ['accuracy']} if reason == 'required_judge_failed' else {}),
+                })
+        reports.write_json(reward_path, measured)
+        receipt = {'state': 'started'}
+        smoke.trial_receipt(job, arm='without_skill', selected=selected, receipt=receipt)
+        self.assertEqual(receipt, {'state': 'complete', 'agent_usage': usage, 'judge_scores': dict.fromkeys(metrics, 0.8)})
+
     def test_compatibility_workflow_is_manual_protected_and_excluded_from_history(self):
         workflow = yaml.safe_load((ROOT / orchestration.BENCHMARK).read_text())
         inputs = workflow.get('on', workflow.get(True))['workflow_dispatch']['inputs']

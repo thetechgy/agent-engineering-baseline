@@ -319,6 +319,17 @@ All 13 credential-free verifier controls passed locally. The hosted launcher
 completed pinned Codex preflight, both arms, collection and teardown for gh
 and Podman on `908502a`. [Hosted receipts](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45655584119)
 
+The protected native v2 smoke on `9a50f48` ended incomplete after the
+Podman baseline recorded Codex usage. The diagnostic reported a
+`KeyError` and complete teardown. The receipt contains no judge
+measurements. The initiating verifier condition is unknown.
+The offline reproduction used two outputs from the pinned verifier.
+Missing trajectory and unsupported execution evidence both produced
+failed sidecars whose absent judge contract triggered the same reader
+exception. The reader now preserves these outcomes as incomplete using
+fixed failure labels. The native v2 production cutover is still pending.
+[Native v2 smoke](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45695901356)
+
 The native 1.0.1 score reader now validates the released dimension means,
 explicit baseline applicability and paired lift against the trial rewards.
 Retained gh and Podman controls replay after redaction with their original

@@ -17,6 +17,7 @@ from skill_reports import outputs, read_json, require, summary, write_json
 MODE = 'candidate-smoke'
 BRANCH = 'qualify/skillevaluator-101-retirement'
 JOB_NAMES = {'with_skill': 'podman-codex-with', 'without_skill': 'podman-codex-without'}
+JUDGE_METRICS = ('accuracy', 'behavior_check', 'goal_accuracy')
 PROVIDER_CREDENTIALS = (
     'OPENAI_API_KEY', 'CODEX_API_KEY', 'CODEX_AUTH_JSON_PATH', 'CODEX_FORCE_AUTH_JSON',
     'ANTHROPIC_API_KEY', 'NVIDIA_API_KEY', 'SKILL_EVAL_LLM_API_KEY',
@@ -126,19 +127,49 @@ def trial_receipt(job, *, arm, selected, receipt):
             'Native usage unavailable')
     require(counts['n_cache_tokens'] is None
             or type(counts['n_cache_tokens']) is int and counts['n_cache_tokens'] >= 0, 'Invalid cache token usage')
-    receipt['agent_usage'] = counts
+    receipt.update(state='incomplete', agent_usage=counts, failure_reason='reward_unavailable')
     reward = read_json(path.parent / 'verifier/skill_evaluator_reward.json')
-    require(reward['entry_id'] == selected['case'] and reward['has_skill'] is (arm == 'with_skill')
-            and reward['judge_contract'] == 'skill-evaluator-judges-v2'
-            and reward['score_policy'] == 'skill-evaluator-dimension-mean-v1', 'Native reward identity mismatch')
+    with_skill = arm == 'with_skill'
+    receipt['failure_reason'] = 'reward_identity'
+    require(isinstance(reward, dict) and reward.get('entry_id') == selected['case']
+            and reward.get('has_skill', with_skill) is with_skill
+            and reward.get('score_policy') == 'skill-evaluator-dimension-mean-v1', 'Native reward identity mismatch')
+
+    status = reward.get('evaluation_status')
+    receipt['failure_reason'] = 'verifier_status'
+    if status in ('failed', 'error'):
+        # Pre-judge failures can omit the contract. Export only known labels
+        # from the verifier, never its error values, tool calls, or replies.
+        errors = reward.get('evaluation_errors')
+        failed = set(errors) if isinstance(errors, dict) else set()
+        if reward.get('error') == 'No trajectory or reconstructible agent log':
+            receipt['failure_reason'] = 'trajectory_unavailable'
+        elif failed == {'execution_evidence'}:
+            receipt['failure_reason'] = 'unsupported_execution_evidence'
+        elif failed == {'environment'}:
+            receipt['failure_reason'] = 'verifier_environment'
+        elif failed and failed.issubset(JUDGE_METRICS):
+            receipt['failure_reason'] = 'required_judge_failed'
+            receipt['failed_judges'] = sorted(failed)
+    require(status is None, 'Native verifier did not produce a complete measurement')
+
+    receipt['failure_reason'] = 'judge_contract'
+    require(reward.get('has_skill') is with_skill and reward.get('judge_contract') == 'skill-evaluator-judges-v2',
+            'Native judge contract mismatch')
+    receipt['failure_reason'] = 'judge_observation'
+    details = reward.get('details')
+    require(isinstance(details, dict), 'Missing judge observations')
     judges = {}
-    for metric in ('accuracy', 'behavior_check', 'goal_accuracy'):
-        detail = reward['details'][metric]
-        require(detail['judge_model_used'] == selected['verifier']['model']
-                and detail['judge_reasoning_effort'] is None and detail['judge_fallback_used'] is False
-                and type(detail['score']) in (int, float) and 0 <= detail['score'] <= 1,
+    for metric in JUDGE_METRICS:
+        detail = details.get(metric)
+        require(isinstance(detail, dict), 'Missing judge observation')
+        score = detail.get('score')
+        require(detail.get('judge_model_used') == selected['verifier']['model']
+                and 'judge_reasoning_effort' in detail and detail['judge_reasoning_effort'] is None
+                and detail.get('judge_fallback_used') is False and type(score) in (int, float) and 0 <= score <= 1,
                 'Missing or changed judge observation')
-        judges[metric] = detail['score']
+        judges[metric] = score
+    del receipt['failure_reason']
     receipt.update(state='complete', judge_scores=judges)
 
 
