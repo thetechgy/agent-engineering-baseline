@@ -1371,6 +1371,7 @@ def validate_policy(value, *, custom_only=False, static=False):
     require(type(value) is dict, 'Invalid policy')
     require(type(value.get('fields')) is dict, 'Invalid policy fields')
     runtime_revision = value['fields'].get('evaluator_revision')
+    require(static or value.get('published_id') != static_evaluator.PRODUCER, 'Static producer policy requires static evidence')
     static_release = static and runtime_revision == static_evaluator.REVISION
     candidate = None if static_release else profiles.candidate_revision(runtime_revision,
         producer_id=value.get('producer_profile'), patch=value.get('patch_digest'))
@@ -2196,6 +2197,12 @@ def native_error_count(record):
     return len(errors)
 
 
+def historical_trial_ordinal(trial):
+    """Read the explicit attempt marker the original collector used."""
+    match = re.search(r'attempt0*(\d+)', trial, flags=re.IGNORECASE)
+    return int(match[1]) if match else None
+
+
 def historical_metric_mean(row, metrics):
     # Recorded v0.3 overalls averaged native metric values before rounding.
     return sum(row[name] for name in metrics) / len(metrics)
@@ -2862,7 +2869,13 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                 require(task_case == case and task_case in known_cases, 'Trial task case identity mismatch')
                 require(case in known_cases and (matched is None or case == matched[0]), 'Trial case identity mismatch')
                 # Attempt index must be runtime recorded. A missing index never comes from directory order.
-                attempt = {'attempt': None, 'score': None, 'passed': None, **matched[1]} if matched else {'attempt': _attempt_ordinal({'_trial_name': trial}), 'score': None, 'passed': None}
+                attempt = {'attempt': None, 'score': None, 'passed': None}
+                if matched:
+                    attempt.update(matched[1])
+                elif historical_scores:
+                    attempt['attempt'] = historical_trial_ordinal(trial)
+                else:
+                    attempt['attempt'] = _attempt_ordinal({'_trial_name': trial})
                 if attempt['attempt'] is None:
                     limitations.add('metadata_missing')
                 diagnostic = None
@@ -3660,7 +3673,7 @@ def custom_registry(workspace=ROOT):
             registry['metrics'].update(version['new_metrics'])
             validate_custom_metrics(registry['metrics'])
             profiles.update(version['new_profiles'])
-    registry['active_profiles']['gh'] = 'gh-deterministic-gate-v8'
+    registry['active_profiles']['gh'] = 'gh-deterministic-gate-v9'
     return registry
 
 
@@ -3723,7 +3736,7 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v24'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
-        profile_id = 'gh-native-oracle-v4'
+        profile_id = 'gh-native-oracle-v5'
     profile_id = registry['active_profiles'].get(name) if profile_id is None else profile_id
     require(profile_id in registry['profiles'], 'Unknown custom metric namespace or profile')
     registered = registry['profiles'][profile_id]
@@ -4477,8 +4490,12 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                     'Native producer or runtime identity mismatch')
             matched = lookup.pop(trial_name, None)
             require(matched is None or matched[0] == case_id, 'Summary case mismatch')
-            ordinal = (matched[1].get('attempt') if matched else
-                       _attempt_ordinal({'_trial_name': trial_name, 'entry_id': case_id}))
+            if matched:
+                ordinal = matched[1].get('attempt')
+            elif capture['evaluator_revision'] == profiles.HISTORICAL_REVISION:
+                ordinal = historical_trial_ordinal(trial_name)
+            else:
+                ordinal = _attempt_ordinal({'_trial_name': trial_name, 'entry_id': case_id})
             if ordinal is None and (capture['purpose'] in ('skill_effectiveness', 'skill_effectiveness_probe') or 'campaign' in profile):
                 from skillevaluator.tier3.harbor.collector import _structural_attempt_ordinal
                 ordinal = _structural_attempt_ordinal(trial_name, case_id)

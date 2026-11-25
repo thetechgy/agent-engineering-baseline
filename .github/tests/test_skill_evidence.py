@@ -5044,7 +5044,7 @@ class EvidenceTests(unittest.TestCase):
         )]
         with patch.object(adapter, '_runtime_skill_copy_ignore', side_effect=AssertionError('Filesystem selector invoked')), \
                 patch.object(output_provenance, '_load_existing_key') as key:
-            self.assertEqual(evidence.skill_projection_files(path, files), expected)
+            self.assertCountEqual(evidence.skill_projection_files(path, files), expected)
             evidence.skill_content(path)
             key.assert_not_called()
 

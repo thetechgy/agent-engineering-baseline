@@ -233,6 +233,14 @@ def qualify(output, name, revision):
     observed = {job: inspect_trial(jobs / job, preflight=job == "runtime-preflight-codex", suite=name)
                 for job in fixtures}
     native.validate_collected_pair(result, root, name, "standard", revision, [CASES[name]])
+    rejection = {"podman": "Prepared benchmark scope differs",
+                 "gh": "Released score report requires the full authored gh cohort"}[name]
+    try:
+        native.score_record(workspace, root, name, "standard", revision)
+    except ValueError as error:
+        require(str(error) == rejection, "Native fixture was rejected at the wrong report boundary")
+    else:
+        raise ValueError("Partial native fixture entered the full-cohort score report")
     if name == "gh":
         require(observed["gh-codex-with"]["custom"] == {"gh_evidence": 1, "gh_activation": 1, native.GH_ACCESS_METRIC: 1, "gh_gate": 1}
                 and observed["gh-codex-without"]["custom"] == {
@@ -241,7 +249,7 @@ def qualify(output, name, revision):
     receipt = {"schema_version": 1, "revision": revision, "producer": native.NATIVE_PRODUCER,
                "patch_sha256": native.NATIVE_PATCH_DIGEST, "suite": name, "case": CASES[name], "observed": observed,
                "scored_attempts": 2, "provider_requests": 0, "history_eligible": False,
-               "origin": "non_forwarding_fixture"}
+               "full_cohort_report_rejected": True, "origin": "non_forwarding_fixture"}
     if not all(trial["teardown_complete"] for trial in observed.values()):
         write_json(output / "failure.json", {**receipt, "status": "teardown_incomplete"})
         raise ValueError("Fixture left Compose resources")

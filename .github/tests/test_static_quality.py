@@ -118,7 +118,7 @@ class StaticQualityRoutingTests(unittest.TestCase):
                 self.assertEqual(retained[0]['record']['policy']['published_id'], owner.PRODUCER)
                 self.assertEqual(retained[0]['record_id'], evidence.identity(record))
                 observation['record']['kind'] = 'behavioral'
-                with self.assertRaisesRegex(ValueError, 'Unsupported native evaluator'):
+                with self.assertRaisesRegex(ValueError, 'Static producer policy requires static evidence'):
                     history.validate(snapshot)
 
         active = evidence.SCANNER_RUNTIME_STATIC_CANDIDATE

@@ -304,7 +304,9 @@ def validate_collected_pair(result, root, name, mode, revision, cases):
     require(config == result["run_config"], "Released benchmark configuration differs from the report")
     require(config["evaluated_source"] == {"repository": REPOSITORY, "commit": revision}
             and config["provider"] == {"name": POLICY["provider"], "model": POLICY["model"]}
-            and config["grading"]["mode"] == policy["grading"], "Released benchmark source or execution policy differs")
+            and config["grading"]["mode"] == policy["grading"] and config["task_source"] == policy["task_source"]
+            and config["skill_workspace"]["mode"] == policy["workspace_mode"],
+            "Released benchmark source or execution policy differs")
     judge = config["judge"]
     require(judge["enabled"] is True and judge["provider"] == POLICY["provider"] and judge["model"] == POLICY["model"]
             and judge["override_applied"] is True and "reasoning_effort" in judge and judge["reasoning_effort"] is None,
@@ -325,6 +327,8 @@ def validate_collected_pair(result, root, name, mode, revision, cases):
         require(arm["execution_status"] == "succeeded" and not arm["execution_errors"]
                 and arm["scored_attempts"] == arm["expected_attempts"] == len(cases) * MODES[mode],
                 "Incomplete released benchmark arm")
+    if name == "gh":
+        gh.deterministic_gate(run, cases, MODES[mode], authorization_metric=GH_ACCESS_METRIC)
     return metric_rows(agent)
 
 
@@ -338,6 +342,7 @@ def released_policy(name):
             "python": RELEASE_BENCHMARK["python"], "environment": BACKENDS[name],
             "producer_profile": NATIVE_PRODUCER, "scoring_policy": RELEASE_BENCHMARK["scoring"],
             "judge_contract": "skill-evaluator-judges-v2", "lock_sha256": RELEASE_BENCHMARK["lock_sha256"],
+            "task_source": "native_harbor" if name == "gh" else "evals_json",
             "dataset_profile": GH_DATASET_PROFILE if name == "gh" else "podman-authored"}
 
 
@@ -345,6 +350,28 @@ def score_series(name, mode):
     require(mode in MODES, "Unsupported released score mode")
     material = json.dumps([released_policy(name), NATIVE_PATCH_DIGEST, mode], sort_keys=True).encode()
     return hashlib.sha256(material).hexdigest()[:16]
+
+
+def score_record(workspace, root, name, mode, revision):
+    """Project complete released scores into their own versioned record."""
+    from skillevaluator.tier3.dataset_utils import load_dataset_entries
+
+    from skill_evidence import select_run
+
+    root, skill, _ = validate_preparation(workspace, root, name, mode, revision)
+    if (root / "provenance.json").exists():
+        require(read_json(root / "provenance.json").get("status") != "incomplete",
+                "Incomplete released recovery cannot produce benchmark scores")
+    cases = [str(entry["id"]) for entry in load_dataset_entries(skill / "evals/evals.json")]
+    if name == "gh":
+        require(cases == [entry["id"] for entry in gh.dataset(workspace)],
+                "Released score report requires the full authored gh cohort")
+    run = select_run(root, name, selected=None)
+    result = read_json(run / "result.json")
+    metrics = validate_collected_pair(result, root, name, mode, revision, cases)
+    return {"schema_version": 1, "skill": name, "mode": mode, "revision": revision,
+            "series": score_series(name, mode), "policy": released_policy(name), "patch_sha256": NATIVE_PATCH_DIGEST,
+            "dataset_digest": result["dataset_digest"], "metrics": metrics}
 
 
 def recover(workspace, root, name, mode, revision, outcome):
@@ -360,7 +387,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     subcommands = parser.add_subparsers(dest="command", required=True)
     subcommands.add_parser("verify-runtime")
-    for command in ("prepare", "execute", "recover"):
+    for command in ("prepare", "execute", "recover", "score-report"):
         entry = subcommands.add_parser(command)
         entry.add_argument("root", type=Path)
         entry.add_argument("skill", choices=BACKENDS)
@@ -368,6 +395,8 @@ def main():
         entry.add_argument("revision")
         if command == "recover":
             entry.add_argument("outcome", choices=("success", "failure", "cancelled", "skipped"))
+        if command == "score-report":
+            entry.add_argument("destination", type=Path)
     args = parser.parse_args()
     if args.command == "verify-runtime":
         validate_runtime()
@@ -378,6 +407,13 @@ def main():
     if args.command == "recover":
         recover(ROOT, args.root, args.skill, args.mode, args.revision, args.outcome)
         return 0
+    if args.command == "score-report":
+        from skill_evidence import write_outputs
+
+        record = score_record(ROOT, args.root, args.skill, args.mode, args.revision)
+        write_outputs({"released-scores.json": record}, args.destination, workspace=ROOT, input_path=args.root)
+        return 0
+    require(args.command == "execute", "Unknown released benchmark command")
     from skillevaluator.evaluation import EvaluationService
     from skillevaluator.tier3.harbor.progress import PlainProgressReporter
 

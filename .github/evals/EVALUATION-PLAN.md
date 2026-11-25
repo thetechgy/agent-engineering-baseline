@@ -284,13 +284,18 @@ The Docker handoff forwards the pinned Compose configuration and a local
 Unix socket for the two reviewed backends. The released launcher renders
 reports without generation calls. Local rootless Podman left Compose
 resources after some trials and the receipts record incomplete teardown.
-The launcher-only workflow is prepared for credential-free hosted Docker
-qualification. Ordinary production keeps its current owner while teardown
-and integrated history admission await qualification.
+Hosted launcher qualification at `5bdc85e` completed preflight, both
+fixture arms, collection and teardown for each suite. Both digest-verified
+receipts remain outside history. Use the existing protected owner while
+integrated native history admission and the adoption decision are pending.
+[Hosted launcher qualification](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45643758537)
 
-The source changes required 89 source-only successor records on 361 lines
-in `source-v44.json`. Grader, fixture and replay adapter identities were
-checked against each parent profile. Earlier records are retained.
+The collected gh report validates the prospective field through the same
+per-trial deterministic gate. A changed authorization score failed gate
+consistency. The two affected gh selectors and the campaign source changes
+required 91 source-only records on 369 lines in `source-v44.json`. Grader,
+fixture and replay adapter identities were checked against each parent
+profile. Earlier records are retained.
 
 The presentation and analysis tests read their original public Podman and
 synthetic static projections from a digest-checked fixture. The existing

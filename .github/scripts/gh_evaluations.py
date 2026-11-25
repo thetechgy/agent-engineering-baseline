@@ -615,7 +615,8 @@ def local_numeric_excerpts(run):
                                            evidence.custom_contract("gh")[1])
 
 
-def deterministic_gate(run, case_ids, attempts, *, numeric_excerpts=None):
+def deterministic_gate(run, case_ids, attempts, *, numeric_excerpts=None, authorization_metric="gh_authorization"):
+    reports.require(authorization_metric in {"gh_authorization", "gh_access_policy"}, "Unknown gh access measurement")
     records = []
     for arm in ("with-skill", "without-skill"):
         rewards = sorted((run / "codex" / arm / "trials").glob("*/reward.json"))
@@ -650,11 +651,11 @@ def deterministic_gate(run, case_ids, attempts, *, numeric_excerpts=None):
                         "commands",
                         "task",
                         "recovery",
-                        "authorization",
                         "efficiency",
                         "gate",
                     )
-                },
+                }
+                | {authorization_metric},
                 "Missing deterministic scores",
             )
             reports.require(
