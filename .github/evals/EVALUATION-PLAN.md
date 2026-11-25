@@ -191,6 +191,22 @@ Local Podman trials used the digest-verified Codex 0.171.0 standalone
 archive and Harbor's preinstalled executable path. Both arms completed
 with two loopback Codex requests and three loopback verifier requests.
 
+The protected compatibility smoke on `e95d525` completed the with-skill
+arm for Podman case 1. Codex 0.171.0 and the three released verifier
+observations passed the runtime admission checks. The recorded agent usage
+was 248,725 input tokens and 5,820 output tokens, including 217,174 cached
+input tokens. The combined total exceeded the approved 120,000-token
+gate, so the without-skill arm did not start. Teardown completed and
+the diagnostic was excluded from canonical history. Provider billing and
+judge token usage were unavailable in the receipt.
+[Protected compatibility smoke](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45510362606)
+
+The follow-up selector accepts one without-skill trial of the same case
+through the existing protected diagnostic job. The fixture verified the
+selected launcher, release collector and skipped comparison. The paired
+control still stops at the original token gate. A live follow-up requires
+separate approval at its reviewed revision.
+
 | Maintained path | Retirement gate |
 | --- | --- |
 | `benchmark-skills.yml`, local `gh_evaluations.py benchmark`, standard and confirmation publication | Qualify the real executable, verifier, recovery and collector under the candidate, then bind its runtime files to the preapproval fingerprint and its publications to a new series. |

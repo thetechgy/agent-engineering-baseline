@@ -18,6 +18,13 @@ on:
           - standard
           - confirmation
           - candidate-smoke
+      candidate_smoke_arms:
+        description: Optional arm selection for the diagnostic candidate smoke
+        type: choice
+        options:
+          - paired
+          - without-skill
+        default: paired
       request_id:
         description: Optional authenticated orchestration request (leave empty for manual runs)
         type: string
@@ -98,7 +105,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RETAINED: ${{ github.workspace }}/retained
           BENCHMARK_MODE: ${{ inputs.mode }}
+          CANDIDATE_SMOKE_ARMS: ${{ inputs.candidate_smoke_arms }}
         run: |
+          if [[ "$BENCHMARK_MODE" != candidate-smoke && "${CANDIDATE_SMOKE_ARMS:-paired}" != paired ]]; then
+            echo '::error::Arm selection requires the candidate smoke mode.'
+            exit 1
+          fi
           if [[ "$BENCHMARK_MODE" == candidate-smoke ]]; then
             "$SKILL_DATA_PYTHON" -B .github/scripts/benchmark_smoke.py context \
               --output "$RUNNER_TEMP/podman-101-context/record.json"

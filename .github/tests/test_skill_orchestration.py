@@ -307,8 +307,13 @@ class OrchestrationTests(unittest.TestCase):
         self.assertEqual(record['scope']['arms'], ['with_skill', 'without_skill'])
         self.assertEqual(record['scope']['planned_trials'], 2)
         self.assertFalse(record['scope']['history_eligible'])
+        baseline = smoke.reviewed_scope(self.workspace, env, {**inputs, 'candidate_smoke_arms': 'without-skill'})
+        self.assertEqual(baseline['scope'], {**record['scope'], 'arms': ['without_skill'], 'planned_trials': 1})
+        self.assertEqual(baseline['provider_policy'], record['provider_policy'])
+        self.assertEqual(baseline['cost_estimate']['usd'], 1.80)
         for updates in ({'mode': 'confirmation'}, {'skill': 'gh'}, {'expected_revision': 'f' * 40},
-                        {'request_id': 'autodispatch'}, {'planner_run_id': '20'}):
+                        {'request_id': 'autodispatch'}, {'planner_run_id': '20'},
+                        {'candidate_smoke_arms': 'with-skill'}):
             with self.subTest(updates=updates), self.assertRaises(ValueError):
                 smoke.reviewed_scope(self.workspace, env, {**inputs, **updates})
         for updates in ({'GITHUB_RUN_ATTEMPT': '2'}, {'GITHUB_REF': 'refs/heads/main'},
@@ -328,6 +333,8 @@ class OrchestrationTests(unittest.TestCase):
                 smoke.guard(self.api, record)
             artifact = self.api.artifact(run, smoke.artifact_name(record), record)
             smoke.guard(self.api, record)
+            with self.assertRaisesRegex(ValueError, 'preapproval scope mismatch'):
+                smoke.guard(self.api, baseline)
             altered = {**record, 'provider_policy': {}}
             with self.assertRaisesRegex(ValueError, 'preapproval scope mismatch'):
                 smoke.guard(self.api, altered)
@@ -343,7 +350,12 @@ class OrchestrationTests(unittest.TestCase):
         inputs = workflow.get('on', workflow.get(True))['workflow_dispatch']['inputs']
         self.assertEqual(inputs['mode']['default'], 'standard')
         self.assertIn('candidate-smoke', inputs['mode']['options'])
+        self.assertEqual(inputs['candidate_smoke_arms']['options'], ['paired', 'without-skill'])
+        self.assertEqual(inputs['candidate_smoke_arms']['default'], 'paired')
         jobs = workflow['jobs']
+        context = next(step for step in jobs['context']['steps'] if step.get('id') == 'context')
+        self.assertEqual(context['env']['CANDIDATE_SMOKE_ARMS'], '${{ inputs.candidate_smoke_arms }}')
+        self.assertIn('Arm selection requires the candidate smoke mode.', context['run'])
         job = jobs['evaluate-candidate']
         self.assertEqual(job['environment'], {'name': 'skill-benchmark', 'deployment': False})
         self.assertEqual(job['permissions'], {'contents': 'read', 'actions': 'read'})

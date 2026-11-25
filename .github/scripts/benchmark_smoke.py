@@ -32,10 +32,12 @@ PROVIDER_POLICY = {
 }
 
 
-def estimate_cost():
+def estimate_cost(*, baseline_only=False):
     profile = read_json(CODEX_PROFILE)
     prices = profile['prices_per_million']
-    planned = {'input_tokens': 400_000, 'output_tokens': 240_000}
+    # The first live arm recorded about 249,000 input tokens including cache reads.
+    planned = ({'input_tokens': 300_000, 'output_tokens': 120_000} if baseline_only
+               else {'input_tokens': 400_000, 'output_tokens': 240_000})
     return {**planned, 'basis': 'standard_short_context_uncached',
             'usd': round((planned['input_tokens'] * prices['input'] +
                           planned['output_tokens'] * prices['output']) / 1_000_000, 2)}
@@ -55,9 +57,15 @@ def reviewed_scope(workspace, env, inputs):
     require(git(workspace, 'rev-parse', 'HEAD').decode().strip() == revision
             and not git(workspace, 'status', '--porcelain=v1', '--untracked-files=all', '--ignored'),
             'Candidate checkout differs from the dispatched revision')
+    arms = inputs.get('candidate_smoke_arms') or 'paired'
+    require(arms in ('paired', 'without-skill'), 'Unknown candidate arm selection')
+    selected = scope(workspace, revision)
+    baseline_only = arms == 'without-skill'
+    if baseline_only:
+        selected.update(arms=['without_skill'], planned_trials=1)
     return {'schema_version': 1, 'kind': 'podman_101_compatibility', 'run_id': pages.number(int(env['GITHUB_RUN_ID'])),
-            'attempt': 1, 'scope': scope(workspace, revision), 'provider_policy': PROVIDER_POLICY,
-            'cost_estimate': estimate_cost()}
+            'attempt': 1, 'scope': selected, 'provider_policy': PROVIDER_POLICY,
+            'cost_estimate': estimate_cost(baseline_only=baseline_only)}
 
 
 def artifact_name(record):
@@ -147,8 +155,30 @@ def trial_receipt(job, *, arm, selected, receipt):
     receipt.update(state='complete', judge_scores=judges)
 
 
-def execute(stage, expected, output, key):
+def collect_candidate(stage, jobs, selected):
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
+
+    baseline_only = selected['arms'] == ['without_skill']
+    collected = collect_harbor_results(
+        'podman', ['codex'], stage / 'collected', jobs, expected_cases=1,
+        expected_case_ids=[selected['case']], expected_trials=1, n_attempts=1,
+        skip_with_skill=baseline_only,
+        agent_models={'codex': {'model': selected['agent']['model'], 'source': 'explicit'}},
+    )
+    agent = collected['agents']['codex']
+    conditions = agent['conditions']
+    require(set(conditions) == set(JOB_NAMES) and all(
+        conditions[arm]['execution_status'] == 'succeeded'
+        and conditions[arm]['scored_attempts'] == conditions[arm]['expected_attempts'] == 1
+        for arm in selected['arms']
+    ), 'Released collector lost a candidate arm')
+    if baseline_only:
+        skipped = conditions['with_skill']
+        require(skipped['execution_status'] == 'skipped' and skipped['scored_attempts'] == 0
+                and not agent.get('lift'), 'Baseline-only collection acquired a comparison')
+
+
+def execute(stage, expected, output, key):
     from skillevaluator.tier3.harbor.runner import (
         _HarborRunCancellation, _run_bounded_harbor_process, build_harbor_run_command,
     )
@@ -203,16 +233,11 @@ def execute(stage, expected, output, key):
                 require(receipt['teardown_complete'], 'Native trial left Compose resources')
                 if arm == 'with_skill':
                     used = receipt['agent_usage']
-                    require(used['n_input_tokens'] + used['n_output_tokens']
-                            <= PROVIDER_POLICY['max_observed_agent_tokens_before_next_arm'],
-                            'First-arm agent tokens exceeded the second-arm threshold')
-            collected = collect_harbor_results('podman', ['codex'], stage / 'collected', jobs, expected_cases=1,
-                expected_case_ids=[selected['case']], expected_trials=1, n_attempts=1,
-                agent_models={'codex': {'model': selected['agent']['model'], 'source': 'explicit'}})
-            conditions = collected['agents']['codex']['conditions']
-            require(set(conditions) == set(selected['arms']) and all(
-                arm['execution_status'] == 'succeeded' and arm['scored_attempts'] == arm['expected_attempts'] == 1
-                for arm in conditions.values()), 'Released collector lost a candidate arm')
+                    if (used['n_input_tokens'] + used['n_output_tokens']
+                            > PROVIDER_POLICY['max_observed_agent_tokens_before_next_arm']):
+                        evidence['stop_reason'] = 'second_arm_token_threshold'
+                        raise ValueError('First-arm agent tokens exceeded the second-arm threshold')
+            collect_candidate(stage, jobs, selected)
             evidence['status'] = 'complete'
     except Exception as error:
         category = type(error).__name__
@@ -287,13 +312,16 @@ def main():
     value = reviewed_scope(workspace, env, read_json(Path(env['GITHUB_EVENT_PATH']))['inputs'])
     if args.command == 'context':
         selected = value['scope']
+        cost = value['cost_estimate']
+        arms = ', '.join(selected['arms'])
         summary(['## Candidate compatibility smoke', '',
-                 f'Revision {selected["revision"]}. Podman case {selected["case"]}. One Codex trial per arm.',
+                 f'Revision {selected["revision"]}. Podman case {selected["case"]}. One trial in each selected arm ({arms}).',
                  'Codex 0.171.0 uses gpt-6.2-sol at High. The default verifier uses gpt-6.2-sol with reasoning omitted.',
                  'The protected evaluation has a 15-minute deadline. Judge transport retries are disabled.',
-                 'The second arm requires recorded first-arm usage within the declared threshold.',
-                 f'Estimated cost is ${value["cost_estimate"]["usd"]:.2f} at the standard short-context rates '
-                 'for 400,000 input and 240,000 output tokens. Native request counts and billing vary.',
+                 *(['The second arm requires recorded first-arm usage within the declared threshold.']
+                   if selected['planned_trials'] == 2 else []),
+                 f'Estimated cost is ${cost["usd"]:.2f} at the standard short-context rates '
+                 f'for {cost["input_tokens"]:,} input and {cost["output_tokens"]:,} output tokens. Billing varies.',
                  'The operational receipt is outside canonical history.'])
     if args.command in ('prepare', 'guard', 'run', 'cleanup'):
         require(args.stage.is_absolute() and args.stage.resolve() == args.stage
