@@ -5,6 +5,14 @@ import sys
 import unittest
 
 TESTS = Path(__file__).resolve().parents[1] / 'tests'
+FIXTURE_TESTS = (
+    'test_cli_observation.DiagnosticContract.test_native_normalization_preserves_unavailability_and_rejects_mutation',
+    'test_codex_pilot.PilotContracts.test_historical_public_record_cannot_claim_pilot_identity',
+    'test_custom_metrics',
+    'test_evaluator_090.Release090Contracts.test_native_gh_oracle_entry_point_selects_actual_owning_profile',
+    'test_pester_evaluations.NativeStagingTests.test_diagnostic_completion_validates_each_native_outcome_without_standard_fields',
+    'test_skill_evidence.EvidenceTests.test_standalone_cli_disables_repository_bytecode_writes',
+)
 REVIEW_MODULES = ('test_skill_review', 'test_skill_report_reviews', 'test_historical_review_replay')
 PRESENTATION_MODULES = (
     'test_skill_analysis', 'test_skill_report', 'test_skill_pages', 'test_public_reports',
@@ -20,13 +28,30 @@ def cases(suite):
             yield item
 
 
-def contract_suite(loader):
-    # Keep the established discovery rule for suites outside the released owners.
+def contract_suite(loader, *, released=False):
+    excluded = (*REVIEW_MODULES, *PRESENTATION_MODULES)
+    if released:
+        excluded += FIXTURE_TESTS
     discovered = loader.discover(str(TESTS))
     return unittest.TestSuite(
         case for case in cases(discovered)
-        if case.id().partition('.')[0] not in (*REVIEW_MODULES, *PRESENTATION_MODULES)
+        if not any(case.id() == name or case.id().startswith(name + '.') for name in excluded)
     )
+
+
+def released_suite(loader):
+    import benchmark_native
+
+    benchmark_native.validate_runtime()
+    return contract_suite(loader, released=True)
+
+
+def fixture_suite(loader):
+    import evaluator_profiles as profiles
+
+    profiles.runtime(profiles.candidate_versions(profiles.RELEASE_BENCHMARK), owning=True)
+    sys.path.insert(0, str(TESTS))
+    return loader.loadTestsFromNames(FIXTURE_TESTS)
 
 
 def review_suite(loader):
@@ -47,7 +72,8 @@ def presentation_suite(loader):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    suites = {'contracts': contract_suite, 'private-review': review_suite, 'presentation': presentation_suite}
+    suites = {'contracts': contract_suite, 'released-contracts': released_suite, 'fixture-contracts': fixture_suite,
+              'private-review': review_suite, 'presentation': presentation_suite}
     parser.add_argument('owner', choices=suites)
     owner = parser.parse_args().owner
     loader = unittest.TestLoader()

@@ -302,7 +302,10 @@ digest-pinned complete and partial synthetic gh controls captured with the
 original 0.3.0 collector. Both public projections reproduce the original
 observations, attempt identities and scores byte for byte. The partial
 control also checks unavailable gate measurements and rejects a substituted
-execution-error ledger.
+execution-error ledger. Feature-branch benchmark preapproval uses the
+pinned released runtime for native contracts and the original 1.0.1
+compatibility owner for its fixture producers. The old reporting setup
+selector exits before installation.
 
 The released verifier comparison found unsupported command wrappers that
 reached judge calls, a missing trajectory that produced numeric values,
@@ -1935,8 +1938,10 @@ comparisons do not produce improvement deltas.
 
 ## Qualification and limits
 
-Use `setup-skillevaluator.sh reporting` for isolated historical runtimes and
-`setup-skillevaluator.sh candidate-current` for the replacement. Then invoke
+For exact reproduction, select the producing Git revision recorded in the
+retained evidence. Use its `setup-skillevaluator.sh reporting` for the
+original reporting runtime and `setup-skillevaluator.sh candidate-current`
+for the 0.8.0 candidate. Then invoke
 `qualify_current_evaluator.py --output` with a new persistent evidence directory and
 `SKILL_REVIEW_PYTHON` selecting the retained historical interpreter. Disposable
 fixtures honor `TMPDIR`. The new `current-evaluator.yml` workflow reproduces this

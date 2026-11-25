@@ -698,8 +698,9 @@ class WorkflowAndUsageTests(unittest.TestCase):
         self.assertFalse(any(selector in step.get('run', '') or '-m unittest discover' in step.get('run', '')
                              for step in protected['steps']))
         expected = [
-            f'"$SKILL_REVIEW_PYTHON" -B {selector} contracts',
+            f'"$SKILL_NATIVE_BENCHMARK_PYTHON" -B {selector} released-contracts',
             f'"$SKILL_REVIEW_CANDIDATE_PYTHON" -B {selector} private-review',
+            f'"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B {selector} fixture-contracts',
             f'"$SKILL_DATA_PYTHON" -B {selector} presentation',
         ]
         tests = [step for step in context['steps'] if selector in step.get('run', '')]
@@ -720,11 +721,18 @@ class WorkflowAndUsageTests(unittest.TestCase):
             self.assertLess(steps.index(release), steps.index(gh))
             self.assertIn('"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON"', gh['run'])
             self.assertNotIn('secrets.', json.dumps([release, gh]))
-        self.assertTrue(all(any(command in step.get('run', '') for step in validate_steps) for command in expected))
+        retained = f'"$SKILL_REVIEW_PYTHON" -B {selector} contracts'
+        for command in (retained, expected[1], expected[-1]):
+            self.assertTrue(any(command in step.get('run', '') for step in validate_steps))
+        for command, setup_kind in ((expected[0], 'native-benchmark-101'), (expected[2], 'native-benchmark-candidate')):
+            setup = next(step for step in context['steps'] if step.get('run', '').endswith(' ' + setup_kind))
+            test = next(step for step in tests if step['run'] == command)
+            self.assertLess(context['steps'].index(setup), context['steps'].index(test))
+            self.assertNotIn('secrets.', json.dumps([setup, test]))
         qualifier = yaml.safe_load((ROOT / '.github/workflows/current-evaluator.yml').read_text())
         for steps in (context['steps'], validate_steps, qualifier['jobs']['cohorts']['steps']):
             data_setup = next(s for s in steps if 'setup-static-evaluator.sh data-host' in s.get('run', ''))
-            presentation = next(s for s in steps if s.get('run') == expected[2])
+            presentation = next(s for s in steps if s.get('run') == expected[-1])
             self.assertLess(steps.index(data_setup), steps.index(presentation))
             self.assertNotIn('secrets.', json.dumps([data_setup, presentation]))
         gate = next(s for s in protected['steps'] if s.get('id') == 'preparation')
@@ -741,7 +749,8 @@ class WorkflowAndUsageTests(unittest.TestCase):
 
         identities = ['test_skill_review.ReviewTests.test_review', 'test_skill_report.ReportTests.test_deterministic',
                       'test_historical_review_replay.HistoricalReviewReplayTests.test_saved_bytes',
-                      'test_skill_analysis.AnalysisTests.test_pinned_environment', 'test_cli.CliTests.test_reports']
+                      'test_skill_analysis.AnalysisTests.test_pinned_environment',
+                      'test_custom_metrics.CustomMetricTests.test_fixture', 'test_cli.CliTests.test_reports']
         discovered = []
         for identity in identities:
             entry = Test()
@@ -749,7 +758,8 @@ class WorkflowAndUsageTests(unittest.TestCase):
             discovered.append(entry)
         loader = unittest.TestLoader()
         loader.discover = lambda _path: unittest.TestSuite([unittest.TestSuite(discovered)])
-        self.assertEqual([case.id() for case in contract_suite(loader)], [identities[-1]])
+        self.assertEqual([case.id() for case in contract_suite(loader)], identities[-2:])
+        self.assertEqual([case.id() for case in contract_suite(loader, released=True)], [identities[-1]])
 
     def test_inference_free_jobs_use_the_released_data_host(self):
         planner = yaml.safe_load((ROOT / orchestration.WORKFLOW).read_text())
@@ -763,9 +773,8 @@ class WorkflowAndUsageTests(unittest.TestCase):
             caller = next(s for s in steps if 'skill_orchestration.py ' + command in s.get('run', ''))
             self.assertLess(steps.index(setup), steps.index(caller))
             self.assertIn('"$SKILL_DATA_PYTHON"', caller['run'])
-        legacy = next(s for s in benchmark['jobs']['context']['steps']
-                      if 'setup-skillevaluator.sh reporting' in s.get('run', ''))
-        self.assertEqual(legacy['if'], "github.ref != 'refs/heads/main'")
+        self.assertFalse(any('setup-skillevaluator.sh reporting' in s.get('run', '')
+                             for s in benchmark['jobs']['context']['steps']))
 
     def test_mutable_history_is_read_after_setup_and_before_consumption(self):
         planner = yaml.safe_load((ROOT / orchestration.WORKFLOW).read_text())

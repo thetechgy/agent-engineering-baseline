@@ -72,10 +72,10 @@ jobs:
       - name: Install pinned evaluator for public data
         working-directory: trusted
         run: bash .github/scripts/setup-static-evaluator.sh data-host
-      - name: Install pinned legacy environments for the regression suite
+      - name: Install pinned released benchmark runtime for regression checks
         if: github.ref != 'refs/heads/main'
         working-directory: trusted
-        run: bash .github/scripts/setup-skillevaluator.sh reporting
+        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-101
       - name: Install the pinned private-review test environment
         if: github.ref != 'refs/heads/main'
         working-directory: trusted
@@ -86,7 +86,7 @@ jobs:
         working-directory: trusted
         env:
           SKILL_EVALUATION_KIND: benchmark
-        run: '"$SKILL_REVIEW_PYTHON" -B .github/scripts/test_evaluation_contracts.py contracts'
+        run: '"$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/test_evaluation_contracts.py released-contracts'
       - name: Test private review and attachments without inference
         if: github.ref != 'refs/heads/main'
         working-directory: trusted
@@ -95,6 +95,10 @@ jobs:
         if: github.ref != 'refs/heads/main'
         working-directory: trusted
         run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-candidate
+      - name: Verify captured custom report fixtures using their released owner
+        if: github.ref != 'refs/heads/main'
+        working-directory: trusted
+        run: '"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py fixture-contracts'
       - name: Verify released gh native task and verifier contracts
         if: github.ref != 'refs/heads/main'
         working-directory: trusted
