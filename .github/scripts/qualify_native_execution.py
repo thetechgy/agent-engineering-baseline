@@ -326,7 +326,13 @@ def qualify(output, name, revision, *, mode="standard"):
         require(len(results) == (1 if preflight else attempts * cases), "Released fixture attempt count differs")
         observed[job] = [inspect_trial(path, preflight=preflight, suite=name) for path in results]
     if name == pester.NAME:
-        qualify_pester_publication(workspace, output, root, mode, revision, fixture_agent, observed)
+        try:
+            qualify_pester_publication(workspace, output, root, mode, revision, fixture_agent, observed)
+        except (KeyError, OSError, TypeError, ValueError) as error:
+            write_json(output / "failure.json", {"schema_version": 1, "revision": revision, "suite": name,
+                "status": "diagnostic_handoff_failed", "failure_type": type(error).__name__,
+                "observed": observed, "history_eligible": False, "provider_requests": 0})
+            raise
         return
     run = Path(result["run_dir"])
     native.validate_collected_pair(result, run, root, name, mode, revision, [CASES[name]],
@@ -379,8 +385,8 @@ def qualify_pester_publication(workspace, output, root, mode, revision, fixture_
     import skill_reports as reports
 
     with (patch.object(native, "CODEX_AGENT", fixture_agent), patch.dict(os.environ, GITHUB_SHA=revision)):
-        reports.benchmark_report(workspace, root, pester.NAME, mode, output / "scores")
-        require(not (output / "scores").exists(), "Pester acquired standard scores")
+        native.diagnostic_report(workspace, root, pester.NAME, mode, revision)
+        require(not (root / "released-scores.json").exists(), "Pester acquired standard scores")
         retained = output / "retained"
         reports.benchmark_artifacts(workspace, root, pester.NAME, retained)
         destination = output / "public"

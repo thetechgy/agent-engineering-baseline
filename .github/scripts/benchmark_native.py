@@ -286,11 +286,34 @@ def podman_finalizer(skill, assets, emitted):
             configure_openai_task(task, assets, profile)
 
 
+def output_provenance_key(home):
+    return home / ".local/state/skillevaluator/output-provenance.key"
+
+
+@contextmanager
+def run_output_provenance(root):
+    # Authenticate the result with the same isolated host key used for execution.
+    from skillevaluator.tier3.output_provenance import OUTPUT_PROVENANCE_KEY_ENV
+
+    prior = os.environ.get(OUTPUT_PROVENANCE_KEY_ENV)
+    os.environ[OUTPUT_PROVENANCE_KEY_ENV] = str(output_provenance_key(root / "operator-home"))
+    try:
+        yield
+    finally:
+        if prior is None:
+            os.environ.pop(OUTPUT_PROVENANCE_KEY_ENV, None)
+        else:
+            os.environ[OUTPUT_PROVENANCE_KEY_ENV] = prior
+
+
 @contextmanager
 def provider_environment(home, key, manifest=None):
+    from skillevaluator.tier3.output_provenance import OUTPUT_PROVENANCE_KEY_ENV
+
     original = dict(os.environ)
     names = ("PATH", "TMPDIR", "DOCKER_CONFIG", "DOCKER_HOST", "COMPOSE_PLUGIN_ROOT", "XDG_RUNTIME_DIR")
     env = {name: original[name] for name in names if name in original}
+    env[OUTPUT_PROVENANCE_KEY_ENV] = str(output_provenance_key(home))
     env.update(HOME=str(home), OPENAI_API_KEY=key, PYTHON_DOTENV_DISABLED="1", PYTHONDONTWRITEBYTECODE="1",
                LITELLM_LOCAL_MODEL_COST_MAP="True", SKILL_EVAL_LLM_PROVIDER=POLICY["provider"],
                SKILL_EVAL_LLM_MODEL=POLICY["model"], SKILL_EVAL_JUDGE_MODEL=POLICY["model"],
@@ -547,7 +570,8 @@ def score_record(workspace, root, name, mode, revision, *, selected=None):
 
 def recover(workspace, root, name, mode, revision, outcome):
     root, _, _ = validate_preparation(workspace, root, name, mode, revision)
-    recover_benchmark(workspace, root, name, mode, outcome, environment=EXECUTION_BACKENDS[name])
+    with run_output_provenance(root):
+        recover_benchmark(workspace, root, name, mode, outcome, environment=EXECUTION_BACKENDS[name])
     if outcome != "success":
         original = read_json(root / "provenance.json")
         score_provenance = ({"native_policy": released_policy(name), "native_series": score_series(name, mode)}
@@ -556,14 +580,25 @@ def recover(workspace, root, name, mode, revision, outcome):
                                              **score_provenance})
 
 
+def diagnostic_report(workspace, root, name, mode, revision):
+    from skill_reports import capture_benchmark_custom, diagnostic_benchmark_report
+
+    require(name == pester.NAME and os.environ.get("GITHUB_SHA") == revision, "Unqualified diagnostic report scope")
+    root, _, _ = validate_preparation(workspace, root, name, mode, revision)
+    with run_output_provenance(root):
+        capture_benchmark_custom(workspace, root, name)
+        diagnostic_benchmark_report(workspace, root, name, mode)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     subcommands = parser.add_subparsers(dest="command", required=True)
     subcommands.add_parser("verify-runtime")
-    for command in ("prepare", "execute", "recover", "score-report"):
+    for command in ("prepare", "execute", "recover", "score-report", "diagnostic-report"):
         entry = subcommands.add_parser(command)
         entry.add_argument("root", type=Path)
-        entry.add_argument("skill", choices=BACKENDS if command == "score-report" else EXECUTION_BACKENDS)
+        suites = {"score-report": BACKENDS, "diagnostic-report": (pester.NAME,)}
+        entry.add_argument("skill", choices=suites.get(command, EXECUTION_BACKENDS))
         entry.add_argument("mode", choices=MODES)
         entry.add_argument("revision")
         if command == "recover":
@@ -579,6 +614,9 @@ def main():
         return 0
     if args.command == "recover":
         recover(ROOT, args.root, args.skill, args.mode, args.revision, args.outcome)
+        return 0
+    if args.command == "diagnostic-report":
+        diagnostic_report(ROOT, args.root, args.skill, args.mode, args.revision)
         return 0
     if args.command == "score-report":
         from skill_evidence import write_outputs

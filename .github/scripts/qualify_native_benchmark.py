@@ -135,6 +135,15 @@ def qualify(root, name, mode, revision):
             "Release launcher did not reach or retain the expected preflight result")
     retained = Path(result["run_dir"])
     require(retained.resolve().is_relative_to(root.resolve()), "Unexpected released report location")
+    from skillevaluator.tier3.output_provenance import OUTPUT_PROVENANCE_KEY_ENV, is_generated_output_root
+
+    # Production reports run after the isolated provider environment exits.
+    with patch.dict(os.environ, {OUTPUT_PROVENANCE_KEY_ENV: str(root / "unrelated-output-key")}):
+        require(not is_generated_output_root(retained), "An unrelated key authenticated the run")
+        with native.run_output_provenance(root):
+            require(is_generated_output_root(retained), "Report phase lost the isolated execution key")
+        require(os.environ[OUTPUT_PROVENANCE_KEY_ENV] == str(root / "unrelated-output-key"),
+                "Report phase changed the caller's output key")
     snapshot = read_json(retained / "dataset_snapshot.json")
     config = result["run_config"]
     require(snapshot["dataset_summary"]["total_tasks"] == count
