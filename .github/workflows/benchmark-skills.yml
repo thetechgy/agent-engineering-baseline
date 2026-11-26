@@ -469,7 +469,7 @@ jobs:
         run: |
           bash .github/scripts/setup-compose.sh
           bash .github/scripts/setup-static-evaluator.sh native-benchmark-101
-      - name: Prepare the two candidate trials without inference
+      - name: Prepare the approved candidate trials without inference
         timeout-minutes: 7
         run: |
           "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_smoke.py prepare \

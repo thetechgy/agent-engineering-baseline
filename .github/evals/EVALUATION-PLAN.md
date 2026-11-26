@@ -7,6 +7,23 @@ Production benchmarks still use the reviewed 0.3.0 runtime. Keep the
 original scorer, locks and validator snapshots available at their producing
 revisions. [Issue #95](https://github.com/thetechgy/agent-engineering-baseline/issues/95)
 
+The direct-tool compatibility smoke ran one Podman case 1 baseline trial
+at `bc96c28`. The approved agent trial recorded usage. The verifier
+recorded unresolved path evidence and stopped before standard judging.
+Teardown passed. The diagnostic remains outside canonical history. Its
+bounded receipt identifies the failure category. The original command
+shape was unavailable for replay. A credential-free verifier control
+reproduced the same failure category and demonstrated the text and
+issued-access controls separately.
+[Hosted diagnostic](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45813989937)
+
+The smoke receipt now rechecks the same trial's bounded trajectory with
+the pinned verifier after an unresolved-path failure. It emits fixed
+syntax labels when the recheck matches the verifier's findings. The
+classifier, score policy, native producer and historical receipts retain
+their original identities. Production adoption remains pending under the
+compatibility gate.
+
 - The startup-only checkpoint `dc997a64a5bc54507786f49c1734e9c1887997b7`
   exercised released SkillEvaluator 1.0.1 staging and Harbor 0.25.0 dispatch
   through a separately pinned backend. Both gh-007 fixture arms reached

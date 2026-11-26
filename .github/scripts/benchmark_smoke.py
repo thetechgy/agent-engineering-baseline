@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import subprocess
 from pathlib import Path
 import signal
@@ -135,7 +136,73 @@ def execution_evidence_reasons(reward):
     return []
 
 
-def trial_receipt(job, *, arm, selected, receipt):
+def path_syntax(source):
+    """Describe syntax in an unresolved action without exposing any operands."""
+    if len(source) > 65536:
+        return "source_limit"
+    try:
+        lexer = shlex.shlex(source, posix=True, punctuation_chars=";&|<>()")
+        lexer.whitespace = " \t\r"
+        words = list(lexer)
+    except ValueError:
+        return "shell_lexing"
+    if any(word in {"<<", "<<<"} for word in words):
+        return "shell_here_input"
+    if any(word in {"|", "||", "&&", "&", "|&"} for word in words):
+        return "shell_control_operator"
+    if any(word in {"(", ")"} or "$(" in word or "`" in word for word in words):
+        return "shell_expansion"
+    if words:
+        executable = words[0].rsplit("/", 1)[-1]
+        if executable in {"sh", "bash", "dash", "eval", "source", "."}:
+            return "shell_interpreter"
+        if executable in {"python", "python3"}:
+            return "python_source"
+    return "unclassified"
+
+
+def path_evidence_syntax(trial, reward, entry_path):
+    """Recheck the pinned verifier's unsupported calls for this receipt only."""
+    if entry_path is None or reward.get("trajectory_source") != "trajectory.json":
+        return []
+    from unittest.mock import patch
+
+    from skillevaluator.tier3.eval_core import checks
+    from skillevaluator.tier3.harbor.templates import eval as verifier
+    from skill_evidence import read_bytes
+
+    findings = reward["details"]["security"]["findings"]
+    expected = sum(isinstance(row, dict) and row.get("type") == "unsupported_path_evidence" for row in findings)
+    syntax = []
+
+    def observe(source, paths, *, matcher):
+        outcome = classifier(source, paths, matcher=matcher)
+        if outcome == "unknown":
+            syntax.append(path_syntax(source))
+        return outcome
+
+    try:
+        classifier = checks.classify_sensitive_command
+        entry = json.loads(read_bytes(entry_path, limit=128 * 1024))
+        if entry.get("id") != reward["entry_id"] or entry.get("has_skill") is not reward["has_skill"]:
+            return []
+        trajectory = json.loads(read_bytes(trial / "agent/trajectory.json", limit=2 * 1024 * 1024))
+        calls = verifier.extract_tool_calls_as_dicts(trajectory)
+        if len(calls) > 256:
+            return []
+        expected_skill = entry.get("expected_skill") or ""
+        acceptable = verifier._resolve_acceptable_skills(entry, expected_skill)
+        with patch.object(checks, "classify_sensitive_command", observe):
+            security = verifier.check_security(trajectory, calls, expected_skill, acceptable,
+                                               agent_workdir=entry.get("agent_workdir", "/workspace"))
+    except (AttributeError, KeyError, OSError, OverflowError, RecursionError, TypeError, ValueError):
+        return []
+    if security.get("supported") is False and len(syntax) == expected:
+        return sorted(set(syntax))
+    return []
+
+
+def trial_receipt(job, *, arm, selected, receipt, entry_path=None):
     paths = list(job.glob('*/result.json'))
     require(len(paths) == 1, 'Expected one native trial in the selected arm')
     path = paths[0]
@@ -170,6 +237,10 @@ def trial_receipt(job, *, arm, selected, receipt):
             reasons = execution_evidence_reasons(reward)
             if reasons:
                 receipt['execution_evidence_reasons'] = reasons
+            if 'unsupported_path_evidence' in reasons:
+                syntax = path_evidence_syntax(path.parent, reward, entry_path)
+                if syntax:
+                    receipt['path_evidence_syntax'] = syntax
         elif failed == {'environment'}:
             receipt['failure_reason'] = 'verifier_environment'
         elif failed and failed.issubset(JUDGE_METRICS):
@@ -275,7 +346,8 @@ def execute(stage, expected, output, key):
                 secret_values={key}, cancellation=cancellation)
             require(process.returncode == 0 and not process.output_exceeded, 'Native launcher failed')
             job = jobs / job_name
-            trial_receipt(job, arm=arm, selected=selected, receipt=receipt)
+            trial_receipt(job, arm=arm, selected=selected, receipt=receipt,
+                          entry_path=task / SMOKE_CASE / "tests/entry.json")
             trial, = job.glob('*/result.json')
             project = trial.parent.name.lower() + '__env'
             receipt['teardown_complete'] = compose_teardown_complete(project)

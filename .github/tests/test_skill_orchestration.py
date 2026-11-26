@@ -445,6 +445,59 @@ class OrchestrationTests(unittest.TestCase):
         self.assertEqual(receipt, {'state': 'complete', 'agent_usage': usage, 'native_tool_route': 'direct',
                                    'judge_scores': dict.fromkeys(metrics, 0.8)})
 
+    @unittest.skipUnless(os.environ.get('SKILL_EVALUATION_KIND') == 'benchmark', 'requires the patched 1.0.1 verifier')
+    def test_compatibility_path_observation_uses_the_native_classifier_and_redacts_the_source(self):
+        import benchmark_smoke as smoke
+        from skillevaluator.tier3.harbor.templates import eval as verifier
+
+        job = self.root / 'job'
+        trial = job / 'podman-1__fixture'
+        marker = 'private fixture command and observation'
+        trajectory = {'steps': [{'source': 'agent', 'tool_calls': [
+            {'function_name': 'exec_command', 'tool_call_id': 'unsupported',
+             'arguments': {'cmd': "printf '%s' 'mention /run/podman/podman.sock' | wc -c"}},
+            {'function_name': 'exec_command', 'tool_call_id': 'literal',
+             'arguments': {'cmd': "printf '%s' '/run/podman/podman.sock " + marker + "'"}},
+        ], 'observation': {'results': [
+            {'source_call_id': call_id, 'content': marker} for call_id in ('unsupported', 'literal')
+        ]}}]}
+        calls = verifier.extract_tool_calls_as_dicts(trajectory)
+        security = verifier.check_security(trajectory, calls)
+        self.assertIs(security['supported'], False)
+        reports.write_json(trial / 'agent/trajectory.json', trajectory)
+        self.assertEqual(smoke.path_syntax('x' * 65537), 'source_limit')
+        usage = {'n_input_tokens': 11, 'n_output_tokens': 5, 'n_cache_tokens': None}
+        reports.write_json(trial / 'result.json', {
+            'exception_info': None, 'finished_at': stamp(0),
+            'agent_info': {'version': '0.171.0'}, 'agent_result': usage,
+        })
+        reward = {
+            'entry_id': '1', 'has_skill': False, 'score_policy': 'skill-evaluator-dimension-mean-v1',
+            'evaluation_status': 'failed', 'evaluation_errors': {'execution_evidence': marker},
+            'details': {'security': security}, 'trajectory_source': 'trajectory.json',
+        }
+        entry = trial / 'tests/entry.json'
+        reports.write_json(entry, {'id': '1', 'has_skill': False})
+        selected = {'case': '1', 'agent': {'cli': '0.171.0'}, 'verifier': {'model': 'gpt-6.2-sol'}}
+        for source, expected in (('trajectory.json', ['shell_control_operator']), ('agent-log', None)):
+            with self.subTest(source=source):
+                reports.write_json(trial / 'verifier/skill_evaluator_reward.json',
+                                   {**reward, 'trajectory_source': source})
+                receipt = {}
+                with self.assertRaisesRegex(ValueError, 'Native verifier did not produce a complete measurement'):
+                    smoke.trial_receipt(job, arm='without_skill', selected=selected, receipt=receipt, entry_path=entry)
+                self.assertEqual(receipt.get('path_evidence_syntax'), expected)
+                self.assertEqual(receipt['execution_evidence_reasons'], ['unsupported_path_evidence'])
+                self.assertNotIn(marker, json.dumps(receipt))
+                self.assertNotIn('podman.sock', json.dumps(receipt))
+
+        security['findings'].append(security['findings'][0])
+        reports.write_json(trial / 'verifier/skill_evaluator_reward.json', reward)
+        receipt = {}
+        with self.assertRaisesRegex(ValueError, 'Native verifier did not produce a complete measurement'):
+            smoke.trial_receipt(job, arm='without_skill', selected=selected, receipt=receipt, entry_path=entry)
+        self.assertNotIn('path_evidence_syntax', receipt)
+
     def test_compatibility_workflow_is_manual_protected_and_excluded_from_history(self):
         workflow = yaml.safe_load((ROOT / orchestration.BENCHMARK).read_text())
         inputs = workflow.get('on', workflow.get(True))['workflow_dispatch']['inputs']
