@@ -496,6 +496,12 @@ across 361 generated lines in `source-v47.json`. Each preserves its
 parent grader, fixture, and replay adapter. The authentic prior
 receipts retain their original producer and scores.
 
+The frozen private-review reader required a separate successor to
+recognize the direct-tool producer and released diagnostic policy.
+`review-101-v4` uses the 12-member overlay from `af379d0` with the
+existing private-review lock and request policy. Earlier saved review
+profiles keep their exact original validator snapshots.
+
 ## Model selection for new executions
 
 | Operator or workflow | Model dispatch and evidence |
