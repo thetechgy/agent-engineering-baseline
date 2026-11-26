@@ -395,7 +395,8 @@ class ReportTests(unittest.TestCase):
                    "metric_set": "skill-evaluator-default-v2",
                    "accuracy": float(present or attempt == 1),
                    "goal_accuracy": float(present or attempt == 1),
-                   "behavior_check": 1.0, "security": 1.0}
+                   "behavior_check": 1.0, "security": 1.0,
+                   "skill_execution": 1.0, "skill_efficiency": 1.0}
                   for case in cases for attempt in (1, 2, 3)]
             for arm, present in native.GH_ARMS.items()
         }
