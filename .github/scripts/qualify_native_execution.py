@@ -244,7 +244,6 @@ def qualify(output, name, revision, *, mode="standard"):
     fixtures = controls(output / "fixtures", name)
     disconnected = output / "fixtures/disconnected.yaml"
     disconnected.write_text("services:\n  main:\n    network_mode: none\n")
-    stage_gh = native.stage_gh
     local_skill = native.local_skill
     gh_task = native.configure_gh_task
     podman_task = native.configure_openai_task
@@ -298,12 +297,12 @@ def qualify(output, name, revision, *, mode="standard"):
         isolate_task(task, standard_judges=False)
 
     root = output / "run"
-    with (patch.object(native, "stage_gh", side_effect=lambda source, dest: stage_gh(source, dest, [CASES[name]])),
-          patch.object(native, "local_skill", return_value=subset),
+    with (patch.object(native, "local_skill", return_value=subset),
           patch.object(native, "configure_gh_task", side_effect=configure_gh),
           patch.object(native, "configure_openai_task", side_effect=configure_podman),
           patch.object(native, "configure_pester_task", side_effect=configure_pester)):
-        native.prepare(workspace, root, name, mode, revision)
+        native.prepare(workspace, root, name, mode, revision,
+                       gh_cases=[CASES[name]] if name == "gh" else None)
         sys.addaudithook(restrict_network)
         with (patch.object(runtime_preflight, "probe_model", side_effect=catalog),
               patch.object(runner, "build_harbor_run_command", side_effect=build_fixture),
