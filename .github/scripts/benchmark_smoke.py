@@ -5,6 +5,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 from pathlib import Path
 import signal
@@ -12,7 +13,7 @@ import time
 
 from benchmark_native import native_versions, validate_runtime
 from benchmark_podman import CODEX_PROFILE, SMOKE_CASE, compose_teardown_complete, configure_openai_task, scope, stage_task
-from skill_orchestration import BENCHMARK, REPOSITORY, git, read_artifact
+from skill_orchestration import BENCHMARK, REPOSITORY, git, identity, read_artifact
 import skill_pages as pages
 from skill_reports import outputs, read_json, require, summary, write_json
 
@@ -20,6 +21,19 @@ MODE = 'candidate-smoke'
 BRANCH = 'qualify/skillevaluator-101-retirement'
 JOB_NAMES = {'with_skill': 'podman-codex-with', 'without_skill': 'podman-codex-without'}
 JUDGE_METRICS = ('accuracy', 'behavior_check', 'goal_accuracy')
+FILE_EDIT_CASE = 'compatibility-file-edit'
+FILE_EDIT_DATASET = {
+    'skill_name': 'podman',
+    'evals': [{
+        'id': FILE_EDIT_CASE,
+        'prompt': ('Create output/compatibility.txt in the current workspace containing a single line '
+                   'with the text podman-compatibility-fixture. Use a workspace tool to create the file, '
+                   'then report its relative path.'),
+        'expected_output': 'output/compatibility.txt contains podman-compatibility-fixture on a single line.',
+        'assertions': ['Creates the requested workspace file with the exact marker.'],
+        'files': [],
+    }],
+}
 PROVIDER_CREDENTIALS = (
     'OPENAI_API_KEY', 'CODEX_API_KEY', 'CODEX_AUTH_JSON_PATH', 'CODEX_FORCE_AUTH_JSON',
     'ANTHROPIC_API_KEY', 'NVIDIA_API_KEY', 'SKILL_EVAL_LLM_API_KEY',
@@ -63,10 +77,15 @@ def reviewed_scope(workspace, env, inputs):
             'Candidate checkout differs from the dispatched revision')
     arms = inputs.get('candidate_smoke_arms') or 'paired'
     require(arms in ('paired', 'without-skill'), 'Unknown candidate arm selection')
+    workload = inputs.get('candidate_smoke_workload') or 'podman-case-1'
+    require(workload in ('podman-case-1', 'file-edit-fixture'), 'Unknown candidate workload')
+    require(workload == 'podman-case-1' or arms == 'without-skill', 'The compatibility fixture requires one baseline arm')
     selected = scope(workspace, revision, released=True)
     baseline_only = arms == 'without-skill'
     if baseline_only:
         selected.update(arms=['without_skill'], planned_trials=1)
+    if workload == 'file-edit-fixture':
+        selected.update(case=FILE_EDIT_CASE, fixture_digest='sha256:' + identity(FILE_EDIT_DATASET))
     return {'schema_version': 2, 'kind': 'podman_101_compatibility', 'run_id': pages.number(int(env['GITHUB_RUN_ID'])),
             'attempt': 1, 'scope': selected, 'provider_policy': PROVIDER_POLICY, 'runtime': native_versions(),
             'cost_estimate': estimate_cost(baseline_only=baseline_only)}
@@ -104,9 +123,22 @@ def prepare(workspace, stage, expected):
     assets.mkdir()
     profile = read_json(CODEX_PROFILE)
     acquire(profile, assets)
+    skill = workspace / '.apm/skills/podman'
+    if selected['case'] == FILE_EDIT_CASE:
+        require(selected['arms'] == ['without_skill'] and selected['planned_trials'] == 1
+                and selected['fixture_digest'] == 'sha256:' + identity(FILE_EDIT_DATASET),
+                'Compatibility fixture scope changed')
+        bundle = stage / 'fixture' / 'podman'
+        bundle.mkdir(parents=True, mode=0o700)
+        # Keep released workspace discovery confined to this synthetic source tree.
+        subprocess.run(['git', 'init', '--quiet', '--template=', str(bundle)], check=True, timeout=15,
+                       env={name: value for name, value in os.environ.items() if not name.startswith('GIT_')})
+        shutil.copyfile(skill / 'SKILL.md', bundle / 'SKILL.md')
+        write_json(bundle / 'evals/evals.json', FILE_EDIT_DATASET)
+        skill = bundle
     task_checksums = {}
     for arm in selected['arms']:
-        task = stage_task(workspace / '.apm/skills/podman', stage / arm, case=SMOKE_CASE,
+        task = stage_task(skill, stage / arm, case=selected['case'],
                           with_skill=arm == 'with_skill')
         native = configure_openai_task(task, assets, profile)
         task_checksums[arm] = native.checksum
@@ -347,7 +379,7 @@ def execute(stage, expected, output, key):
             require(process.returncode == 0 and not process.output_exceeded, 'Native launcher failed')
             job = jobs / job_name
             trial_receipt(job, arm=arm, selected=selected, receipt=receipt,
-                          entry_path=task / SMOKE_CASE / "tests/entry.json")
+                          entry_path=task / selected["case"] / "tests/entry.json")
             trial, = job.glob('*/result.json')
             project = trial.parent.name.lower() + '__env'
             receipt['teardown_complete'] = compose_teardown_complete(project)
@@ -381,11 +413,14 @@ def cleanup(stage, expected, output):
         require(evidence['context'] == expected, 'Diagnostic scope changed')
         subprocess.run(['docker', 'info', '--format', '{{.ServerVersion}}'], stdout=subprocess.DEVNULL,
                        timeout=10, check=True)
+        case = expected['scope']['case']
+        require(case in (SMOKE_CASE, FILE_EDIT_CASE), 'Unrecognized candidate cleanup case')
         for arm in expected['scope']['arms']:
-            environment = stage / arm / 'tasks' / SMOKE_CASE / 'environment'
-            for trial in (stage / 'jobs' / JOB_NAMES[arm]).glob(SMOKE_CASE + '__*'):
+            environment = stage / arm / 'tasks' / case / 'environment'
+            for trial in (stage / 'jobs' / JOB_NAMES[arm]).glob(case + '__*'):
                 require(trial.is_dir() and not trial.is_symlink()
-                        and re.fullmatch(r'1__[A-Za-z0-9]{1,32}', trial.name), 'Unexpected trial recording path')
+                        and re.fullmatch(re.escape(case) + r'__[A-Za-z0-9]{1,32}', trial.name),
+                        'Unexpected trial recording path')
                 project = trial.name.lower() + '__env'
                 selector = 'label=com.docker.compose.project=' + project
                 containers = subprocess.check_output(
@@ -437,6 +472,8 @@ def main():
         arms = ', '.join(selected['arms'])
         summary(['## Candidate compatibility smoke', '',
                  f'Revision {selected["revision"]}. Podman case {selected["case"]}. One trial in each selected arm ({arms}).',
+                 *([f'Synthetic file-edit integration fixture {selected["fixture_digest"]}.']
+                   if 'fixture_digest' in selected else []),
                  f'Runtime {value["runtime"]["producer_profile"]}. Patch SHA-256 {value["runtime"]["patch_sha256"]}.',
                  'Codex 0.171.0 uses gpt-6.2-sol at High with the pinned direct-tool catalog.',
                  'The default verifier uses gpt-6.2-sol with reasoning omitted.',

@@ -25,6 +25,13 @@ on:
           - paired
           - without-skill
         default: paired
+      candidate_smoke_workload:
+        description: Workload for the diagnostic candidate smoke
+        type: choice
+        options:
+          - podman-case-1
+          - file-edit-fixture
+        default: podman-case-1
       request_id:
         description: Optional authenticated orchestration request (leave empty for manual runs)
         type: string
@@ -124,7 +131,12 @@ jobs:
           RETAINED: ${{ github.workspace }}/retained
           BENCHMARK_MODE: ${{ inputs.mode }}
           CANDIDATE_SMOKE_ARMS: ${{ inputs.candidate_smoke_arms }}
+          CANDIDATE_SMOKE_WORKLOAD: ${{ inputs.candidate_smoke_workload }}
         run: |
+          if [[ "$BENCHMARK_MODE" != candidate-smoke && "${CANDIDATE_SMOKE_WORKLOAD:-podman-case-1}" != podman-case-1 ]]; then
+            echo '::error::The file-edit fixture requires the candidate smoke mode.'
+            exit 1
+          fi
           if [[ "$BENCHMARK_MODE" != candidate-smoke && "${CANDIDATE_SMOKE_ARMS:-paired}" != paired ]]; then
             echo '::error::Arm selection requires the candidate smoke mode.'
             exit 1

@@ -339,9 +339,20 @@ class OrchestrationTests(unittest.TestCase):
         self.assertEqual(baseline['scope'], {**record['scope'], 'arms': ['without_skill'], 'planned_trials': 1})
         self.assertEqual(baseline['provider_policy'], record['provider_policy'])
         self.assertEqual(baseline['cost_estimate']['usd'], 1.80)
+        fixture_inputs = {**inputs, 'candidate_smoke_arms': 'without-skill',
+                          'candidate_smoke_workload': 'file-edit-fixture'}
+        fixture = smoke.reviewed_scope(self.workspace, env, fixture_inputs)
+        self.assertEqual(fixture['scope'], {
+            **baseline['scope'], 'case': smoke.FILE_EDIT_CASE,
+            'fixture_digest': 'sha256:' + orchestration.identity(smoke.FILE_EDIT_DATASET),
+        })
+        self.assertEqual(fixture['provider_policy'], baseline['provider_policy'])
+        self.assertEqual(fixture['runtime'], baseline['runtime'])
         for updates in ({'mode': 'confirmation'}, {'skill': 'gh'}, {'expected_revision': 'f' * 40},
                         {'request_id': 'autodispatch'}, {'planner_run_id': '20'},
-                        {'candidate_smoke_arms': 'with-skill'}):
+                        {'candidate_smoke_arms': 'with-skill'},
+                        {'candidate_smoke_workload': 'file-edit-fixture'},
+                        {'candidate_smoke_workload': 'unknown'}):
             with self.subTest(updates=updates), self.assertRaises(ValueError):
                 smoke.reviewed_scope(self.workspace, env, {**inputs, **updates})
         for updates in ({'GITHUB_RUN_ATTEMPT': '2'}, {'GITHUB_REF': 'refs/heads/main'},
@@ -361,8 +372,9 @@ class OrchestrationTests(unittest.TestCase):
                 smoke.guard(self.api, record)
             artifact = self.api.artifact(run, smoke.artifact_name(record), record)
             smoke.guard(self.api, record)
-            with self.assertRaisesRegex(ValueError, 'preapproval scope mismatch'):
-                smoke.guard(self.api, baseline)
+            for other in (baseline, fixture):
+                with self.assertRaisesRegex(ValueError, 'preapproval scope mismatch'):
+                    smoke.guard(self.api, other)
             altered = {**record, 'provider_policy': {}}
             with self.assertRaisesRegex(ValueError, 'preapproval scope mismatch'):
                 smoke.guard(self.api, altered)
@@ -375,6 +387,33 @@ class OrchestrationTests(unittest.TestCase):
             artifact['expired'] = True
             with self.assertRaisesRegex(ValueError, 'Operational record unavailable'):
                 smoke.guard(self.api, record)
+
+    @unittest.skipUnless(os.environ.get('SKILL_EVALUATION_KIND') == 'benchmark', 'requires the patched 1.0.1 runtime')
+    def test_compatibility_file_edit_stages_one_isolated_baseline(self):
+        import benchmark_smoke as smoke
+        from harbor.models.task.task import Task
+
+        revision = self.candidate_inputs(released=True)
+        env = dict(os.environ, GITHUB_SHA=revision, GITHUB_EVENT_NAME='workflow_dispatch',
+                   GITHUB_REF='refs/heads/' + smoke.BRANCH)
+        inputs = {'mode': smoke.MODE, 'skill': 'podman', 'expected_revision': revision,
+                  'candidate_smoke_arms': 'without-skill', 'candidate_smoke_workload': 'file-edit-fixture'}
+        expected = smoke.reviewed_scope(self.workspace, env, inputs)
+        authored = self.workspace / '.apm/skills/podman/evals/evals.json'
+        original = authored.read_bytes()
+        stage = self.root / 'file-edit'
+        with patch('qualify_codex_1691.acquire', side_effect=lambda _, dest: reports.write_json(dest / 'integrity.json', {})), \
+                patch.object(smoke, 'configure_openai_task', side_effect=lambda task, *_: Task(task)):
+            receipt = smoke.prepare(self.workspace, stage, expected)
+        task, = (stage / 'without_skill/tasks').iterdir()
+        self.assertEqual(task.name, smoke.FILE_EDIT_CASE)
+        self.assertEqual(receipt['tasks'], {'without_skill': Task(task).checksum})
+        self.assertFalse((stage / 'with_skill').exists())
+        self.assertTrue((stage / 'fixture/podman/.git').is_dir())
+        entry = reports.read_json(task / 'tests/entry.json')
+        self.assertIs(entry['has_skill'], False)
+        self.assertEqual(entry['question'], smoke.FILE_EDIT_DATASET['evals'][0]['prompt'])
+        self.assertEqual(authored.read_bytes(), original)
 
     def test_compatibility_receipt_requires_a_complete_verifier_measurement(self):
         import benchmark_smoke as smoke
@@ -505,9 +544,13 @@ class OrchestrationTests(unittest.TestCase):
         self.assertIn('candidate-smoke', inputs['mode']['options'])
         self.assertEqual(inputs['candidate_smoke_arms']['options'], ['paired', 'without-skill'])
         self.assertEqual(inputs['candidate_smoke_arms']['default'], 'paired')
+        self.assertEqual(inputs['candidate_smoke_workload']['options'], ['podman-case-1', 'file-edit-fixture'])
+        self.assertEqual(inputs['candidate_smoke_workload']['default'], 'podman-case-1')
         jobs = workflow['jobs']
         context = next(step for step in jobs['context']['steps'] if step.get('id') == 'context')
         self.assertEqual(context['env']['CANDIDATE_SMOKE_ARMS'], '${{ inputs.candidate_smoke_arms }}')
+        self.assertEqual(context['env']['CANDIDATE_SMOKE_WORKLOAD'], '${{ inputs.candidate_smoke_workload }}')
+        self.assertIn('The file-edit fixture requires the candidate smoke mode.', context['run'])
         self.assertIn('Arm selection requires the candidate smoke mode.', context['run'])
         job = jobs['evaluate-candidate']
         self.assertEqual(job['environment'], {'name': 'skill-benchmark', 'deployment': False})

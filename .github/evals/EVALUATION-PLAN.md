@@ -24,6 +24,13 @@ classifier, score policy, native producer and historical receipts retain
 their original identities. Production adoption remains pending under the
 compatibility gate.
 
+The next protected compatibility option uses one synthetic file-edit
+task in the baseline arm. The scope binds the fixture digest, revision,
+released launcher, Codex model and verifier policy. The fixture uses the
+same native backend and standard judges. It stays outside canonical
+history and leaves the authored Podman cases unchanged. Live execution
+requires separate authorization.
+
 - The startup-only checkpoint `dc997a64a5bc54507786f49c1734e9c1887997b7`
   exercised released SkillEvaluator 1.0.1 staging and Harbor 0.25.0 dispatch
   through a separately pinned backend. Both gh-007 fixture arms reached
