@@ -175,9 +175,10 @@ def contracts(workspace=evidence.ROOT):
             assert not SecurityValidator._validate_skillspector_report(changed, 0, False, 'skillspector', invalid)
         return {'seed': 'retained SkillSpector 2.13.4 response', 'owner': 'released 0.9.0 adapter',
                 'known_finding_retained': True, 'coverage': 'incomplete', 'negative_mutations': 3}
-    if owner_version != '1.0.1':
-        raise ValueError('Unsupported scanner contract runtime')
     import static_evaluator
+
+    if owner_version != static_evaluator.VERSION:
+        raise ValueError('Unsupported scanner contract runtime')
 
     static_evaluator.validate_install(scanner_contracts=True)
     result = ValidationResult()
@@ -231,7 +232,7 @@ def contracts(workspace=evidence.ROOT):
     receipt = {'seed': 'actual SkillSpector 2.13.4 response, synthetic input',
                'fixture_sha256': evidence.digest_bytes(evidence.encoded(fixture)),
                'negative_mutations': len(controls), 'ordinary_states': ['complete', 'partial', 'failed']}
-    return {**receipt, 'owner': 'skillevaluator-1.0.1-scanner-contracts'}
+    return {**receipt, 'owner': f'skillevaluator-{static_evaluator.VERSION}-scanner-contracts'}
 
 
 if __name__ == '__main__':

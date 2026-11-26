@@ -51,7 +51,7 @@ def released_suite(loader):
 def fixture_suite(loader):
     import evaluator_profiles as profiles
 
-    profiles.runtime(profiles.candidate_versions(profiles.RELEASE_BENCHMARK), owning=True)
+    profiles.runtime(profiles.candidate_versions(profiles.CURRENT_RELEASE), owning=True)
     sys.path.insert(0, str(TESTS))
     return loader.loadTestsFromNames(FIXTURE_TESTS)
 

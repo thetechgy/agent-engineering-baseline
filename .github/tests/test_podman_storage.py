@@ -97,7 +97,7 @@ class PodmanStorageContract(unittest.TestCase):
 
     def test_successors_preserve_historical_grading_and_bind_current_sources(self):
         registry = evidence.custom_registry()
-        active_purposes = {"pester-effectiveness-v51": "skill_effectiveness",
+        active_purposes = {"pester-effectiveness-v52": "skill_effectiveness",
                            "gh-deterministic-gate-v10": "benchmark",
                            "gh-native-oracle-v6": "oracle_qualification"}
         for member in (evidence.CAMPAIGN_SOURCE_SUCCESSORS, evidence.RETIREMENT_SOURCE_SUCCESSORS,

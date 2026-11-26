@@ -14,7 +14,7 @@ import skill_report_reviews as attachments
 from review_snapshots import parity_archive, restore_parity_case
 
 
-@unittest.skipUnless(importlib.metadata.version('skillevaluator') == '1.0.1', 'Use the private review candidate')
+@unittest.skipUnless(importlib.metadata.version('skillevaluator') == '1.2.1', 'Use the private review candidate')
 class HistoricalReviewReplayTests(unittest.TestCase):
     def setUp(self):
         self.archive = self.enterContext(parity_archive())

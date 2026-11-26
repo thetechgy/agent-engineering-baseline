@@ -52,9 +52,10 @@ CANDIDATE_RUNTIME_FILES = (
     '.github/evaluator-backends/candidate-101/codex-catalog/models.json',
     '.github/patches/skillevaluator-v1.0.1-benchmark-request.patch',
 )
-NATIVE_BENCHMARK_POLICY = '.github/evals/benchmark-native-101-v1.json'
-NATIVE_RUNTIME_FILES = (
-    NATIVE_BENCHMARK_POLICY,
+RETAINED_NATIVE_BENCHMARK_POLICY = '.github/evals/benchmark-native-101-v1.json'
+NATIVE_BENCHMARK_POLICY = '.github/evals/benchmark-native-121-v1.json'
+RETAINED_NATIVE_RUNTIME_FILES = (
+    RETAINED_NATIVE_BENCHMARK_POLICY,
     '.github/workflows/benchmark-skills.yml',
     '.github/scripts/benchmark_native.py',
     '.github/scripts/benchmark_podman.py',
@@ -80,6 +81,12 @@ NATIVE_RUNTIME_FILES = (
     '.github/patches/skillevaluator-v1.0.1-benchmark-staging.patch',
     '.github/patches/skillevaluator-v1.0.1-benchmark-recovery.patch',
     '.github/patches/skillevaluator-v1.0.1-benchmark-evidence.patch',
+)
+NATIVE_RUNTIME_FILES = (
+    NATIVE_BENCHMARK_POLICY,
+    '.github/evals/evaluator-1.2.1-benchmark-candidate-v1.json',
+    *(member.replace('v1.0.1-benchmark-', 'v1.2.1-benchmark-') for member in RETAINED_NATIVE_RUNTIME_FILES
+      if member not in (RETAINED_NATIVE_BENCHMARK_POLICY, '.github/evals/evaluator-1.0.1-benchmark-candidate-v3.json')),
 )
 SUITE_FILES = {'podman': ('.apm/skills/podman/',),
                'gh': ('.github/evals/gh/evals/', '.github/scripts/gh_evaluations.py',
@@ -186,7 +193,8 @@ def benchmark_runtime_inputs(files):
     # A historical reference is recomputed against its own Git tree. A new
     # production namespace must bind every released runtime input before it can
     # share any qualification, reference, or dispatch intent.
-    prefixes = NATIVE_RUNTIME_FILES if NATIVE_BENCHMARK_POLICY in files else RUNTIME_FILES
+    prefixes = next((members for members in (NATIVE_RUNTIME_FILES, RETAINED_NATIVE_RUNTIME_FILES)
+                     if members[0] in files), RUNTIME_FILES)
     runtime = subset(files, prefixes)
     require(all(subset(runtime, (prefix,)) for prefix in prefixes), 'Missing runtime input')
     return runtime
@@ -277,10 +285,17 @@ def qualified(api, workspace, main, run, name, current, ledger):
         'Append standard result to durable history', 'Capture and verify the exact published history commit'])
     previous = snapshots(workspace, run['head_sha'])[1][name]
     require(previous['runtime'] == current['runtime'], 'Reference runtime requires qualification')
-    if NATIVE_BENCHMARK_POLICY in manifest(workspace, run['head_sha']):
-        from benchmark_native import score_series
+    files = manifest(workspace, run['head_sha'])
+    native_policy = next((member for member in (NATIVE_BENCHMARK_POLICY, RETAINED_NATIVE_BENCHMARK_POLICY)
+                          if member in files), None)
+    if native_policy:
+        from benchmark_native import native_versions, score_series
 
-        published_policy = score_series(name, 'standard')
+        recorded = pages.parse(blob(workspace, run['head_sha'], native_policy))['runtime']
+        profile = reports.read_json(workspace / native_policy)['runtime']
+        owner = profile['producer_profile']
+        require(recorded == profile == native_versions(owner=owner), 'Reference native owner differs')
+        published_policy = score_series(name, 'standard', owner=owner)
     else:
         patch = hashlib.sha256(blob(workspace, run['head_sha'], reports.PATCH)).hexdigest()
         published_policy = hashlib.sha256(

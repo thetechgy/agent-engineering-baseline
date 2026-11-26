@@ -317,14 +317,35 @@ class ReportTests(unittest.TestCase):
         result = reports.read_json(directory / "benchmark.json")
         self.assertEqual([row["value"] for row in result], [row["value"] for row in candidate["metrics"]])
 
+    def test_retained_release_is_readable_but_cannot_enter_new_publication(self):
+        import benchmark_native as native
+
+        owner = native.RETAINED_NATIVE_PRODUCER
+        recorded = {**self.metrics(), "policy": native.released_policy("podman", owner=owner),
+                    "patch_sha256": native.native_versions(owner=owner)["patch_sha256"],
+                    "series": native.score_series("podman", "standard", owner=owner)}
+        reports.validate_released_metrics(recorded, self.workspace, "podman", SHA, mode="standard", historical=True)
+        self.assertNotEqual(recorded["series"], native.score_series("podman", "standard"))
+        directory = self.root / "metrics"
+        reports.write_json(directory / "released-scores.json", recorded)
+        with patch.dict(os.environ, {"GITHUB_EVENT_NAME": "workflow_dispatch", "GITHUB_REF": "refs/heads/main",
+                                    "BENCHMARK_MODE": "standard"}):
+            with self.assertRaisesRegex(ValueError, "history producer or policy differs"):
+                reports.publish_metrics(self.workspace, directory, "podman", released=True)
+        self.assertFalse((directory / "benchmark.json").exists())
+
     def test_released_runtime_receipt_cannot_alias_the_compatibility_owner(self):
         import benchmark_native as native
         import evaluator_profiles as profiles
 
-        candidate = profiles.candidate_versions(profiles.RELEASE_BENCHMARK)
+        candidate = profiles.candidate_versions(profiles.CURRENT_RELEASE)
         receipt = native.native_versions()
         self.assertEqual(profiles.runtime(receipt), native.native_profile())
-        self.assertIs(profiles.runtime(candidate), profiles.RELEASE_BENCHMARK)
+        self.assertIs(profiles.runtime(candidate), profiles.CURRENT_RELEASE)
+        retained = native.native_versions(owner=native.RETAINED_NATIVE_PRODUCER)
+        self.assertEqual(profiles.runtime(retained), native.native_profile(owner=native.RETAINED_NATIVE_PRODUCER))
+        with self.assertRaises(ValueError):
+            profiles.runtime({**retained, "producer_profile": native.NATIVE_PRODUCER})
         prior = profiles.RETAINED_RELEASE_BENCHMARK
         prior_receipt = native.native_versions(backend=prior)
         self.assertIs(profiles.runtime(profiles.candidate_versions(prior)), prior)
@@ -813,7 +834,7 @@ class UpstreamTests(unittest.TestCase):
     def test_pinned_evaluator_patch_only_pins_codex_for_docker_runs(self):
         from skillevaluator.tier3.harbor import runner
 
-        if importlib.metadata.version('skillevaluator') == '1.0.1':
+        if importlib.metadata.version('skillevaluator') == '1.2.1':
             import benchmark_native
 
             benchmark_native.validate_runtime()
@@ -1146,12 +1167,12 @@ class WorkflowTests(unittest.TestCase):
                         temporary = checkout / "tools" if inside else root / layout / "tools"
                         env = {"PATH": os.defpath, "RUNNER_TEMP": str(temporary),
                                "GITHUB_WORKSPACE": str(workspace), "GITHUB_ENV": str(root / "environment")}
-                        result = subprocess.run(["bash", str(script), "native-benchmark-101"], cwd=root, env=env,
+                        result = subprocess.run(["bash", str(script), "native-benchmark-121"], cwd=root, env=env,
                                                 text=True, capture_output=True, timeout=10)
                         if inside:
                             self.assertNotEqual(result.returncode, 0)
                             self.assertIn("Tools must be outside the checkout.", result.stderr)
-                            self.assertFalse((temporary / "skill-native-benchmark-101").exists())
+                            self.assertFalse((temporary / "skill-native-benchmark-121").exists())
                         else:
                             self.assertEqual(result.returncode, 0, result.stderr)
                             self.assertEqual(result.stdout.strip(), str(checkout.resolve()))
@@ -1218,7 +1239,7 @@ class WorkflowTests(unittest.TestCase):
                              for step in jobs["evaluate"]["steps"]))
         compose_index = jobs["evaluate"]["steps"].index(compose)
         evaluator_index = next(index for index, step in enumerate(jobs["evaluate"]["steps"])
-                               if "setup-static-evaluator.sh native-benchmark-101" in step.get("run", ""))
+                               if "setup-static-evaluator.sh native-benchmark-121" in step.get("run", ""))
         self.assertLess(compose_index, evaluator_index)
         verification = jobs["evaluate"]["steps"][compose_index + 1]
         self.assertEqual(verification["name"], "Verify pinned Docker Compose")

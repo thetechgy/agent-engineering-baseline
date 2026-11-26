@@ -90,6 +90,7 @@ class AttachmentTests(unittest.TestCase):
 
         for profile, member in ((snapshot.PROFILE, 'SNAPSHOT'), (snapshot.V2_PROFILE, 'V2_OVERLAY'),
                                 (snapshot.V3_PROFILE, 'V3_OVERLAY'), (snapshot.V4_PROFILE, 'V4_OVERLAY'),
+                                (snapshot.V5_PROFILE, 'V5_OVERLAY'),
                                 (snapshot.ACTIVE_PROFILE, 'ACTIVE_OVERLAY')):
             with self.subTest(profile=profile):
                 changed = self.root / 'changed.zip'
@@ -107,7 +108,8 @@ class AttachmentTests(unittest.TestCase):
         from private_review_snapshot import ACTIVE_PROFILE, PROFILE, V2_PROFILE, V3_PROFILE, V4_PROFILE, unpack
 
         cases = (('current-v5', False, ACTIVE_PROFILE), ('gh-89f46f0', False, ACTIVE_PROFILE),
-                 (None, True, ACTIVE_PROFILE), ('current-v5', False, PROFILE), ('current-v5', False, V2_PROFILE),
+                 (None, True, ACTIVE_PROFILE), ('current-v5', False, snapshot.V5_PROFILE),
+                 ('current-v5', False, PROFILE), ('current-v5', False, V2_PROFILE),
                  ('current-v5', False, V3_PROFILE), ('current-v5', False, V4_PROFILE),
                  ('gh-89f46f0', False, V4_PROFILE), (None, True, V4_PROFILE))
         for key, pester, profile in cases:
@@ -116,9 +118,10 @@ class AttachmentTests(unittest.TestCase):
                 with parity_archive(pester=pester) as archive:
                     spec, spec_path, _ = restore_parity_case(self, archive, base / 'inputs', key=key)
                 scripts = unpack(base / 'frozen', profile)
-                command = [sys.executable, '-B', str(evidence.ROOT / '.github/scripts/skill_review.py')]
+                python = attachments.validator_python(profile)
+                command = [python, '-B', str(evidence.ROOT / '.github/scripts/skill_review.py')]
                 if profile != ACTIVE_PROFILE:
-                    command = [sys.executable, '-I', '-B', '-c', snapshot.RUN_CLI, str(scripts), str(evidence.ROOT)]
+                    command = [python, '-I', '-B', '-c', snapshot.RUN_CLI, str(scripts), str(evidence.ROOT)]
                 args = ['--analysis', spec['analysis'], '--skill', spec['skill'], '--record-id', spec['record_id']]
                 for item in spec['inputs']:
                     args.extend(['--input', item])
@@ -149,12 +152,13 @@ target = Path(sys.argv[4])
 (target / 'skill-review.md').write_bytes(review.render_review(sample, context))
 """
                 fixture = base / 'review'; fixture.mkdir()
-                subprocess.run([sys.executable, '-I', '-B', '-c', source, str(scripts), str(Path(__file__).parent),
+                subprocess.run([python, '-I', '-B', '-c', source, str(scripts), str(Path(__file__).parent),
                                 json.dumps(spec), str(fixture)], env=env, check=True, timeout=45)
                 save = fixture / 'skill-review.json'
                 release_review = evidence.read_json(save)
                 self.assertEqual(emitted['implementation_digest'], release_review['provenance']['implementation_digest'])
-                self.assertEqual(release_review['provenance']['versions']['skillevaluator'], '1.0.1')
+                self.assertEqual(release_review['provenance']['versions']['skillevaluator'],
+                                 '1.2.1' if profile == ACTIVE_PROFILE else '1.0.1')
                 self.assertEqual(subprocess.run([*command, 'validate', *args, '--review', str(save)],
                     env=env, capture_output=True, timeout=45).returncode, 0)
                 if key == 'current-v5' and profile == ACTIVE_PROFILE:

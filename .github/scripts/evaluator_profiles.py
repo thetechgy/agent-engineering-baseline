@@ -14,7 +14,8 @@ RETAINED_NEXT = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluat
 ACCOUNTING = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-0.9-accounting-v1.json').read_text())
 RETAINED_RELEASE_BENCHMARK = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-1.0.1-benchmark-candidate-v2.json').read_text())
 RELEASE_BENCHMARK = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-1.0.1-benchmark-candidate-v3.json').read_text())
-CANDIDATES = (CANDIDATE, NEXT, RETAINED_NEXT, ACCOUNTING, RELEASE_BENCHMARK, RETAINED_RELEASE_BENCHMARK)
+CURRENT_RELEASE = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-1.2.1-benchmark-candidate-v1.json').read_text())
+CANDIDATES = (CANDIDATE, NEXT, RETAINED_NEXT, ACCOUNTING, CURRENT_RELEASE, RELEASE_BENCHMARK, RETAINED_RELEASE_BENCHMARK)
 BENCHMARK_ACCOUNTING = json.loads((Path(__file__).resolve().parents[1] / 'evals/benchmark-090-accounting-v1.json').read_text())
 
 
@@ -57,12 +58,14 @@ def by_revision(revision):
 
 
 def runtime(versions, *, owning=False):
-    if versions.get('skillevaluator') == RELEASE_BENCHMARK['version'] and 'producer_profile' in versions:
-        from benchmark_native import NATIVE_PRODUCER, native_profile, native_versions
+    if (versions.get('skillevaluator') in (CURRENT_RELEASE['version'], RELEASE_BENCHMARK['version'])
+            and type(versions.get('producer_profile')) is str):
+        from benchmark_native import NATIVE_OWNERS, native_profile, native_versions
 
-        if versions['producer_profile'] == NATIVE_PRODUCER:
-            backend = next((p for p in (RELEASE_BENCHMARK, RETAINED_RELEASE_BENCHMARK)
-                            if versions == native_versions(backend=p)), None)
+        owner = versions['producer_profile']
+        if owner in NATIVE_OWNERS:
+            backends = NATIVE_OWNERS[owner]['backends']
+            backend = next((entry for entry in backends if versions == native_versions(backend=entry)), None)
             if backend is None:
                 raise ValueError('Contradictory released benchmark runtime provenance')
             profile = native_profile(backend=backend)

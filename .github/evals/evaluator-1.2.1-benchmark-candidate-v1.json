@@ -1,0 +1,30 @@
+{
+  "id": "skillevaluator-1.2.1-benchmark-candidate-v1",
+  "revision": "f7fcd35d79d0506fadbd79f2b3ff384c98bd10f3",
+  "version": "1.2.1",
+  "python": "3.14.10",
+  "harbor": "0.25.0",
+  "scoring": "skill-evaluator-dimension-mean-v1",
+  "lock_sha256": "817d00c49588a09db6e47ce9295b1d5339642246dc529daa26c6ac949a21a942",
+  "patch_sha256": "18b217f7e88289911617f27a6ff5ba5638a73336f12509fdcf3caef4f9ce135f",
+  "source_tree_digest": "sha256:03083e68a4cb0f9a69e7b4bc8c4d951f32a0ea3507bb0f37c5f747743d3aa1c2",
+  "backend_wheel_sha256": "b1a6b0f86a5c7f7873146327a215687969d46bbadc54ee46c84c615518262ea7",
+  "backend_source_digest": "sha256:5b573d82d73f15a01cd2d43be4e9ab575446f7bcd41ca48bd0e148b251120826",
+  "dependencies": {
+    "skillevaluator": "1.2.1",
+    "harbor": "0.25.0",
+    "openai": "2.44.0",
+    "anthropic": "0.116.0",
+    "pydantic": "2.13.4",
+    "pydantic-core": "2.46.4",
+    "litellm": "1.110.2",
+    "typing-inspection": "0.4.2",
+    "mcp": "1.30.0",
+    "certifi": "2026.10.23",
+    "aeb-gh-fixture": "1.4.0"
+  },
+  "codex_tool_surface": {
+    "mode": "direct",
+    "catalog_sha256": "fd533349d25b61d61028a80f4a8c2c5388895490d7116bc39e2e407b6c972095"
+  }
+}

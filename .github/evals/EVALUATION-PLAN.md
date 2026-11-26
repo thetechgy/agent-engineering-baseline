@@ -1,5 +1,26 @@
 # Evaluation checkpoint
 
+## SkillEvaluator 1.2.1 promotion
+
+The candidate uses NVIDIA revision
+`f7fcd35d79d0506fadbd79f2b3ff384c98bd10f3` and its frozen lock.
+Native execution carries forward the pinned Codex adapter, staged task and
+verifier isolation, request policy, and incomplete-run recovery. Static
+collection adopts the 1.2.1 scanner contract and the same external scanner
+pins. Public data and private review keep separate installations. The new
+score series and attachment identity preserve the original 1.0.1 records.
+
+Paired lift intervals and multi-attempt reliability are advisory. The job
+summary derives them from the admitted rewards, and the redacted native
+artifact retains the verified statistics. The estimate is case-weighted.
+Pass@k counts any passing attempt. Pass^k requires every attempt to pass
+under that arm's applicable rubric.
+
+Credential-free qualification compares the patched 1.0.1 and 1.2.1 releases.
+The protected one-trial provider compatibility check and reviewer approval
+remain production cutover gates.
+[NVIDIA release](https://github.com/NVIDIA/SkillEvaluator/releases/tag/v1.2.1).
+
 ## SkillEvaluator 0.3.0 retirement
 
 PR #185 switches the maintained native benchmark to SkillEvaluator 1.0.1,

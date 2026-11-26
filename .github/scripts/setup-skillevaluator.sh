@@ -48,8 +48,8 @@ import skill_evidence as evidence
 import static_evaluator
 root = Path(sys.argv[2])
 if sys.argv[3] == 'candidate':
-    runtime = dict(evidence.SCANNER_RUNTIME_NEXT, evaluator_revision=static_evaluator.REVISION)
-    owner = static_evaluator.VERSIONS
+    runtime = dict(evidence.SCANNER_RUNTIME_NEXT, evaluator_revision=static_evaluator.RETAINED['evaluator_revision'])
+    owner = static_evaluator.RETAINED
 else:
     runtime = evidence.SCANNER_RUNTIME_NEXT
     owner = profiles.candidate_versions(profiles.NEXT)
@@ -85,7 +85,7 @@ baseline = evidence.read_json(Path(sys.argv[2]) / 'versions.json')
 evidence.validate_runtime_versions(baseline)
 evidence.require(baseline.get('scanner_runtime') == evidence.SCANNER_RUNTIME_NEXT,
                  'Install the current static baseline first')
-print(static_evaluator.REVISION, static_evaluator.LOCK, static_evaluator.VERSIONS['python'], sep='\n')
+print(*(static_evaluator.RETAINED[key] for key in ('evaluator_revision', 'lock_sha256', 'python')), sep='\n')
 PYPIN
   )
   test "${#pin[@]}" -eq 3

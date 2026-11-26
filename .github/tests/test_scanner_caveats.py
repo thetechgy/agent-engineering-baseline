@@ -9,5 +9,5 @@ class ScannerCaveatTests(unittest.TestCase):
         from qualify_scanner_caveats import contracts
 
         result = contracts()
-        self.assertEqual(result['owner'], 'skillevaluator-1.0.1-scanner-contracts')
+        self.assertEqual(result['owner'], 'skillevaluator-1.2.1-scanner-contracts')
         self.assertEqual(result['negative_mutations'], 43)

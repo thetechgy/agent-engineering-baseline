@@ -27,6 +27,7 @@ from skillevaluator.tier3.harbor.runner import build_harbor_run_command
 import gh_candidate
 import gh_evaluations as gh
 from gh_initializer_validation import docker, startup_attempt
+import evaluator_profiles as profiles
 import static_evaluator
 
 
@@ -77,7 +78,7 @@ async def run_startup(task, paths, import_path, row, save):
 
 
 def qualify(output, *, stage_only):
-    static_evaluator.validate_install()
+    profiles.validate_install(profiles.CURRENT_RELEASE)
     require_runtime()
     output = output.absolute()
     if output.resolve() != output or output.is_relative_to(gh.ROOT) or output.exists():

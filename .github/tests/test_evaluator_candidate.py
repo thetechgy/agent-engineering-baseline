@@ -85,8 +85,8 @@ class CandidateEvidenceTests(unittest.TestCase):
     def test_local_codex_install_uses_the_reviewed_hoisted_layout(self):
         from importlib.metadata import version
 
-        if version("skillevaluator") != "1.0.1":
-            self.skipTest("Requires the 1.0.1 benchmark candidate")
+        if version("skillevaluator") != "1.2.1":
+            self.skipTest("Requires the 1.2.1 benchmark candidate")
 
         from qualify_benchmark_codex import CODEX_VENDOR
 
@@ -98,8 +98,8 @@ class CandidateEvidenceTests(unittest.TestCase):
     def test_codex_setup_failure_without_container_receipt_keeps_primary_error(self):
         from importlib.metadata import version
 
-        if version("skillevaluator") != "1.0.1":
-            self.skipTest("Requires the 1.0.1 benchmark candidate")
+        if version("skillevaluator") != "1.2.1":
+            self.skipTest("Requires the 1.2.1 benchmark candidate")
 
         import qualify_benchmark_codex as fixture
         from skill_reports import read_json, write_json
@@ -127,8 +127,8 @@ class CandidateEvidenceTests(unittest.TestCase):
     def test_codex_verifier_failure_receipt_excludes_raw_log_and_unknown_paths(self):
         from importlib.metadata import version
 
-        if version("skillevaluator") != "1.0.1":
-            self.skipTest("Requires the 1.0.1 benchmark candidate")
+        if version("skillevaluator") != "1.2.1":
+            self.skipTest("Requires the 1.2.1 benchmark candidate")
 
         from qualify_benchmark_codex import record_native_failure
         from skill_reports import read_json

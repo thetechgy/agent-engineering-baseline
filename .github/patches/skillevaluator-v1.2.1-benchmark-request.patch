@@ -1,0 +1,69 @@
+--- a/src/skillevaluator/provider_config.py
++++ b/src/skillevaluator/provider_config.py
+@@ -48,7 +48,7 @@
+ # Harbor ``templates/eval.py`` cannot import this module — keep its local
+ # ``DEFAULT_JUDGE_MODELS`` in sync via the drift test in
+ # ``tests/tier3/test_judge_parse_robustness.py``.
+-CHAT_DEFAULT_OPENAI = "gpt-6.1-sol"
++CHAT_DEFAULT_OPENAI = "gpt-6.2-sol"
+ CHAT_DEFAULT_ANTHROPIC = "claude-opus-5-5"
+ CHAT_DEFAULT_BEDROCK = "us.anthropic.claude-opus-5-5"
+ CHAT_DEFAULT_NVIDIA = "nvidia/nemotron-3.5-lightning-30b-a3b"
+--- a/src/skillevaluator/tier3/harbor/local_runtime.py
++++ b/src/skillevaluator/tier3/harbor/local_runtime.py
+@@ -65,7 +65,7 @@
+     "opencode": "opencode-ai",
+ }
+ PINNED_RUNTIME_VERSIONS: Mapping[str, str] = MappingProxyType(
+-    {"claude-code": "2.1.292", "codex": "0.161.0", "opencode": "1.19.5"}
++    {"claude-code": "2.1.292", "codex": "0.171.0", "opencode": "1.19.5"}
+ )
+ RUNTIME_INSTALL_TIMEOUT_SECONDS = 600
+
+--- a/src/skillevaluator/tier3/harbor/templates/eval.py
++++ b/src/skillevaluator/tier3/harbor/templates/eval.py
+@@ -668,13 +668,13 @@
+ # skillevaluator.provider_config.CHAT_DEFAULT_MODELS (sandbox template cannot
+ # import the package — see drift tests).
+ DEFAULT_JUDGE_MODELS = {
+-    "openai": "gpt-6.1-sol",
++    "openai": "gpt-6.2-sol",
+     "anthropic": "claude-opus-5-5",
+     "nv_build": "nvidia/nemotron-3.5-lightning-30b-a3b",
+     "bedrock": "us.anthropic.claude-opus-5-5",
+     "openai-compatible": "nvidia/nvidia/nemotron-3-super-120b-long-ctx",
+ }
+-JUDGE_REASONING_EFFORT = "medium"
++JUDGE_REASONING_EFFORT = None
+ REASONING_MAX_COMPLETION_TOKENS = 32768
+ ANTHROPIC_REFUSAL_FALLBACK_MODEL = "claude-opus-4-8"
+ ANTHROPIC_SERVER_SIDE_FALLBACK_BETA = "server-side-fallback-2026-07-01"
+@@ -920,6 +920,8 @@
+
+
+ def _fallback_models(primary_model):
++    if primary_model == "gpt-6.2-sol":
++        return [primary_model]
+     env_fallbacks = [
+         item.strip() for item in os.environ.get("LLM_JUDGE_FALLBACK_MODELS", "").split(",") if item.strip()
+     ]
+--- a/src/skillevaluator/tier3/eval_core/llm_judge.py
++++ b/src/skillevaluator/tier3/eval_core/llm_judge.py
+@@ -46,7 +46,7 @@
+ OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions"
+ NVIDIA_BUILD_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
+ # Sent only where effective_reasoning_effort allows it (GPT-6, Claude 5.5+ on the anthropic provider).
+-JUDGE_REASONING_EFFORT = "medium"
++JUDGE_REASONING_EFFORT = None
+
+ _ERROR_REDACTION_MARKER = "[REDACTED]"
+ _JUDGE_ERROR_REASON_LIMIT = 512
+@@ -84,6 +84,8 @@
+
+
+ def _fallback_models(primary_model: str) -> list[str]:
++    if primary_model == "gpt-6.2-sol":
++        return [primary_model]
+     env_fallbacks = [
+         item.strip() for item in os.environ.get("LLM_JUDGE_FALLBACK_MODELS", "").split(",") if item.strip()
+     ]

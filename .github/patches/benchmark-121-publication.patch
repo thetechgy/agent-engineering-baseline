@@ -1,0 +1,77 @@
+diff --git a/.github/scripts/skill_evidence.py b/.github/scripts/skill_evidence.py
+--- a/.github/scripts/skill_evidence.py
++++ b/.github/scripts/skill_evidence.py
+@@ -1787,11 +1787,15 @@
+                     (tail == ['trials', obs['native_trial'], 'failure.json'] and ref['locator'] == []
+                      or tail == ['trials', obs['native_trial'], 'reward.json']
+                         and ref['locator'] == ['details', 'security']))
++                release_failure_ref = (data.get('benchmark', {}).get('profile') == 'behavioral-121-direct-fixture-v1'
++                    and obs['score'] is None and tail == ['trials', obs['native_trial'], 'failure.json']
++                    and ref['locator'] == [])
+                 accounting_ref = (data['policy'].get('producer_profile') == profiles.ACCOUNTING['id']
+                     and tail == ['trials', obs['native_trial'], 'judge_accounting.json'] and ref['locator'] == [])
+                 require(trial_result and ref['locator'] in ([], ['verifier_result'], ['verifier_result', 'rewards'])
+                         or tail in (['trials', obs['native_trial'], 'reward.json'], ['summary.json'])
+-                        and ref['locator'] == [] or diagnostic_ref or accounting_ref, 'Observation reference origin mismatch')
++                        and ref['locator'] == [] or diagnostic_ref or release_failure_ref or accounting_ref,
++                        'Observation reference origin mismatch')
+                 trial_result_found |= trial_result
+             require(trial_result_found, 'Observation reference origin mismatch')
+     require(type(data['arms']) is list and len(data['arms']) <= 2, 'Invalid arms')
+@@ -2697,6 +2701,7 @@
+                       'policy_id': score_series(name, mode, owner=owner), 'patch_sha256': producer['patch_sha256'],
+                       'policy': {key: expected[key] for key in POLICY_FIELDS if key in expected}}
+     historical_scores = producer['revision'] == profiles.HISTORICAL_REVISION
++    release_fixture = benchmark_meta is not None and benchmark_meta['profile'] == 'behavioral-121-direct-fixture-v1'
+     if benchmark_meta is not None:
+         require(producer['id'] == profiles.benchmark_profile(benchmark_meta['profile'])['producer'], 'Versioned benchmark producer mismatch')
+     expected_scoring = producer['scoring']
+@@ -2963,8 +2968,12 @@
+                 require(expected is None or len(lookup) < expected, 'Summary attempt limit')
+                 require(trial not in lookup, 'Duplicate summary trial')
+                 lookup[trial] = (case, attempt)
+-        validate_summary_rollups(pass_data, native_cases, ids, maximum, stop_on_pass,
+-                                 versioned=benchmark_meta is not None or released_native)
++        if release_fixture and 'unresolved_cases' in pass_data:
++            require(native_condition['execution_status'] != 'succeeded', 'Partial rollups contradict successful execution')
++            validate_101_partial_rollups(pass_data, native_cases, ids, maximum, stop_on_pass)
++        else:
++            validate_summary_rollups(pass_data, native_cases, ids, maximum, stop_on_pass,
++                                     versioned=benchmark_meta is not None or released_native)
+         observed = []; missing_rubric_details = False
+         if trials_by_arm[arm]:
+             for path in trials_by_arm[arm]:
+@@ -3003,10 +3012,12 @@
+                 if attempt['attempt'] is None:
+                     limitations.add('metadata_missing')
+                 diagnostic = None
+-                if producer in (profiles.NEXT, profiles.ACCOUNTING) and reward is not None and reward.get('evaluation_status') == 'failed' and 'trial_id' not in reward:
++                if ((release_fixture or producer in (profiles.NEXT, profiles.ACCOUNTING)) and reward is not None
++                        and reward.get('evaluation_status') == 'failed' and 'trial_id' not in reward):
+                     failure_path = path.with_name('failure.json')
+                     require(failure_path in scanned_entries, 'Unscored diagnostic lacks native failure identity')
+-                    validate_unscored_diagnostic(reward, read_member(failure_path), trial_result, case, arm, producer, versioned=benchmark_meta is not None)
++                    validate_unscored_diagnostic(reward, read_member(failure_path), trial_result, case, arm, producer,
++                                                 versioned=benchmark_meta is not None, release_fixture=release_fixture)
+                     diagnostic = reward
+                     reward = None
+                 if reward is not None:
+@@ -3658,7 +3669,8 @@
+                     'execution_authentication': 'not_established'}
+
+
+-def validate_unscored_diagnostic(reward, failure, trial, case_id, arm, producer=None, *, collector_agent=None, versioned=False):
++def validate_unscored_diagnostic(reward, failure, trial, case_id, arm, producer=None, *, collector_agent=None,
++                                 versioned=False, release_fixture=False):
+     """Bind a collector diagnostic to native failure evidence without grading it.
+
+     The pinned collector omits trial_id only on its failed-judge projection.
+@@ -3699,7 +3711,7 @@
+             'Unscored diagnostic native failure mismatch')
+     raw = ((trial.get('verifier_result') or {}).get('rewards') or {})
+     if versioned:
+-        require(current, 'Versioned diagnostic requires offline-v3')
++        require(current or release_fixture, 'Versioned diagnostic producer is unsupported')
+         from evaluator_090 import diagnostic_observations
+         diagnostic_observations(reward, trial)  # Explicit judge failure can retain deterministic observations.
+     else:

@@ -33,7 +33,7 @@ execution step. Offline dataset validation and fixture replay run locally.
 
 Prepare the released benchmark owner with
 [setup-static-evaluator.sh](../../scripts/setup-static-evaluator.sh)
-`native-benchmark-101` and use the exported interpreter for local runs.
+`native-benchmark-121` and use the exported interpreter for local runs.
 
 ```bash
 "$SKILL_NATIVE_BENCHMARK_PYTHON" .github/scripts/gh_evaluations.py benchmark gh --mode standard --output "$HOME/worktrees/gh-standard"
@@ -43,7 +43,7 @@ Prepare the released benchmark owner with
 ```
 
 The runtime verifies Docker Compose 5.8.0, Python 3.14.10,
-SkillEvaluator 1.0.1, Harbor 0.25.0, and the pinned native backend.
+SkillEvaluator 1.2.1, Harbor 0.25.0, and the pinned native backend.
 The trial uses Codex 0.171.0 and `gpt-6.2-sol` at High. The released
 verifier reports its broker-bound authorization check as `gh_access_policy`.
 The benchmark requires an existing credential and a new output directory.

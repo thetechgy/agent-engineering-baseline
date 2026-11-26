@@ -153,8 +153,8 @@ class FreshnessTests(unittest.TestCase):
         root = Path(temporary.name)
         for name in (fresh.CONFIG, "apm.yml", "apm.lock.yaml", ".apm-version", ".github/dependabot.yml",
                      "scripts/Invoke-Validation.ps1", ".github/evals/evaluator-candidate.json", ".github/evals/evaluator-0.9.json", ".github/evals/codex-pilot-sol62.json", ".github/evals/codex-execution-090-sol62.json",
-                     ".github/evals/codex-execution-1710.json", ".github/evals/evaluator-1.0.1-benchmark-candidate-v3.json",
-                     ".github/evals/benchmark-native-101-v1.json",
+                     ".github/evals/codex-execution-1710.json", ".github/evals/evaluator-1.2.1-benchmark-candidate-v1.json",
+                     ".github/evals/benchmark-native-121-v1.json",
                      ".github/evals/campaigns/case-observation-1710.json",
                      ".github/evals/campaigns/codex-1710-observation.json"):
             target = root / name
@@ -217,7 +217,7 @@ class FreshnessTests(unittest.TestCase):
     def test_independent_active_and_retained_environments_are_visible(self):
         _, rows, _ = fresh.inventory(ROOT)
         by_id = {row['id']: row for row in rows}
-        self.assertEqual(by_id['skillevaluator']['pin']['version'], '1.0.1')
+        self.assertEqual(by_id['skillevaluator']['pin']['version'], '1.2.1')
         self.assertEqual(by_id['released-evaluator']['pin'], by_id['skillevaluator']['pin'])
         production = json.loads(by_id['production-environment']['pin']['value'])
         self.assertEqual((production['dependencies']['openai'], production['dependencies']['pydantic']), ('2.44.0', '2.13.4'))
@@ -243,7 +243,7 @@ class FreshnessTests(unittest.TestCase):
 
     def test_missing_production_environment_identity_preserves_partial_inventory(self):
         root = self.scratch()
-        (root / ".github/evals/evaluator-1.0.1-benchmark-candidate-v3.json").unlink()
+        (root / ".github/evals/evaluator-1.2.1-benchmark-candidate-v1.json").unlink()
         _, rows, _ = fresh.inventory(root)
         by_id = {row['id']: row for row in rows}
         self.assertEqual(by_id['production-environment']['errors'], ['missing_source'])

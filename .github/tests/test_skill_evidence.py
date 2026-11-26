@@ -66,7 +66,8 @@ class EvidenceTests(unittest.TestCase):
         shutil.copyfile(REPO / '.github/evals/evaluator-candidate.json', config)
         for name in ('evaluator-0.9.json', 'evaluator-0.9-offline-v2.json',
                      'evaluator-0.9-accounting-v1.json', 'benchmark-090-accounting-v1.json',
-                     'evaluator-1.0.1-benchmark-candidate-v2.json', 'evaluator-1.0.1-benchmark-candidate-v3.json'):
+                     'evaluator-1.0.1-benchmark-candidate-v2.json', 'evaluator-1.0.1-benchmark-candidate-v3.json',
+                     'evaluator-1.2.1-benchmark-candidate-v1.json'):
             shutil.copyfile(REPO / '.github/evals' / name, config.with_name(name))
 
     def native(self):

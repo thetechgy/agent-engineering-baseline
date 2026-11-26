@@ -27,11 +27,11 @@ STOP = "Credential-free control stopped before Docker runtime preflight"
 def interrupted_podman(root, revision):
     """Recover reviewed synthetic native jobs with one result missing."""
     from harbor.models.job.result import JobResult, JobStats
-    from evaluator_profiles import RELEASE_BENCHMARK
+    from evaluator_profiles import CURRENT_RELEASE
     from qualify_benchmark_evidence import fixture
     from skillevaluator.tier3.harbor.collector import _interrupted_trial_roots
 
-    simulated = fixture(root / "interruption-fixture", "complete", producer=RELEASE_BENCHMARK,
+    simulated = fixture(root / "interruption-fixture", "complete", producer=CURRENT_RELEASE,
                         model=POLICY["model"], codex=POLICY["codex"], workspace=native.ROOT)
     for member in ("native-preparation.json", "versions.json"):
         write_json(simulated / member, read_json(root / member))

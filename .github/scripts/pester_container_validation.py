@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import tempfile
 
+import evaluator_profiles as profiles
 import skill_evidence as evidence
 import pester_evaluations as pilot
 import skill_reports as reports
@@ -136,8 +137,8 @@ def _main(*, candidate, artifact):
     if current or release:
         owner = owning_candidate()
         expected_runtime = owner['version'], owner['harbor']
-        if release and owner['version'] != '1.0.1':
-            raise RuntimeError('Release fixture requires the 1.0.1 benchmark candidate')
+        if release and owner is not profiles.CURRENT_RELEASE:
+            raise RuntimeError('Release fixture requires the current benchmark candidate')
         runtime(candidate_versions(owner), owning=True)
     else:
         expected_runtime = ('0.7.2', '0.24.0')

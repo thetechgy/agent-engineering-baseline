@@ -1,4 +1,4 @@
-"""Materialize the fixed 1.0.1 private-review producer and validator."""
+"""Materialize the fixed private-review producer and validator."""
 import io
 from pathlib import PurePosixPath
 import shutil
@@ -30,25 +30,36 @@ V4_REVISION = "af379d06d08d621910a1abe2cce1bb04e12a72c8"
 V4_OVERLAY = evidence.ROOT / ".github/evals/retained/private-review-101-v4-overlay.zip"
 V4_DIGEST = "sha256:4d2dfd9e49bfc1d253d25621cf8a38023469fbaabd4b1ac16299b47d8476eafe"
 
-ACTIVE_PROFILE = "review-101-v5"
-ACTIVE_REVISION = "f2d5d766ce5149dcc80dc851e64895c442d4e912"
-ACTIVE_OVERLAY = evidence.ROOT / ".github/evals/retained/private-review-101-v5-overlay.zip"
-ACTIVE_DIGEST = "sha256:21ac911579c5f4ccfb3d11f3db1bf2b1e5fc748a44e5f64650d1fa06659e206a"
-RELEASE_PROFILES = (PROFILE, V2_PROFILE, V3_PROFILE, V4_PROFILE, ACTIVE_PROFILE)
+V5_PROFILE = "review-101-v5"
+V5_REVISION = "f2d5d766ce5149dcc80dc851e64895c442d4e912"
+V5_OVERLAY = evidence.ROOT / ".github/evals/retained/private-review-101-v5-overlay.zip"
+V5_DIGEST = "sha256:21ac911579c5f4ccfb3d11f3db1bf2b1e5fc748a44e5f64650d1fa06659e206a"
+ACTIVE_PROFILE = "review-121-v1"
+ACTIVE_OVERLAY = evidence.ROOT / ".github/evals/retained/private-review-121-v1-overlay.zip"
+ACTIVE_MANIFEST = evidence.ROOT / ".github/evals/retained/private-review-121-v1.json"
+RELEASE_PROFILES = (PROFILE, V2_PROFILE, V3_PROFILE, V4_PROFILE, V5_PROFILE, ACTIVE_PROFILE)
+
+
+def active_manifest():
+    manifest = evidence.parse_json(evidence.read_bytes(ACTIVE_MANIFEST, limit=4096))
+    evidence.closed(manifest, ("revision", "digest", "members"))
+    evidence.revision(manifest["revision"])
+    evidence.sha(manifest["digest"])
+    evidence.require(type(manifest["members"]) is int and 0 < manifest["members"] <= 100,
+                     "Unexpected active validator overlay size")
+    return manifest
 
 
 def identity(profile):
     """Return the fixed producer source and execution identity for a release profile."""
     evidence.require(profile in RELEASE_PROFILES, "Unsupported validator profile")
-    if profile == PROFILE:
-        return REVISION, "skillevaluator-1.0.1-private-review-frozen-v1"
-    if profile == V2_PROFILE:
-        return V2_REVISION, "skillevaluator-1.0.1-private-review-frozen-v2"
-    if profile == V3_PROFILE:
-        return V3_REVISION, "skillevaluator-1.0.1-private-review-frozen-v3"
-    if profile == V4_PROFILE:
-        return V4_REVISION, "skillevaluator-1.0.1-private-review-frozen-v4"
-    return ACTIVE_REVISION, "skillevaluator-1.0.1-private-review-frozen-v5"
+    if profile == ACTIVE_PROFILE:
+        return active_manifest()["revision"], "skillevaluator-1.2.1-private-review-frozen-v1"
+    sources = {
+        PROFILE: REVISION, V2_PROFILE: V2_REVISION, V3_PROFILE: V3_REVISION,
+        V4_PROFILE: V4_REVISION, V5_PROFILE: V5_REVISION,
+    }
+    return sources[profile], "skillevaluator-1.0.1-private-review-frozen-" + profile.rsplit("-", 1)[1]
 
 
 def snapshot_members(source, digest, count):
@@ -73,14 +84,13 @@ def snapshot_members(source, digest, count):
 def unpack(destination, profile=PROFILE):
     identity(profile)
     contents = snapshot_members(SNAPSHOT, DIGEST, 490)
-    if profile != PROFILE:
-        contents.update(snapshot_members(V2_OVERLAY, V2_DIGEST, 10))
-    if profile in (V3_PROFILE, V4_PROFILE, ACTIVE_PROFILE):
-        contents.update(snapshot_members(V3_OVERLAY, V3_DIGEST, 12))
-    if profile in (V4_PROFILE, ACTIVE_PROFILE):
-        contents.update(snapshot_members(V4_OVERLAY, V4_DIGEST, 12))
+    overlays = ((V2_OVERLAY, V2_DIGEST, 10), (V3_OVERLAY, V3_DIGEST, 12),
+                (V4_OVERLAY, V4_DIGEST, 12), (V5_OVERLAY, V5_DIGEST, 8))
+    for source, digest, count in overlays[:RELEASE_PROFILES.index(profile)]:
+        contents.update(snapshot_members(source, digest, count))
     if profile == ACTIVE_PROFILE:
-        contents.update(snapshot_members(ACTIVE_OVERLAY, ACTIVE_DIGEST, 8))
+        manifest = active_manifest()
+        contents.update(snapshot_members(ACTIVE_OVERLAY, manifest["digest"], manifest["members"]))
     for member, raw in contents.items():
         target = destination / member
         target.parent.mkdir(parents=True, exist_ok=True)
