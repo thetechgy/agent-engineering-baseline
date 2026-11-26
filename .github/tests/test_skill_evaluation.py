@@ -1225,7 +1225,8 @@ class WorkflowTests(unittest.TestCase):
         setup = (REPO / ".github/scripts/setup-static-evaluator.sh").read_text()
         self.assertLess(setup.index("umask 077"), setup.index('mkdir -m 700 "$tools"'))
         self.assertIn('python_export=SKILL_NATIVE_BENCHMARK_PYTHON', setup)
-        self.assertIn('benchmark_native.py" verify-runtime', setup)
+        verification = 'if kind == "native-benchmark-121":\n    native.validate_runtime()'
+        self.assertLess(setup.index(verification), setup.index('>> "$GITHUB_ENV"', setup.index(verification)))
 
     def test_setup_provenance_records_the_pinned_benchmark_runtime(self):
         from benchmark_native import adoption_policy, validate_adoption
@@ -1305,7 +1306,7 @@ class WorkflowTests(unittest.TestCase):
         preflight = next(index for index, step in enumerate(quality["steps"])
                          if "skill_reports.py preflight" in step.get("run", ""))
         setup = next(index for index, step in enumerate(quality["steps"])
-                     if "setup-skillevaluator.sh" in step.get("run", ""))
+                     if step.get("run") == "bash .github/scripts/setup-static-evaluator.sh quality-static")
         self.assertLess(preflight, setup)
         self.assertNotIn("deploy-pages", jobs)
         self.assertEqual(jobs["publish-history"]["concurrency"], {"group": "skill-report-publication", "queue": "max", "cancel-in-progress": False})

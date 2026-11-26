@@ -102,7 +102,8 @@ class PodmanStorageContract(unittest.TestCase):
                            "gh-native-oracle-v6": "oracle_qualification"}
         for member in (evidence.CAMPAIGN_SOURCE_SUCCESSORS, evidence.RETIREMENT_SOURCE_SUCCESSORS,
                        evidence.PUBLICATION_SOURCE_SUCCESSORS, evidence.DIAGNOSTIC_SOURCE_SUCCESSORS,
-                       evidence.DIRECT_TOOL_SOURCE_SUCCESSORS, evidence.NATIVE_RETIREMENT_SOURCE_SUCCESSORS):
+                       evidence.DIRECT_TOOL_SOURCE_SUCCESSORS, evidence.NATIVE_RETIREMENT_SOURCE_SUCCESSORS,
+                       evidence.RELEASE_121_SOURCE_SUCCESSORS):
             version_data = reports.read_json(ROOT / member)
             for profile_id, binding in version_data["profiles"].items():
                 with self.subTest(profile=profile_id):
@@ -115,7 +116,7 @@ class PodmanStorageContract(unittest.TestCase):
                         self.assertNotEqual(binding["grader_digest"], parent["grader_digest"])
                         fields["grader_digest"] = binding["grader_digest"]
                     self.assertEqual(current, dict(parent, id=profile_id, **fields))
-                    if member == evidence.NATIVE_RETIREMENT_SOURCE_SUCCESSORS or profile_id in active_purposes:
+                    if member == evidence.RELEASE_121_SOURCE_SUCCESSORS or profile_id in active_purposes:
                         purpose_id = active_purposes.get(profile_id, profile_id)
                         selected, _, _ = evidence.custom_contract(current["skill_id"], ROOT, purpose=purpose_id)
                         self.assertEqual(selected["id"], profile_id)
