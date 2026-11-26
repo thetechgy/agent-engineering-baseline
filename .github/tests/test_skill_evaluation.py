@@ -325,6 +325,12 @@ class ReportTests(unittest.TestCase):
         receipt = native.native_versions()
         self.assertEqual(profiles.runtime(receipt), native.native_profile())
         self.assertIs(profiles.runtime(candidate), profiles.RELEASE_BENCHMARK)
+        prior = profiles.RETAINED_RELEASE_BENCHMARK
+        prior_receipt = native.native_versions(backend=prior)
+        self.assertIs(profiles.runtime(profiles.candidate_versions(prior)), prior)
+        self.assertEqual(profiles.runtime(prior_receipt), native.native_profile(backend=prior))
+        with self.assertRaises(ValueError):
+            profiles.runtime({**prior_receipt, 'codex_tool_surface': receipt['codex_tool_surface']})
         for supplied in ({**candidate, "producer_profile": native.NATIVE_PRODUCER},
                          {**receipt, "patch_sha256": candidate["patch_sha256"]},
                          {**receipt, "source_tree_digest": "sha256:" + "0" * 64}):

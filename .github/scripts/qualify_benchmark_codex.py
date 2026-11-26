@@ -19,6 +19,7 @@ from skillevaluator.tier3.harbor.collector import collect_harbor_results
 from skillevaluator.tier3.harbor.report import display_findings_report
 from skillevaluator.tier3.harbor.runner import build_harbor_run_command
 
+from benchmark_codex_fixture import TOOL_ROUTE
 import gh_evaluations as gh
 from qualify_codex_1691 import acquire
 from skill_reports import POLICY, read_json, require, write_json
@@ -207,7 +208,8 @@ def add_offline_assets(image, assets=None):
         shutil.copytree(assets / "lib/node_modules", image / "reviewed/node_modules", symlinks=True)
         launcher = "/opt/reviewed/node_modules/@openai/codex/bin/codex.js"
         install = ""
-    shutil.copy2(gh.ROOT / ".github/scripts/codex_pilot_stub.py", image / "reviewed/stub.py")
+    fixture = "benchmark_codex_fixture.py" if RELEASE else "codex_pilot_stub.py"
+    shutil.copy2(gh.ROOT / ".github/scripts" / fixture, image / "reviewed/stub.py")
     with (image / "Dockerfile").open("a") as build:
         build.write("\nCOPY reviewed /opt/reviewed\n" + install + "RUN chmod -R a+rX /opt/reviewed /workspace/skills"
                     " && ln -s " + launcher + " /usr/local/bin/codex\n")
@@ -366,7 +368,8 @@ def run(root, assets, present, *, interrupt=False):
     require("error" not in native_reward, "Native custom verifier failed: " + str(native_reward.get("error")))
     request = read_json(trial / "verifier/provider.json")
     require(request["requests"] == 2 and all(row["model"] == POLICY["model"] and row["reasoning"]["effort"] == "high"
-        and row["path"] == "/v1/responses" and row["authorization_matches_sentinel"] for row in request["request_observations"]),
+        and row["path"] == "/v1/responses" and row["authorization_matches_sentinel"]
+        and (not RELEASE or row.get("native_tool_route") == TOOL_ROUTE) for row in request["request_observations"]),
         "Unexpected provider identity")
     require(read_json(trial / "verifier/edited.json") == fixture["expected"], "Native patch output changed")
     completed = [e["item"]["type"] for e in events if e["type"] == "item.completed"]

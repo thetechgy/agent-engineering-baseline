@@ -77,9 +77,9 @@ if [[ "$kind" == native-startup || "$kind" == native-benchmark-* ]]; then
     printf '%s  %s\n' 029ac12e32476d83b5a8555291b7c094be7df3262cd862396ddff1b453ec1821 "$patch" | sha256sum --check --strict
     git -C "$evaluator" apply --check "$patch"
     git -C "$evaluator" apply "$patch"
-    wheel_version=1.3.1
+    wheel_version=1.3.2
     wheel_kind=--benchmark-candidate
-    wheel_digest=8558a0ece14d6555835fa992560b65b767410c9828c379198ca9981e2c74bd10
+    wheel_digest=0899cdc4c270d5fe817b256c099457551f6b273b65aaf5418da99ae5ff60052b
     python_export=SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON
   fi
   if [ "$kind" = native-benchmark-101 ]; then

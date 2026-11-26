@@ -20,6 +20,7 @@ from benchmark_podman import compose_teardown_complete
 from benchmark_smoke import PROVIDER_CREDENTIALS
 import gh_evaluations as gh
 import pester_evaluations as pester
+from benchmark_codex_fixture import TOOL_ROUTE
 from qualify_benchmark_101 import restrict_network
 from qualify_benchmark_codex import OfflineCodex, OfflinePodmanCodex
 from skill_reports import MODES, POLICY, benchmark_artifacts, read_json, require, write_json
@@ -106,7 +107,7 @@ def isolate_task(task, *, standard_judges=True):
     image = task / "environment"
     reviewed = image / "reviewed"
     reviewed.mkdir(exist_ok=True)
-    shutil.copyfile(native.ROOT / ".github/scripts/codex_pilot_stub.py", reviewed / "stub.py")
+    shutil.copyfile(native.ROOT / ".github/scripts/benchmark_codex_fixture.py", reviewed / "stub.py")
     with (image / "Dockerfile").open("a") as build:
         if not standard_judges:
             build.write("\nCOPY --chown=0:0 reviewed/stub.py /opt/reviewed/stub.py\n"
@@ -183,7 +184,8 @@ def inspect_trial(result_path, *, preflight, suite):
                     else verifier / "codex-requests.json")
     requests = read_json(request_path)["request_observations"]
     require(len(requests) == 2 and all(item["model"] == POLICY["model"] and item["path"] == "/v1/responses"
-            and item["reasoning"]["effort"] == "high" and item["authorization_matches_sentinel"] for item in requests),
+            and item["reasoning"]["effort"] == "high" and item["authorization_matches_sentinel"]
+            and item["native_tool_route"] == TOOL_ROUTE for item in requests),
             "Codex fixture request contract differs")
     if suite == pester.NAME:
         raw = read_json(verifier / "custom_reward.json")

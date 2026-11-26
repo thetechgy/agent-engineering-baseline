@@ -271,7 +271,8 @@ class OrchestrationTests(unittest.TestCase):
                  for name in orchestration.NATIVE_RUNTIME_FILES + orchestration.RUNTIME_FILES}
         pinned = orchestration.benchmark_runtime_inputs(files)
         for member in ('.github/scripts/benchmark_native.py', '.github/scripts/skill_reports.py',
-                       '.github/evaluator-backends/candidate-101/fixture.py',
+                       '.github/evaluator-backends/candidate-101/benchmark_codex.py',
+                       '.github/evaluator-backends/candidate-101/codex-catalog/models.json',
                        '.github/patches/skillevaluator-v1.0.1-benchmark-staging.patch',
                        '.github/patches/skillevaluator-v1.0.1-benchmark-recovery.patch',
                        '.github/patches/skillevaluator-v1.0.1-benchmark-evidence.patch'):
@@ -305,13 +306,14 @@ class OrchestrationTests(unittest.TestCase):
         self.assertEqual(before, orchestration.snapshots(self.workspace, revision)[1])
         for member in ('.github/scripts/setup-static-evaluator.sh',
                        '.github/evaluator-backends/candidate-101/benchmark_codex.py',
+                       '.github/evaluator-backends/candidate-101/codex-catalog/models.json',
                        '.apm/skills/podman/evals/evals.json'):
             with self.subTest(member=member):
                 self.change(member)
                 changed = orchestration.candidate_podman_fingerprint(self.workspace, self.api.main)
                 self.assertNotEqual(fingerprint, changed)
                 fingerprint = changed
-        (self.workspace / '.github/evals/evaluator-1.0.1-benchmark-candidate-v2.json').unlink()
+        (self.workspace / '.github/evals/evaluator-1.0.1-benchmark-candidate-v3.json').unlink()
         revision = commit(self.workspace, 'Remove the candidate release lock identity')
         with self.assertRaisesRegex(ValueError, 'Missing candidate benchmark input'):
             orchestration.candidate_podman_fingerprint(self.workspace, revision)
@@ -332,6 +334,7 @@ class OrchestrationTests(unittest.TestCase):
         self.assertEqual(record['scope']['arms'], ['with_skill', 'without_skill'])
         self.assertEqual(record['scope']['planned_trials'], 2)
         self.assertFalse(record['scope']['history_eligible'])
+        self.assertEqual(record['scope']['agent']['tool_surface'], record['runtime']['codex_tool_surface'])
         baseline = smoke.reviewed_scope(self.workspace, env, {**inputs, 'candidate_smoke_arms': 'without-skill'})
         self.assertEqual(baseline['scope'], {**record['scope'], 'arms': ['without_skill'], 'planned_trials': 1})
         self.assertEqual(baseline['provider_policy'], record['provider_policy'])
@@ -427,6 +430,20 @@ class OrchestrationTests(unittest.TestCase):
         receipt = {'state': 'started'}
         smoke.trial_receipt(job, arm='without_skill', selected=selected, receipt=receipt)
         self.assertEqual(receipt, {'state': 'complete', 'agent_usage': usage, 'judge_scores': dict.fromkeys(metrics, 0.8)})
+
+        selected['agent']['tool_surface'] = smoke.native_versions()['codex_tool_surface']
+        atif = trial / 'agent/trajectory.json'
+        for names in ((), ('exec',), ('exec', 'exec_command')):
+            reports.write_json(atif, {'steps': [{'tool_calls': [{'function_name': name} for name in names]}]})
+            receipt = {'state': 'started'}
+            with self.assertRaisesRegex(ValueError, 'reviewed direct tool route'):
+                smoke.trial_receipt(job, arm='without_skill', selected=selected, receipt=receipt)
+            self.assertEqual(receipt['failure_reason'], 'tool_route_unavailable')
+        reports.write_json(atif, {'steps': [{'tool_calls': [{'function_name': 'exec_command'}]}]})
+        receipt = {'state': 'started'}
+        smoke.trial_receipt(job, arm='without_skill', selected=selected, receipt=receipt)
+        self.assertEqual(receipt, {'state': 'complete', 'agent_usage': usage, 'native_tool_route': 'direct',
+                                   'judge_scores': dict.fromkeys(metrics, 0.8)})
 
     def test_compatibility_workflow_is_manual_protected_and_excluded_from_history(self):
         workflow = yaml.safe_load((ROOT / orchestration.BENCHMARK).read_text())

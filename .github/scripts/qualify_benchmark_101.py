@@ -73,10 +73,16 @@ def agent_dispatch(root):
                 'Candidate Codex options changed')
         cls = import_symbol(selected)
         agent = cls(logs_dir=root, model_name=POLICY['model'], version=POLICY['codex'], reasoning_effort='high')
-        require('model_reasoning_effort=high' in agent.build_cli_flags() and '--disable code_mode' in agent.build_cli_flags(),
+        from aeb_gh_fixture.benchmark_codex import CATALOG_SHA256, REMOTE_CATALOG
+
+        flags = agent.build_cli_flags()
+        require('model_reasoning_effort=high' in flags and '--disable code_mode' in flags
+                and ('model_catalog_json="' + REMOTE_CATALOG + '"') in flags
+                and CATALOG_SHA256 == RELEASE_CANDIDATE['codex_tool_surface']['catalog_sha256'],
                 'Codex launch flags changed')
     return {'agent_import_path': required, 'modes': modes, 'model': POLICY['model'],
-            'codex_version': POLICY['codex'], 'reasoning_effort': 'high', 'executed': False}
+            'codex_version': POLICY['codex'], 'reasoning_effort': 'high',
+            'tool_surface': RELEASE_CANDIDATE['codex_tool_surface'], 'executed': False}
 
 
 def verifier_requests():

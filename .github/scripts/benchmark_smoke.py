@@ -1,6 +1,7 @@
 """Prepare and authenticate the single protected Podman compatibility smoke."""
 
 import argparse
+import json
 import os
 import re
 import subprocess
@@ -192,6 +193,15 @@ def trial_receipt(job, *, arm, selected, receipt):
                 and detail.get('judge_fallback_used') is False and type(score) in (int, float) and 0 <= score <= 1,
                 'Missing or changed judge observation')
         judges[metric] = score
+    if 'tool_surface' in selected['agent']:
+        from skill_evidence import read_bytes
+
+        receipt['failure_reason'] = 'tool_route_unavailable'
+        trajectory = json.loads(read_bytes(path.parent / 'agent/trajectory.json', limit=16 * 1024 * 1024))
+        calls = {call.get('function_name') for step in trajectory['steps'] for call in step.get('tool_calls') or []}
+        require('exec' not in calls and calls.intersection(('exec_command', 'apply_patch')),
+                'Native trace did not observe the reviewed direct tool route')
+        receipt['native_tool_route'] = 'direct'
     del receipt['failure_reason']
     receipt.update(state='complete', judge_scores=judges)
 
@@ -356,7 +366,8 @@ def main():
         summary(['## Candidate compatibility smoke', '',
                  f'Revision {selected["revision"]}. Podman case {selected["case"]}. One trial in each selected arm ({arms}).',
                  f'Runtime {value["runtime"]["producer_profile"]}. Patch SHA-256 {value["runtime"]["patch_sha256"]}.',
-                 'Codex 0.171.0 uses gpt-6.2-sol at High. The default verifier uses gpt-6.2-sol with reasoning omitted.',
+                 'Codex 0.171.0 uses gpt-6.2-sol at High with the pinned direct-tool catalog.',
+                 'The default verifier uses gpt-6.2-sol with reasoning omitted.',
                  'The protected evaluation has a 15-minute deadline. Judge transport retries are disabled.',
                  *(['The second arm requires recorded first-arm usage within the declared threshold.']
                    if selected['planned_trials'] == 2 else []),

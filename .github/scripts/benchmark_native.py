@@ -186,17 +186,18 @@ def gh_finalizer(manifest, emitted):
     require(actual == approved["tasks"], "Released gh task staging differs from the prepared approval")
 
 
-def native_profile():
+def native_profile(*, backend=None):
     from evaluator_profiles import RELEASE_BENCHMARK
 
-    return {**RELEASE_BENCHMARK, "id": NATIVE_PRODUCER, "source_tree_digest": NATIVE_SOURCE_DIGEST,
+    return {**(RELEASE_BENCHMARK if backend is None else backend), "id": NATIVE_PRODUCER,
+            "source_tree_digest": NATIVE_SOURCE_DIGEST,
             "patch_sha256": NATIVE_PATCH_DIGEST}
 
 
-def native_versions():
+def native_versions(*, backend=None):
     from evaluator_profiles import RELEASE_BENCHMARK, candidate_versions
 
-    return {**candidate_versions(RELEASE_BENCHMARK), "patch_sha256": NATIVE_PATCH_DIGEST,
+    return {**candidate_versions(RELEASE_BENCHMARK if backend is None else backend), "patch_sha256": NATIVE_PATCH_DIGEST,
             "source_tree_digest": NATIVE_SOURCE_DIGEST, "producer_profile": NATIVE_PRODUCER}
 
 
@@ -541,7 +542,10 @@ def released_policy(name):
 
 def score_series(name, mode):
     require(mode in MODES, "Unsupported released score mode")
-    material = json.dumps([released_policy(name), NATIVE_PATCH_DIGEST, mode], sort_keys=True).encode()
+    from evaluator_profiles import RELEASE_BENCHMARK
+
+    identity = [released_policy(name), NATIVE_PATCH_DIGEST, RELEASE_BENCHMARK["codex_tool_surface"], mode]
+    material = json.dumps(identity, sort_keys=True).encode()
     return hashlib.sha256(material).hexdigest()[:16]
 
 

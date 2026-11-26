@@ -1,6 +1,8 @@
 """Codex adapter for the SkillEvaluator 1.0.1 benchmark candidate."""
 
-from pathlib import PurePosixPath
+import hashlib
+import json
+from pathlib import Path, PurePosixPath
 import re
 import shlex
 
@@ -17,6 +19,12 @@ def backend_spec():
 
 
 NATIVE_SESSION_LOGS = "codex-native"
+CODEX_MODEL = "gpt-6.2-sol"
+CODEX_VERSION = "0.171.0"
+CATALOG = Path(__file__).with_name("codex-catalog") / "models.json"
+CATALOG_SHA256 = "fd533349d25b61d61028a80f4a8c2c5388895490d7116bc39e2e407b6c972095"
+REMOTE_CATALOG_DIR = "/opt/aeb-benchmark-codex"
+REMOTE_CATALOG = REMOTE_CATALOG_DIR + "/models.json"
 
 
 class BenchmarkCodex(SkillEvaluatorCodex):
@@ -71,10 +79,33 @@ class BenchmarkCodex(SkillEvaluatorCodex):
         return trajectory
 
     def build_cli_flags(self):
-        return super().build_cli_flags() + " --disable code_mode"
+        catalog = shlex.quote("model_catalog_json=" + json.dumps(REMOTE_CATALOG))
+        return super().build_cli_flags() + " --disable code_mode -c " + catalog
+
+    async def install_catalog(self, environment):
+        if self._resolved_model_name() != CODEX_MODEL or self._version != CODEX_VERSION:
+            raise RuntimeError("Unexpected model or CLI for the reviewed direct-tool catalog")
+        if CATALOG.is_symlink() or hashlib.sha256(CATALOG.read_bytes()).hexdigest() != CATALOG_SHA256:
+            raise RuntimeError("Codex model catalog differs from its reviewed bytes")
+
+        created = await self.exec_as_root(environment, command=(
+            f'test "$(find /opt -maxdepth 0 -type d -uid 0 ! -perm /022 -print)" = /opt '
+            f'&& mkdir -m 0755 -- {REMOTE_CATALOG_DIR}'
+        ))
+        if created.return_code != 0:
+            raise RuntimeError("Could not create a protected Codex catalog directory")
+        await environment.upload_file(CATALOG, REMOTE_CATALOG)
+        checked = await self.exec_as_root(environment, command=(
+            f'test -f {REMOTE_CATALOG} && test ! -L {REMOTE_CATALOG} '
+            f'&& chown 0:0 -- {REMOTE_CATALOG} && chmod 0444 -- {REMOTE_CATALOG} '
+            f'&& printf "%s  %s\n" {CATALOG_SHA256} {REMOTE_CATALOG} | sha256sum --check --strict'
+        ))
+        if checked.return_code != 0:
+            raise RuntimeError("Could not verify the protected Codex catalog")
 
     async def run(self, instruction, environment, context):
         self._exec_completed = False
+        await self.install_catalog(environment)
         created = await self.exec_as_agent(
             environment,
             command='home=$(getent passwd "$(id -u)" | cut -d: -f6) && '

@@ -12,8 +12,9 @@ CANDIDATE = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-c
 NEXT = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-0.9.json').read_text())
 RETAINED_NEXT = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-0.9-offline-v2.json').read_text())
 ACCOUNTING = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-0.9-accounting-v1.json').read_text())
-RELEASE_BENCHMARK = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-1.0.1-benchmark-candidate-v2.json').read_text())
-CANDIDATES = (CANDIDATE, NEXT, RETAINED_NEXT, ACCOUNTING, RELEASE_BENCHMARK)
+RETAINED_RELEASE_BENCHMARK = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-1.0.1-benchmark-candidate-v2.json').read_text())
+RELEASE_BENCHMARK = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-1.0.1-benchmark-candidate-v3.json').read_text())
+CANDIDATES = (CANDIDATE, NEXT, RETAINED_NEXT, ACCOUNTING, RELEASE_BENCHMARK, RETAINED_RELEASE_BENCHMARK)
 BENCHMARK_ACCOUNTING = json.loads((Path(__file__).resolve().parents[1] / 'evals/benchmark-090-accounting-v1.json').read_text())
 
 
@@ -60,9 +61,11 @@ def runtime(versions, *, owning=False):
         from benchmark_native import NATIVE_PRODUCER, native_profile, native_versions
 
         if versions['producer_profile'] == NATIVE_PRODUCER:
-            if versions != native_versions():
+            backend = next((p for p in (RELEASE_BENCHMARK, RETAINED_RELEASE_BENCHMARK)
+                            if versions == native_versions(backend=p)), None)
+            if backend is None:
                 raise ValueError('Contradictory released benchmark runtime provenance')
-            profile = native_profile()
+            profile = native_profile(backend=backend)
             if owning:
                 validate_install(profile)
             return profile
@@ -73,7 +76,8 @@ def runtime(versions, *, owning=False):
     profile = by_revision(revision)
     if is_candidate(profile):
         profile = next((p for p in CANDIDATES if p['revision'] == revision
-                        and p['patch_sha256'] == versions.get('patch_sha256')), None)
+                        and versions.get('codex_tool_surface') == p.get('codex_tool_surface')
+                        and all(versions.get(key) == value for key, value in candidate_versions(p).items())), None)
         if profile is None:
             raise ValueError('Incomplete or contradictory candidate provenance')
     for key, expected in (('skillevaluator', profile['version']), ('harbor', profile['harbor'])):
@@ -108,6 +112,11 @@ def validate_install(profile):
         digest = 'sha256:' + hashlib.sha256(json.dumps(files, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
         if digest != profile['backend_source_digest']:
             raise ValueError('Candidate backend implementation differs')
+        if surface := profile.get('codex_tool_surface'):
+            catalog = backend / 'codex-catalog/models.json'
+            if (catalog.parent.is_symlink() or catalog.is_symlink() or not catalog.is_file()
+                    or hashlib.sha256(catalog.read_bytes()).hexdigest() != surface['catalog_sha256']):
+                raise ValueError('Candidate Codex tool catalog differs')
     if 'source_tree_digest' in profile:
         import skillevaluator
         package = Path(skillevaluator.__file__).resolve().parent
@@ -130,6 +139,8 @@ def candidate_versions(profile=None):
     if p.get('backend_source_digest'):
         value.update(backend_version=p['dependencies']['aeb-gh-fixture'],
                      backend_source_digest=p['backend_source_digest'], backend_wheel_sha256=p['backend_wheel_sha256'])
+    if 'codex_tool_surface' in p:
+        value['codex_tool_surface'] = p['codex_tool_surface'].copy()
     return value
 
 

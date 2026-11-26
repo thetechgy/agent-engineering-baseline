@@ -105,6 +105,7 @@ def verifier():
 def run(root, present, case, assets, profile):
     from skillevaluator.tier3.harbor.runner import build_harbor_run_command
 
+    from benchmark_codex_fixture import TOOL_ROUTE
     from benchmark_podman import compose_teardown_complete, stage_codex, stage_task
     from qualify_benchmark_101 import ROOT
     from skill_reports import POLICY, read_json, require, write_json
@@ -117,7 +118,7 @@ def run(root, present, case, assets, profile):
     image = task / 'environment'
     stage_codex(image, assets, profile)
     (image / 'docker-compose.yaml').write_text('services:\n  main:\n    network_mode: none\n')
-    shutil.copy2(ROOT / '.github/scripts/codex_pilot_stub.py', image / 'reviewed/stub.py')
+    shutil.copy2(ROOT / '.github/scripts/benchmark_codex_fixture.py', image / 'reviewed/stub.py')
     shutil.copy2(Path(__file__), image / 'reviewed/podman_fixture.py')
     with (image / 'Dockerfile').open('a') as build:
         build.write('\nCOPY --chown=0:0 reviewed/stub.py reviewed/podman_fixture.py /opt/reviewed/\n'
@@ -160,7 +161,8 @@ def run(root, present, case, assets, profile):
             and len(requests) == 3 and all(row['request_policy_matches'] for row in requests),
             'Unexpected default judge requests')
     require(len(codex) == 2 and all(row['model'] == MODEL and row['reasoning']['effort'] == 'high'
-            and row['path'] == '/v1/responses' and row['authorization_matches_sentinel'] for row in codex),
+            and row['path'] == '/v1/responses' and row['authorization_matches_sentinel']
+            and row['native_tool_route'] == TOOL_ROUTE for row in codex),
             'Unexpected Codex requests')
     require(reward.get('accuracy') == 0.8 and result['agent_info']['version'] == POLICY['codex'],
             'Native accuracy or Codex identity changed')

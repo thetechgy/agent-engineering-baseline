@@ -449,6 +449,41 @@ planning estimate of 400,000 input and 240,000 output tokens costs about
 $3.20. Authorize the exact live scope separately after the credential-free
 qualification gates. [OpenAI API pricing](https://developers.openai.com/api/docs/pricing)
 
+
+### Native Codex tool request qualification
+
+The Podman case 1 baseline smoke on `466b0cc` completed the Codex trial
+and teardown. The protected verifier stopped with
+`unsupported_tool_wrapper` before making a judge request. The receipt
+does not retain the underlying call or program.
+[Protected diagnostic run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45746132396)
+
+A non-forwarding fixture with Codex 0.171.0 reproduced that failure
+class. With the bundled catalog, the CLI advertised `functions.exec`
+even with `--disable code_mode`. One literal wrapper executed and
+graded. A wrapper that supplied a variable as the shell argument also
+executed, but the verifier could not attribute its action and stopped
+before judging. The earlier benchmark fixture issued direct calls in
+response to empty top-level `tools`. It missed the tool declarations in
+developer-role `additional_tools`.
+
+The approved candidate uses the `gpt-6.2-sol` row from Codex
+`rust-v0.171.0` at `ccf9be8cc458bd6b8336fe84d68d8893f2691a5e`.
+The upstream catalog SHA-256 is
+`d50b6749506d97e5f334dbabcb666eb1689f423cf3e88cfabdcf3c536b873068`.
+Its single supported model row changes `tool_mode` to `direct`.
+The 1.3.2 backend verifies the catalog on the host and installs it in
+a protected path before startup. The loopback fixture now requires
+the direct shell and file-edit declarations in `additional_tools`
+before issuing either operation. The smoke scope, wheel and prospective
+score series bind the catalog digest. The agent still requests High,
+and the verifier request keeps reasoning omitted and zero transport
+retries in the protected smoke.
+
+The direct credential-free probe completed a shell write, a separate
+file edit and the three standard judge checks. Native hosted
+qualification and a separate paid smoke still gate production adoption.
+
 ## Model selection for new executions
 
 | Operator or workflow | Model dispatch and evidence |
