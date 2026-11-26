@@ -1531,8 +1531,9 @@ SKILL_EVALUATION_KIND=benchmark "$SKILL_NATIVE_BENCHMARK_PYTHON" -B \
 pwsh -NoLogo -NoProfile -File ./scripts/Invoke-Validation.ps1
 ```
 
-Validate runs the retained scanner contracts in an isolated 0.3.0 scanner
-environment while the scanner adapter comparison is open.
+Use the scanner steps in Validate for the separate 1.0.1 scanner-contract
+owner. That environment pins the caveat validation patch and the same external
+scanner executables. The published static suite uses the release owner.
 
 ### Privacy and accessibility
 

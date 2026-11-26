@@ -345,14 +345,22 @@ before judging. Controlled variants of the successful trajectory
 verified the unsupported-wrapper and missing-or-ambiguous-result codes.
 The diagnostic contains only fixed reason codes for this boundary.
 
-Validate now uses the credential-free 1.0.1 regression, fixture, review
-and presentation owners already used by feature-branch preapproval.
-Its retained 0.3.0 scanner contracts run in a step-local environment.
-The scanner bootstrap installs its evaluator and pinned external tools.
-The two historical review overlays are outside the Validate setup.
-The retained scanner step preserves all 43 caveat mutation checks while
-the 1.0.1 adapter comparison remains open. A direct 1.0.1 replacement
-accepted eight mutated caveat rows in the retained fixture.
+Validate uses the credential-free 1.0.1 regression, fixture, review and
+presentation owners already used by feature-branch preapproval. The
+intermediate revision `f966a39` isolated the retained 0.3.0 scanner
+contracts and excluded both historical review overlays from Validate.
+The unpatched 1.0.1 adapter accepted eight mutated caveat rows and marked
+coverage incomplete even with the actual skill root supplied.
+
+The separate 1.0.1 scanner-contract owner now retains the 43 raw-envelope
+rejection controls and the explicit partial-as-incomplete rule. Its
+digest-pinned patch reproduces the unpatched result on four genuine
+SkillSpector 2.13.6 reports, then rejects all eight altered rows for each
+input. The exact scanner setup runs the Semgrep and SkillSpector tests
+with the existing executable pins. The former `quality` selector exits
+before installing tools. Published static reports retain their original
+producer identities. The retained 0.9.0 repository caveat replay
+reproduced its comparison byte for byte.
 
 The native 1.0.1 score reader now validates the released dimension means,
 explicit baseline applicability and paired lift against the trial rewards.

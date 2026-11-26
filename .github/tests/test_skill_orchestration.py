@@ -800,11 +800,14 @@ class WorkflowAndUsageTests(unittest.TestCase):
         for command in expected:
             self.assertEqual(sum(command in step.get('run', '') for step in validate_steps), 1)
         self.assertNotIn('SKILL_REVIEW_PYTHON', json.dumps(validate_steps))
-        legacy = next(step for step in validate_steps if ' legacy-scanner-contracts' in step.get('run', ''))
-        self.assertIn('GITHUB_ENV="$RUNNER_TEMP/owner.env"', legacy['run'])
-        self.assertIn('GITHUB_PATH="$RUNNER_TEMP/owner.path"', legacy['run'])
-        self.assertIn(f'"$SKILL_EVALUATOR_PYTHON" -B {selector} legacy-scanner-contracts', legacy['run'])
-        self.assertNotIn('secrets.', json.dumps(legacy))
+        scanner_setup = next(step for step in validate_steps if step.get('run') ==
+                             'bash .github/scripts/setup-static-evaluator.sh scanner-contracts')
+        scanner_command = f'"$SKILL_SCANNER_CONTRACT_PYTHON" -B {selector} scanner-contracts'
+        scanner = next(step for step in validate_steps if scanner_command in step.get('run', ''))
+        self.assertLess(validate_steps.index(scanner_setup), validate_steps.index(scanner))
+        self.assertEqual(scanner['env'], {'SKILL_EVALUATION_KIND': 'scanner-contracts',
+                                          'SKILLEVALUATOR_REQUIRE_SEMGREP': '1'})
+        self.assertNotIn('secrets.', json.dumps([scanner_setup, scanner]))
         for command, setup_kind in ((expected[0], 'native-benchmark-101'), (expected[2], 'native-benchmark-candidate')):
             for steps in (context['steps'], validate_steps):
                 setup = next(step for step in steps if step.get('run', '').endswith(' ' + setup_kind))
@@ -823,7 +826,7 @@ class WorkflowAndUsageTests(unittest.TestCase):
         self.assertIn('skill_orchestration.py guard', gate['run'])
 
     def test_contract_discovery_keeps_tests_outside_the_released_owners(self):
-        from test_evaluation_contracts import contract_suite, legacy_scanner_suite
+        from test_evaluation_contracts import contract_suite, scanner_suite
 
         class Test(unittest.TestCase):
             def runTest(self):
@@ -846,10 +849,11 @@ class WorkflowAndUsageTests(unittest.TestCase):
         loader.discover = lambda _path: unittest.TestSuite([unittest.TestSuite(discovered)])
         self.assertEqual([case.id() for case in contract_suite(loader)], identities[4:])
         self.assertEqual([case.id() for case in contract_suite(loader, released=True)], [identities[-1]])
-        with patch.dict(os.environ, {'SKILL_EVALUATION_KIND': 'quality'}), \
-                patch('test_evaluation_contracts.version', return_value='0.3.0'), \
+        with patch.dict(os.environ, {'SKILL_EVALUATION_KIND': 'scanner-contracts'}), \
+                patch('static_evaluator.validate_install') as authenticate, \
                 patch.object(loader, 'loadTestsFromNames') as load:
-            legacy_scanner_suite(loader)
+            scanner_suite(loader)
+        authenticate.assert_called_once_with(scanner_contracts=True)
         load.assert_called_once_with(('test_scanner_caveats', 'test_semgrep', 'test_skillspector'))
 
     def test_inference_free_jobs_use_the_released_data_host(self):

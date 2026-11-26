@@ -1172,16 +1172,18 @@ class WorkflowTests(unittest.TestCase):
                             self.assertEqual(result.returncode, 0, result.stderr)
                             self.assertEqual(result.stdout.strip(), str(checkout.resolve()))
 
-    def test_retired_reporting_selector_exits_before_install(self):
+    def test_retired_setup_selectors_exit_before_install(self):
         setup = REPO / '.github/scripts/setup-skillevaluator.sh'
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             env = {'PATH': os.defpath, 'RUNNER_TEMP': str(root / 'tools'), 'GITHUB_WORKSPACE': str(REPO),
                    'GITHUB_ENV': str(root / 'environment'), 'GITHUB_PATH': str(root / 'path')}
-            result = subprocess.run(['bash', str(setup), 'reporting'], cwd=root, env=env,
-                                    text=True, capture_output=True, timeout=10)
-            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
-            self.assertEqual(list(root.iterdir()), [])
+            for kind in ('reporting', 'quality'):
+                with self.subTest(kind=kind):
+                    result = subprocess.run(['bash', str(setup), kind], cwd=root, env=env,
+                                            text=True, capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                    self.assertEqual(list(root.iterdir()), [])
 
     def test_setup_private_tool_root_for_provenance_key(self):
         setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
@@ -1193,44 +1195,25 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn('chmod 700 "$tool_root"', setup)
         self.assertIn('["docker", "compose", "version", "--short"]', setup)
 
-    def test_setup_provenance_records_the_selected_scanner_revision(self):
+    def test_setup_provenance_records_the_pinned_benchmark_runtime(self):
         setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
         self.assertIn("printf 'SKILL_EVALUATION_KIND=%s\\n' \"$kind\"", setup)
         producer = setup.split("<<'PY' > \"$tool_root/versions.json\"\n", 1)[1].rsplit("\nPY", 1)[0]
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "dependencies").mkdir()
-            for name in ("semgrep", "skillspector"):
-                (root / "dependencies" / f"{name}.json").write_text(
-                    json.dumps([{"name": name, "version": "fixture-version"}]))
-            (root / 'skillspector').mkdir()
-            (root / 'skillspector/uv.lock').write_text('scanner lock fixture')
             (root / 'benchmark').mkdir()
             (root / 'benchmark/uv.lock').write_bytes(b'benchmark lock fixture')
-            scanner_packages = {"bandit": "fixture-bandit", "pip-audit": "fixture-pip-audit"}
-            version = importlib.metadata.version
-
-            def package_version(name):
-                return scanner_packages[name] if name in scanner_packages else version(name)
-
-            for kind in ("quality", "benchmark"):
-                output = io.StringIO()
-                with self.subTest(kind=kind), patch.object(sys, "argv", ["-", str(root), kind, SHA, str(REPO)]), \
-                        patch.object(subprocess, "check_output", return_value="fixture-version\n"), \
-                        patch.object(importlib.metadata, "version", side_effect=package_version), \
-                        contextlib.redirect_stdout(output):
-                    exec(compile(producer, "setup-provenance", "exec"), {})
-                versions = json.loads(output.getvalue())
-                if kind == "quality":
-                    self.assertEqual(versions["skillspector_revision"], SHA)
-                    self.assertEqual(versions["scanners"]["skillspector"], "fixture-version")
-                    self.assertEqual({name: versions["scanners"][name] for name in scanner_packages}, scanner_packages)
-                    self.assertEqual(versions['scanner_runtime']['skillspector_lock'],
-                                     'sha256:' + hashlib.sha256(b'scanner lock fixture').hexdigest())
-                else:
-                    self.assertNotIn("skillspector_revision", versions)
-                    self.assertEqual(versions["lock_sha256"], hashlib.sha256(b"benchmark lock fixture").hexdigest())
-                    self.assertEqual(versions["certifi"], importlib.metadata.version("certifi"))
+            output = io.StringIO()
+            with patch.object(sys, "argv", ["-", str(root)]), \
+                    patch.object(subprocess, "check_output", return_value="fixture-version\n"), \
+                    contextlib.redirect_stdout(output):
+                exec(compile(producer, "setup-provenance", "exec"), {})
+            versions = json.loads(output.getvalue())
+            self.assertNotIn("skillspector_revision", versions)
+            self.assertEqual(versions["lock_sha256"], hashlib.sha256(b"benchmark lock fixture").hexdigest())
+            self.assertEqual(versions["certifi"], importlib.metadata.version("certifi"))
+            self.assertEqual(versions["docker_compose"], 'fixture-version')
+            self.assertEqual(versions["evaluator_revision"], reports.POLICY["evaluator_revision"])
 
     def test_benchmark_contracts_allow_the_intentionally_absent_scanner(self):
         with tempfile.TemporaryDirectory() as directory:

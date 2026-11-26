@@ -45,11 +45,12 @@ class StaticQualityRoutingTests(unittest.TestCase):
             if 'skill_reports.py' in step.get('run', '') and 'preflight' not in step['run']:
                 self.assertIn('"$SKILL_QUALITY_PYTHON" -B "$STATIC_QUALITY_SCRIPTS/skill_reports.py"', step['run'])
         self.assertIn('bash "$STATIC_QUALITY_SCRIPTS/collect-static-quality.sh"', body)
-        scanner = [step for step in contracts['steps']
-                   if 'setup-skillevaluator.sh quality' in step.get('run', '')]
-        self.assertEqual(len(scanner), 1)
-        self.assertIn('legacy-scanner-contracts', scanner[0]['run'])
-        self.assertNotIn('released-contracts', scanner[0]['run'])
+        scanner_setup = 'bash .github/scripts/setup-static-evaluator.sh scanner-contracts'
+        scanner, = [step for step in contracts['steps'] if step.get('run') == scanner_setup]
+        self.assertFalse(any(step.get('run') == scanner_setup for step in quality['steps']))
+        scanner_tests = next(step for step in contracts['steps'] if ' scanner-contracts' in step.get('run', '')
+                             and 'test_evaluation_contracts.py' in step['run'])
+        self.assertLess(contracts['steps'].index(scanner), contracts['steps'].index(scanner_tests))
         native = [step for job in jobs.values() for step in job.get('steps', [])
                   if 'gh_container_validation.py' in step.get('run', '')]
         self.assertEqual(len(native), 1)

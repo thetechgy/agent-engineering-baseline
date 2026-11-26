@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Credential-free before/after adapter qualification on unchanged repository inputs."""
+"""Credential-free scanner adapter qualification on frozen and authored inputs."""
 import copy
 from contextlib import redirect_stdout
 import io
@@ -21,14 +21,9 @@ import skill_reports as reports
 
 NAMES = ('a11y', 'ansible', 'podman', 'powershell-pester-6')
 DRIVER = '''
-import json, os, sys, types
+import json, os
 from pathlib import Path
 from skillevaluator.utils.tool_runner import Tools
-if os.environ['SCANNER_ADAPTER'] == 'before':
-    import skillevaluator.validators.security as security
-    original = types.ModuleType('original_security')
-    exec(compile(Path(os.environ['SCANNER_ORIGINAL']).read_bytes(), '<retained-security>', 'exec'), original.__dict__)
-    security.SecurityValidator._validate_skillspector_report = staticmethod(original.SecurityValidator._validate_skillspector_report)
 run = Tools.skillspector.run
 def capture(args, **kwargs):
     result = run(args, **kwargs)
@@ -46,132 +41,112 @@ cli()
 
 
 def qualify(output, tools, workspace):
-    contract_result = contracts(tools, workspace)
+    versions = evidence.read_json(tools / 'versions.json')
+    if versions['skillevaluator'] != '0.9.0' or importlib.metadata.version('skillevaluator') != '0.9.0':
+        raise ValueError('The repository caveat replay requires the pinned 0.9.0 owner')
+    contract_result = contracts(workspace)
     output.mkdir(parents=True, exist_ok=False)
     (output / "contracts.json").write_bytes(evidence.encoded(contract_result))
-    versions = evidence.read_json(tools / 'versions.json')
     environment = {key: os.environ[key] for key in ('PATH', 'TMPDIR', 'LANG', 'SYSTEMROOT') if key in os.environ}
     environment.update(PYTHONDONTWRITEBYTECODE='1', SEMGREP_SEND_METRICS='off',
                        SEMGREP_ENABLE_VERSION_CHECK='0', LANGSMITH_TRACING='false')
     environment['PATH'] = str(tools / 'bin') + os.pathsep + environment.get('PATH', '')
-    outcomes = {}
-    producer_claims = {}
-    roots = []
+    outcomes = {'after': {}}
     inputs = {name: {p.relative_to(workspace / '.apm/skills' / name).as_posix(): evidence.digest_bytes(p.read_bytes())
                      for p in sorted((workspace / '.apm/skills' / name).rglob('*')) if p.is_file()} for name in NAMES}
-    released = versions['skillevaluator'] == '0.9.0'
-    for mode in (('after',) if released else ('before', 'after')):
-        destination = output / mode
-        native = destination / 'native'
-        capture = destination / 'process'
-        native.mkdir(parents=True); capture.mkdir()
-        identity = copy.deepcopy(versions)
-        if mode == 'before': identity['scanner_runtime'] = evidence.SCANNER_RUNTIME_CURRENT_UNPATCHED
-        (native / 'versions.json').write_bytes(evidence.encoded(identity))
-        with tempfile.TemporaryDirectory(prefix='scanner-caveats-') as temporary:
-            env = dict(environment, HOME=temporary, XDG_CACHE_HOME=temporary, XDG_STATE_HOME=temporary,
-                       SKILLEVALUATOR_RESULTS_DIR=temporary,
-                       SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE=str(Path(temporary) / 'key'),
-                       SCANNER_ADAPTER=mode, SCANNER_ORIGINAL=str(tools / 'security-original.py'),
-                       SCANNER_WORKSPACE=str(workspace), SCANNER_CAPTURE=str(capture))
-            for tool in ('SKILLSPECTOR', 'SEMGREP', 'GITLEAKS'):
-                env['SKILLEVALUATOR_' + tool + '_PATH'] = str(tools / 'bin' / tool.lower())
-            command = [sys.executable, '-B', '-c', DRIVER, 'validate', str(workspace / '.apm/skills'),
-                       '--external', '--tiers', '1', '--no-llm', '--no-dedup', '--continue-on-failure',
-                       '--evaluated-source-repository', 'thetechgy/agent-engineering-baseline',
-                       '--evaluated-source-revision', subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=workspace, text=True).strip(),
-                       '-r', 'json,markdown,html', '-o', str(native / 'reports')]
-            process = subprocess.run(command, env=env, cwd=native, capture_output=True, text=True, timeout=300)
-            (destination / 'collection.log').write_text((process.stdout + process.stderr).replace(str(workspace), '<workspace>').replace(temporary, '<scratch>'))
-            assert process.returncode == 1, process.returncode
-            (native / 'catalog.exit').write_text(str(process.returncode) + '\n')
-            datasets = native / 'datasets'
-            datasets.mkdir()
-            for dataset in sorted((workspace / '.apm/skills').glob('*/evals/evals.json')):
-                name = dataset.parents[1].name
-                check = subprocess.run([sys.executable, '-B', '-c', 'from skillevaluator.cli import cli; cli()', 'tier3', 'validate',
-                                        str(dataset.parent.parent), '--strict', '--json'],
-                                       env={key: value for key, value in env.items()
-                                            if key not in {'SKILLEVALUATOR_' + tool + '_PATH'
-                                                           for tool in ('SKILLSPECTOR', 'SEMGREP', 'GITLEAKS')}},
-                                       cwd=native, capture_output=True, text=True, timeout=60)
-                (datasets / (name + '.json')).write_text(check.stdout)
-                (datasets / (name + '.stderr')).write_text(check.stderr.replace(str(workspace), '<workspace>').replace(temporary, '<scratch>'))
-                (datasets / (name + '.exit')).write_text(str(check.returncode) + '\n')
+    destination = output / 'after'
+    native = destination / 'native'
+    capture = destination / 'process'
+    native.mkdir(parents=True); capture.mkdir()
+    (native / 'versions.json').write_bytes(evidence.encoded(versions))
+    with tempfile.TemporaryDirectory(prefix='scanner-caveats-') as temporary:
+        env = dict(environment, HOME=temporary, XDG_CACHE_HOME=temporary, XDG_STATE_HOME=temporary,
+                   SKILLEVALUATOR_RESULTS_DIR=temporary,
+                   SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE=str(Path(temporary) / 'key'),
+                   SCANNER_WORKSPACE=str(workspace), SCANNER_CAPTURE=str(capture))
+        for tool in ('SKILLSPECTOR', 'SEMGREP', 'GITLEAKS'):
+            env['SKILLEVALUATOR_' + tool + '_PATH'] = str(tools / 'bin' / tool.lower())
+        command = [sys.executable, '-B', '-c', DRIVER, 'validate', str(workspace / '.apm/skills'),
+                   '--external', '--tiers', '1', '--no-llm', '--no-dedup', '--continue-on-failure',
+                   '--evaluated-source-repository', 'thetechgy/agent-engineering-baseline',
+                   '--evaluated-source-revision', subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=workspace, text=True).strip(),
+                   '-r', 'json,markdown,html', '-o', str(native / 'reports')]
+        process = subprocess.run(command, env=env, cwd=native, capture_output=True, text=True, timeout=300)
+        (destination / 'collection.log').write_text((process.stdout + process.stderr).replace(str(workspace), '<workspace>').replace(temporary, '<scratch>'))
+        assert process.returncode == 1, process.returncode
+        (native / 'catalog.exit').write_text(str(process.returncode) + '\n')
+        datasets = native / 'datasets'
+        datasets.mkdir()
+        for dataset in sorted((workspace / '.apm/skills').glob('*/evals/evals.json')):
+            name = dataset.parents[1].name
+            check = subprocess.run([sys.executable, '-B', '-c', 'from skillevaluator.cli import cli; cli()', 'tier3', 'validate',
+                                    str(dataset.parent.parent), '--strict', '--json'],
+                                   env={key: value for key, value in env.items()
+                                        if key not in {'SKILLEVALUATOR_' + tool + '_PATH'
+                                                       for tool in ('SKILLSPECTOR', 'SEMGREP', 'GITLEAKS')}},
+                                   cwd=native, capture_output=True, text=True, timeout=60)
+            (datasets / (name + '.json')).write_text(check.stdout)
+            (datasets / (name + '.stderr')).write_text(check.stderr.replace(str(workspace), '<workspace>').replace(temporary, '<scratch>'))
+            (datasets / (name + '.exit')).write_text(str(check.returncode) + '\n')
 
-        summary = io.StringIO()
-        try:
-            with redirect_stdout(summary):
-                try:
-                    reports.catalog_report(workspace, native)
-                except ValueError:
-                    # An adoption assessment retains an actual dataset refusal.
-                    # It cannot turn scanner findings into a complete catalog gate.
-                    if not released:
-                        raise
-                    failures = [line for line in summary.getvalue().splitlines() if line.startswith('- ')]
-                    if not failures or not all(re.fullmatch(
-                            r'- [a-z0-9-]+: Strict eval dataset validation failed; inspect dataset reports and collection steps\.', line)
-                            for line in failures):
-                        raise
-                    datasets = {path.stem: {
-                        'exit': int(path.with_suffix('.exit').read_text()),
-                        'checks': evidence.read_json(path)} for path in (native / 'datasets').glob('*.json')}
-                    (output / 'collection-gate.json').write_bytes(evidence.encoded({
-                        'status': 'failed', 'adoption_ready': False, 'failures': failures, 'datasets': datasets}))
-                reports.public_quality(workspace, native, destination / 'public')
-        finally:
-            (destination / 'collection-summary.md').write_text(summary.getvalue())
-        catalog = evidence.read_json(native / 'reports/catalog-summary.json')
-        outcomes[mode] = {}
-        producer_claims[mode] = {}
-        for name in NAMES:
-            row = next(row for row in catalog['skills'] if row['name'] == name)
-            raw = evidence.read_json(native / 'reports' / name / row['json_report'])
-            scan = next(row for row in raw['results'] if row['validator'] == 'Security Scan')
-            producer = evidence.read_json(capture / (name + '.json'))
-            data = json.loads(producer['stdout'])
-            assert data['metadata']['llm_requested'] is False and not data['metadata']['inference_usage']
-            assert data['analysis_completeness']['status'] == 'complete_with_caveats'
-            producer_claims[mode][name] = {
-                'coverage': data['analysis_completeness'],
-                'findings': sorted((issue['id'], issue['severity'], evidence.identity(issue['location']))
-                                   for issue in data['issues'])}
-            assert 'skillspector' in scan['incomplete_scans']
-            assert scan['status'] == ('failed' if released and (scan['summary']['critical_count'] or scan['summary']['high_count']) else 'incomplete')
-            public = evidence.read_json(destination / 'public/skills' / name / 'static/public-report.json')
-            if mode == 'after':
-                captured_record = evidence.normalize_static(native, name, workspace=workspace)
-                for mutation in ('omit', 'count', 'profile'):
-                    changed = copy.deepcopy(dict(captured_record))
-                    if mutation == 'omit': changed.pop('coverage_caveats')
-                    elif mutation == 'count': changed['coverage_caveats'][0]['count'] += 1
-                    else: changed['scanner_runtime'] = evidence.SCANNER_RUNTIME_CURRENT_UNPATCHED
-                    try:
-                        evidence.project(changed, static_bundle=native)
-                    except ValueError:
-                        pass
-                    else:
-                        raise AssertionError('Changed caveat evidence accepted: ' + mutation)
-
-            if mode == 'before':
-                assert not scan['findings'] and any("status' is not recognized" in error for error in scan['legacy']['errors'])
+    summary = io.StringIO()
+    try:
+        with redirect_stdout(summary):
+            try:
+                reports.catalog_report(workspace, native)
+            except ValueError:
+                # An adoption assessment retains an actual dataset refusal.
+                # It cannot turn scanner findings into a complete catalog gate.
+                failures = [line for line in summary.getvalue().splitlines() if line.startswith('- ')]
+                if not failures or not all(re.fullmatch(
+                        r'- [a-z0-9-]+: Strict eval dataset validation failed; inspect dataset reports and collection steps\.', line)
+                        for line in failures):
+                    raise
+                datasets = {path.stem: {
+                    'exit': int(path.with_suffix('.exit').read_text()),
+                    'checks': evidence.read_json(path)} for path in (native / 'datasets').glob('*.json')}
+                (output / 'collection-gate.json').write_bytes(evidence.encoded({
+                    'status': 'failed', 'adoption_ready': False, 'failures': failures, 'datasets': datasets}))
+            reports.public_quality(workspace, native, destination / 'public')
+    finally:
+        (destination / 'collection-summary.md').write_text(summary.getvalue())
+    catalog = evidence.read_json(native / 'reports/catalog-summary.json')
+    for name in NAMES:
+        row = next(row for row in catalog['skills'] if row['name'] == name)
+        raw = evidence.read_json(native / 'reports' / name / row['json_report'])
+        scan = next(row for row in raw['results'] if row['validator'] == 'Security Scan')
+        producer = evidence.read_json(capture / (name + '.json'))
+        data = json.loads(producer['stdout'])
+        assert data['metadata']['llm_requested'] is False and not data['metadata']['inference_usage']
+        assert data['analysis_completeness']['status'] == 'complete_with_caveats'
+        assert 'skillspector' in scan['incomplete_scans']
+        assert scan['status'] == ('failed' if (scan['summary']['critical_count'] or scan['summary']['high_count']) else 'incomplete')
+        public = evidence.read_json(destination / 'public/skills' / name / 'static/public-report.json')
+        captured_record = evidence.normalize_static(native, name, workspace=workspace)
+        for mutation in ('omit', 'count', 'profile'):
+            changed = copy.deepcopy(dict(captured_record))
+            if mutation == 'omit': changed.pop('coverage_caveats')
+            elif mutation == 'count': changed['coverage_caveats'][0]['count'] += 1
+            else: changed['scanner_runtime'] = evidence.SCANNER_RUNTIME_CURRENT_UNPATCHED
+            try:
+                evidence.project(changed, static_bundle=native)
+            except ValueError:
+                pass
             else:
-                assert public['coverage_caveats'][0]['count'] == len(data['analysis_completeness']['ledger_exceptions'])
-                assert len([f for f in scan['findings'] if f['category'] == 'SECURITY']) >= len(data['issues'])
-                for issue in data['issues']:
-                    location = issue['location']
-                    assert any(f['check'] == issue['id'] and f['member'] == location['file']
-                               and f['line'] == location['start_line'] for f in public['findings']), issue
-            outcomes[mode][name] = {'coverage': scan['status'], 'producer_status': data['analysis_completeness']['status'],
-                                     'producer_findings': len(data['issues']), 'security_findings': len(scan['findings']),
-                                     'caveats': len(data['analysis_completeness']['ledger_exceptions'])}
-        roots.append(destination / 'public')
+                raise AssertionError('Changed caveat evidence accepted: ' + mutation)
+
+        assert public['coverage_caveats'][0]['count'] == len(data['analysis_completeness']['ledger_exceptions'])
+        assert len([f for f in scan['findings'] if f['category'] == 'SECURITY']) >= len(data['issues'])
+        for issue in data['issues']:
+            location = issue['location']
+            assert any(f['check'] == issue['id'] and f['member'] == location['file']
+                       and f['line'] == location['start_line'] for f in public['findings']), issue
+        outcomes['after'][name] = {'coverage': scan['status'], 'producer_status': data['analysis_completeness']['status'],
+                                 'producer_findings': len(data['issues']), 'security_findings': len(scan['findings']),
+                                 'caveats': len(data['analysis_completeness']['ledger_exceptions'])}
     assert inputs == {name: {p.relative_to(workspace / '.apm/skills' / name).as_posix(): evidence.digest_bytes(p.read_bytes())
                             for p in sorted((workspace / '.apm/skills' / name).rglob('*')) if p.is_file()} for name in NAMES}
-    if not released:
-        assert producer_claims['before'] == producer_claims['after'], 'Producer claims changed on unchanged inputs'
-    captured = analysis.capture_inputs(roots)
+    captured = analysis.capture_inputs([destination / 'public'])
     result = analysis.validate_analysis(None, captured)
     (output / 'analysis.json').write_bytes(evidence.encoded(result))
     html = renderer.render_report(result, captured)
@@ -183,13 +158,13 @@ def qualify(output, tools, workspace):
 
 
 
-def contracts(tools, workspace=evidence.ROOT):
+def contracts(workspace=evidence.ROOT):
     """Mutation controls are synthetic; the seed is an unchanged real producer response."""
-    import types
     from skillevaluator.validators.base import ValidationResult
     from skillevaluator.validators.security import SecurityValidator
     fixture = evidence.read_json(workspace / '.github/tests/fixtures/skillspector-caveat-response.json')
-    if importlib.metadata.version('skillevaluator') == '0.9.0':
+    owner_version = importlib.metadata.version('skillevaluator')
+    if owner_version == '0.9.0':
         result = ValidationResult()
         assert SecurityValidator._validate_skillspector_report(fixture, 0, False, 'skillspector', result)
         SecurityValidator()._process_skillspector_cli_result(fixture, result)
@@ -200,12 +175,11 @@ def contracts(tools, workspace=evidence.ROOT):
             assert not SecurityValidator._validate_skillspector_report(changed, 0, False, 'skillspector', invalid)
         return {'seed': 'retained SkillSpector 2.13.4 response', 'owner': 'released 0.9.0 adapter',
                 'known_finding_retained': True, 'coverage': 'incomplete', 'negative_mutations': 3}
-    original = types.ModuleType('original_security')
-    exec(compile((tools / 'security-original.py').read_bytes(), '<retained-security>', 'exec'), original.__dict__)
-    assert evidence.digest_bytes((tools / 'security-original.py').read_bytes()) == 'sha256:919ff88315310e64a7e9d623f22ca5d19fb3dbea809255957fc9ecab53098345'
-    before = ValidationResult()
-    assert not original.SecurityValidator._validate_skillspector_report(fixture, 0, False, 'skillspector', before)
-    assert any("status' is not recognized" in error for error in before.errors)
+    if owner_version != '1.0.1':
+        raise ValueError('Unsupported scanner contract runtime')
+    import static_evaluator
+
+    static_evaluator.validate_install(scanner_contracts=True)
     result = ValidationResult()
     assert SecurityValidator._validate_skillspector_report(fixture, 0, False, 'skillspector', result), result.errors
     SecurityValidator()._process_skillspector_cli_result(fixture, result)
@@ -254,10 +228,10 @@ def contracts(tools, workspace=evidence.ROOT):
         result = ValidationResult()
         assert SecurityValidator._validate_skillspector_report(changed, 0, False, 'skillspector', result) is accepted
         if accepted: assert result.is_incomplete is incomplete
-    return {'seed': 'actual SkillSpector 2.13.4 response, synthetic input', 'before': before.errors,
-            'original_adapter_sha256': evidence.digest_bytes((tools / 'security-original.py').read_bytes()),
-            'fixture_sha256': evidence.digest_bytes(evidence.encoded(fixture)),
-            'negative_mutations': len(controls), 'ordinary_states': ['complete', 'partial', 'failed']}
+    receipt = {'seed': 'actual SkillSpector 2.13.4 response, synthetic input',
+               'fixture_sha256': evidence.digest_bytes(evidence.encoded(fixture)),
+               'negative_mutations': len(controls), 'ordinary_states': ['complete', 'partial', 'failed']}
+    return {**receipt, 'owner': 'skillevaluator-1.0.1-scanner-contracts'}
 
 
 if __name__ == '__main__':

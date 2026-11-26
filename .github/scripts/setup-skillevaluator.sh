@@ -3,8 +3,8 @@
 set -euo pipefail
 umask 077
 
-kind=${1:?usage: setup-skillevaluator.sh quality|quality-next|quality-candidate|benchmark|candidate-current|candidate-next|candidate-accounting}
-case "$kind" in quality-next|quality-candidate|quality|benchmark|candidate-current|candidate-next|candidate-accounting) ;; *) exit 2 ;; esac
+kind=${1:?usage: setup-skillevaluator.sh quality-next|quality-candidate|benchmark|candidate-current|candidate-next|candidate-accounting}
+case "$kind" in quality-next|quality-candidate|benchmark|candidate-current|candidate-next|candidate-accounting) ;; *) exit 2 ;; esac
 : "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}" "${GITHUB_ENV:?}" "${GITHUB_PATH:?}"
 repository_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 tool_root="$RUNNER_TEMP/skill-evaluation-tools"
@@ -183,14 +183,6 @@ git -C "$tool_root/evaluator" fetch --quiet --depth=1 \
   https://github.com/NVIDIA/SkillEvaluator.git "$evaluator_revision"
 git -C "$tool_root/evaluator" checkout --quiet --detach FETCH_HEAD
 test "$(git -C "$tool_root/evaluator" rev-parse HEAD)" = "$evaluator_revision"
-if [ "$kind" = quality ]; then
-  # Preserve pristine adapter bytes for credential-free before/after qualification.
-  cp "$tool_root/evaluator/src/skillevaluator/validators/security.py" "$tool_root/security-original.py"
-  compatibility_patch="$repository_root/.github/patches/skillevaluator-v0.3.0-skillspector-caveats.patch"
-  printf '%s  %s\n' 09ab5d1440f355224935b9498ea3c2a68395d656997932ab525771287cb802bc "$compatibility_patch" | sha256sum --check --strict
-  git -C "$tool_root/evaluator" apply --check "$compatibility_patch"
-  git -C "$tool_root/evaluator" apply "$compatibility_patch"
-fi
 if [ "$kind" = benchmark ]; then
   # Keep the upstream evaluator lock and interpreter available for offline replay.
   benchmark_root="$tool_root/benchmark"
@@ -254,12 +246,6 @@ PYREVIEW
   printf '%s  %s\n' "$previous_review_lock_sha256" "$tool_root/review-previous/uv.lock" | sha256sum --check --strict
 fi
 
-if [ "$kind" = quality ]; then
-  # shellcheck source-path=SCRIPTDIR
-  # shellcheck source=setup-skill-scanners.sh
-  source "$repository_root/.github/scripts/setup-skill-scanners.sh"
-  install_skill_scanners "$tool_root" "$evaluator_bin" "$repository_root"
-fi
 uv pip list --python "$evaluator_bin/python" --format json > "$tool_root/dependencies/evaluator.json"
 
 printf '%s\n' "$evaluator_bin" "$tool_root/bin" >> "$GITHUB_PATH"
@@ -274,7 +260,7 @@ printf '%s\n' "$evaluator_bin" "$tool_root/bin" >> "$GITHUB_PATH"
   printf 'XDG_CACHE_HOME=%s\nXDG_STATE_HOME=%s\n' "$XDG_CACHE_HOME" "$XDG_STATE_HOME"
   printf 'SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE=%s/provenance.key\n' "$tool_root"
 } >> "$GITHUB_ENV"
-"$evaluator_bin/python" - "$tool_root" "$kind" "${skillspector_revision:-}" "$repository_root" <<'PY' > "$tool_root/versions.json"
+"$evaluator_bin/python" - "$tool_root" <<'PY' > "$tool_root/versions.json"
 import hashlib, importlib.metadata, json, platform, subprocess, sys
 from pathlib import Path
 root = Path(sys.argv[1])
@@ -284,23 +270,9 @@ versions = {
     "harbor": importlib.metadata.version("harbor"),
     "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
 }
-if sys.argv[2] == "benchmark":
-    versions["lock_sha256"] = hashlib.sha256((root / "benchmark/uv.lock").read_bytes()).hexdigest()
-    versions["certifi"] = importlib.metadata.version("certifi")
-    versions["docker_compose"] = subprocess.check_output(
-        ["docker", "compose", "version", "--short"], text=True).strip()
-if sys.argv[2] == "quality":
-    versions["scanners"] = {name: next(package["version"] for package in
-        json.loads((root / "dependencies" / f"{name}.json").read_text()) if package["name"] == name)
-        for name in ("semgrep", "skillspector")}
-    versions["scanners"].update({name: importlib.metadata.version(name) for name in ("bandit", "pip-audit")})
-    versions["scanners"]["gitleaks"] = subprocess.check_output([root / "bin/gitleaks", "version"], text=True).strip()
-    versions["skillspector_revision"] = sys.argv[3]
-    versions["scanner_runtime"] = {
-        "versions": versions["scanners"], "skillspector_revision": sys.argv[3],
-        "adapter_patch": "sha256:" + hashlib.sha256((Path(sys.argv[4]) / ".github/patches/skillevaluator-v0.3.0-skillspector-caveats.patch").read_bytes()).hexdigest(),
-        "skillspector_lock": "sha256:" + hashlib.sha256((root / "skillspector/uv.lock").read_bytes()).hexdigest(),
-        "semgrep_lock": "sha256:" + hashlib.sha256((Path(sys.argv[4]) / ".github/requirements/semgrep.txt").read_bytes()).hexdigest(),
-    }
+versions["lock_sha256"] = hashlib.sha256((root / "benchmark/uv.lock").read_bytes()).hexdigest()
+versions["certifi"] = importlib.metadata.version("certifi")
+versions["docker_compose"] = subprocess.check_output(
+    ["docker", "compose", "version", "--short"], text=True).strip()
 print(json.dumps(versions, indent=2))
 PY

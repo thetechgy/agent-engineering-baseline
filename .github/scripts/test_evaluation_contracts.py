@@ -1,6 +1,5 @@
 """Run the evaluator contract tests in their owning environments."""
 import argparse
-from importlib.metadata import version
 import os
 from pathlib import Path
 import sys
@@ -57,9 +56,12 @@ def fixture_suite(loader):
     return loader.loadTestsFromNames(FIXTURE_TESTS)
 
 
-def legacy_scanner_suite(loader):
-    if os.environ.get('SKILL_EVALUATION_KIND') != 'quality' or version('skillevaluator') != '0.3.0':
-        raise ValueError('Install the retained scanner contract owner first')
+def scanner_suite(loader):
+    import static_evaluator
+
+    if os.environ.get('SKILL_EVALUATION_KIND') != 'scanner-contracts':
+        raise ValueError('Install the pinned scanner contract owner first')
+    static_evaluator.validate_install(scanner_contracts=True)
     sys.path.insert(0, str(TESTS))
     return loader.loadTestsFromNames(SCANNER_MODULES)
 
@@ -82,8 +84,8 @@ def presentation_suite(loader):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    suites = {'contracts': contract_suite, 'released-contracts': released_suite, 'fixture-contracts': fixture_suite,
-              'legacy-scanner-contracts': legacy_scanner_suite, 'private-review': review_suite,
+    suites = {'released-contracts': released_suite, 'fixture-contracts': fixture_suite,
+              'scanner-contracts': scanner_suite, 'private-review': review_suite,
               'presentation': presentation_suite}
     parser.add_argument('owner', choices=suites)
     owner = parser.parse_args().owner

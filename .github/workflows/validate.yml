@@ -135,7 +135,7 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    # Budget the released contracts, retained scanner controls and native fixtures together.
+    # Budget the released contracts, scanner controls and native fixtures together.
     timeout-minutes: 45
     env:
       PYTHONDONTWRITEBYTECODE: '1'
@@ -179,17 +179,17 @@ jobs:
           "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/gh_evaluations.py validate gh
           "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/gh_evaluations.py replay gh
 
-      - name: Test retained scanner contracts in their pinned environment
+      - name: Install the pinned released scanner contract runtime
+        run: bash .github/scripts/setup-static-evaluator.sh scanner-contracts
+
+      - name: Test scanner contracts without inference
+        env:
+          SKILL_EVALUATION_KIND: scanner-contracts
+          SKILLEVALUATOR_REQUIRE_SEMGREP: '1'
         run: |
-          export RUNNER_TEMP="$RUNNER_TEMP/legacy-scanner-contracts"
-          mkdir -m 700 "$RUNNER_TEMP"
-          export GITHUB_ENV="$RUNNER_TEMP/owner.env" GITHUB_PATH="$RUNNER_TEMP/owner.path"
-          bash .github/scripts/setup-skillevaluator.sh quality
-          set -a
-          source "$GITHUB_ENV"
-          set +a
-          export PATH="$(dirname -- "$SKILL_EVALUATOR_PYTHON"):$RUNNER_TEMP/skill-evaluation-tools/bin:$PATH"
-          "$SKILL_EVALUATOR_PYTHON" -B .github/scripts/test_evaluation_contracts.py legacy-scanner-contracts
+          export SKILLEVALUATOR_SKILLSPECTOR_PATH="$SKILL_SCANNER_CONTRACT_TOOLS/bin/skillspector"
+          export SKILLEVALUATOR_SEMGREP_PATH="$SKILL_SCANNER_CONTRACT_TOOLS/bin/semgrep"
+          "$SKILL_SCANNER_CONTRACT_PYTHON" -B .github/scripts/test_evaluation_contracts.py scanner-contracts
 
       - name: Test private review and attachments without inference
         run: '"$SKILL_REVIEW_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py private-review'

@@ -7,12 +7,13 @@ root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 kind=${1:-quality-static}
 case "$kind" in
   quality-next) exec bash "$root/.github/scripts/setup-skillevaluator.sh" quality-next ;;
-  quality-static|data-host|native-startup|native-benchmark-candidate|native-benchmark-101|review-candidate|review-contracts) ;;
+  quality-static|scanner-contracts|data-host|native-startup|native-benchmark-candidate|native-benchmark-101|review-candidate|review-contracts) ;;
   *) exit 2 ;;
 esac
 : "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}" "${GITHUB_ENV:?}"
 tools="$RUNNER_TEMP/skill-evaluation-tools"
 if [ "$kind" = data-host ]; then tools="$RUNNER_TEMP/skill-data-host"; fi
+if [ "$kind" = scanner-contracts ]; then tools="$RUNNER_TEMP/skill-scanner-contracts"; fi
 if [ "$kind" = native-startup ]; then tools="$RUNNER_TEMP/skill-native-startup"; fi
 if [[ "$kind" == native-benchmark-* ]]; then tools="$RUNNER_TEMP/skill-$kind"; fi
 if [[ "$kind" == review-* ]]; then tools="$RUNNER_TEMP/skill-$kind"; fi
@@ -46,7 +47,7 @@ git -C "$evaluator" checkout --quiet --detach FETCH_HEAD
 test "$(git -C "$evaluator" rev-parse HEAD)" = "$revision"
 printf '%s  %s\n' "$lock" "$evaluator/uv.lock" | sha256sum --check --strict
 extras=()
-if [ "$kind" = quality-static ]; then extras=(--extra security --extra tier3); fi
+if [[ "$kind" == quality-static || "$kind" == scanner-contracts ]]; then extras=(--extra security --extra tier3); fi
 if [[ "$kind" == native-startup || "$kind" == native-benchmark-* ]]; then extras=(--extra tier3); fi
 uv sync --project "$evaluator" --python "$python_version" --managed-python --frozen --no-dev "${extras[@]}"
 python="$evaluator/.venv/bin/python"
@@ -120,6 +121,15 @@ mkdir "$tools/bin" "$tools/dependencies"
 # shellcheck source=setup-skill-scanners.sh
 source "$root/.github/scripts/setup-skill-scanners.sh"
 install_skill_scanners "$tools" "$evaluator/.venv/bin" "$root"
+if [ "$kind" = scanner-contracts ]; then
+  patch="$root/.github/patches/skillevaluator-v1.0.1-scanner-contracts.patch"
+  printf '%s  %s\n' d974793bb66d3629cb3b2d74a6cad2c1f21e8ee9f1787b256cc4b22eb1751c2b "$patch" | sha256sum --check --strict
+  git -C "$evaluator" apply --check "$patch"
+  git -C "$evaluator" apply "$patch"
+  PYTHONPATH="$root/.github/scripts" "$python" -B -c 'import static_evaluator; static_evaluator.validate_install(scanner_contracts=True)'
+  printf 'SKILL_SCANNER_CONTRACT_PYTHON=%s\nSKILL_SCANNER_CONTRACT_TOOLS=%s\n' "$python" "$tools" >> "$GITHUB_ENV"
+  exit 0
+fi
 uv pip list --python "$python" --format json > "$tools/dependencies/evaluator.json"
 "$python" -B "$root/.github/scripts/static_quality_ci.py" versions --tools "$tools"
 
