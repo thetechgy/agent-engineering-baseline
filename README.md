@@ -711,8 +711,10 @@ A skill can look useful without improving results. I use NVIDIA's
 [SkillEvaluator](https://github.com/NVIDIA/SkillEvaluator/releases/tag/v1.0.1)
 to evaluate locally maintained skills in `.apm/skills/`. Static quality and public
 reporting use the released 1.0.1 runtime. Native benchmarks and private reviews
-use their qualified 0.3.0 environments. Replay uses the original producer
-recorded with each result.
+use independently pinned 1.0.1 environments. Released native benchmarks have
+their own score series. Retained results preserve their original producers,
+scores, and validator identities. To reproduce the retired 0.3.0 environment,
+check out the reviewed pre-retirement revision documented in the evaluation plan.
 
 Automated **Skill quality** checks cover security scanners and test-case data; LLM
 checks and Tier 2 are disabled. Findings and incomplete scanner evidence are advisory.

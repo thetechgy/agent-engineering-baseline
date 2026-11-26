@@ -26,6 +26,8 @@ import skill_analysis as analysis
 import skill_evidence as evidence
 import skill_pages as pages
 import skill_report as report
+from qualify_current_evaluator import historical_podman
+from review_snapshots import PESTER_RECORD, parity_archive
 import test_skill_analysis as fixtures
 from test_skill_report import Document
 
@@ -109,20 +111,7 @@ class FixtureAPI:
 class PagesTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        import importlib.metadata
-        if importlib.metadata.version('skillevaluator') == '0.3.0':
-            cls.historical = evidence.project(evidence.normalize_behavioral(fixtures.FIXTURES / 'podman-native', 'podman'))
-        else:
-            # Normalize historical native data under its original owner; exercise
-            # publication preparation and rebuilding under the selected host.
-            python = Path(os.environ.get('SKILL_EVALUATOR_PYTHON', ''))
-            if not python.is_absolute() or not python.is_file():
-                raise ValueError('Historical native fixture requires its owning interpreter')
-            command = 'import sys,json; from pathlib import Path; sys.path.insert(0,sys.argv[1]); import skill_evidence as e; print(json.dumps(e.project(e.normalize_behavioral(Path(sys.argv[2]),"podman"))))'
-            result = subprocess.run([str(python), '-I', '-B', '-c', command, str(ROOT / '.github/scripts'),
-                                     str(fixtures.FIXTURES / 'podman-native')],
-                                    capture_output=True, text=True, check=True, timeout=60)
-            cls.historical = json.loads(result.stdout)
+        cls.historical = evidence.parse_json(historical_podman())
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='pages-test-'); self.addCleanup(self.temp.cleanup)
@@ -208,6 +197,48 @@ class PagesTests(unittest.TestCase):
         pages.write(self.site, self.member, b'window.BENCHMARK_DATA = ' + pages.encoded(value))
         self.assertEqual([r['detail'] for r in pages.build(self.site)], ['public_detail_available', 'ledger_only'])
         self.assertIn('standard--podman', pages.load_state(self.site)['slots'])
+
+    def test_released_standard_series_retains_legacy_and_confirmation_is_diagnostic(self):
+        from benchmark_native import NATIVE_PATCH_DIGEST, released_policy, score_series
+        import skill_history as history
+
+        def fixture(mode):
+            settings = released_policy('podman')
+            maximum = evidence.reports.MODES[mode]
+            record = fixtures.synthetic(name='podman', run='fixture-' + mode, maximum=maximum)
+            record['source'].update(repository=pages.REPOSITORY, revision=self.revision)
+            fields = {key: settings[key] for key in evidence.POLICY_FIELDS if key in settings}
+            judge = {'model': settings['model'], 'provider': settings['provider'], 'enabled': True}
+            record['policy'] = evidence.make_policy(fields, 'sha256:' + NATIVE_PATCH_DIGEST,
+                'skill-evaluator-default-v2', judge,
+                {'mode': mode, 'maximum': maximum, 'stop_on_pass': False, 'pass_threshold': 0.5},
+                'runtime_recorded', score_series('podman', mode))
+            for arm in record['arms']:
+                condition = arm['condition']
+                condition['execution']['environment'] = settings['environment']
+                condition['id'] = evidence.identity({key: value for key, value in condition.items() if key != 'id'})
+            return record
+
+        standard, confirmation = (fixture(mode) for mode in ('standard', 'confirmation'))
+        latest = prov(self.revision, 21, kind='benchmark')
+        limited = copy.deepcopy(standard)
+        limited['availability'].update(status='incomplete', reasons=['coverage_missing'])
+        with self.assertRaisesRegex(ValueError, 'authenticated complete cohort'):
+            self.admit('standard--podman', [limited], latest, suffix='limited')
+        with self.assertRaisesRegex(ValueError, 'Behavioral purpose mismatch'):
+            self.admit('standard--podman', [confirmation], latest, suffix='confirmation')
+        self.assertTrue(self.admit('standard--podman', [standard], latest))
+        self.assertTrue(self.admit('confirmation--podman', [confirmation], latest))
+        member, raw = ledger_data(standard)
+        self.assertNotEqual(member, self.member)
+        pages.write(self.site, member, raw)
+        rows = {row['policy']: row for row in pages.build(self.site)}
+        self.assertEqual(rows[score_series('podman', 'standard')]['detail'], 'public_detail_available')
+        self.assertFalse(rows[pages.published_policy(self.historical)]['record_id'])
+        self.assertNotIn(score_series('podman', 'confirmation'), rows)
+        item = history.observation(confirmation, 'confirmation--podman', latest, '2026-11-25T15:00:00Z')
+        self.assertEqual(item['class'], 'diagnostic')
+        self.assertEqual((self.site / self.member).read_bytes(), self.raw_ledger)
 
     def test_conflicting_standard_values_block_and_preserve_generated_index(self):
         self.admit('standard--podman', [self.historical], prov(self.historical['source']['revision'], kind='benchmark'))
@@ -365,11 +396,10 @@ class PagesTests(unittest.TestCase):
             pages.acquire(api, api.run, api.jobs, 'benchmark', self.site, self.state, ROOT, self.root / 'failed')
         # Synthetic native custom confirmation contains failed/unscoreable outcomes.
         # Producer workflow success must not turn those outcomes into passes.
-        import test_custom_metrics as custom
-        native, _ = custom.synthetic_native(self.root / 'custom')
-        record = evidence.project(evidence.normalize_behavioral(native, 'powershell-pester-6'))
+        with parity_archive(pester=True) as archive:
+            record = evidence.parse_json(archive.read(PESTER_RECORD))
         source = bundle(self.root / 'confirmation-source', [record])
-        api = FixtureAPI(self.revision, 'f' * 40, source)
+        api = FixtureAPI(record['source']['revision'], 'f' * 40, source)
         api.run.update(workflow_id=200, path=pages.WORKFLOWS['benchmark'], event='workflow_dispatch')
         api.jobs = [api.job('evaluate', evaluation)]
         api.artifacts[0]['name'] = 'skill-public-benchmark-powershell-pester-6-confirmation-20-1'
@@ -429,12 +459,6 @@ class PagesTests(unittest.TestCase):
         before = pages.tree(output / 'benchmarks')
         command = [sys.executable, '-B', str(SCRIPTS / 'skill_pages.py'), 'build', '--site', str(output / 'benchmarks')]
         run = subprocess.run(command, capture_output=True, text=True)
-        self.assertEqual(run.returncode, 0, run.stderr)
-        self.assertEqual(before, pages.tree(output / 'benchmarks'))
-        self.assertEqual(seal, pages.verify_candidate(output))
-        # Roll back only the data host: preserve every public byte and its seal.
-        legacy = os.environ.get('SKILL_EVALUATOR_PYTHON', sys.executable)
-        run = subprocess.run([legacy, *command[1:]], capture_output=True, text=True)
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertEqual(before, pages.tree(output / 'benchmarks'))
         self.assertEqual(seal, pages.verify_candidate(output))
@@ -523,61 +547,62 @@ class PagesTests(unittest.TestCase):
             report.render_report(result, captured, pages_context=context)
 
     def test_reporting_setup_entry_point_never_dispatches_scanners_compose_or_evaluation(self):
-        if sys.version_info[:2] != (3, 13): self.skipTest('Pinned Python 3.13 setup contract')
-        # Command fixtures exercise the real Bash routing; they are not an install qualification.
-        bin_dir = self.root / 'bin'; bin_dir.mkdir()
-        log = self.root / 'calls'
-        uv = """import os,pathlib,sys,shlex
-args=sys.argv[1:]
-with open(os.environ['CALL_LOG'],'a') as f: f.write('uv '+ ' '.join(args)+'\\n')
-if args==['--version']: print('uv 0.13.9')
-elif args[0]=='sync':
- root=pathlib.Path(args[args.index('--project')+1])/'.venv/bin'; root.mkdir(parents=True)
- (root/'python').write_text('#!/bin/sh\\nexec '+shlex.quote(sys.executable)+' \"$@\"\\n'); (root/'python').chmod(0o700)
- (root/'skillevaluator').write_text('#!/bin/sh\\n[ "$#" -eq 1 ] && [ "$1" = --version ] || exit 1\\necho skillevaluator-0.3.0\\n'); (root/'skillevaluator').chmod(0o700)
-elif args[:2]==['pip','list']: print('[]')
-elif args[:2]==['pip','check']:
- assert args[2:] in [['--python',str(pathlib.Path(os.environ['RUNNER_TEMP'])/('skill-evaluation-tools/'+name+'/.venv/bin/python'))] for name in ('review','review-previous')]
-else: raise SystemExit('Unexpected reporting setup dependency operation')
+        from static_evaluator import LOCK, REVISION, VERSIONS, validate_install
+
+        validate_install()
+        lock = Path(sys.executable).parents[2] / 'uv.lock'
+        self.assertEqual(evidence.digest_bytes(lock.read_bytes()), 'sha256:' + LOCK)
+        binary = self.root / 'bin'
+        binary.mkdir()
+        temporary = self.root / 'tools'
+        temporary.mkdir()
+        script = """
+import os, pathlib, shlex, shutil, sys
+
+name = pathlib.Path(sys.argv[0]).name
+args = sys.argv[1:]
+if name == 'uv' and args == ['--version']:
+    print('uv 0.13.9')
+elif name == 'uv' and args[:2] == ['sync', '--project']:
+    assert args[3:] == ['--python', os.environ['RELEASE_PYTHON'], '--managed-python', '--frozen', '--no-dev']
+    bin_dir = pathlib.Path(args[2]) / '.venv/bin'
+    bin_dir.mkdir(parents=True)
+    python = bin_dir / 'python'
+    python.write_text('#!/bin/sh\\nexec ' + shlex.quote(sys.executable) + ' "$@"\\n')
+    cli = bin_dir / 'skillevaluator'
+    cli.write_text('#!/bin/sh\\n[ "$#" -eq 1 ] && [ "$1" = --version ]\\n')
+    python.chmod(0o700)
+    cli.chmod(0o700)
+elif name == 'uv' and args[:3] == ['pip', 'check', '--python']:
+    assert pathlib.Path(args[3]).is_file()
+elif name == 'git' and args[:2] == ['init', '--quiet']:
+    pathlib.Path(args[-1]).mkdir()
+elif name == 'git' and args[:2] == ['-C', os.environ['EVALUATOR']]:
+    command = args[2:]
+    if command == ['fetch', '--quiet', '--depth=1', 'https://github.com/NVIDIA/SkillEvaluator.git', os.environ['RELEASE_REVISION']]:
+        pass
+    elif command == ['checkout', '--quiet', '--detach', 'FETCH_HEAD']:
+        shutil.copyfile(os.environ['RELEASE_LOCK'], pathlib.Path(args[1]) / 'uv.lock')
+    elif command == ['rev-parse', 'HEAD']:
+        print(os.environ['RELEASE_REVISION'])
+    else:
+        raise SystemExit('Unexpected Git operation')
+else:
+    raise SystemExit('Unexpected data-host setup operation')
 """
-        git = """import os,pathlib,sys,subprocess,shutil
-args=sys.argv[1:]
-with open(os.environ['CALL_LOG'],'a') as f: f.write('git '+ ' '.join(args)+'\\n')
-if args[0]=='init': pathlib.Path(args[-1]).mkdir(parents=True)
-if 'rev-parse' in args: print('ac0a04905100acdafc6c95829311a9739c340ff6')
-if 'worktree' in args:
- target=pathlib.Path(args[-2]); target.mkdir(parents=True)
- shutil.copyfile(os.environ['BASE_LOCK'],target/'uv.lock')
-if 'apply' in args:
- allowed={str(pathlib.Path(os.environ['RUNNER_TEMP'])/('skill-evaluation-tools/'+name)):os.environ[key] for name,key in [('review','REVIEW_PATCH'),('review-previous','PREVIOUS_REVIEW_PATCH')]}
- assert args[0]=='-C' and args[1] in allowed, 'Reporting must not patch evaluator execution'
- patch=allowed[args[1]]
- assert args[2:] in (['apply','--check',patch], ['apply',patch]), 'Only the matching reviewed dependency lock patch is allowed'
- subprocess.run([os.environ['REAL_GIT'],*args],check=True)
-"""
-        for name, source in [('uv', uv), ('git', git), *[(name, "raise SystemExit('Forbidden reporting operation')") for name in ('curl', 'docker', 'semgrep', 'skillspector')]]:
-            path = bin_dir / name; path.write_text('#!' + sys.executable + '\n' + source); path.chmod(0o700)
-        environment = {**os.environ, 'PATH': str(bin_dir) + os.pathsep + os.environ['PATH'], 'CALL_LOG': str(log),
-            'RUNNER_TEMP': str(self.root / 'tools'), 'GITHUB_WORKSPACE': str(ROOT),
-            'GITHUB_ENV': str(self.root / 'env'), 'GITHUB_PATH': str(self.root / 'path'),
-            'REAL_GIT': shutil.which('git'),
-            'BASE_LOCK': str(Path(os.environ['SKILL_LEGACY_REVIEW_PYTHON']).parents[2] / 'uv.lock'),
-            'REVIEW_PATCH': str(ROOT / '.github/patches/skillevaluator-v0.3.0-review-runtime.patch'),
-            'PREVIOUS_REVIEW_PATCH': str(ROOT / '.github/patches/skillevaluator-v0.3.0-review-runtime-v1.patch')}
-        run = subprocess.run(['bash', str(ROOT / '.github/scripts/setup-skillevaluator.sh'), 'reporting'], env=environment,
-                             capture_output=True, text=True, timeout=30)
+        for name in ('uv', 'git', 'curl', 'docker', 'semgrep', 'skillspector'):
+            executable = binary / name
+            executable.write_text('#!' + sys.executable + '\n' + script)
+            executable.chmod(0o700)
+        evaluator = temporary / 'skill-data-host/evaluator'
+        environment_file = self.root / 'env'
+        env = {'PATH': str(binary) + os.pathsep + os.environ['PATH'], 'RUNNER_TEMP': str(temporary),
+               'GITHUB_WORKSPACE': str(ROOT), 'GITHUB_ENV': str(environment_file), 'EVALUATOR': str(evaluator),
+               'RELEASE_REVISION': REVISION, 'RELEASE_LOCK': str(lock), 'RELEASE_PYTHON': VERSIONS['python']}
+        run = subprocess.run(['bash', str(ROOT / '.github/scripts/setup-static-evaluator.sh'), 'data-host'],
+                             env=env, capture_output=True, text=True, timeout=30)
         self.assertEqual(run.returncode, 0, run.stderr)
-        self.assertIn('SKILL_EVALUATION_KIND=reporting', (self.root / 'env').read_text())
-        calls = log.read_text()
-        self.assertNotIn('semgrep', calls); self.assertNotIn('skillspector', calls); self.assertNotIn('benchmark', calls)
-        self.assertNotIn('pin-codex.patch', calls)
-        self.assertIn(environment['REVIEW_PATCH'], calls)
-        self.assertIn(environment['PREVIOUS_REVIEW_PATCH'], calls)
-        self.assertIn('pip check --python', calls)
-        self.assertIn('SKILL_REVIEW_PYTHON=', (self.root / 'env').read_text())
-        self.assertIn('SKILL_LEGACY_REVIEW_PYTHON=', (self.root / 'env').read_text())
-        self.assertIn('SKILL_PREVIOUS_REVIEW_PYTHON=', (self.root / 'env').read_text())
-        self.assertIn('--frozen --no-dev --extra security --extra tier3', calls)
+        self.assertEqual(environment_file.read_text(), f'SKILL_DATA_PYTHON={evaluator}/.venv/bin/python\n')
 
     def test_workflow_permissions_queue_and_trusted_checkout(self):
         workflow = yaml.safe_load((ROOT / '.github/workflows/publish-skill-report.yml').read_text())

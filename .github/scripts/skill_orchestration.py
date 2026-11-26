@@ -30,6 +30,57 @@ SUITES = ('podman', 'gh', 'powershell-pester-6')
 RUNTIME_FILES = ('.github/workflows/benchmark-skills.yml', '.github/scripts/setup-compose.sh',
                  '.github/scripts/setup-skillevaluator.sh', '.github/scripts/skill_reports.py',
                  '.github/patches/')
+CANDIDATE_RUNTIME_FILES = (
+    '.github/workflows/benchmark-skills.yml',
+    '.github/scripts/setup-compose.sh',
+    '.github/scripts/setup-static-evaluator.sh',
+    '.github/scripts/static_evaluator.py',
+    '.github/scripts/evaluator_profiles.py',
+    '.github/scripts/qualify_benchmark_101.py',
+    '.github/scripts/skill_pages.py',
+    '.github/scripts/skill_orchestration.py',
+    '.github/scripts/skill_reports.py',
+    '.github/scripts/qualify_codex_1691.py',
+    '.github/scripts/benchmark_podman.py',
+    '.github/scripts/benchmark_smoke.py',
+    '.github/evals/codex-execution-1710.json',
+    '.github/evals/evaluator-1.0.1-benchmark-candidate-v3.json',
+    '.github/evaluator-backends/build_wheel.py',
+    '.github/evaluator-backends/aeb_gh_fixture/',
+    '.github/evaluator-backends/candidate-101/',
+    '.github/evaluator-backends/candidate-101/benchmark_codex.py',
+    '.github/evaluator-backends/candidate-101/codex-catalog/models.json',
+    '.github/patches/skillevaluator-v1.0.1-benchmark-request.patch',
+)
+NATIVE_BENCHMARK_POLICY = '.github/evals/benchmark-native-101-v1.json'
+NATIVE_RUNTIME_FILES = (
+    NATIVE_BENCHMARK_POLICY,
+    '.github/workflows/benchmark-skills.yml',
+    '.github/scripts/benchmark_native.py',
+    '.github/scripts/benchmark_podman.py',
+    '.github/scripts/setup-compose.sh',
+    '.github/scripts/setup-static-evaluator.sh',
+    '.github/scripts/static_evaluator.py',
+    '.github/scripts/evaluator_profiles.py',
+    '.github/scripts/gh_candidate.py',
+    '.github/scripts/qualify_codex_1691.py',
+    '.github/scripts/skill_evidence.py',
+    '.github/scripts/skill_orchestration.py',
+    '.github/scripts/skill_pages.py',
+    '.github/scripts/skill_reports.py',
+    '.github/scripts/skill_history.py',
+    '.github/evals/codex-execution-1710.json',
+    '.github/evals/evaluator-1.0.1-benchmark-candidate-v3.json',
+    '.github/evaluator-backends/build_wheel.py',
+    '.github/evaluator-backends/aeb_gh_fixture/',
+    '.github/evaluator-backends/candidate-101/',
+    '.github/evaluator-backends/candidate-101/benchmark_codex.py',
+    '.github/evaluator-backends/candidate-101/codex-catalog/models.json',
+    '.github/patches/skillevaluator-v1.0.1-benchmark-request.patch',
+    '.github/patches/skillevaluator-v1.0.1-benchmark-staging.patch',
+    '.github/patches/skillevaluator-v1.0.1-benchmark-recovery.patch',
+    '.github/patches/skillevaluator-v1.0.1-benchmark-evidence.patch',
+)
 SUITE_FILES = {'podman': ('.apm/skills/podman/',),
                'gh': ('.github/evals/gh/evals/', '.github/scripts/gh_evaluations.py',
                       '.github/evals/custom-metrics.json', '.github/scripts/skill_evidence.py'),
@@ -120,12 +171,31 @@ def sources(workspace, revision, files):
     return result
 
 
+def candidate_podman_fingerprint(workspace, revision, *, released=False):
+    """Fingerprint the reviewed candidate inputs without changing historical lookups."""
+    files = manifest(workspace, revision)
+    prefixes = CANDIDATE_RUNTIME_FILES + SUITE_FILES['podman']
+    if released:
+        # Pre-merge qualification binds the released implementation before the adoption marker exists.
+        prefixes += tuple(member for member in NATIVE_RUNTIME_FILES if member != NATIVE_BENCHMARK_POLICY)
+    require(all(subset(files, (prefix,)) for prefix in prefixes), 'Missing candidate benchmark input')
+    return identity(subset(files, prefixes))
+
+
+def benchmark_runtime_inputs(files):
+    # A historical reference is recomputed against its own Git tree. A new
+    # production namespace must bind every released runtime input before it can
+    # share any qualification, reference, or dispatch intent.
+    prefixes = NATIVE_RUNTIME_FILES if NATIVE_BENCHMARK_POLICY in files else RUNTIME_FILES
+    runtime = subset(files, prefixes)
+    require(all(subset(runtime, (prefix,)) for prefix in prefixes), 'Missing runtime input')
+    return runtime
+
+
 def snapshots(workspace, revision):
     files = manifest(workspace, revision)
     catalog = sources(workspace, revision, files)
-    runtime = subset(files, RUNTIME_FILES)
-    require(all(any(name.startswith(p) if p.endswith('/') else name == p for name in runtime) for p in RUNTIME_FILES),
-            'Missing runtime input')
+    runtime = benchmark_runtime_inputs(files)
     suites = {}
     for name in SUITES:
         root = '.apm/skills/podman' if name == 'podman' else '.github/evals/' + name
@@ -207,8 +277,14 @@ def qualified(api, workspace, main, run, name, current, ledger):
         'Append standard result to durable history', 'Capture and verify the exact published history commit'])
     previous = snapshots(workspace, run['head_sha'])[1][name]
     require(previous['runtime'] == current['runtime'], 'Reference runtime requires qualification')
-    patch = hashlib.sha256((workspace / reports.PATCH).read_bytes()).hexdigest()
-    published_policy = hashlib.sha256(json.dumps([reports.benchmark_policy(name), patch], sort_keys=True).encode()).hexdigest()[:16]
+    if NATIVE_BENCHMARK_POLICY in manifest(workspace, run['head_sha']):
+        from benchmark_native import score_series
+
+        published_policy = score_series(name, 'standard')
+    else:
+        patch = hashlib.sha256(blob(workspace, run['head_sha'], reports.PATCH)).hexdigest()
+        published_policy = hashlib.sha256(
+            json.dumps([reports.benchmark_policy(name), patch], sort_keys=True).encode()).hexdigest()[:16]
     rows = [r for r in ledger if r['skill'] == name and r['revision'] == run['head_sha'] and r['policy'] == published_policy]
     require(rows, 'Admitted current-policy history unavailable')
     return {**previous, 'run_id': run['id'], 'attempt': run['run_attempt'], 'revision': run['head_sha'],

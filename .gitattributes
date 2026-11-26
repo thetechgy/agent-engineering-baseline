@@ -9,3 +9,4 @@
 
 # Unified patch context retains upstream blank-line whitespace.
 /.github/patches/skillevaluator-v0.3.0-pin-codex.patch -whitespace
+/.github/patches/skillevaluator-v1.0.1-benchmark-recovery.patch -whitespace

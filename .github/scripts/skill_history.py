@@ -30,6 +30,8 @@ def observation(record, slot, provenance, at, execution=None):
     evidence.validate_public(record)
     evidence.require(not slot.startswith('standard--') or ('benchmark' not in record and 'producer_profile' not in record['policy']),
                      'Offline behavioral evidence cannot enter production history')
+    if record['kind'] == 'behavioral':
+        evidence.require_released_report_population(record)
     core = {key: copy.deepcopy(record[key]) for key in FIELDS}
     # Reference IDs remain provenance locators, not claims of retained possession.
     category = 'quality' if slot == 'quality' else 'standard' if slot.startswith('standard--') else 'diagnostic'

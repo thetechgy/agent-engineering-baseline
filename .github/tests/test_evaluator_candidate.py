@@ -1,5 +1,6 @@
 """Opt-in candidate controls supplement the unchanged production evidence cases."""
 
+from contextlib import nullcontext
 import json
 import hashlib
 import importlib.util
@@ -59,9 +60,99 @@ class CandidateHarnessTests(unittest.TestCase):
             self.assertIn('Scoring qualification requires the reviewed candidate patch', result.stderr)
             self.assertFalse(output.exists())
 
+    def test_retained_pester_replay_keeps_original_report_and_rejects_archive_changes(self):
+        from zipfile import ZipFile
+
+        project = Path(__file__).resolve().parents[2]
+        relative = Path('.github/evals/retained/pester-public-030.zip')
+        source = project / relative
+        with patch.object(sys, 'path', [str(project / '.github/scripts'), *sys.path]):
+            from qualify_evaluator_candidate import RETAINED_PESTER_REPORT, retained_pester
+
+            with ZipFile(source) as archive:
+                self.assertEqual(retained_pester(project), archive.read(RETAINED_PESTER_REPORT))
+            with tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                candidate = root / relative
+                candidate.parent.mkdir(parents=True)
+                candidate.write_bytes(source.read_bytes() + b'\x00')
+                with self.assertRaisesRegex(ValueError, 'Retained Pester archive digest mismatch'):
+                    retained_pester(root)
+
 
 @unittest.skipUnless(os.environ.get('CANDIDATE_EVIDENCE_CHILD') == '1', 'opt-in candidate qualification only')
 class CandidateEvidenceTests(unittest.TestCase):
+    def test_local_codex_install_uses_the_reviewed_hoisted_layout(self):
+        from importlib.metadata import version
+
+        if version("skillevaluator") != "1.0.1":
+            self.skipTest("Requires the 1.0.1 benchmark candidate")
+
+        from qualify_benchmark_codex import CODEX_VENDOR
+
+        self.assertEqual(
+            CODEX_VENDOR,
+            "/opt/reviewed/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/",
+        )
+
+    def test_codex_setup_failure_without_container_receipt_keeps_primary_error(self):
+        from importlib.metadata import version
+
+        if version("skillevaluator") != "1.0.1":
+            self.skipTest("Requires the 1.0.1 benchmark candidate")
+
+        import qualify_benchmark_codex as fixture
+        from skill_reports import read_json, write_json
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            arm = root / "with"
+
+            def launch(argv, *, env):
+                job_name = argv[argv.index("--job-name") + 1]
+                write_json(root / "jobs" / job_name / "trial/result.json", {"exception_info": {
+                    "exception_type": "NonZeroAgentExitCodeError",
+                    "exception_message": "raw output must not be retained",
+                }})
+                with patch.dict(os.environ, {"BENCHMARK_CODEX_FIXTURE": env["BENCHMARK_CODEX_FIXTURE"]}, clear=True):
+                    fixture.OfflineCodex.record_startup("verify_package")
+                return nullcontext(SimpleNamespace(poll=lambda: 0, wait=lambda **_: 0))
+
+            with patch.object(fixture, "stage", return_value=root / "tasks/gh-001"), \
+                 patch("aeb_gh_fixture.manifest.write_manifest", return_value=root / "manifest.json"), \
+                 patch.object(fixture.subprocess, "Popen", side_effect=launch):
+                with self.assertRaisesRegex(ValueError, r"^Native Codex trial failed during or after verify_package: NonZeroAgentExitCodeError$"):
+                    fixture.run(arm, True)
+            self.assertEqual(read_json(arm / "startup.json"), {"stage": "verify_package"})
+
+    def test_codex_verifier_failure_receipt_excludes_raw_log_and_unknown_paths(self):
+        from importlib.metadata import version
+
+        if version("skillevaluator") != "1.0.1":
+            self.skipTest("Requires the 1.0.1 benchmark candidate")
+
+        from qualify_benchmark_codex import record_native_failure
+        from skill_reports import read_json
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            trial = root / "trial"
+            stdout = trial / "verifier/test-stdout.txt"
+            stdout.parent.mkdir(parents=True)
+            stdout.write_text(
+                "ignored fixture material\n"
+                "FileNotFoundError: missing '/logs/agent/trajectory.json' from '/private/unused'\n"
+            )
+            record_native_failure(root, trial, "ready", "RewardFileNotFoundError")
+            value = read_json(root / "failure.json")
+            self.assertEqual(value, {
+                "startup": "ready",
+                "harbor_exception": "RewardFileNotFoundError",
+                "observed": {
+                    "codex_events": False, "atif": False, "test_stdout": True, "reward": False, "custom_reward": False,
+                },
+                "verifier_exception": {"category": "FileNotFoundError", "member": "trajectory"},
+            })
+
     def test_only_bundled_offline_verifiers_accept_literal_network_none(self):
         from skillevaluator.tier3.harbor import adapter
         from harbor.environments.docker.docker import DockerEnvironment

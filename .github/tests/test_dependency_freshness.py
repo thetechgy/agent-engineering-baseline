@@ -153,7 +153,9 @@ class FreshnessTests(unittest.TestCase):
         root = Path(temporary.name)
         for name in (fresh.CONFIG, "apm.yml", "apm.lock.yaml", ".apm-version", ".github/dependabot.yml",
                      "scripts/Invoke-Validation.ps1", ".github/evals/evaluator-candidate.json", ".github/evals/evaluator-0.9.json", ".github/evals/codex-pilot-sol62.json", ".github/evals/codex-execution-090-sol62.json",
-                     ".github/evals/codex-execution-1710.json", ".github/evals/campaigns/case-observation-1710.json",
+                     ".github/evals/codex-execution-1710.json", ".github/evals/evaluator-1.0.1-benchmark-candidate-v3.json",
+                     ".github/evals/benchmark-native-101-v1.json",
+                     ".github/evals/campaigns/case-observation-1710.json",
                      ".github/evals/campaigns/codex-1710-observation.json"):
             target = root / name
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -168,6 +170,8 @@ class FreshnessTests(unittest.TestCase):
         self.assertFalse([r for r in rows if r["errors"]])
         self.assertEqual(mechanisms["dependabot_routine_ecosystems"], ["github-actions", "pip"])
         self.assertIn("not proof", mechanisms["dependabot_python_security_updates"])
+        self.assertEqual(self.find({"dependencies": rows}, "harbor")["pin"]["version"], "0.25.0")
+        self.assertEqual(self.find({"dependencies": rows}, "codex")["pin"]["version"], "0.171.0")
         for id in ("harbor", "openai", "pydantic"):
             row = next(r for r in rows if r["id"] == id)
             self.assertEqual(row["policy"]["group"],
@@ -210,15 +214,13 @@ class FreshnessTests(unittest.TestCase):
                                  {group["id"]: ["contradictory_action_pins"]})
                 member.write_text(original)
 
-    def test_independent_environments_are_visible_without_production_adoption(self):
+    def test_independent_active_and_retained_environments_are_visible(self):
         _, rows, _ = fresh.inventory(ROOT)
         by_id = {row['id']: row for row in rows}
-        self.assertEqual(by_id['skillevaluator']['pin']['version'], '0.3.0')
-        from static_evaluator import REVISION, VERSION
-        self.assertEqual(by_id['released-evaluator']['pin'], {
-            'version': VERSION, 'revision': REVISION, 'value': VERSION})
+        self.assertEqual(by_id['skillevaluator']['pin']['version'], '1.0.1')
+        self.assertEqual(by_id['released-evaluator']['pin'], by_id['skillevaluator']['pin'])
         production = json.loads(by_id['production-environment']['pin']['value'])
-        self.assertEqual((production['openai'], production['pydantic']), ('2.44.0', '2.13.4'))
+        self.assertEqual((production['dependencies']['openai'], production['dependencies']['pydantic']), ('2.44.0', '2.13.4'))
         candidate = json.loads(by_id['candidate-environment']['pin']['value'])
         self.assertEqual(candidate['version'], '0.8.0')
         self.assertEqual(candidate['dependencies']['harbor'], '0.24.0')
@@ -239,20 +241,19 @@ class FreshnessTests(unittest.TestCase):
         self.assertEqual(pin['version'], (root / '.apm-version').read_text().strip())
         self.assertEqual({s['path'] for s in sources}, {'.apm-version'})
 
-    def test_missing_retained_environment_identity_preserves_partial_inventory(self):
+    def test_missing_production_environment_identity_preserves_partial_inventory(self):
         root = self.scratch()
-        source = root / '.github/scripts/skill_report_reviews.py'
-        source.write_text(source.read_text().replace('LEGACY_PINS =', 'RENAMED_LEGACY_PINS ='))
+        (root / ".github/evals/evaluator-1.0.1-benchmark-candidate-v3.json").unlink()
         _, rows, _ = fresh.inventory(root)
         by_id = {row['id']: row for row in rows}
-        self.assertEqual(by_id['production-environment']['errors'], ['missing_or_duplicate_pin'])
+        self.assertEqual(by_id['production-environment']['errors'], ['missing_source'])
         self.assertIsNotNone(by_id['openai']['pin']['version'])
         self.assertFalse(by_id['candidate-environment']['errors'])
 
     def test_review_lock_overlay_disagreement_remains_visible(self):
         root = self.scratch()
-        overlay = root / '.github/patches/skillevaluator-v0.3.0-review-runtime.patch'
-        overlay.write_text(overlay.read_text().replace('+version = "2.54.0"', '+version = "2.54.1"'))
+        overlay = root / '.github/requirements/review-101.txt'
+        overlay.write_text(overlay.read_text().replace('openai==2.54.0 ', 'openai==2.54.1 '))
         _, rows, _ = fresh.inventory(root)
         sdk = next(row for row in rows if row['id'] == 'openai')
         self.assertIn('contradictory_pins', sdk['errors'])

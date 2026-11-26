@@ -31,13 +31,19 @@ RUNTIME_COMMAND = (
 
 
 from evaluator_profiles import CANDIDATE, owning_candidate
+from qualify_benchmark_101 import RELEASE_CANDIDATE, release_owner
 try:
-    CANDIDATE = owning_candidate()
+    installed = owning_candidate()
+    if installed is not RELEASE_CANDIDATE:
+        CANDIDATE = installed
 except ValueError:
     pass
 
-RUNTIMES = {"current": {"skillevaluator": CANDIDATE['version'], "harbor": CANDIDATE['harbor']}, "candidate": {"skillevaluator": "0.7.2", "harbor": "0.24.0"},
-            "retained": {"skillevaluator": "0.3.0", "harbor": "0.13.2"}}
+RUNTIMES = {
+    "current": {"skillevaluator": CANDIDATE['version'], "harbor": CANDIDATE['harbor']},
+    "candidate": {"skillevaluator": "0.7.2", "harbor": "0.24.0"},
+    "release": {"skillevaluator": RELEASE_CANDIDATE['version'], "harbor": RELEASE_CANDIDATE['harbor']},
+}
 
 BUILD_ATTEMPT_SECONDS = 300
 INTEGRITY_ERRORS = ("digest mismatch", "hash sum mismatch", "gpg error", "not signed",
@@ -64,11 +70,15 @@ def staged_task(root, suite="pester", arm=None, shard=None, runtime="candidate")
         return selected[0]
     if suite != "pester":
         raise ValueError("Unsupported preparation suite")
-    bundle, fixtures = pilot.qualification_bundle(root, candidate=runtime in ("candidate", "current"))
+    release = runtime == "release"
+    bundle, fixtures = pilot.qualification_bundle(root, candidate=runtime in ("candidate", "current") and not release)
     tasks = stage_native_harbor_tasks(bundle, root / "tasks", with_skill=True, grading_mode="custom_only")
     if len(tasks) != 26 or len(fixtures) != 26:
         raise RuntimeError("Incomplete package preparation source cohort")
-    return next(task for task in tasks if task.name == "pester-001-classic")
+    selected = next(task for task in tasks if task.name == "pester-001-classic")
+    if release:
+        pilot.attach_loopback_verifier(selected)
+    return selected
 
 
 def transient_snapshot_failure(message):
@@ -176,11 +186,16 @@ async def prepare(root, artifact, suite="pester", arm=None, shard=None, runtime=
         status["runtime"] = versions
         dependencies = {key: importlib.metadata.version(key) for key in ("openai", "pydantic")}
         status["dependencies"] = dependencies
-        expected_python = (3, 14) if runtime == "current" else (3, 13)
-        expected_dependencies = {key: CANDIDATE['dependencies'][key] for key in ('openai', 'pydantic')} if runtime == "current" else {"openai": "2.44.0", "pydantic": "2.13.4"}
+        expected_python = (3, 14) if runtime in ("current", "release") else (3, 13)
+        policy = {"current": CANDIDATE, "release": RELEASE_CANDIDATE}.get(runtime)
+        expected_dependencies = ({key: policy['dependencies'][key] for key in dependencies} if policy else
+                                 {"openai": "2.44.0", "pydantic": "2.13.4"})
         if (runtime not in RUNTIMES or versions != RUNTIMES[runtime] or sys.version_info[:2] != expected_python
                 or dependencies != expected_dependencies):
             raise RuntimeError("Unqualified package preparation runtime")
+        if runtime == "release":
+            with release_owner() as verified:
+                status["owner"] = verified
         task = staged_task(root, suite, arm, shard, runtime)
         native = Task(task)
         status.update(task_checksum=native.checksum, environment_context=_task_environment_context_hash(task / "environment"))

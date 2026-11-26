@@ -1,10 +1,11 @@
-"""Score-preservation gate controls, including real frozen-runtime probes when configured."""
+"""Score-preservation controls using the original receipt and candidate runtime."""
 
 import json
 import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -41,14 +42,32 @@ class ScoringGateTests(unittest.TestCase):
         self.assertTrue(result['fixture_only']); self.assertFalse(result['inference']); self.assertFalse(result['remote_judges'])
         self.assertEqual(before['scores'][1], 0.5)
 
-    def test_missing_or_invalid_retained_interpreter_never_falls_back(self):
-        for executable in (None, '', 'python', 'relative/python'):
-            with self.subTest(executable=executable), patch.object(scoring, 'probe') as called:
-                result = scoring.qualify(sys.executable, Path('.'), Path('uv.lock'), executable)
+    def test_retained_probe_is_authenticated_and_has_no_executable_fallback(self):
+        retained = scoring.retained_probe()
+        self.assertEqual(len(retained['scores']), 73)
+        self.assertEqual(retained['scores'][62], 0.8333)
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = Path(directory) / 'retained.json'
+            fixture.write_bytes(scoring.RETAINED_PROBE.read_bytes() + b' ')
+            with patch.object(scoring, 'RETAINED_PROBE', fixture), patch.object(scoring, 'probe') as called:
+                result = scoring.qualify(sys.executable, Path('.'), Path('uv.lock'))
                 self.assertEqual(result['status'], 'unqualified')
-                self.assertEqual(result['code'], 'retained_evaluator_python_required')
+                self.assertEqual(result['code'], 'native_score_probe_rejected')
                 called.assert_not_called()
-        with self.assertRaises(ValueError): scoring.probe('python', '0.3.0')
+        with self.assertRaisesRegex(ValueError, 'Unsupported executable scoring runtime'):
+            scoring.probe(sys.executable, '0.3.0')
+
+    def test_released_legacy_policy_matches_original_recorded_scores(self):
+        import static_evaluator
+        from skillevaluator.tier3.harbor import metrics
+
+        static_evaluator.validate_install()
+        retained = scoring.retained_probe()
+        policy = 'skill-evaluator-metric-mean-v1'
+        self.assertEqual(metrics.LEGACY_SCORE_POLICY, policy)
+        scores = [metrics.overall_score({**vector, 'score_policy': policy})
+                  for vector in scoring.vectors()]
+        self.assertEqual(scores, retained['scores'])
 
     def test_wrong_runtime_lock_source_metric_set_and_activity_reject(self):
         mutations = [
@@ -70,15 +89,15 @@ class ScoringGateTests(unittest.TestCase):
     def test_probe_failures_are_unqualified_and_cannot_be_successful_comparisons(self):
         for error in (OSError(), ValueError(), subprocess.TimeoutExpired('probe', 30)):
             with self.subTest(error=type(error).__name__), patch.object(scoring, 'probe', side_effect=error):
-                result = scoring.qualify(sys.executable, Path('.'), Path('uv.lock'), sys.executable)
+                result = scoring.qualify(sys.executable, Path('.'), Path('uv.lock'))
                 self.assertEqual(result['status'], 'unqualified')
                 self.assertEqual(result['code'], 'native_score_probe_rejected')
                 self.assertNotIn('scores', result)
 
     def test_request_is_fixed_isolated_and_does_not_forward_provider_credentials(self):
         with patch.dict(os.environ, {'OPENAI_API_KEY': 'dummy-must-not-be-forwarded', 'PYTHONPATH': 'dummy-module-override'}), \
-                patch.object(subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, json.dumps(self.result('0.3.0')).encode())) as called:
-            scoring.probe(sys.executable, '0.3.0')
+                patch.object(subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, json.dumps(self.result('0.7.2')).encode())) as called:
+            scoring.probe(sys.executable, '0.7.2')
         args, kwargs = called.call_args
         self.assertEqual(args[0][:4], [sys.executable, '-I', '-B', '-c'])
         self.assertEqual(args[0][4], scoring.PROBE)
@@ -89,16 +108,15 @@ class ScoringGateTests(unittest.TestCase):
         for code, raw in ((1, b'{}'), (0, b'{'), (0, b' ' * (scoring.LIMIT + 1)), (0, b'NaN')):
             with self.subTest(code=code, size=len(raw)), \
                     patch.object(subprocess, 'run', return_value=subprocess.CompletedProcess([], code, raw)), self.assertRaises(ValueError):
-                scoring.probe(sys.executable, '0.3.0')
+                scoring.probe(sys.executable, '0.7.2')
 
     def test_real_native_runtime_comparison_preserves_the_blocker(self):
-        retained = os.environ.get('SKILL_LEGACY_REVIEW_PYTHON')
         candidate = os.environ.get('SKILL_CANDIDATE_PYTHON')
         source = os.environ.get('SCORE_CANDIDATE_SOURCE')
         lock = os.environ.get('SCORE_CANDIDATE_LOCK')
-        if not all((retained, candidate, source, lock)):
-            self.skipTest('Frozen native interpreters and approved candidate snapshot not configured')
-        result = scoring.qualify(candidate, Path(source), Path(lock), retained)
+        if not all((candidate, source, lock)):
+            self.skipTest('Frozen candidate interpreter and approved candidate snapshot not configured')
+        result = scoring.qualify(candidate, Path(source), Path(lock))
         self.assertEqual(result['status'], 'incompatible', result)
         self.assertEqual(result['vectors'], 73)
         self.assertEqual(len(result['differences']), 56)

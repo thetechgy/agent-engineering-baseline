@@ -1,0 +1,101 @@
+--- a/src/skillevaluator/tier3/harbor/collector.py
++++ b/src/skillevaluator/tier3/harbor/collector.py
+@@ -1210,6 +1210,46 @@
+     failed_trials = {str(failure.get("trial") or "") for failure in trial_failures}
+     failed_trials.discard("")
+     return len(failed_trials) >= errors
++
++
++def _interrupted_trial_roots(job_dir: Path, expected_trials: int | None) -> list[Path] | None:
++    """Find finished trials backed by both the interrupted job and physical trial records."""
++    try:
++        from harbor.models.job.result import JobResult, JobStats
++        from harbor.models.trial.result import TrialResult
++
++        if _inspect_trial_directory(job_dir)[0] != "directory":
++            return None
++        job = JobResult.model_validate(_read_json(job_dir / "result.json"))
++        trials = job.trial_results
++        if job.n_total_trials != expected_trials or not 0 < len(trials) < job.n_total_trials:
++            return None
++        if len({trial.id for trial in trials}) != len(trials):
++            return None
++        recorded = {trial.trial_name: trial for trial in trials}
++        if len(recorded) != len(trials) or not all(trial.finished_at for trial in trials):
++            return None
++        derived = JobStats.from_trial_results(trials, n_total_trials=job.n_total_trials,
++                                             n_running_trials=job.stats.n_running_trials, n_retries=job.stats.n_retries)
++        if _trial_derived_job_stats(derived) != _trial_derived_job_stats(job.stats):
++            return None
++        matched = []
++        for path in sorted(job_dir.iterdir()):
++            kind, _ = _inspect_trial_directory(path)
++            if kind == "link":
++                return None
++            if kind != "directory":
++                continue
++            result_path = path / "result.json"
++            if not result_path.exists() and not result_path.is_symlink():
++                continue
++            trial = TrialResult.model_validate(_read_json(result_path))
++            if recorded.get(path.name) != trial:
++                return None
++            matched.append(path)
++        return matched if len(matched) == len(trials) else None
++    except (TypeError, ValueError, OSError):
++        return None
+ 
+ 
+ def _extract_agent_runtime_failures(job_dir: Path) -> list[dict[str, str]]:
+@@ -7601,6 +7641,7 @@
+     grading_mode: str | None = None,
+     tolerate_baseline_timeouts: bool = False,
+     budget_not_run: list[dict[str, Any]] | None = None,
++    recover_interrupted: bool = False,
+ ) -> dict[str, Any]:
+     """Collect results from Harbor jobs into evals/results/<agent>/ structure.
+ 
+@@ -7790,6 +7831,10 @@
+             with_runtime_failures = _extract_agent_runtime_failures(with_job_dir)
+             with_trial_failures = _extract_trial_failures(with_job_dir)
+             preserve_partial = _can_preserve_partial_rewards(with_job_dir, with_trial_failures)
++            interrupted_roots = (
++                _interrupted_trial_roots(with_job_dir, with_expected_trials)
++                if recover_interrupted and not with_job_ok and not preserve_partial else None
++            )
+             # Runner-owned selector maps are authoritative; staged task files only
+             # resolve identities for direct callers that do not supply one.
+             with_task_entry_ids = (
+@@ -7803,8 +7848,9 @@
+                     case_id_by_task_selector,
+                     arm_suffix=with_arm_suffix,
+                     task_entry_id_map=with_task_entry_ids,
++                    selected_trial_roots=interrupted_roots,
+                 )
+-                if with_job_ok or preserve_partial
++                if with_job_ok or preserve_partial or interrupted_roots is not None
+                 else []
+             )
+             with_rewards, invalid_score_failures = _partition_scoreable_rewards(
+@@ -8040,6 +8086,10 @@
+                     without_runtime_failures = _extract_agent_runtime_failures(without_job_dir)
+                     without_trial_failures = _extract_trial_failures(without_job_dir)
+                     preserve_partial = _can_preserve_partial_rewards(without_job_dir, without_trial_failures)
++                    interrupted_roots = (
++                        _interrupted_trial_roots(without_job_dir, without_expected_trials)
++                        if recover_interrupted and not without_job_ok and not preserve_partial else None
++                    )
+                     # The runner stages unsuffixed task names when only one arm runs.
+                     without_arm_suffix = "-without-skill" if not skip_with_skill else ""
+                     without_task_entry_ids = (
+@@ -8054,8 +8104,9 @@
+                             case_id_by_task_selector,
+                             arm_suffix=without_arm_suffix,
+                             task_entry_id_map=without_task_entry_ids,
++                            selected_trial_roots=interrupted_roots,
+                         )
+-                        if without_job_ok or preserve_partial
++                        if without_job_ok or preserve_partial or interrupted_roots is not None
+                         else []
+                     )
+                     without_rewards, invalid_score_failures = _partition_scoreable_rewards(

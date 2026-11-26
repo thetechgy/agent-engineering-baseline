@@ -9,41 +9,77 @@ from pathlib import Path
 import shlex
 import shutil
 import time
-import tempfile
 import subprocess
 
-from skillevaluator.tier3.harbor.benchmark_codex import BenchmarkCodex
+from aeb_gh_fixture.benchmark_codex import BenchmarkCodex
 from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
 from skillevaluator.tier3.harbor.collector import collect_harbor_results
 from skillevaluator.tier3.harbor.report import display_findings_report
 from skillevaluator.tier3.harbor.runner import build_harbor_run_command
 
+from benchmark_codex_fixture import TOOL_ROUTE
 import gh_evaluations as gh
-from qualify_codex_1691 import acquire
 from skill_reports import POLICY, read_json, require, write_json
 
 CASE = "gh-001"
 PROFILE = gh.ROOT / ".github/evals/codex-execution-1710.json"
 ENDPOINT = "http://127.0.0.1:8765/v1"
 SENTINEL = "pilot-not-a-credential"
+CODEX_VENDOR = "/opt/reviewed/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/"
+TRIAL_EXCEPTIONS = frozenset({
+    "AgentSetupTimeoutError", "AgentTimeoutError", "CalledProcessError", "EnvironmentStartTimeoutError",
+    "NonZeroAgentExitCodeError", "PermissionError", "RewardFileNotFoundError", "RuntimeError", "TimeoutError",
+    "ValueError", "VerifierTimeoutError",
+})
+VERIFIER_EXCEPTIONS = frozenset({
+    "AttributeError", "FileNotFoundError", "ImportError", "JSONDecodeError", "KeyError", "ModuleNotFoundError",
+    "PermissionError", "TypeError", "UnicodeDecodeError", "ValueError",
+})
+VERIFIER_MEMBERS = {
+    "entry": "/tests/entry.json",
+    "trajectory": "/logs/agent/trajectory.json",
+    "grader": "/tests/grader.py",
+    "test_script": "/tests/test.sh",
+    "reward": "/logs/verifier/reward.json",
+}
 
 
-# Run as the trial user. Other UIDs' /proc/exe links are intentionally unreadable.
+# Run as the trial user. The host may not receive logs until the trial exits.
+INTERRUPT_NOT_READY = 75
 INTERRUPT_AGENT = r"""
+import json
 import os
 from pathlib import Path
 import signal
 
+try:
+    with Path("/logs/agent/codex.txt").open("rb") as trace:
+        lines = trace.read(2 * 1024 * 1024).split(b"\n")[:-1]
+except FileNotFoundError:
+    raise SystemExit(75)
+for line in lines:
+    if not line.startswith(b"{"):
+        continue
+    event = json.loads(line)
+    if event.get("type") == "item.started" and event.get("item", {}).get("type") == "command_execution":
+        break
+else:
+    raise SystemExit(75)
+
 matches = []
 for proc in Path("/proc").glob("[0-9]*"):
     try:
-        if proc.stat().st_uid != os.getuid():
-            continue
         argv = (proc / "cmdline").read_bytes().split(b"\0")
-    except (FileNotFoundError, PermissionError):
-        continue
-    if len(argv) > 2 and argv[0].split(b"/")[-1] == b"codex" and argv[1] == b"exec":
+        if len(argv) <= 2 or argv[0].split(b"/")[-1] != b"codex" or argv[1] != b"exec":
+            continue
+        # /proc directory ownership reflects dumpability, not process identity.
+        uid = next(line.split()[1:3] for line in (proc / "status").read_bytes().splitlines()
+                   if line.startswith(b"Uid:"))
+        if uid != [str(os.getuid()).encode(), str(os.geteuid()).encode()]:
+            continue
         matches.append(int(proc.name))
+    except (FileNotFoundError, PermissionError, StopIteration):
+        continue
 if len(matches) != 1:
     raise RuntimeError(f"Expected one trial Codex exec, found {len(matches)}")
 os.kill(matches[0], signal.SIGINT)
@@ -53,27 +89,54 @@ os.kill(matches[0], signal.SIGINT)
 class OfflineCodex(BenchmarkCodex):
     """Replace Internet installation only. Harbor owns execution and log conversion."""
 
-    async def install(self, environment):
+    identity_stage = "verify_agent_identity_and_broker"
+
+    @staticmethod
+    def record_startup(stage):
+        fixture = Path(os.environ["BENCHMARK_CODEX_FIXTURE"])
+        write_json(fixture.with_name("startup.json"), {"stage": stage})
+
+    async def verify_trial_user(self, environment):
+        result = await self.exec_as_agent(environment, "codex --version && id -u && test -S /run/gh-eval/gh.sock && test ! -r /opt/gh-eval/state/case.json")
+        require(result.return_code == 0 and result.stdout.splitlines() == ["codex-cli " + self._version, "1000"],
+                "Agent identity, CLI or broker isolation drift")
+
+    async def verify_package(self, environment):
         profile = read_json(PROFILE)
         expected = {"bin/codex": profile["cli_executable_sha256"], **profile["helper_sha256"]}
         require(self._version == profile["cli"], "Generated dispatch version drift")
-        vendor = "/opt/reviewed/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/"
         # npm omits the standalone archive's optional exec-server. Exercise the
         # installed package exactly as published, including its native launcher.
         del expected["bin/codex-exec-server"]
+        vendor = CODEX_VENDOR
         await self.exec_as_root(environment, "test ! -e " + vendor + "bin/codex-exec-server")
         for name, sha in expected.items():
             result = await self.exec_as_root(environment, "sha256sum " + vendor + name)
             require(result.stdout.split()[0] == sha, "Container release bytes differ")
-        result = await self.exec_as_agent(environment, "codex --version && id -u && test -S /run/gh-eval/gh.sock && test ! -r /opt/gh-eval/state/case.json")
-        require(result.stdout.splitlines() == ["codex-cli " + self._version, "1000"], "Agent identity or CLI drift")
+
+    def fixture_path(self):
+        return Path(os.environ["BENCHMARK_CODEX_FIXTURE"])
+
+    async def install(self, environment):
+        self.record_startup("verify_package")
+        await self.verify_package(environment)
+        self.record_startup(self.identity_stage)
+        await self.verify_trial_user(environment)
+        self.record_startup("verify_network_isolation")
         container = (await environment._run_docker_compose_command(["ps", "--quiet", "main"])).stdout.strip()
         inspected, = json.loads(subprocess.check_output(["docker", "inspect", container]))
         require(inspected["HostConfig"]["NetworkMode"] == "none", "Fixture requires isolated networking")
-        write_json(self.logs_dir.parent / "fixture-container.json", {"id": container})
+        receipt = self.logs_dir.parent / "fixture-container.json"
+        pending = receipt.with_suffix(".tmp")
+        identity = {"id": container}
+        if isinstance(self, OfflinePodmanCodex):
+            identity["project"] = inspected["Config"]["Labels"]["com.docker.compose.project"]
+        write_json(pending, identity)
+        pending.replace(receipt)
 
+        self.record_startup("start_loopback_provider")
         # Every byte supplied to the native agent is public fixture data.
-        fixture = read_json(Path(os.environ["BENCHMARK_CODEX_FIXTURE"]))
+        fixture = read_json(self.fixture_path())
         commands = base64.b64encode(json.dumps(fixture["commands"]).encode()).decode()
         argv = ["python3", "/opt/reviewed/stub.py", "/opt/reviewed/request.json", fixture["scenario"],
                 "Zml4dHVyZQ==", commands]
@@ -86,10 +149,54 @@ class OfflineCodex(BenchmarkCodex):
         else:
             raise ValueError("Loopback responder failed to start")
         self._extra_env.update(OPENAI_API_KEY=SENTINEL, OPENAI_BASE_URL=ENDPOINT)
+        self.record_startup("ready")
 
 
-def stage(root, assets, present):
-    bundle = gh.stage(gh.ROOT, root / "bundle/gh", [CASE])
+class OfflinePodmanCodex(OfflineCodex):
+    identity_stage = "verify_trial_identity"
+
+    async def verify_package(self, environment):
+        from benchmark_podman import CODEX_ROOT, codex_members
+
+        profile = read_json(PROFILE)
+        require(self._version == profile["cli"], "Generated dispatch version drift")
+        for name, expected in codex_members(profile).items():
+            checked = await self.exec_as_root(environment, shlex.join(["sha256sum", f"{CODEX_ROOT}/{name}"]))
+            require(checked.return_code == 0 and checked.stdout.split()[0] == expected, "Podman Codex bytes differ")
+        # Exercise the released installer's preinstalled branch in the disconnected image.
+        await BenchmarkCodex.install(self, environment)
+
+    async def verify_trial_user(self, environment):
+        result = await self.exec_as_agent(environment, "codex --version && id -u && test ! -r /tests/entry.json")
+        require(result.return_code == 0 and result.stdout.splitlines() == ["codex-cli " + self._version, "1000"],
+                "Agent identity, CLI or verifier isolation drift")
+
+
+def add_offline_assets(image):
+    # The operator-owned loopback responder is inside the same network namespace.
+    # Harbor must leave this service on loopback instead of joining the egress sidecar.
+    with (image / "docker-compose.yaml").open("x", encoding="utf-8") as override:
+        override.write("services:\n  main:\n    network_mode: none\n")
+    reviewed = image / "reviewed"
+    reviewed.mkdir()
+    # Keep packaged executables out of the broker's bounded task tree.
+    # Install scripts are disabled and every executable is checked in install().
+    vendor = CODEX_VENDOR
+    launcher = vendor + "bin/codex"
+    package = "@openai/codex@" + POLICY["codex"]
+    install = ("RUN npm install --prefix /opt/reviewed --no-audit --no-fund --ignore-scripts "
+               "--install-strategy=hoisted --registry=https://registry.npmjs.org/ " + package + "\n"
+               + "ENV PATH=" + vendor + "codex-path:$PATH\n")
+    shutil.copy2(gh.ROOT / ".github/scripts/benchmark_codex_fixture.py", image / "reviewed/stub.py")
+    with (image / "Dockerfile").open("a") as build:
+        build.write("\nCOPY reviewed /opt/reviewed\n" + install + "RUN chmod -R a+rX /opt/reviewed /workspace/skills"
+                    " && ln -s " + launcher + " /usr/local/bin/codex\n")
+
+
+def stage(root, present):
+    import gh_candidate
+
+    bundle = gh_candidate.stage(gh.ROOT, root / "bundle/gh", [CASE], fixture=True)
     task, = stage_native_harbor_tasks(bundle, root / "tasks", with_skill=present, grading_mode="custom_only",
         workspace_mode="group", workspace_skill_paths=[bundle.parent / gh.COMPETING])
     descriptor = task / "task.toml"
@@ -97,16 +204,14 @@ def stage(root, assets, present):
     require('network_mode = "public"' in source, "Unknown source networking")
     descriptor.write_text(source.replace('network_mode = "public"', 'network_mode = "no-network"'))
     image = task / "environment"
-    shutil.copytree(assets / "lib/node_modules", image / "reviewed/node_modules", symlinks=True)
-    shutil.copy2(gh.ROOT / ".github/scripts/codex_pilot_stub.py", image / "reviewed/stub.py")
-    with (image / "Dockerfile").open("a") as build:
-        build.write("\nCOPY reviewed /opt/reviewed\nRUN chmod -R a+rX /opt/reviewed /workspace/skills && ln -s /opt/reviewed/node_modules/@openai/codex/bin/codex.js /usr/local/bin/codex\n")
+    add_offline_assets(image)
     # The production verifier reads real ATIF and the private broker audit. Copy
     # only the loopback request and the produced edit into this local fixture.
     # The standard verifier image carries idna. Custom-only mode omits its
     # judge dependencies, so stage the same locked pure-Python import.
     shutil.copytree(Path(idna.__file__).parent, task / "tests/idna", ignore=shutil.ignore_patterns("__pycache__"))
     verify = task / "tests/test.sh"
+    verify.write_text("#!/bin/sh\nset -eu\npython3 -I /tests/grader.py\n")
     with verify.open("a") as script:
         script.write("\ncp /opt/reviewed/request.json /logs/verifier/provider.json\n"
                      "test ! -e /tmp/codex-secrets\ntest -z \"$(find /home/agent -maxdepth 1 -name '.codex-benchmark.*')\"\n"
@@ -114,8 +219,40 @@ def stage(root, assets, present):
     return task
 
 
-def run(root, assets, present, *, interrupt=False):
-    task = stage(root, assets, present)
+def record_native_failure(root, trial, stage, exception):
+    """Retain fixed member names and exception categories from synthetic trials."""
+    from skill_evidence import read_bytes
+
+    observed = {
+        name: (trial / member).is_file() and not (trial / member).is_symlink()
+        for name, member in {
+            "codex_events": "agent/codex.txt",
+            "atif": "agent/trajectory.json",
+            "test_stdout": "verifier/test-stdout.txt",
+            "reward": "verifier/reward.json",
+            "custom_reward": "verifier/custom_reward.json",
+        }.items()
+    }
+    verifier = None
+    if observed["test_stdout"]:
+        try:
+            # Never copy the verifier log or include exception messages.
+            log = read_bytes(trial / "verifier/test-stdout.txt", limit=128 * 1024).decode(errors="replace")
+        except (OSError, ValueError):
+            verifier = {"category": "unavailable"}
+        else:
+            for line in reversed(log.splitlines()):
+                error, separator, detail = line.partition(":")
+                if separator and error in VERIFIER_EXCEPTIONS:
+                    verifier = {"category": error, "member": next(
+                        (name for name, member in VERIFIER_MEMBERS.items() if repr(member) in detail), None)}
+                    break
+    write_json(root / "failure.json", {"startup": stage, "harbor_exception": exception,
+                                      "observed": observed, "verifier_exception": verifier})
+
+
+def run(root, present, *, interrupt=False):
+    task = stage(root, present)
     fixture = gh.dataset(selected=[CASE])[0]["contract"]
     output = json.dumps(fixture["expected"])
     if present:
@@ -128,28 +265,43 @@ def run(root, assets, present, *, interrupt=False):
         calls = [{"tool": "apply_patch", "expect_failure": False, "input":
             "*** Begin Patch\n*** Add File: output/result.json\n+" + output + "\n*** End Patch"}]
     fixture_file = root / "provider.json"
-    write_json(fixture_file, {"scenario": "benchmark-interruption" if interrupt else "benchmark-priced", "commands": calls})
+    # Hold the follow-up response even when Codex yields a running shell
+    # command to the model before the tool has finished.
+    if interrupt:
+        calls = ["printf pilot-command-started; sleep 120"]
+    write_json(fixture_file, {"scenario": "native-deadline" if interrupt else "benchmark-priced", "commands": calls})
     jobs = root.parent / "jobs"
     job_name = "gh-interrupted" if interrupt else "gh-codex-" + ("with" if present else "without")
     argv = build_harbor_run_command(dataset_path=task.parent, job_name=job_name, jobs_dir=jobs,
-        agent="codex", model=POLICY["model"], env_mode="docker", n_concurrent=1)
-    require(argv[argv.index("--ak") + 1] == "version=" + POLICY["codex"], "Workflow dispatch pin drift")
-    index = argv.index("--agent-import-path") + 1
+        agent="codex", model=POLICY["model"], env_mode="aeb-gh-fixture", n_concurrent=1)
+    env = dict(os.environ, PYTHONPATH=str(gh.ROOT / ".github/scripts"), BENCHMARK_CODEX_FIXTURE=str(fixture_file))
+    from aeb_gh_fixture.manifest import write_manifest
+    manifest = write_manifest(root / "operator", [task], staged_roots=[root / "tasks", root / "bundle"])
+    env["AEB_GH_MANIFEST"] = str(manifest)
+    require(argv[argv.index("--env") + 1] == "aeb_gh_fixture.backend:TrustedGhEnvironment",
+            "Unexpected benchmark environment")
+    require("version=" + json.dumps(POLICY["codex"]) in argv and 'reasoning_effort="high"' in argv,
+            "Workflow dispatch pin drift")
+    index = argv.index("--agent") + 1
     require(argv[index] == BenchmarkCodex.__module__ + ":BenchmarkCodex", "Unexpected benchmark agent")
     argv[index] = "qualify_benchmark_codex:OfflineCodex"
-    env = dict(os.environ, PYTHONPATH=str(gh.ROOT / ".github/scripts"), BENCHMARK_CODEX_FIXTURE=str(fixture_file))
+    write_json(root / "startup.json", {"stage": "staged"})
     with subprocess.Popen(argv, env=env) as job:
         try:
             if interrupt:
                 deadline = time.monotonic() + 420
                 while time.monotonic() < deadline and job.poll() is None:
-                    log = next((jobs / job_name).glob("*/agent/codex.txt"), None)
-                    if log and '"item.started"' in log.read_text(errors="replace"):
-                        container = read_json(log.parent.parent / "fixture-container.json")["id"]
-                        subprocess.run(["docker", "exec", "--user", "agent", container,
-                                        "python3", "-c", INTERRUPT_AGENT], check=True)
-                        break
-                    time.sleep(.25)
+                    receipt = next((jobs / job_name).glob("*/fixture-container.json"), None)
+                    if receipt:
+                        container = read_json(receipt)["id"]
+                        signal_result = subprocess.run(
+                            ["docker", "exec", "--user", "agent", container, "python3", "-c", INTERRUPT_AGENT],
+                            capture_output=True, timeout=15,
+                        )
+                        if signal_result.returncode == 0:
+                            break
+                        require(signal_result.returncode == INTERRUPT_NOT_READY, "Could not confirm the native signal")
+                    time.sleep(.5)
                 else:
                     raise ValueError("No started native command to interrupt")
             require(job.wait(timeout=480) == 0 or interrupt, "Harbor job exited unsuccessfully")
@@ -157,12 +309,19 @@ def run(root, assets, present, *, interrupt=False):
             if job.poll() is None:
                 job.terminate()
                 job.wait(timeout=30)
-    trial, = (jobs / job_name).glob("*/fixture-container.json")
-    container = read_json(trial)["id"]
+    results = list((jobs / job_name).glob("*/result.json"))
+    require(len(results) == 1, "Expected one Harbor trial result")
+    result = read_json(results[0])
+    if not interrupt and result.get("exception_info") is not None:
+        reported = result["exception_info"].get("exception_type")
+        exception = reported if isinstance(reported, str) and reported in TRIAL_EXCEPTIONS else "unclassified"
+        last_stage = read_json(root / "startup.json")["stage"]
+        record_native_failure(root, results[0].parent, last_stage, exception)
+        raise ValueError(f"Native Codex trial failed during or after {last_stage}: {exception}")
+    trial = results[0].parent
+    container = read_json(trial / "fixture-container.json")["id"]
     require(subprocess.run(["docker", "container", "inspect", container], capture_output=True).returncode != 0,
             "Native trial container survived teardown")
-    trial = trial.parent
-    result = read_json(trial / "result.json")
     events = [json.loads(line) for line in (trial / "agent/codex.txt").read_text().splitlines() if line.startswith("{")]
     if interrupt:
         require((result.get("exception_info") or {}).get("exception_type") == "NonZeroAgentExitCodeError"
@@ -173,12 +332,12 @@ def run(root, assets, present, *, interrupt=False):
                 "Incomplete usage was presented as a final measurement")
         return {"execution": "interrupted", "exception": result["exception_info"]["exception_type"],
                 "usage": None, "cleanup": True}
-    require(result.get("exception_info") is None, "Trial failed: " + str(result.get("exception_info")))
     native_reward = read_json(trial / "verifier/custom_reward.json")
     require("error" not in native_reward, "Native custom verifier failed: " + str(native_reward.get("error")))
     request = read_json(trial / "verifier/provider.json")
     require(request["requests"] == 2 and all(row["model"] == POLICY["model"] and row["reasoning"]["effort"] == "high"
-        and row["path"] == "/v1/responses" and row["authorization_matches_sentinel"] for row in request["request_observations"]),
+        and row["path"] == "/v1/responses" and row["authorization_matches_sentinel"]
+        and row.get("native_tool_route") == TOOL_ROUTE for row in request["request_observations"]),
         "Unexpected provider identity")
     require(read_json(trial / "verifier/edited.json") == fixture["expected"], "Native patch output changed")
     completed = [e["item"]["type"] for e in events if e["type"] == "item.completed"]
@@ -196,69 +355,34 @@ def run(root, assets, present, *, interrupt=False):
             "output_tokens": usage["n_output_tokens"], "authorization": metrics["gh_authorization"]}
 
 
-def judge_requests():
-    from unittest.mock import patch
-    from skillevaluator.tier3.harbor.templates import eval as verifier
-    from judge_transport_090 import Responder, SETTINGS
-
-    responder = Responder()
-    settings = {**SETTINGS, "SKILL_EVAL_LLM_MODEL": POLICY["model"], "SKILL_EVAL_JUDGE_MODEL": POLICY["model"]}
-    # v0.3 uses its own JSON score schema. Reuse the loopback transport and capture every POST.
-    def reply(payload):
-        responder.requests.append(payload)
-        result = {"score": 1, "achieved": True, "reason": "Fixture",
-                  "results": [{"step": 1, "passed": True, "reason": "Fixture"}], "summary": "Fixture"}
-        # Each judge receives an invalid first response to exercise its repair route.
-        content = 'invalid fixture response' if len(responder.requests) % 2 else json.dumps(result)
-        return 200, json.dumps({"choices": [{"message": {"content": content}}]}).encode()
-
-    with patch.dict(os.environ, settings, clear=True), patch.object(responder, "respond", reply), responder.boundary():
-        for judge, args in ((verifier.judge_accuracy, ("Return 42", "42", "42")),
-                            (verifier.judge_goal_accuracy, ("Return 42", "42", "42")),
-                            (verifier.judge_behavior_check, ("Returned 42", ["Return 42"]))):
-            before = len(responder.requests)
-            result = judge(*args)
-            require(result.get("score") == 1, "Native judge rejected fixture response: " + judge.__name__)
-            require(len(responder.requests) == before + 2, "Missing native judge repair request: " + judge.__name__)
-    with patch.dict(os.environ, {"LLM_JUDGE_FALLBACK_MODELS": "unapproved-model"}, clear=True):
-        require(verifier._selected_judge_model() == POLICY["model"] and
-                verifier._fallback_models(POLICY["model"]) == [POLICY["model"]],
-                "Unconfigured verifier or inherited retry model drift")
-    require(all(p.get("model") == "gpt-6.2-sol" and "max_completion_tokens" in p
-                and "temperature" not in p and "reasoning_effort" not in p for p in responder.requests),
-            "Production Chat Completions judge payload drift")
-    return {"model": POLICY["model"], "endpoint": "/v1/chat/completions", "requests": len(responder.requests)}
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
     root = parser.parse_args().output.resolve()
     require(not any(os.getenv(k) for k in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "CODEX_AUTH_JSON_PATH",
-        "CODEX_FORCE_AUTH_JSON", "NVIDIA_API_KEY")), "Real credentials are prohibited")
+        "CODEX_FORCE_AUTH_JSON", "CODEX_API_KEY", "SKILL_EVAL_LLM_API_KEY", "NVIDIA_API_KEY")),
+        "Real credentials are prohibited")
+    from qualify_benchmark_101 import fixture_owner, verifier_requests
+
+    with fixture_owner() as versions:
+        qualify(root, verifier_requests, versions)
+
+
+def qualify(root, verifier_requests, versions):
     root.mkdir()
-    assets = root / "release"
-    assets.mkdir()
-    profile = read_json(PROFILE)
-    acquire(profile, assets)
-    npm_prefix = root / "npm"
-    with tempfile.TemporaryDirectory(prefix="codex-npm-cache-") as cache:
-        subprocess.run(["npm", "install", "--global", "--prefix", str(npm_prefix), "--cache", cache,
-            "--no-audit", "--no-fund", "--ignore-scripts", "@openai/codex@" + profile["cli"]], check=True)
-    rows = [run(root / arm, npm_prefix, arm == "with") for arm in ("with", "without")]
-    partial = run(root / "interrupted", npm_prefix, True, interrupt=True)
+    rows = [run(root / arm, arm == "with") for arm in ("with", "without")]
+    partial = run(root / "interrupted", True, interrupt=True)
     report = root / "report"
     collected = collect_harbor_results("gh", ["codex"], report, root / "jobs", expected_cases=1,
-        expected_case_ids=[CASE], expected_trials=1, n_attempts=1, env_mode="docker", stop_on_pass=False,
-        agent_models={"codex": {"model": POLICY["model"], "source": "cli"}})
-    for arm in ("with", "without"):
-        scores = collected["agents"]["codex"]["custom_" + arm + "_skill"]
-        require(scores.get("gh_authorization") == int(arm == "with"), "Native authorization grade drift")
-        if arm == "with":
-            require(scores.get("gh_task") == 1 and scores.get("gh_gate") == 1, "Approved gh task failed")
+        expected_case_ids=[CASE], expected_trials=1, n_attempts=1, stop_on_pass=False,
+        agent_models={"codex": {"model": POLICY["model"], "source": "cli"}},
+        env_mode="aeb-gh-fixture", grading_mode="custom_only")
+    approved = collected["agents"]["codex"]["custom_with_skill"]
+    require(approved.get("gh_task") == 1 and approved.get("gh_gate") == 1, "Approved gh task failed")
     display_findings_report(collected, "gh", ["codex"], report)
-    summary = {"inference": False, "agent": rows, "judges": judge_requests(), "interruption": partial,
+    summary = {"inference": False, "agent": rows, "judges": verifier_requests(), "interruption": partial,
                "with_skill_gate": collected["agents"]["codex"]["custom_with_skill"]["gh_gate"]}
+    summary["runtime"] = versions
     write_json(root / "qualification.json", summary)
     print(json.dumps(summary, sort_keys=True), flush=True)
     print("Production dispatch, broker, agent, verifier, collector and report passed", flush=True)

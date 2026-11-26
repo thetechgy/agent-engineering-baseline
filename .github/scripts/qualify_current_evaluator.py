@@ -22,6 +22,17 @@ import skill_analysis as analysis
 import skill_report as report
 import skill_reports as reports
 
+HISTORICAL_PODMAN = ROOT / '.github/evals/retained/podman-public-030.json'
+HISTORICAL_PODMAN_DIGEST = 'sha256:68c931be666b71bbdc9a0150f386557f468bd6f2be70918266ef7ba742d17078'
+
+
+def historical_podman():
+    raw = evidence.read_bytes(HISTORICAL_PODMAN)
+    evidence.require(evidence.digest_bytes(raw) == HISTORICAL_PODMAN_DIGEST,
+                     'Retained Podman projection digest mismatch')
+    evidence.validate_public(evidence.parse_json(raw))
+    return raw
+
 
 
 def backend_sources():
@@ -140,7 +151,7 @@ def worker(output):
         'vectors': len(vectors()), 'synthetic': True, 'quality_measurement': False})
     metrics, diagnostics = replay_controls()
     reports.write_json(output / 'replay-controls.json', diagnostics)
-    gh_root, _ = synthetic_gh_native(output / 'gh', candidate=True, candidate_metrics=metrics)
+    gh_root, _ = synthetic_gh_native(output / 'gh', candidate_metrics=metrics)
     pester_root, _ = synthetic_native(output / 'pester-carriers', candidate=True)
     records = []
     (output / 'projections').mkdir()
@@ -410,6 +421,8 @@ def main():
     if output.resolve() != output or output.exists() or output.is_relative_to(ROOT):
         parser.error('Use a new persistent resolved output directory outside the checkout')
     p = profiles.owning_candidate()
+    reports.require(p is profiles.CANDIDATE or p is profiles.NEXT,
+                    'Use the separately pinned 0.8.0 or 0.9.0 cohort owner')
     import aeb_gh_fixture
     backend = Path(aeb_gh_fixture.__file__).parent
     assert {f.name: f.read_bytes() for f in backend.glob('*.py')} == backend_sources(), 'Installed backend source differs'
@@ -428,22 +441,7 @@ def main():
     home = output / 'empty-home'; home.mkdir(mode=0o700)
     env = {'HOME': str(home), 'PATH': os.defpath, 'TMPDIR': os.environ.get('TMPDIR', str(home)),
            'PYTHONDONTWRITEBYTECODE': '1', 'PYTHON_DOTENV_DISABLED': '1', 'LITELLM_LOCAL_MODEL_COST_MAP': 'True'}
-    legacy = os.environ.get('SKILL_REVIEW_PYTHON')
-    if not legacy: parser.error('SKILL_REVIEW_PYTHON must select the retained historical reporting runtime')
-    historical_code = """
-import sys
-from pathlib import Path
-project, output = map(Path, sys.argv[1:])
-sys.path.insert(0,str(project / '.github/scripts'))
-import skill_evidence as e
-from importlib.metadata import version
-assert version('skillevaluator') == '0.3.0'
-native=e.normalize_behavioral(project / '.github/tests/fixtures/skill_evidence/podman-native','podman')
-public=e.project(native)
-for guard in e.record_guards(public): guard()
-(output / 'historical.json').write_bytes(e.encoded(public))
-"""
-    subprocess.run([legacy, '-I', '-B', '-c', historical_code, str(ROOT), str(output)], env=env, check=True, timeout=60)
+    (output / 'historical.json').write_bytes(historical_podman())
     reports.write_json(output / 'metadata.json', {'versions': versions, 'source_tree_digest': p['source_tree_digest'],
         'producer_revision': evidence.git_revision(ROOT), 'simulated': True, 'inference': False,
         'workflow_run': os.environ.get('GITHUB_RUN_ID'), 'workflow_attempt': os.environ.get('GITHUB_RUN_ATTEMPT'),

@@ -63,21 +63,21 @@ jobs:
         with:
           version: '0.13.9'
           enable-cache: false
-      - name: Install the existing pinned evaluator
+      - name: Install the pinned 1.0.1 package preparation owner
         timeout-minutes: 15
-        run: bash .github/scripts/setup-skillevaluator.sh benchmark
-      - name: Verify retained-runtime image preparation contracts
+        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-candidate
+      - name: Verify release-owned image preparation contracts
         env:
-          IMAGE_PREPARATION_RUNTIME: retained
-        run: '"$SKILL_EVALUATOR_PYTHON" -B -m unittest discover -s .github/tests -p test_image_preparation.py -v'
-      - name: Prepare pinned Pester packages under the retained owning runtime
+          IMAGE_PREPARATION_RUNTIME: release
+        run: '"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B -m unittest discover -s .github/tests -p test_image_preparation.py -v'
+      - name: Prepare pinned Pester packages with the release owner
         timeout-minutes: 23
-        run: '"$SKILL_EVALUATOR_PYTHON" .github/scripts/prepare_candidate_images.py --runtime retained --output "$RUNNER_TEMP/pester-package-preparation.json"'
+        run: '"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/prepare_candidate_images.py --runtime release --output "$RUNNER_TEMP/pester-package-preparation.json"'
       - name: Retain bounded preparation checkpoint
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: retained-pester-package-preparation-${{ github.run_attempt }}
+          name: release-pester-package-preparation-${{ github.run_attempt }}
           path: ${{ runner.temp }}/pester-package-preparation.json
           if-no-files-found: error
           retention-days: 14
@@ -85,13 +85,27 @@ jobs:
         run: |
           printf 'PREPARATION_COMPOSE_PLUGIN_ROOT=%s\n' "$COMPOSE_PLUGIN_ROOT" >> "$GITHUB_ENV"
           bash .github/scripts/setup-compose.sh
+      - name: Install the private-review owner for the Pester report control
+        run: bash .github/scripts/setup-static-evaluator.sh review-candidate
       - name: Qualify native Pester execution and diagnostic containment
         id: qualification
         timeout-minutes: 30
-        run: '"$SKILL_EVALUATOR_PYTHON" .github/scripts/pester_container_validation.py'
-      - name: Qualify the production Codex benchmark against the loopback fixture
+        run: >-
+          "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_101.py
+          --native pester "$RUNNER_TEMP/pester-gate-artifacts"
+      - name: Qualify the released Codex benchmark against the loopback fixture
         timeout-minutes: 18
-        run: '"$SKILL_EVALUATOR_PYTHON" -B .github/scripts/qualify_benchmark_codex.py "$RUNNER_TEMP/benchmark-codex"'
+        run: '"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_codex.py "$RUNNER_TEMP/benchmark-codex"'
+      - name: Install pinned released native benchmark launcher
+        timeout-minutes: 15
+        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-101
+      - name: Verify released Pester benchmark and its diagnostic handoff
+        timeout-minutes: 28
+        run: |
+          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/qualify_native_benchmark.py \
+            "$RUNNER_TEMP/released-pester-launcher" powershell-pester-6 confirmation "$GITHUB_SHA"
+          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/qualify_native_execution.py \
+            "$RUNNER_TEMP/released-pester-execution" powershell-pester-6 "$GITHUB_SHA" --mode confirmation
       - name: Verify checkout integrity
         id: pester-integrity
         if: always()
@@ -113,7 +127,11 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pester-feasibility-diagnostics-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/pester-gate-artifacts/
+          path: |
+            ${{ runner.temp }}/pester-gate-artifacts/
+            ${{ runner.temp }}/released-pester-launcher/qualification.json
+            ${{ runner.temp }}/released-pester-execution/qualification.json
+            ${{ runner.temp }}/released-pester-execution/failure.json
           if-no-files-found: warn
           retention-days: 14
       - name: Remove test-only Compose plugin
@@ -131,7 +149,7 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    # Prior run: 21m tests + 7.5m container checks; retain room for offline evidence.
+    # Budget the released contracts, scanner controls and native fixtures together.
     timeout-minutes: 45
     env:
       PYTHONDONTWRITEBYTECODE: '1'
@@ -139,6 +157,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0 # Recover the frozen gh fixture authored revision.
           persist-credentials: false
 
       - name: Require an initially clean checkout
@@ -152,23 +171,53 @@ jobs:
           version: '0.13.9'
           enable-cache: false
 
-      - name: Install evaluator and security scanners with Python 3.13
-        run: bash .github/scripts/setup-skillevaluator.sh quality
+      - name: Install the pinned released benchmark runtime for regression checks
+        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-101
+
+      - name: Install the pinned private-review test environment
+        run: bash .github/scripts/setup-static-evaluator.sh review-contracts
+
+      - name: Install the pinned released owner for native gh contracts
+        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-candidate
 
       - name: Test CI contracts without inference
+        env:
+          SKILL_EVALUATION_KIND: benchmark
         run: |
           shellcheck .github/scripts/setup-skillevaluator.sh .github/scripts/setup-skill-scanners.sh .github/scripts/setup-static-evaluator.sh .github/scripts/collect-static-quality.sh .github/scripts/setup-compose.sh
-          "$SKILL_REVIEW_PYTHON" -m unittest discover -s .github/tests -v
-          "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py validate gh
-          "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py replay gh
-          "$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_evaluations.py stage gh "$RUNNER_TEMP/gh-eval-bundle/gh"
-          skillevaluator tier3 validate "$RUNNER_TEMP/gh-eval-bundle/gh" --strict --json
+          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/test_evaluation_contracts.py released-contracts
+
+      - name: Verify captured fixture contracts with the pinned compatibility owner
+        run: |
+          "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py fixture-contracts
+          "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/gh_evaluations.py validate gh
+          "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/gh_evaluations.py replay gh
+
+      - name: Install the pinned released scanner contract runtime
+        run: bash .github/scripts/setup-static-evaluator.sh scanner-contracts
+
+      - name: Test scanner contracts without inference
+        env:
+          SKILL_EVALUATION_KIND: scanner-contracts
+          SKILLEVALUATOR_REQUIRE_SEMGREP: '1'
+        run: |
+          export SKILLEVALUATOR_SKILLSPECTOR_PATH="$SKILL_SCANNER_CONTRACT_TOOLS/bin/skillspector"
+          export SKILLEVALUATOR_SEMGREP_PATH="$SKILL_SCANNER_CONTRACT_TOOLS/bin/semgrep"
+          "$SKILL_SCANNER_CONTRACT_PYTHON" -B .github/scripts/test_evaluation_contracts.py scanner-contracts
+
+      - name: Test private review and attachments without inference
+        run: '"$SKILL_REVIEW_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py private-review'
 
       - name: Install verified test-only Docker Compose
         run: bash .github/scripts/setup-compose.sh
 
+      - name: Verify released gh native task and verifier contracts
+        env:
+          PYTHONPATH: .github/scripts:.github/tests
+        run: '"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B -m unittest test_gh_evaluations.GhNativeTests -v'
+
       - name: Validate native gh Docker boundary without inference or credentials
-        run: '"$SKILL_EVALUATOR_PYTHON" .github/scripts/gh_container_validation.py'
+        run: '"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/gh_container_validation.py'
 
       - name: Install pinned SkillEvaluator 0.9.0 behavioral qualification owner
         run: bash .github/scripts/setup-skillevaluator.sh candidate-next
@@ -185,7 +234,10 @@ jobs:
       - name: Install pinned evaluator for public data
         run: bash .github/scripts/setup-static-evaluator.sh data-host
 
-      - name: Qualify data-only publisher and orchestration with retained rollback
+      - name: Verify retained report presentation without inference
+        run: '"$SKILL_DATA_PYTHON" -B .github/scripts/test_evaluation_contracts.py presentation'
+
+      - name: Qualify data-only publisher and orchestration with retained evidence
         env:
           EVALUATOR_ADOPTION_CONTROLS: '1'
         run: |
@@ -194,7 +246,7 @@ jobs:
             test_skill_pages.PagesTests.test_production_prepare_and_offline_cli_rebuild
           "$SKILL_DATA_PYTHON" -B -m unittest discover -s .github/tests -p test_skill_orchestration.py -v
           PYTHONPATH=.github/tests "$SKILL_NEXT_PYTHON" -m unittest -v test_evaluator_adoption.AdoptionTests.test_released_status_keeps_confirmed_failure_and_missing_coverage
-          PYTHONPATH=.github/tests "$SKILL_DATA_PYTHON" -m unittest -v test_evaluator_adoption.AdoptionTests.test_held_consumers_refuse_candidate_before_execution
+          PYTHONPATH=.github/tests "$SKILL_DATA_PYTHON" -m unittest -v test_evaluator_adoption.AdoptionTests.test_data_host_replays_history_and_holds_operational_consumers
 
       - name: Check candidate broker identity and unscored verifier findings
         env:
@@ -298,6 +350,8 @@ jobs:
       - name: Qualify scanner controls and consolidated reporting without credentials
         run: |
           "$SKILL_QUALITY_PYTHON" -B -m unittest discover -s .github/tests -p test_static_quality.py -v
+          PYTHONPATH=.github/tests "$SKILL_QUALITY_PYTHON" -B -m unittest -v \
+            test_public_reports.PublicReportsTests.test_pinned_native_quality_cli_provenance_titles_and_public_handoff
           "$SKILL_QUALITY_PYTHON" -B "$STATIC_QUALITY_SCRIPTS/qualify_scanners.py" \
             --workspace "$GITHUB_WORKSPACE" --tools "$SKILL_QUALITY_TOOLS" --redact \
             --output "$RUNNER_TEMP/scanner-controls"

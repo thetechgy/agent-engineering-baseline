@@ -18,6 +18,13 @@ from harbor.agents.installed.codex import Codex
 
 
 ROOT = Path(__file__).resolve().parents[2]
+VERIFIER_NO_NETWORK = 'services:\n  main:\n    network_mode: none\n'
+
+
+def attach_loopback_verifier(task):
+    """Apply the fixture owner's loopback-only setting after authored input validation."""
+    with (task / 'tests/docker-compose.yaml').open('x', encoding='utf-8') as override:
+        override.write(VERIFIER_NO_NETWORK)
 
 
 def qualification_bundle(root, *, candidate=False):
@@ -29,7 +36,7 @@ def qualification_bundle(root, *, candidate=False):
         # literal offline override; the shared grader still requires only lo.
         for task in (bundle / 'evals/harbor').iterdir():
             if task.is_dir():
-                (task / 'tests/docker-compose.yaml').write_text('services:\n  main:\n    network_mode: none\n')
+                (task / 'tests/docker-compose.yaml').write_text(VERIFIER_NO_NETWORK)
     source = ROOT / pilot.OVERLAY / 'support'
     solutions = {'pester-001': ('classic', 'standalone', 'data'),
                  'pester-002': ('classic', 'data'), 'pester-003': ('external', 'module'),
@@ -92,8 +99,10 @@ def qualification_bundle(root, *, candidate=False):
     return bundle, records
 
 
-def main(*, candidate=False, artifact=None):
+def main(*, candidate='release', artifact=None):
     """Always retain cleanup status, including failed native controls."""
+    if candidate is not True and candidate not in ('current', 'release'):
+        raise ValueError('Unrecognized Pester qualification runtime')
     artifact = Path(artifact) if artifact is not None else Path(os.environ['RUNNER_TEMP']) / 'pester-gate-artifacts'
     def resources():
         return {kind: set(subprocess.check_output(command, text=True, timeout=15).split()) for kind, command in (
@@ -112,23 +121,28 @@ def main(*, candidate=False, artifact=None):
         if not clean: raise RuntimeError('Native Pester cleanup incomplete')
 
 
-def _main(*, candidate=False, artifact=None):
+def _main(*, candidate, artifact):
     subprocess.run(['docker', 'info'], check=True, stdout=subprocess.DEVNULL, timeout=15)
     compose = subprocess.check_output(['docker', 'compose', 'version', '--short'], text=True, timeout=15).strip()
     if compose != reports.POLICY['docker_compose']:
         raise RuntimeError('Qualification Compose version mismatch')
     if any(os.environ.get(key) for key in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'NVIDIA_API_KEY')):
         raise RuntimeError('Qualification must not receive model credentials')
-    artifact = Path(artifact) if artifact is not None else Path(os.environ['RUNNER_TEMP']) / 'pester-gate-artifacts'
     from importlib.metadata import version
     current = candidate == 'current'
-    from evaluator_profiles import owning_candidate
-    expected_runtime = (owning_candidate()['version'], owning_candidate()['harbor']) if current else ('0.7.2', '0.24.0') if candidate else ('0.3.0', '0.13.2')
+    release = candidate == 'release'
+    shared_reporting = current or release
+    from evaluator_profiles import owning_candidate, runtime, candidate_versions
+    if current or release:
+        owner = owning_candidate()
+        expected_runtime = owner['version'], owner['harbor']
+        if release and owner['version'] != '1.0.1':
+            raise RuntimeError('Release fixture requires the 1.0.1 benchmark candidate')
+        runtime(candidate_versions(owner), owning=True)
+    else:
+        expected_runtime = ('0.7.2', '0.24.0')
     if (version('skillevaluator'), version('harbor')) != expected_runtime:
         raise RuntimeError('Qualification runtime mismatch')
-    if current:
-        from evaluator_profiles import runtime, candidate_versions
-        runtime(candidate_versions(owning_candidate()), owning=True)
     def resources(kind):
         command = ['docker', 'ps', '--all', '--quiet'] if kind == 'containers' else ['docker', 'network', 'ls', '--quiet']
         return set(subprocess.check_output(command, text=True, timeout=15).split())
@@ -136,8 +150,9 @@ def _main(*, candidate=False, artifact=None):
     with tempfile.TemporaryDirectory(prefix='pester-container-gate-', dir=os.environ.get('RUNNER_TEMP')) as temporary:
         root = Path(temporary)
         os.environ['SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE'] = str(root / 'private/key')
-        bundle, fixtures = qualification_bundle(root, candidate=candidate)
-        register = Codex(logs_dir=root / 'registration', skills_dir='/workspace/skills', version='0.155.1')._build_register_skills_command()
+        bundle, fixtures = qualification_bundle(root, candidate=not release)
+        register = Codex(logs_dir=root / 'registration', skills_dir='/workspace/skills',
+                         version=reports.POLICY['codex'] if release else '0.155.1')._build_register_skills_command()
         jobs = root / 'jobs'
         staged_evidence = []
         before_inputs = evidence.custom_source_manifest(ROOT, pilot.NAME)
@@ -149,6 +164,8 @@ def _main(*, candidate=False, artifact=None):
             if len(staged_tasks) != len(fixtures):
                 raise RuntimeError('Native staging coverage mismatch')
             for task in staged_tasks:
+                if release:
+                    attach_loopback_verifier(task)
                 if current and version('skillevaluator') == '0.9.0':
                     # Reuse #135's transport correction before any verifier image build.
                     from codex_pilot import bind_verifier_metadata
@@ -206,7 +223,7 @@ def _main(*, candidate=False, artifact=None):
             agent_models={'codex': {'model': 'credential-free-oracle', 'source': 'qualification'}})
         if evidence.custom_source_manifest(ROOT, pilot.NAME) != before_inputs:
             raise RuntimeError('Approved qualification inputs changed')
-        if not native_failed and (not candidate or current):
+        if not native_failed and shared_reporting:
             reports.write_json(raw / evidence.CUSTOM_CAPTURE, evidence.custom_capture(ROOT, pilot.NAME, bundle, staged_evidence,
                 purpose='oracle_qualification', attempts=1, agent='oracle',
                 execution_policy={'environment': 'docker', 'concurrency': 2, 'timeout_multiplier': 1.0, 'stop_on_pass': False}))
@@ -245,6 +262,11 @@ def _main(*, candidate=False, artifact=None):
                 outcome = reward.get('details', {}).get('outcome', {})
                 observed.append(outcome.get('classification'))
                 if outcome.get('classification') != fixture['expected']:
+                    if release and outcome.get('code') in ('isolation_environment', 'isolation_network',
+                            'isolation_seccomp', 'isolation_resources', 'isolation_mount',
+                            'worker_permission', 'worker_coreclr', 'worker_memory', 'worker_dependency',
+                            'worker_unclassified', 'incomplete', 'verifier'):
+                        print(f'Pester verifier prerequisite: {outcome["code"]}', flush=True)
                     raise RuntimeError(f'Unexpected outcome ({identity}, {arm}, {outcome.get("classification")})')
                 if fixture['expected'] not in ('passed', 'failed'):
                     if reward.get('evaluation_status') != 'failed' or reward.get('custom_metrics'):
@@ -273,40 +295,49 @@ def _main(*, candidate=False, artifact=None):
         if Counter(observed) != {'passed': 22, 'failed': 14, 'invalid': 8, 'timeout': 2,
                                  'unsupported': 2, 'infrastructure_error': 4}:
             raise RuntimeError('Qualification classification population mismatch')
-        if not candidate or current:
-            qualify_reporting(root, artifact, candidate=current)
+        if shared_reporting:
+            _qualify_reporting(root, artifact, candidate=current)
         if any(b'PESTER_VERIFIER_ONLY_' in p.read_bytes() for p in reports.regular_tree(artifact)):
             raise RuntimeError('Protected payload entered a derived reporting artifact')
-        print('Pester native qualification passed' + ('; candidate HTML diagnostics only' if candidate and not current else ' with shared reporting')
+        print('Pester native qualification passed' + (' with shared reporting' if shared_reporting else '; candidate HTML diagnostics only')
               + '; no model inference executed.', flush=True)
 
 
-def qualify_reporting(root, native, *, candidate=False):
-    """Keep native execution on its legacy runtime; hand reviews to their owner."""
-    if candidate:
-        _qualify_reporting(root, native, candidate=True)
-        return
-    python = Path(os.environ['SKILL_REVIEW_PYTHON'])
+def _review_oracle_context(public, saved, name, record_id):
+    """Rebuild the private context without exposing native evidence to the review owner."""
+    python = Path(os.environ['SKILL_REVIEW_CANDIDATE_PYTHON'])
     if not python.is_absolute() or not python.is_file():
-        raise RuntimeError('Current review interpreter unavailable')
-    environment = {'PATH': os.defpath, 'PYTHONDONTWRITEBYTECODE': '1', 'GIT_NO_LAZY_FETCH': '1'}
-    for name in ('TMPDIR', 'RUNNER_TEMP', 'SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE'):
-        if name in os.environ:
-            environment[name] = os.environ[name]
-    launcher = (
-        "import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]); "
-        "from pester_container_validation import _qualify_reporting; "
-        "_qualify_reporting(Path(sys.argv[2]), Path(sys.argv[3]))"
-    )
-    subprocess.run([str(python), '-I', '-B', '-c', launcher, str(ROOT / '.github/scripts'),
-                    str(root), str(native)], env=environment, check=True, timeout=120)
+        raise RuntimeError('Pinned private-review interpreter unavailable')
+    launcher = """
+import sys
+from pathlib import Path
+
+sys.path.insert(0, sys.argv[1])
+from private_review_runtime import validate_install
+from skill_evidence import identity
+from skill_review import prepare
+
+validate_install()
+context = prepare([Path(sys.argv[2])], Path(sys.argv[3]), sys.argv[4], sys.argv[5])
+results = context.value['analysis']['behavioral_results']
+if len(results) != 1 or results[0]['custom']['purpose'] != 'oracle_qualification':
+    raise ValueError('Oracle review purpose lost')
+print(identity(context.value))
+"""
+    environment = {'PATH': os.defpath, 'PYTHON_DOTENV_DISABLED': '1', 'GIT_NO_LAZY_FETCH': '1'}
+    for key in ('TMPDIR', 'RUNNER_TEMP'):
+        if key in os.environ:
+            environment[key] = os.environ[key]
+    return subprocess.check_output(
+        [str(python), '-I', '-B', '-c', launcher, str(ROOT / '.github/scripts'),
+         str(public), str(saved), name, record_id], env=environment, text=True, timeout=120,
+    ).strip()
 
 
 def _qualify_reporting(root, native, *, candidate=False, name=pilot.NAME):
     """Use the consolidated public-only consumers, then remove native originals."""
     import skill_analysis as analysis
     import skill_report as report
-    import skill_review as review
 
     public = root / 'public'
     reports.public_benchmark(ROOT, native, name, 'confirmation', public)
@@ -316,13 +347,11 @@ def _qualify_reporting(root, native, *, candidate=False, name=pilot.NAME):
     reports.write_json(saved, value)
     rid = next(key for key, row in captured.records.items() if row['kind'] == 'behavioral')
     first = report.render_report(value, captured)
-    context = None if candidate else review.prepare([public], saved, name, rid)
+    context = None if candidate else _review_oracle_context(public, saved, name, rid)
     if candidate:
         behavioral = [result for skill in value['skills'] if skill['skill'] == name for result in skill['behavioral_results']]
         if len(behavioral) != 1 or behavioral[0]['custom']['purpose'] != 'oracle_qualification':
             raise RuntimeError('Oracle reporting purpose lost')
-    elif context.value['analysis']['behavioral_results'][0]['custom']['purpose'] != 'oracle_qualification':
-        raise RuntimeError('Oracle reporting purpose lost')
     # Keep the already allowlisted native diagnostics in a separate retained
     # copy. These fresh consumers see public input only, with no native tree.
     hidden = root / 'retained-native'
@@ -333,7 +362,8 @@ def _qualify_reporting(root, native, *, candidate=False, name=pilot.NAME):
             raise RuntimeError('Public-only analysis changed')
         if report.render_report(value, again) != first:
             raise RuntimeError('Public-only rendered report changed')
-        if not candidate: review.prepare([public], saved, name, rid)
+        if context is not None and _review_oracle_context(public, saved, name, rid) != context:
+            raise RuntimeError('Public-only review context changed')
     finally:
         hidden.rename(native)
     output = report.generate([public], saved, root / 'consolidated')

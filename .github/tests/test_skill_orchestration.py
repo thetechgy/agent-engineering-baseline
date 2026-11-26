@@ -121,7 +121,7 @@ class OrchestrationTests(unittest.TestCase):
     def setUpClass(cls):
         cls.base_temp = tempfile.TemporaryDirectory(prefix='skill-orchestration-base-')
         cls.base = Path(cls.base_temp.name)
-        prefixes = ('.apm/', '.agents/skills/', '.github/evals/', '.github/scripts/', '.github/patches/', '.github/workflows/')
+        prefixes = ('.apm/', '.agents/skills/', '.github/evals/', '.github/scripts/', '.github/patches/', '.github/workflows/', '.github/evaluator-backends/')
         members = git(ROOT, 'ls-files').splitlines()
         members += [orchestration.POLICY_FILE, orchestration.WORKFLOW, '.github/scripts/skill_orchestration.py']
         for name in sorted(set(members)):
@@ -186,8 +186,13 @@ class OrchestrationTests(unittest.TestCase):
             'Verify evaluator left the checkout unchanged'])
         self.api.job(run, 'publish-history', ['Validate metric allowlist and canonical series',
             'Append standard result to durable history', 'Capture and verify the exact published history commit'])
-        patch_digest = hashlib.sha256((self.workspace / reports.PATCH).read_bytes()).hexdigest()
-        policy = hashlib.sha256(json.dumps([reports.benchmark_policy(name), patch_digest], sort_keys=True).encode()).hexdigest()[:16]
+        if orchestration.NATIVE_BENCHMARK_POLICY in orchestration.manifest(self.workspace, run['head_sha']):
+            from benchmark_native import score_series
+
+            policy = score_series(name, 'standard')
+        else:
+            patch_digest = hashlib.sha256((self.workspace / reports.PATCH).read_bytes()).hexdigest()
+            policy = hashlib.sha256(json.dumps([reports.benchmark_policy(name), patch_digest], sort_keys=True).encode()).hexdigest()[:16]
         metrics = [{'name': title, 'value': 0.1, 'unit': 'score', 'extra': f'Dataset sha256:{"b" * 64}; policy {policy}'} for title in reports.METRICS]
         row = {'commit': {'id': run['head_sha'], 'url': f'https://github.com/{pages.REPOSITORY}/commit/{run["head_sha"]}', 'message': 'Fixture'},
                'date': 100, 'tool': 'customBiggerIsBetter', 'benches': metrics}
@@ -264,6 +269,290 @@ class OrchestrationTests(unittest.TestCase):
         result = self.assess()
         self.assertTrue(result['shared_instructions_changed'])
         self.assertFalse(result['requests'])
+
+    def test_production_release_fingerprint_requires_all_runtime_members(self):
+        files = {name.removesuffix('/') + ('/fixture.py' if name.endswith('/') else ''):
+                 ('100644', 'blob', 'a' * 40)
+                 for name in orchestration.NATIVE_RUNTIME_FILES + orchestration.RUNTIME_FILES}
+        pinned = orchestration.benchmark_runtime_inputs(files)
+        for member in ('.github/scripts/benchmark_native.py', '.github/scripts/skill_reports.py',
+                       '.github/evaluator-backends/candidate-101/benchmark_codex.py',
+                       '.github/evaluator-backends/candidate-101/codex-catalog/models.json',
+                       '.github/patches/skillevaluator-v1.0.1-benchmark-staging.patch',
+                       '.github/patches/skillevaluator-v1.0.1-benchmark-recovery.patch',
+                       '.github/patches/skillevaluator-v1.0.1-benchmark-evidence.patch'):
+            with self.subTest(member=member):
+                self.assertNotEqual(orchestration.identity(pinned), orchestration.identity(
+                    orchestration.benchmark_runtime_inputs({**files, member: ('100644', 'blob', 'b' * 40)})))
+                with self.assertRaisesRegex(ValueError, 'Missing runtime input'):
+                    orchestration.benchmark_runtime_inputs({key: value for key, value in files.items() if key != member})
+        files.pop(orchestration.NATIVE_BENCHMARK_POLICY)
+        self.assertEqual(orchestration.benchmark_runtime_inputs(files), orchestration.subset(files, orchestration.RUNTIME_FILES))
+
+    def test_candidate_fingerprint_binds_release_and_dataset_without_rewriting_historical_fingerprint(self):
+        (self.workspace / orchestration.NATIVE_BENCHMARK_POLICY).unlink()
+        self.api.main = commit(self.workspace, 'Select the pre-adoption benchmark runtime')
+        before = orchestration.snapshots(self.workspace, self.api.main)[1]
+        fingerprint = orchestration.candidate_podman_fingerprint(self.workspace, self.api.main)
+        self.change('.github/scripts/benchmark_smoke.py', '\n# Candidate diagnostics changed\n')
+        self.assertEqual(before, orchestration.snapshots(self.workspace, self.api.main)[1])
+        self.assertNotEqual(fingerprint, orchestration.candidate_podman_fingerprint(self.workspace, self.api.main))
+        for member in ('.github/scripts/setup-static-evaluator.sh',
+                       '.github/evaluator-backends/candidate-101/benchmark_codex.py',
+                       '.github/evaluator-backends/candidate-101/codex-catalog/models.json',
+                       '.apm/skills/podman/evals/evals.json'):
+            with self.subTest(member=member):
+                self.change(member)
+                changed = orchestration.candidate_podman_fingerprint(self.workspace, self.api.main)
+                self.assertNotEqual(fingerprint, changed)
+                fingerprint = changed
+        (self.workspace / '.github/evals/evaluator-1.0.1-benchmark-candidate-v3.json').unlink()
+        revision = commit(self.workspace, 'Remove the candidate release lock identity')
+        with self.assertRaisesRegex(ValueError, 'Missing candidate benchmark input'):
+            orchestration.candidate_podman_fingerprint(self.workspace, revision)
+
+    def test_compatibility_scope_requires_exact_initial_dispatch_and_preapproval(self):
+        import benchmark_smoke as smoke
+        from benchmark_native import native_versions
+
+        revision = self.api.main
+        env = dict(os.environ, GITHUB_SHA=revision, GITHUB_EVENT_NAME='workflow_dispatch',
+                   GITHUB_REF='refs/heads/' + smoke.BRANCH)
+        inputs = {'mode': smoke.MODE, 'skill': 'podman', 'expected_revision': revision}
+        record = smoke.reviewed_scope(self.workspace, env, inputs)
+        self.assertEqual(record['runtime'], native_versions())
+        self.assertEqual(record['scope']['fingerprint'],
+                         orchestration.candidate_podman_fingerprint(self.workspace, revision, released=True))
+        self.assertEqual(record['scope']['case'], '1')
+        self.assertEqual(record['scope']['arms'], ['with_skill', 'without_skill'])
+        self.assertEqual(record['scope']['planned_trials'], 2)
+        self.assertFalse(record['scope']['history_eligible'])
+        self.assertEqual(record['scope']['agent']['tool_surface'], record['runtime']['codex_tool_surface'])
+        baseline = smoke.reviewed_scope(self.workspace, env, {**inputs, 'candidate_smoke_arms': 'without-skill'})
+        self.assertEqual(baseline['scope'], {**record['scope'], 'arms': ['without_skill'], 'planned_trials': 1})
+        self.assertEqual(baseline['provider_policy'], record['provider_policy'])
+        self.assertEqual(baseline['cost_estimate']['usd'], 1.80)
+        fixture_inputs = {**inputs, 'candidate_smoke_arms': 'without-skill',
+                          'candidate_smoke_workload': 'file-edit-fixture'}
+        fixture = smoke.reviewed_scope(self.workspace, env, fixture_inputs)
+        self.assertEqual(fixture['scope'], {
+            **baseline['scope'], 'case': smoke.FILE_EDIT_CASE,
+            'fixture_digest': 'sha256:' + orchestration.identity(smoke.FILE_EDIT_DATASET),
+        })
+        self.assertEqual(fixture['provider_policy'], baseline['provider_policy'])
+        self.assertEqual(fixture['runtime'], baseline['runtime'])
+        for updates in ({'mode': 'confirmation'}, {'skill': 'gh'}, {'expected_revision': 'f' * 40},
+                        {'request_id': 'autodispatch'}, {'planner_run_id': '20'},
+                        {'candidate_smoke_arms': 'with-skill'},
+                        {'candidate_smoke_workload': 'file-edit-fixture'},
+                        {'candidate_smoke_workload': 'unknown'}):
+            with self.subTest(updates=updates), self.assertRaises(ValueError):
+                smoke.reviewed_scope(self.workspace, env, {**inputs, **updates})
+        for updates in ({'GITHUB_RUN_ATTEMPT': '2'}, {'GITHUB_REF': 'refs/heads/main'},
+                        {'GITHUB_EVENT_NAME': 'push'}):
+            with self.subTest(updates=updates), self.assertRaises(ValueError):
+                smoke.reviewed_scope(self.workspace, {**env, **updates}, inputs)
+        run = self.api.run(30, orchestration.BENCHMARK, revision, status='in_progress')
+        run['head_branch'] = smoke.BRANCH
+        original_get = self.api.get
+        def feature_get(path):
+            if path == 'git/ref/heads/' + smoke.BRANCH:
+                return {'object': {'sha': self.api.main}}
+            return original_get(path)
+        self.api.main = revision
+        with patch.object(self.api, 'get', side_effect=feature_get):
+            with self.assertRaisesRegex(ValueError, 'Operational record unavailable'):
+                smoke.guard(self.api, record)
+            artifact = self.api.artifact(run, smoke.artifact_name(record), record)
+            smoke.guard(self.api, record)
+            for other in (baseline, fixture):
+                with self.assertRaisesRegex(ValueError, 'preapproval scope mismatch'):
+                    smoke.guard(self.api, other)
+            altered = {**record, 'provider_policy': {}}
+            with self.assertRaisesRegex(ValueError, 'preapproval scope mismatch'):
+                smoke.guard(self.api, altered)
+            altered = {**record, 'runtime': {**record['runtime'], 'patch_sha256': 'a' * 64}}
+            with self.assertRaisesRegex(ValueError, 'preapproval scope mismatch'):
+                smoke.guard(self.api, altered)
+            self.api.main = 'f' * 40
+            with self.assertRaisesRegex(ValueError, 'branch changed'):
+                smoke.guard(self.api, record)
+            artifact['expired'] = True
+            with self.assertRaisesRegex(ValueError, 'Operational record unavailable'):
+                smoke.guard(self.api, record)
+
+    @unittest.skipUnless(os.environ.get('SKILL_EVALUATION_KIND') == 'benchmark', 'requires the patched 1.0.1 runtime')
+    def test_compatibility_file_edit_stages_one_isolated_baseline(self):
+        import benchmark_smoke as smoke
+        from harbor.models.task.task import Task
+
+        revision = self.api.main
+        env = dict(os.environ, GITHUB_SHA=revision, GITHUB_EVENT_NAME='workflow_dispatch',
+                   GITHUB_REF='refs/heads/' + smoke.BRANCH)
+        inputs = {'mode': smoke.MODE, 'skill': 'podman', 'expected_revision': revision,
+                  'candidate_smoke_arms': 'without-skill', 'candidate_smoke_workload': 'file-edit-fixture'}
+        expected = smoke.reviewed_scope(self.workspace, env, inputs)
+        authored = self.workspace / '.apm/skills/podman/evals/evals.json'
+        original = authored.read_bytes()
+        stage = self.root / 'file-edit'
+        with patch('qualify_codex_1691.acquire', side_effect=lambda _, dest: reports.write_json(dest / 'integrity.json', {})), \
+                patch.object(smoke, 'configure_openai_task', side_effect=lambda task, *_: Task(task)):
+            receipt = smoke.prepare(self.workspace, stage, expected)
+        task, = (stage / 'without_skill/tasks').iterdir()
+        self.assertEqual(task.name, smoke.FILE_EDIT_CASE)
+        self.assertEqual(receipt['tasks'], {'without_skill': Task(task).checksum})
+        self.assertFalse((stage / 'with_skill').exists())
+        self.assertTrue((stage / 'fixture/podman/.git').is_dir())
+        entry = reports.read_json(task / 'tests/entry.json')
+        self.assertIs(entry['has_skill'], False)
+        self.assertEqual(entry['question'], smoke.FILE_EDIT_DATASET['evals'][0]['prompt'])
+        self.assertEqual(authored.read_bytes(), original)
+
+    def test_compatibility_receipt_requires_a_complete_verifier_measurement(self):
+        import benchmark_smoke as smoke
+
+        job = self.root / 'job'
+        trial = job / 'podman-1__fixture'
+        usage = {'n_input_tokens': 11, 'n_output_tokens': 5, 'n_cache_tokens': None}
+        reports.write_json(trial / 'result.json', {
+            'exception_info': None, 'finished_at': stamp(0),
+            'agent_info': {'version': '0.171.0'}, 'agent_result': usage,
+        })
+        selected = {'case': '1', 'agent': {'cli': '0.171.0'}, 'verifier': {'model': 'gpt-6.2-sol'}}
+        reward_path = trial / 'verifier' / 'skill_evaluator_reward.json'
+        identity = {'entry_id': '1', 'has_skill': False, 'score_policy': 'skill-evaluator-dimension-mean-v1'}
+        metrics = ('accuracy', 'behavior_check', 'goal_accuracy')
+        details = {metric: {'judge_model_used': 'gpt-6.2-sol', 'judge_reasoning_effort': None,
+                            'judge_fallback_used': False, 'score': 0.8} for metric in metrics}
+        measured = {**identity, 'judge_contract': 'skill-evaluator-judges-v2', 'details': details}
+        private_text = 'private verifier output'
+        blocked = {**identity, 'evaluation_status': 'failed', 'evaluation_errors': {'execution_evidence': private_text}}
+        incomplete = (
+            ({**identity, 'evaluation_status': 'failed', 'error': 'No trajectory or reconstructible agent log'},
+             'trajectory_unavailable', {}),
+            (blocked, 'unsupported_execution_evidence', {}),
+            ({**blocked, 'details': {'security': {'findings': [None, {'type': private_text}],
+                                                  'supported': False, 'passed': None}}},
+             'unsupported_execution_evidence', {}),
+            ({**blocked, 'details': {'security': {'findings': [
+                {'type': 'unsupported_tool_wrapper', 'evidence': private_text},
+                {'type': private_text}, {'type': 'unsupported_path_evidence', 'message': private_text},
+                {'type': 'unsupported_tool_wrapper'},
+             ], 'supported': False, 'passed': None}}},
+             'unsupported_execution_evidence',
+             {'execution_evidence_reasons': ['unsupported_path_evidence', 'unsupported_tool_wrapper']}),
+            ({**blocked, 'details': {'security': {'findings': [], 'passed': True, 'score': 1.0}}},
+             'unsupported_execution_evidence', {'execution_evidence_reasons': ['missing_or_ambiguous_tool_result']}),
+            ({**measured, 'evaluation_status': 'failed', 'evaluation_errors': {'accuracy': private_text}},
+             'required_judge_failed', {'failed_judges': ['accuracy']}),
+            ({**measured, 'has_skill': True}, 'reward_identity', {}),
+            ({**measured, 'judge_contract': None}, 'judge_contract', {}),
+            ({**measured, 'details': {**details, 'accuracy': {'score': 0.8}}}, 'judge_observation', {}),
+        )
+        for reward, reason, diagnostic in incomplete:
+            with self.subTest(reason=reason, diagnostic=diagnostic):
+                reports.write_json(reward_path, reward)
+                receipt = {'state': 'started'}
+                with self.assertRaises(ValueError):
+                    smoke.trial_receipt(job, arm='without_skill', selected=selected, receipt=receipt)
+                self.assertEqual(receipt, {
+                    'state': 'incomplete', 'agent_usage': usage, 'failure_reason': reason, **diagnostic,
+                })
+        reports.write_json(reward_path, measured)
+        receipt = {'state': 'started'}
+        smoke.trial_receipt(job, arm='without_skill', selected=selected, receipt=receipt)
+        self.assertEqual(receipt, {'state': 'complete', 'agent_usage': usage, 'judge_scores': dict.fromkeys(metrics, 0.8)})
+
+        selected['agent']['tool_surface'] = smoke.native_versions()['codex_tool_surface']
+        atif = trial / 'agent/trajectory.json'
+        for names in ((), ('exec',), ('exec', 'exec_command')):
+            reports.write_json(atif, {'steps': [{'tool_calls': [{'function_name': name} for name in names]}]})
+            receipt = {'state': 'started'}
+            with self.assertRaisesRegex(ValueError, 'reviewed direct tool route'):
+                smoke.trial_receipt(job, arm='without_skill', selected=selected, receipt=receipt)
+            self.assertEqual(receipt['failure_reason'], 'tool_route_unavailable')
+        reports.write_json(atif, {'steps': [{'tool_calls': [{'function_name': 'exec_command'}]}]})
+        receipt = {'state': 'started'}
+        smoke.trial_receipt(job, arm='without_skill', selected=selected, receipt=receipt)
+        self.assertEqual(receipt, {'state': 'complete', 'agent_usage': usage, 'native_tool_route': 'direct',
+                                   'judge_scores': dict.fromkeys(metrics, 0.8)})
+
+    def test_production_workflow_is_manual_protected_and_uses_the_released_owner(self):
+        workflow = yaml.safe_load((ROOT / orchestration.BENCHMARK).read_text())
+        inputs = workflow.get('on', workflow.get(True))['workflow_dispatch']['inputs']
+        self.assertEqual(inputs['mode']['default'], 'standard')
+        self.assertEqual(inputs['mode']['options'], ['standard', 'confirmation'])
+        self.assertNotIn('candidate_smoke_arms', inputs)
+        jobs = workflow['jobs']
+        self.assertEqual(set(jobs), {'context', 'evaluate', 'publish-history'})
+        job = jobs['evaluate']
+        self.assertEqual(job['environment'], {'name': 'skill-benchmark', 'deployment': False})
+        self.assertEqual(job['permissions'], {'contents': 'read', 'actions': 'read'})
+        steps = job['steps']
+        index = next(i for i, step in enumerate(steps) if step.get('id') == 'evaluation')
+        self.assertEqual(steps[index - 1]['id'], 'preparation')
+        self.assertIn('benchmark_native.py prepare', steps[index - 1]['run'])
+        self.assertIn('skill_orchestration.py guard', steps[index - 1]['run'].splitlines()[-2])
+        self.assertEqual(steps[index]['if'], "steps.preparation.outputs.execute == 'true'")
+        self.assertIn('benchmark_native.py execute', steps[index]['run'])
+        uploads = [step for step in steps if step.get('with', {}).get('name') == 'skill-metrics']
+        self.assertEqual(len(uploads), 1)
+        self.assertTrue(uploads[0]['with']['path'].endswith('/released-scores.json'))
+        self.assertIn("inputs.mode == 'standard'", uploads[0]['if'])
+        self.assertIn('history_eligible', uploads[0]['if'])
+
+    @unittest.skipUnless(os.environ.get('SKILL_EVALUATION_KIND') == 'benchmark', 'requires the patched 1.0.1 verifier')
+    def test_compatibility_path_observation_uses_the_native_classifier_and_redacts_the_source(self):
+        import benchmark_smoke as smoke
+        from skillevaluator.tier3.harbor.templates import eval as verifier
+
+        job = self.root / 'job'
+        trial = job / 'podman-1__fixture'
+        marker = 'private fixture command and observation'
+        trajectory = {'steps': [{'source': 'agent', 'tool_calls': [
+            {'function_name': 'exec_command', 'tool_call_id': 'unsupported',
+             'arguments': {'cmd': "printf '%s' 'mention /run/podman/podman.sock' | wc -c"}},
+            {'function_name': 'exec_command', 'tool_call_id': 'literal',
+             'arguments': {'cmd': "printf '%s' '/run/podman/podman.sock " + marker + "'"}},
+        ], 'observation': {'results': [
+            {'source_call_id': call_id, 'content': marker} for call_id in ('unsupported', 'literal')
+        ]}}]}
+        calls = verifier.extract_tool_calls_as_dicts(trajectory)
+        security = verifier.check_security(trajectory, calls)
+        self.assertIs(security['supported'], False)
+        reports.write_json(trial / 'agent/trajectory.json', trajectory)
+        self.assertEqual(smoke.path_syntax('x' * 65537), 'source_limit')
+        usage = {'n_input_tokens': 11, 'n_output_tokens': 5, 'n_cache_tokens': None}
+        reports.write_json(trial / 'result.json', {
+            'exception_info': None, 'finished_at': stamp(0),
+            'agent_info': {'version': '0.171.0'}, 'agent_result': usage,
+        })
+        reward = {
+            'entry_id': '1', 'has_skill': False, 'score_policy': 'skill-evaluator-dimension-mean-v1',
+            'evaluation_status': 'failed', 'evaluation_errors': {'execution_evidence': marker},
+            'details': {'security': security}, 'trajectory_source': 'trajectory.json',
+        }
+        entry = trial / 'tests/entry.json'
+        reports.write_json(entry, {'id': '1', 'has_skill': False})
+        selected = {'case': '1', 'agent': {'cli': '0.171.0'}, 'verifier': {'model': 'gpt-6.2-sol'}}
+        for source, expected in (('trajectory.json', ['shell_control_operator']), ('agent-log', None)):
+            with self.subTest(source=source):
+                reports.write_json(trial / 'verifier/skill_evaluator_reward.json',
+                                   {**reward, 'trajectory_source': source})
+                receipt = {}
+                with self.assertRaisesRegex(ValueError, 'Native verifier did not produce a complete measurement'):
+                    smoke.trial_receipt(job, arm='without_skill', selected=selected, receipt=receipt, entry_path=entry)
+                self.assertEqual(receipt.get('path_evidence_syntax'), expected)
+                self.assertEqual(receipt['execution_evidence_reasons'], ['unsupported_path_evidence'])
+                self.assertNotIn(marker, json.dumps(receipt))
+                self.assertNotIn('podman.sock', json.dumps(receipt))
+
+        security['findings'].append(security['findings'][0])
+        reports.write_json(trial / 'verifier/skill_evaluator_reward.json', reward)
+        receipt = {}
+        with self.assertRaisesRegex(ValueError, 'Native verifier did not produce a complete measurement'):
+            smoke.trial_receipt(job, arm='without_skill', selected=selected, receipt=receipt, entry_path=entry)
+        self.assertNotIn('path_evidence_syntax', receipt)
 
     def test_gh_competing_refresh_is_one_canonical_change_and_blocks_unreviewed_pin(self):
         lock_path = self.workspace / 'apm.lock.yaml'
@@ -539,22 +828,127 @@ class WorkflowAndUsageTests(unittest.TestCase):
         self.assertEqual(steps[guard + 1]['if'], "steps.preparation.outputs.execute == 'true'")
         self.assertEqual(benchmark['concurrency'], {'group': 'benchmark-skills', 'queue': 'max', 'cancel-in-progress': False})
         self.assertIn("needs.evaluate.outputs.execution_success == 'true'", benchmark['jobs']['publish-history']['if'])
+        self.assertEqual(set(benchmark['jobs']), {'context', 'evaluate', 'publish-history'})
+        self.assertEqual(sum(step.get('run', '').endswith(' native-benchmark-101') for step in steps), 1)
+        self.assertNotIn('OPENAI_API_KEY', steps[guard]['env'])
+        self.assertIn('"$SKILL_NATIVE_BENCHMARK_PYTHON"', steps[guard + 1]['run'])
         publisher = yaml.safe_load((ROOT / '.github/workflows/publish-skill-report.yml').read_text())
         self.assertEqual(publisher.get('on', publisher.get(True))['workflow_run']['workflows'], ['Validate', 'Benchmark skills'])
+
+    def test_released_launcher_qualification_is_isolated_from_protected_execution(self):
+        workflow = yaml.safe_load((ROOT / '.github/workflows/current-evaluator.yml').read_text())
+        jobs = workflow['jobs']
+        harness = jobs['benchmark-101-launcher']
+        self.assertNotIn('environment', harness)
+        self.assertNotIn('secrets.', json.dumps(harness))
+        self.assertEqual(workflow['permissions'], {'contents': 'read'})
+        self.assertEqual(harness['strategy']['matrix']['include'], [
+            {'suite': 'podman', 'mode': 'standard'}, {'suite': 'gh', 'mode': 'confirmation'}])
+        for name in ('cohorts', 'native-gh', 'report', 'startup', 'benchmark-101'):
+            self.assertIn('!inputs.benchmark-101-launcher', jobs[name]['if'])
+        steps = [step.get('run', '') for step in harness['steps']]
+        setup = steps.index('bash .github/scripts/setup-static-evaluator.sh native-benchmark-101')
+        qualify = next(index for index, step in enumerate(steps) if 'qualify_native_benchmark.py' in step)
+        self.assertLess(setup, qualify)
+        self.assertIn('"$SKILL_NATIVE_BENCHMARK_PYTHON"', steps[qualify])
+        self.assertIn('"$GITHUB_SHA"', steps[qualify])
+        installed = steps.index('bash .github/scripts/setup-compose.sh')
+        executed = next(index for index, step in enumerate(steps) if 'qualify_native_execution.py' in step)
+        self.assertLess(qualify, installed)
+        self.assertLess(installed, executed)
+        self.assertIn('"$SKILL_NATIVE_BENCHMARK_PYTHON"', steps[executed])
+        self.assertIn('"$GITHUB_SHA"', steps[executed])
+        self.assertIn('--mode "$QUALIFICATION_MODE"', steps[executed])
 
     def test_full_regression_validation_is_reused_on_main_and_preapproval_on_features(self):
         workflow = yaml.safe_load((ROOT / orchestration.BENCHMARK).read_text())
         context = workflow['jobs']['context']
         protected = workflow['jobs']['evaluate']
-        self.assertFalse(any('-m unittest discover' in step.get('run', '') for step in protected['steps']))
-        tests = [step for step in context['steps'] if '-m unittest discover' in step.get('run', '')]
-        self.assertEqual(len(tests), 1)
-        self.assertEqual(tests[0]['if'], "github.ref != 'refs/heads/main'")
+        selector = '.github/scripts/test_evaluation_contracts.py'
+        self.assertFalse(any(selector in step.get('run', '') or '-m unittest discover' in step.get('run', '')
+                             for step in protected['steps']))
+        expected = [
+            f'"$SKILL_NATIVE_BENCHMARK_PYTHON" -B {selector} released-contracts',
+            f'"$SKILL_REVIEW_CANDIDATE_PYTHON" -B {selector} private-review',
+            f'"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B {selector} fixture-contracts',
+            f'"$SKILL_DATA_PYTHON" -B {selector} presentation',
+        ]
+        tests = [step for step in context['steps'] if selector in step.get('run', '')]
+        self.assertEqual([step['run'] for step in tests], expected)
+        self.assertTrue(all(step['if'] == "github.ref != 'refs/heads/main'" for step in tests))
         self.assertEqual(tests[0]['env']['SKILL_EVALUATION_KIND'], 'benchmark')
+        validate = yaml.safe_load((ROOT / '.github/workflows/validate.yml').read_text())
+        validate_steps = validate['jobs']['ci-contracts']['steps']
+        for steps in (context['steps'], validate_steps):
+            setup = next(step for step in steps
+                         if step.get('run') == 'bash .github/scripts/setup-static-evaluator.sh review-contracts')
+            review = next(step for step in steps if step.get('run') == expected[1])
+            self.assertLess(steps.index(setup), steps.index(review))
+            self.assertNotIn('secrets.', json.dumps([setup, review]))
+            release = next(step for step in steps if step.get('run') ==
+                           'bash .github/scripts/setup-static-evaluator.sh native-benchmark-candidate')
+            gh = next(step for step in steps if 'test_gh_evaluations.GhNativeTests' in step.get('run', ''))
+            self.assertLess(steps.index(release), steps.index(gh))
+            self.assertIn('"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON"', gh['run'])
+            self.assertNotIn('secrets.', json.dumps([release, gh]))
+        for command in expected:
+            self.assertEqual(sum(command in step.get('run', '') for step in validate_steps), 1)
+        self.assertNotIn('SKILL_REVIEW_PYTHON', json.dumps(validate_steps))
+        scanner_setup = next(step for step in validate_steps if step.get('run') ==
+                             'bash .github/scripts/setup-static-evaluator.sh scanner-contracts')
+        scanner_command = f'"$SKILL_SCANNER_CONTRACT_PYTHON" -B {selector} scanner-contracts'
+        scanner = next(step for step in validate_steps if scanner_command in step.get('run', ''))
+        self.assertLess(validate_steps.index(scanner_setup), validate_steps.index(scanner))
+        self.assertEqual(scanner['env'], {'SKILL_EVALUATION_KIND': 'scanner-contracts',
+                                          'SKILLEVALUATOR_REQUIRE_SEMGREP': '1'})
+        self.assertNotIn('secrets.', json.dumps([scanner_setup, scanner]))
+        for command, setup_kind in ((expected[0], 'native-benchmark-101'), (expected[2], 'native-benchmark-candidate')):
+            for steps in (context['steps'], validate_steps):
+                setup = next(step for step in steps if step.get('run', '').endswith(' ' + setup_kind))
+                test = next(step for step in steps if command in step.get('run', ''))
+                self.assertLess(steps.index(setup), steps.index(test))
+                self.assertNotIn('secrets.', json.dumps([setup, test]))
+        qualifier = yaml.safe_load((ROOT / '.github/workflows/current-evaluator.yml').read_text())
+        for steps in (context['steps'], validate_steps, qualifier['jobs']['cohorts']['steps']):
+            data_setup = next(s for s in steps if 'setup-static-evaluator.sh data-host' in s.get('run', ''))
+            presentation = next(s for s in steps if s.get('run') == expected[-1])
+            self.assertLess(steps.index(data_setup), steps.index(presentation))
+            self.assertNotIn('secrets.', json.dumps([data_setup, presentation]))
         gate = next(s for s in protected['steps'] if s.get('id') == 'preparation')
         self.assertEqual(gate['timeout-minutes'], 5)
-        self.assertIn('tier3 validate', gate['run'])
+        self.assertIn('benchmark_native.py prepare', gate['run'])
         self.assertIn('skill_orchestration.py guard', gate['run'])
+
+    def test_contract_discovery_keeps_tests_outside_the_released_owners(self):
+        from test_evaluation_contracts import contract_suite, scanner_suite
+
+        class Test(unittest.TestCase):
+            def runTest(self):
+                pass
+
+        identities = ['test_skill_review.ReviewTests.test_review', 'test_skill_report.ReportTests.test_deterministic',
+                      'test_historical_review_replay.HistoricalReviewReplayTests.test_saved_bytes',
+                      'test_skill_analysis.AnalysisTests.test_pinned_environment',
+                      'test_custom_metrics.CustomMetricTests.test_fixture',
+                      'test_scanner_caveats.ScannerCaveatTests.test_retained_adapter_compatibility_contracts',
+                      'test_semgrep.SemgrepTests.test_unavailable_scanner_is_incomplete',
+                      'test_skillspector.SkillSpectorTests.test_failed_and_unavailable_scanners_cannot_pass',
+                      'test_cli.CliTests.test_reports']
+        discovered = []
+        for identity in identities:
+            entry = Test()
+            entry.id = lambda value=identity: value
+            discovered.append(entry)
+        loader = unittest.TestLoader()
+        loader.discover = lambda _path: unittest.TestSuite([unittest.TestSuite(discovered)])
+        self.assertEqual([case.id() for case in contract_suite(loader)], identities[4:])
+        self.assertEqual([case.id() for case in contract_suite(loader, released=True)], [identities[-1]])
+        with patch.dict(os.environ, {'SKILL_EVALUATION_KIND': 'scanner-contracts'}), \
+                patch('static_evaluator.validate_install') as authenticate, \
+                patch.object(loader, 'loadTestsFromNames') as load:
+            scanner_suite(loader)
+        authenticate.assert_called_once_with(scanner_contracts=True)
+        load.assert_called_once_with(('test_scanner_caveats', 'test_semgrep', 'test_skillspector'))
 
     def test_inference_free_jobs_use_the_released_data_host(self):
         planner = yaml.safe_load((ROOT / orchestration.WORKFLOW).read_text())
@@ -568,9 +962,8 @@ class WorkflowAndUsageTests(unittest.TestCase):
             caller = next(s for s in steps if 'skill_orchestration.py ' + command in s.get('run', ''))
             self.assertLess(steps.index(setup), steps.index(caller))
             self.assertIn('"$SKILL_DATA_PYTHON"', caller['run'])
-        legacy = next(s for s in benchmark['jobs']['context']['steps']
-                      if 'setup-skillevaluator.sh reporting' in s.get('run', ''))
-        self.assertEqual(legacy['if'], "github.ref != 'refs/heads/main'")
+        self.assertFalse(any('setup-skillevaluator.sh reporting' in s.get('run', '')
+                             for s in benchmark['jobs']['context']['steps']))
 
     def test_mutable_history_is_read_after_setup_and_before_consumption(self):
         planner = yaml.safe_load((ROOT / orchestration.WORKFLOW).read_text())
@@ -581,7 +974,7 @@ class WorkflowAndUsageTests(unittest.TestCase):
             setups = [i for i, step in enumerate(steps) if 'setup-skillevaluator.sh' in step.get('run', '')
                       or 'setup-static-evaluator.sh' in step.get('run', '')]
             self.assertTrue(setups and all(history > i for i in setups))
-            features = [i for i, step in enumerate(steps) if '-m unittest discover' in step.get('run', '')]
+            features = [i for i, step in enumerate(steps) if 'test_evaluation_contracts.py' in step.get('run', '')]
             self.assertTrue(all(history > i for i in features))
 
     def test_usage_conflicts_unknowns_and_cache_accounting(self):

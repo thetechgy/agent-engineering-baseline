@@ -420,160 +420,57 @@ def replay(selected=None):
     return result
 
 
-def native_command(skill, mode, results):
-    return [
-        "skillevaluator",
-        "tier3",
-        "evaluate",
-        str(skill),
-        "--agents",
-        "codex",
-        "--agent-model",
-        "codex=" + reports.POLICY["model"],
-        "--env-mode",
-        "docker",
-        "--skill-workspace-mode",
-        "group",
-        "--grading-mode",
-        "default_plus_custom",
-        "--n-attempts",
-        str(reports.MODES[mode]),
-        "--no-stop-on-pass",
-        "--n-concurrent",
-        "2",
-        "--max-agents",
-        "1",
-        "--agent-runtime-preflight",
-        "--timeout-multiplier",
-        "2",
-        "--progress",
-        "plain",
-        "--harbor-keep-jobs",
-        "--results-dir",
-        str(results),
-    ]
-
-
 def benchmark(args):
-    selected = list(SMOKE) if args.smoke else [args.case] if args.case else None
-    dataset(selected=selected)
-    missing = [
-        name
-        for name in ("docker", "skillevaluator", "timeout")
-        if not shutil.which(name)
-    ]
-    reports.require(
-        not missing, "Unexecuted: missing pinned runtime tools: " + ", ".join(missing)
-    )
-    reports.require(
-        bool(os.environ.get("OPENAI_API_KEY")),
-        "Unexecuted: model credential unavailable",
-    )
-    import importlib.metadata
-
-    versions = {
-        "python": sys.version.split()[0],
-        "skillevaluator": importlib.metadata.version("skillevaluator"),
-        "harbor": importlib.metadata.version("harbor"),
-        "docker_compose": subprocess.check_output(
-            ["docker", "compose", "version", "--short"], text=True
-        ).strip(),
-    }
-    reports.validate_benchmark_versions(versions)
-    from skillevaluator.tier3.harbor import runner
-    import inspect
-
-    runner_path = Path(inspect.getfile(runner)).resolve()
-    evaluator_root = runner_path.parents[4]
-    revision = subprocess.check_output(
-        ["git", "-C", str(evaluator_root), "rev-parse", "HEAD"], text=True
-    ).strip()
-    reports.require(
-        revision == reports.POLICY["evaluator_revision"],
-        "Unreviewed evaluator revision",
-    )
-    codex_command = runner.build_harbor_run_command(
-        agent="codex", env_mode="docker", dataset_path="unused", job_name="pin-check"
-    )
-    reports.require(
-        "--ak" in codex_command
-        and codex_command[codex_command.index("--ak") + 1] == "version=" + reports.POLICY["codex"],
-        "Required pinned Codex patch is absent",
-    )
-    versions["evaluator_revision"] = revision
-    root = args.output.absolute()
-    reports.require(
-        not root.exists() and root.resolve() == root and not root.is_relative_to(ROOT),
-        "Use a new output directory outside checkout",
-    )
-    root.mkdir(parents=True)
-    mode = "standard" if args.smoke else args.mode
-    reports.write_json(
-        root / "selection.json",
-        {
-            "case_ids": [e["id"] for e in dataset(selected=selected)],
-            "diagnostic_only": bool(selected) or mode != "standard",
-            "mode": mode,
-        },
-    )
-    reports.write_json(root / "versions.json", versions)
-    skill = stage(ROOT, root / "bundle/gh", selected)
-    subprocess.run(
-        ["skillevaluator", "tier3", "validate", str(skill), "--strict", "--json"],
-        check=True,
-    )
-    command = native_command(skill, mode, root / "results")
-    command += [
-        "--evaluated-source-repository",
-        os.environ.get("GITHUB_REPOSITORY", "local/diagnostic"),
-        "--evaluated-source-revision",
-        subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
-        ).strip(),
-    ]
-    outcome = "failure"
-    try:
-        environment = {
-            **os.environ,
-            "SKILL_EVAL_LLM_PROVIDER": "openai",
-            "SKILL_EVAL_LLM_MODEL": reports.POLICY["model"],
-            "SKILL_EVAL_JUDGE_MODEL": reports.POLICY["model"],
-            "LLM_JUDGE_MODEL": reports.POLICY["model"],
-        }
-        subprocess.run(
-            ["timeout", "--signal=INT", "--kill-after=30s", "8400s", *command],
-            cwd=root,
-            env=environment,
-            check=True,
-        )
-        outcome = "success"
-    finally:
-        reports.recover_benchmark(ROOT, root, "gh", mode, outcome)
+    from benchmark_native import GH_ACCESS_METRIC, recover, run_output_provenance, validate_runtime
+    from benchmark_smoke import PROVIDER_CREDENTIALS
     from skillevaluator.evaluation import EvaluationService
 
-    run = EvaluationService().discover_latest_results(skill, root / "results")
-    reports.require(run is not None, "Missing complete native result")
-    result = reports.read_json(run / "result.json")
-    reports.require(
-        EvaluationService().failure_reason(result) is None
-        and result.get("report_status") == "complete",
-        "Incomplete native evaluation",
-    )
-    records = deterministic_gate(
-        run, [e["id"] for e in dataset(selected=selected)], reports.MODES[mode],
-        numeric_excerpts=local_numeric_excerpts(run),
-    )
-    reports.write_json(root / "deterministic.json", {"trials": records})
-    print(
-        json.dumps(
-            {
-                "evidence": "model-backed",
-                "task_trials": len(records),
-                "deterministic_gate": "passed",
-                "history_published": False,
-            }
+    selected = list(SMOKE) if args.smoke else [args.case] if args.case else None
+    cases = [entry["id"] for entry in dataset(selected=selected)]
+    mode = "standard" if args.smoke else args.mode
+    reports.require(os.environ.get("OPENAI_API_KEY"), "Unexecuted: model credential unavailable")
+    validate_runtime()
+    compose = subprocess.check_output(["docker", "compose", "version", "--short"], text=True, timeout=20)
+    reports.require(compose.strip() == reports.POLICY["docker_compose"], "Unexecuted: unsupported Compose version")
+    revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, timeout=20).strip()
+    root = args.output.absolute()
+    launcher = [sys.executable, "-B", str(ROOT / ".github/scripts/benchmark_native.py")]
+    scope = [str(root), "gh", mode, revision]
+    preparation_env = {name: value for name, value in os.environ.items() if name not in PROVIDER_CREDENTIALS}
+    prepare = [*launcher, "prepare", *scope]
+    for case in selected or []:
+        prepare.extend(["--gh-case", case])
+    subprocess.run(prepare, env=preparation_env, cwd=ROOT, check=True, timeout=360)
+    reports.write_json(root / "selection.json", {
+        "case_ids": cases, "diagnostic_only": bool(selected) or mode != "standard", "mode": mode,
+    })
+    outcome = "failure"
+    try:
+        result = subprocess.run(
+            ["timeout", "--signal=INT", "--kill-after=30s", "8400s", *launcher, "execute", *scope],
+            cwd=ROOT, check=False,
         )
-    )
+        if result.returncode == 0:
+            outcome = "success"
+        elif result.returncode in (124, 130, 137, 143):
+            outcome = "cancelled"
+        result.check_returncode()
+    except KeyboardInterrupt:
+        outcome = "cancelled"
+        raise
+    finally:
+        recover(ROOT, root, "gh", mode, revision, outcome)
+    service = EvaluationService()
+    with run_output_provenance(root):
+        run = service.discover_latest_results(root / "bundle/gh", root / "results")
+    reports.require(run is not None, "Missing complete native result")
+    report = reports.read_json(run / "result.json")
+    reports.require(service.failure_reason(report) is None and report.get("report_status") == "complete",
+                    "Incomplete native evaluation")
+    records = deterministic_gate(run, cases, reports.MODES[mode], authorization_metric=GH_ACCESS_METRIC)
+    reports.write_json(root / "deterministic.json", {"trials": records})
+    print(json.dumps({"evidence": "model-backed", "task_trials": len(records),
+                      "deterministic_gate": "passed", "history_published": False}))
 
 
 def redact_publication(value):
@@ -615,7 +512,8 @@ def local_numeric_excerpts(run):
                                            evidence.custom_contract("gh")[1])
 
 
-def deterministic_gate(run, case_ids, attempts, *, numeric_excerpts=None):
+def deterministic_gate(run, case_ids, attempts, *, numeric_excerpts=None, authorization_metric="gh_authorization"):
+    reports.require(authorization_metric in {"gh_authorization", "gh_access_policy"}, "Unknown gh access measurement")
     records = []
     for arm in ("with-skill", "without-skill"):
         rewards = sorted((run / "codex" / arm / "trials").glob("*/reward.json"))
@@ -650,11 +548,11 @@ def deterministic_gate(run, case_ids, attempts, *, numeric_excerpts=None):
                         "commands",
                         "task",
                         "recovery",
-                        "authorization",
                         "efficiency",
                         "gate",
                     )
-                },
+                }
+                | {authorization_metric},
                 "Missing deterministic scores",
             )
             reports.require(
@@ -738,7 +636,7 @@ def main():
         if name == "benchmark":
             cmd.add_argument("--mode", choices=reports.MODES, default="standard")
             cmd.add_argument("--smoke", action="store_true")
-            cmd.add_argument("--output", type=Path, default=Path("/tmp/gh-benchmark"))
+            cmd.add_argument("--output", type=Path, default=Path.home() / "worktrees/gh-benchmark")
         if name == "live":
             cmd.add_argument("--repo", required=True)
         if name == "stage":

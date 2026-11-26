@@ -22,9 +22,9 @@ class StaticQualityRoutingTests(unittest.TestCase):
 
         lock = ROOT / '.github/requirements/semgrep.txt'
         self.assertEqual(owner.SEMGREP_LOCK, evidence.digest_bytes(lock.read_bytes()))
-        if ISOLATED_SCRIPTS:
-            self.assertEqual(evidence.SCANNER_RUNTIME_STATIC_CANDIDATE['semgrep_lock'], owner.SEMGREP_LOCK)
-            self.assertEqual(evidence.SCANNER_RUNTIME_NEXT['semgrep_lock'], owner.SEMGREP_LOCK)
+        self.assertEqual(evidence.SCANNER_RUNTIME_STATIC_CANDIDATE['semgrep_lock'], owner.SEMGREP_LOCK)
+        self.assertEqual(evidence.SCANNER_RUNTIME_NEXT['semgrep_lock'], owner.SEMGREP_LOCK)
+        self.assertNotEqual(evidence.SCANNER_2136_INITIAL_NEXT['semgrep_lock'], owner.SEMGREP_LOCK)
 
     def test_static_consumer_and_retained_native_boundary_have_explicit_separate_owners(self):
         jobs = yaml.safe_load((ROOT / '.github/workflows/validate.yml').read_text())['jobs']
@@ -45,13 +45,20 @@ class StaticQualityRoutingTests(unittest.TestCase):
             if 'skill_reports.py' in step.get('run', '') and 'preflight' not in step['run']:
                 self.assertIn('"$SKILL_QUALITY_PYTHON" -B "$STATIC_QUALITY_SCRIPTS/skill_reports.py"', step['run'])
         self.assertIn('bash "$STATIC_QUALITY_SCRIPTS/collect-static-quality.sh"', body)
-        setup = next(step for step in contracts['steps'] if 'setup-skillevaluator' in step.get('run', ''))
-        self.assertEqual(setup['run'], 'bash .github/scripts/setup-skillevaluator.sh quality')
+        scanner_setup = 'bash .github/scripts/setup-static-evaluator.sh scanner-contracts'
+        scanner, = [step for step in contracts['steps'] if step.get('run') == scanner_setup]
+        self.assertFalse(any(step.get('run') == scanner_setup for step in quality['steps']))
+        scanner_tests = next(step for step in contracts['steps'] if ' scanner-contracts' in step.get('run', '')
+                             and 'test_evaluation_contracts.py' in step['run'])
+        self.assertLess(contracts['steps'].index(scanner), contracts['steps'].index(scanner_tests))
         native = [step for job in jobs.values() for step in job.get('steps', [])
                   if 'gh_container_validation.py' in step.get('run', '')]
         self.assertEqual(len(native), 1)
         self.assertIn(native[0], contracts['steps'])
-        self.assertIn('"$SKILL_EVALUATOR_PYTHON"', native[0]['run'])
+        self.assertIn('"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON"', native[0]['run'])
+        released_setup = next(step for step in contracts['steps']
+                              if 'setup-static-evaluator.sh native-benchmark-candidate' in step.get('run', ''))
+        self.assertLess(contracts['steps'].index(released_setup), contracts['steps'].index(native[0]))
         self.assertEqual(quality['permissions'], {'contents': 'read'})
         self.assertEqual(quality['if'], "needs.plan.outputs.quality == 'true'")
 
@@ -115,7 +122,7 @@ class StaticQualityRoutingTests(unittest.TestCase):
                 self.assertEqual(retained[0]['record']['policy']['published_id'], owner.PRODUCER)
                 self.assertEqual(retained[0]['record_id'], evidence.identity(record))
                 observation['record']['kind'] = 'behavioral'
-                with self.assertRaisesRegex(ValueError, 'Unsupported native evaluator'):
+                with self.assertRaisesRegex(ValueError, 'Static producer policy requires static evidence'):
                     history.validate(snapshot)
 
         active = evidence.SCANNER_RUNTIME_STATIC_CANDIDATE

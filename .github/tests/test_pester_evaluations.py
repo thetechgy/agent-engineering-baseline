@@ -78,10 +78,12 @@ class SelectionTests(unittest.TestCase):
         jobs = workflow['jobs']; steps = jobs['evaluate']['steps']
         prepare = next(s for s in steps if s.get('id') == 'preparation')
         evaluate = next(s for s in steps if s.get('id') == 'evaluation')
-        self.assertIn('skill_reports.py prepare', prepare['run'])
+        self.assertIn('benchmark_native.py prepare', prepare['run'])
         self.assertNotIn('powershell-pester-6', json.dumps(workflow))
-        self.assertNotIn('BENCHMARK_SKILL', evaluate['run'])
-        self.assertEqual(evaluate['env']['GRADING_MODE'], '${{ steps.preparation.outputs.grading_mode }}')
+        self.assertIn('benchmark_native.py execute', evaluate['run'])
+        self.assertNotIn('GRADING_MODE', evaluate['env'])
+        diagnostic = next(s for s in steps if 'benchmark_native.py diagnostic-report' in s.get('run', ''))
+        self.assertIn("history_eligible == 'false'", diagnostic['if'])
         self.assertIn("history_eligible == 'true'", jobs['publish-history']['if'])
         metrics = next(s for s in steps if s.get('with', {}).get('name') == 'skill-metrics')
         self.assertIn("history_eligible == 'true'", metrics['if'])
@@ -295,6 +297,8 @@ class NativeStagingTests(unittest.TestCase):
         self.assertEqual(rows[0]['suite']['owner'], 'overlay')
 
     def test_native_runner_collector_and_report_do_not_score_unsupported_zero(self):
+        from importlib.metadata import version
+
         from skillevaluator.tier3.harbor.collector import collect_harbor_results
         from skillevaluator.evaluation.tier3_report import agent_eval_result_from_directory, render_agent_eval_html_report
         from skillevaluator.tier3.harbor.adapter import TEMPLATES_DIR
@@ -335,7 +339,12 @@ class NativeStagingTests(unittest.TestCase):
             self.assertIsNone(summary['overall_score'])
             self.assertFalse(summary['pass_at_k'])
             retained = reports.read_json(next((destination / 'codex/with-skill/trials').glob('*/reward.json')))
-            self.assertEqual(retained['custom_details']['outcome']['classification'], 'unsupported')
+            if version('skillevaluator') == '1.0.1':
+                self.assertEqual(retained['evaluation_status'], 'failed')
+                self.assertEqual(retained['evaluation_errors'], {'applicability': 'Unsupported candidate; unassessed'})
+                self.assertNotIn('custom_metrics', retained)
+            else:
+                self.assertEqual(retained['custom_details']['outcome']['classification'], 'unsupported')
             skill = root / 'demo'; skill.mkdir()
             reports.write_json(destination / 'run_config.json', {'grading': {'mode': 'custom_only'}})
             payload = agent_eval_result_from_directory(skill, destination, use_llm_judge=False).metadata['agent_eval']

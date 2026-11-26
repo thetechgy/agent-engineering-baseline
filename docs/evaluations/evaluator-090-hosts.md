@@ -55,8 +55,8 @@ manually rerun historical or experiment-preparation matrices.
 
 Restore `reporting` and `SKILL_EVALUATOR_PYTHON` in the three job selections above
 from base `379f449`; restore operator base analysis/rendering to that interpreter.
-Use `bash .github/scripts/setup-skillevaluator.sh reporting` for the retained
-owner. Do not change global setup semantics, publisher commit/deploy jobs,
+From that checkout, use `bash .github/scripts/setup-skillevaluator.sh reporting`
+for the retained owner. Do not change global setup semantics, publisher commit/deploy jobs,
 benchmark execution, streams, history or ledger files. Review the reversal and
 normal selected checks before merging; do not dispatch the production publisher
 as a preparation test.

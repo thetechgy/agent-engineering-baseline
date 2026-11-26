@@ -361,7 +361,7 @@ def startup_observer(base, observations):
     return Observed
 
 
-async def startup_attempt(environment, *, inspect_image, cleanup_check, retain, diagnose=None):
+async def startup_attempt(environment, *, inspect_image, cleanup_check, retain, diagnose=None, check_containment=None):
     """No agent setup, command fixture, grader or reset; keep the primary exception."""
     row = {'status': 'starting', 'cleanup': 'pending'}
     primary = None; cleanup_error = None; evidence_error = None
@@ -381,6 +381,8 @@ async def startup_attempt(environment, *, inspect_image, cleanup_check, retain, 
         repeated = json.loads(first.read_text().splitlines()[-1])
         if initial != repeated or initial.get('status') != 'ready':
             raise RuntimeError('Repeated startup identity drift')
+        if check_containment is not None:
+            row['protected_state'] = await check_containment(environment)
         row.update(status='passed', repeated_identity_equal=True)
         if diagnose is not None: row['spawn_diagnostic'] = await diagnose()
     except BaseException as error:

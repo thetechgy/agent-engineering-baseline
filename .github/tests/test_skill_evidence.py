@@ -58,13 +58,15 @@ class EvidenceTests(unittest.TestCase):
 
     def copy_cli_modules(self, scripts, *extra):
         """Copy the complete authored CLI dependency layout, without bytecode."""
-        for name in ('skill_evidence.py', 'skill_reports.py', 'evaluator_profiles.py', 'unscored_security.py', *extra):
+        for name in ('skill_evidence.py', 'skill_reports.py', 'evaluator_profiles.py', 'static_evaluator.py',
+                     'unscored_security.py', *extra):
             shutil.copyfile(REPO / '.github/scripts' / name, scripts / name)
         config = scripts.parent / 'evals/evaluator-candidate.json'
         config.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(REPO / '.github/evals/evaluator-candidate.json', config)
         for name in ('evaluator-0.9.json', 'evaluator-0.9-offline-v2.json',
-                     'evaluator-0.9-accounting-v1.json', 'benchmark-090-accounting-v1.json'):
+                     'evaluator-0.9-accounting-v1.json', 'benchmark-090-accounting-v1.json',
+                     'evaluator-1.0.1-benchmark-candidate-v2.json', 'evaluator-1.0.1-benchmark-candidate-v3.json'):
             shutil.copyfile(REPO / '.github/evals' / name, config.with_name(name))
 
     def native(self):
@@ -2076,15 +2078,16 @@ class EvidenceTests(unittest.TestCase):
         from skillevaluator.tier3.harbor.metrics import DEFAULT_METRICS, dimension_scores
         with_scores = dict.fromkeys(DEFAULT_METRICS, 0.7)
         without_scores = dict.fromkeys(DEFAULT_METRICS, 0.6); without_scores['accuracy'] = 0.6003
-        lift = _compute_lift(with_scores, without_scores); overall = lift['overall']
-        self.assertNotEqual(overall['delta'], round(overall['with_skill'] - overall['without_skill'], 4))
+        lift = _compute_lift(with_scores, without_scores)
+        # The original collector rounds each arm and their unrounded difference separately.
+        lift['overall'] = {'with_skill': 0.7, 'without_skill': 0.6, 'delta': 0.0999}
         agent = {'with_skill': with_scores, 'without_skill': without_scores, 'lift': lift,
                  'dimensions_with_skill': dimension_scores(with_scores),
                  'dimensions_without_skill': dimension_scores(without_scores)}
-        self.assertTrue(evidence.validate_native_metrics(agent))
+        self.assertTrue(evidence.validate_native_metrics(agent, historical_scores=True))
         partial = copy.deepcopy(agent); partial.pop('with_skill'); partial.pop('without_skill')
         partial['lift'].pop('security')
-        self.assertFalse(evidence.validate_native_metrics(partial))
+        self.assertFalse(evidence.validate_native_metrics(partial, historical_scores=True))
         agent['lift'] = {'overall': lift['overall']}; agent.pop('with_skill'); agent.pop('without_skill')
         self.assertFalse(evidence.validate_native_metrics(agent))
         agent['lift']['overall']['delta'] = 0.5
@@ -4663,11 +4666,11 @@ class EvidenceTests(unittest.TestCase):
 
     def test_behavioral_reference_budget_supports_reward_companions(self):
         from skillevaluator.tier3.harbor import report_data as native_reports
-        from skillevaluator.tier3.harbor.collector import _pass_summary
         root = self.native(); run = next((root / 'results/podman').iterdir())
         entries = [{'id': str(i), 'question': 'Synthetic question', 'ground_truth': 'Synthetic answer',
                     'expected_skill': 'podman', 'skill_workspace_mode': 'isolated'} for i in range(1, 1001)]
         snapshot = native_reports.build_dataset_snapshot(entries, evaluator_version='0.3.0')
+        snapshot['schema_version'] = '1.0'
         write(run / 'dataset_snapshot.json', snapshot)
         config = evidence.read_json(run / 'run_config.json'); config['harbor']['n_attempts'] = 3
         write(run / 'run_config.json', config)
@@ -4682,24 +4685,31 @@ class EvidenceTests(unittest.TestCase):
             base = run / 'codex' / arm.replace('_', '-')
             summary = evidence.read_json(base / 'summary.json')
             templates = {}
-            for case, row in summary['pass_at_k']['cases'].items():
+            pass_at_k = summary['pass_at_k']
+            for case, row in pass_at_k['cases'].items():
                 trial = base / 'trials' / row['attempts'][0]['trial']
-                templates[case] = (evidence.read_json(trial / 'result.json'), evidence.read_json(trial / 'reward.json'))
+                templates[case] = (
+                    evidence.read_json(trial / 'result.json'), evidence.read_json(trial / 'reward.json'), row,
+                )
             shutil.rmtree(base / 'trials')
-            rewards = []
+            cases = {}
             for case in range(1, 1001):
+                native, reward, original = copy.deepcopy(templates[str((case - 1) % 10 + 1)])
+                attempts = []
                 for attempt in range(1, 4):
-                    native, reward = copy.deepcopy(templates[str((case - 1) % 10 + 1)])
                     trial = f'{case}__fixture-attempt{attempt}'
                     native.update(id=f'{arm}-{case}-{attempt}', trial_name=trial,
                                   task_name=f'nvidia/skillevaluator-{case}')
                     reward.update(entry_id=str(case), trial_id=trial)
                     write(base / 'trials' / trial / 'result.json', native)
                     write(base / 'trials' / trial / 'reward.json', reward)
-                    rewards.append({**reward, '_trial_name': trial})
+                    attempts.append(dict(original['attempts'][0], attempt=attempt, trial=trial))
+                cases[str(case)] = dict(original, attempts=attempts, attempts_used=3)
+            passed = sum(row['passed'] for row in cases.values())
+            pass_at_k.pop('rate_interval')
+            pass_at_k.update(k=3, total_cases=1000, attempts_used=3000, max_attempts_possible=3000,
+                             avg_attempts_used=3.0, cases=cases, passed_cases=passed, failed_cases=1000 - passed)
             summary.update(expected_attempts=3000, scored_attempts=3000, num_trials=3000)
-            summary['pass_at_k'] = _pass_summary(rewards, n_attempts=3, pass_threshold=policy['pass_threshold'],
-                                               expected_cases=1000, expected_case_ids=[str(i) for i in range(1, 1001)])
             write(base / 'summary.json', summary)
             result['agents']['codex']['conditions'][arm].update(expected_attempts=3000, scored_attempts=3000)
             result['agents']['codex']['pass_at_k'][arm] = summary['pass_at_k']
@@ -5027,11 +5037,14 @@ class EvidenceTests(unittest.TestCase):
                        'results/private.json', 'README.md'):
             target = path / member; target.parent.mkdir(parents=True, exist_ok=True); target.write_text('{}')
         files = evidence.safe_tree(path)
-        ignore = adapter._runtime_skill_copy_ignore(path)
-        expected = [p for p in files if not adapter._runtime_projection_path_is_ignored(p, path, ignore)]
+        # The retained source contract includes a regular file named evals
+        # under a nested directory.
+        expected = [path / member for member in (
+            'README.md', 'SKILL.md', 'nested/evals', 'nested/skill.md', 'examples/evals/visible.json',
+        )]
         with patch.object(adapter, '_runtime_skill_copy_ignore', side_effect=AssertionError('Filesystem selector invoked')), \
                 patch.object(output_provenance, '_load_existing_key') as key:
-            self.assertEqual(evidence.skill_projection_files(path, files), expected)
+            self.assertCountEqual(evidence.skill_projection_files(path, files), expected)
             evidence.skill_content(path)
             key.assert_not_called()
 

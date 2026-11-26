@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 import errno
 import hashlib
+from importlib.metadata import PackageNotFoundError, version as installed_version
 import json
 import math
 import os
@@ -24,6 +25,7 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import skill_reports as reports
 import evaluator_profiles as profiles
+import static_evaluator
 import unscored_security
 
 # Frozen static admission identity, not a freshness inventory. Retain this profile
@@ -47,12 +49,16 @@ SCANNER_RUNTIME_2134 = {**SCANNER_RUNTIME_PREVIOUS,
                    "versions": {**SCANNER_RUNTIME_PREVIOUS["versions"], "semgrep": "1.185.0"},
                    "skillspector_lock": "sha256:3352c462434ed1d906069b710bfba8b352c255139a0c5718f4edb6ad4051be2b",
                    "semgrep_lock": "sha256:d0c13313fb643f578a8116375078d344bfcf74748380ca88acd6e0d7d467c520"}
-SCANNER_RUNTIME = {
+SCANNER_RUNTIME_2136_INITIAL = {
     **SCANNER_RUNTIME_2134,
     "versions": {**SCANNER_RUNTIME_2134["versions"], "skillspector": "2.13.6", "semgrep": "1.186.0"},
     "skillspector_revision": "e2674da339b0bddc6e565d059c0577c6d9cd25da",
     "skillspector_lock": "sha256:5ab9adb9707d66ee786cf934509d6c8d7258fb7ce12ebbc6a5b74fee35733fd1",
     "semgrep_lock": "sha256:f0e17604bc64d9189ea4165c1e7fb5612834488d4be786312601d0f04763053e",
+}
+SCANNER_RUNTIME = {
+    **SCANNER_RUNTIME_2136_INITIAL,
+    "semgrep_lock": static_evaluator.SEMGREP_LOCK,
 }
 
 
@@ -63,12 +69,24 @@ def scanner_adapters(patched):
 
 
 SCANNER_2134_UNPATCHED, SCANNER_2134_NEXT = scanner_adapters(SCANNER_RUNTIME_2134)
+SCANNER_2136_INITIAL_UNPATCHED, SCANNER_2136_INITIAL_NEXT = scanner_adapters(
+    SCANNER_RUNTIME_2136_INITIAL)
 SCANNER_RUNTIME_CURRENT_UNPATCHED, SCANNER_RUNTIME_NEXT = scanner_adapters(SCANNER_RUNTIME)
-RELEASED_SCANNER_RUNTIMES = (SCANNER_2134_NEXT, SCANNER_RUNTIME_NEXT)
-CAVEAT_SCANNER_RUNTIMES = (SCANNER_RUNTIME_PREVIOUS, SCANNER_RUNTIME_2134, SCANNER_RUNTIME,
+SCANNER_RUNTIME_STATIC_CANDIDATE = {
+    **SCANNER_RUNTIME_CURRENT_UNPATCHED, 'evaluator_revision': static_evaluator.REVISION
+}
+SCANNER_2136_INITIAL_STATIC = {
+    **SCANNER_2136_INITIAL_UNPATCHED, 'evaluator_revision': static_evaluator.REVISION
+}
+STATIC_SCANNER_RUNTIMES = (SCANNER_2136_INITIAL_STATIC, SCANNER_RUNTIME_STATIC_CANDIDATE)
+RELEASED_SCANNER_RUNTIMES = (SCANNER_2134_NEXT, SCANNER_2136_INITIAL_NEXT, SCANNER_RUNTIME_NEXT,
+                             *STATIC_SCANNER_RUNTIMES)
+CAVEAT_SCANNER_RUNTIMES = (SCANNER_RUNTIME_PREVIOUS, SCANNER_RUNTIME_2134,
+                           SCANNER_RUNTIME_2136_INITIAL, SCANNER_RUNTIME,
                            *RELEASED_SCANNER_RUNTIMES)
 SCANNER_RUNTIMES = (SCANNER_RUNTIME_UNPATCHED, SCANNER_2134_UNPATCHED,
-                    SCANNER_RUNTIME_CURRENT_UNPATCHED, *CAVEAT_SCANNER_RUNTIMES)
+                    SCANNER_2136_INITIAL_UNPATCHED, SCANNER_RUNTIME_CURRENT_UNPATCHED,
+                    *CAVEAT_SCANNER_RUNTIMES)
 
 ROOT = Path(__file__).resolve().parents[2]
 JSON_LIMIT = 8 * 1024 * 1024
@@ -1094,7 +1112,12 @@ def strict_dataset(path, name, *, reader=None, directory_identities=None, direct
         if target in tree_entries:
             # Capture before invoking validators that may catch parse/read errors.
             optional_reader(target)
-            native_spec._run_file_checks(captured_tree.at(target), spec, checks)
+            if spec.rel_path in ('evals/config.yml', 'evals/config.yaml') and static_evaluator.is_owner():
+                # The released validator opens configs through SecureRoot.
+                # Use its parser on the confined bytes already captured above.
+                static_evaluator.validate_captured_config(captured_tree)
+            else:
+                native_spec._run_file_checks(captured_tree.at(target), spec, checks)
     native_spec._check_unrecognised(captured_tree, checks)
     require(all(row.status == 'ok' for row in checks), 'Strict dataset contract failed')
     for entry in entries:
@@ -1330,6 +1353,22 @@ SCORE_FIELDS = ('security', 'skill_execution', 'skill_efficiency', 'accuracy', '
                 'behavior_check', 'overall', 'custom')
 
 
+def deterministic_observation(value, skill, *, released_native=False):
+    keys = {field: 'gh_' + field for field in GATE_FIELDS}
+    if released_native:
+        from benchmark_native import GH_ACCESS_METRIC
+
+        keys['authorization'] = GH_ACCESS_METRIC
+    require(type(value) is dict and (not value or skill == 'gh' and set(value) == set(keys.values())),
+            'Unsupported custom grading contract')
+    if value:
+        require(all(type(v) in (int, float) and v in (0, 1) for v in value.values()),
+                'Invalid deterministic observation')
+        require(value['gh_gate'] == float(all(v == 1 for k, v in value.items() if k != 'gh_gate')),
+                'Gate consistency')
+    return {key: value.get(native_key) for key, native_key in keys.items()}
+
+
 def validate_build(value):
     closed(value, ('base_image', 'apt_snapshot', 'apt_packages'))
     require(type(value['base_image']) is str and bool(re.fullmatch(r'[a-z0-9./:_-]+@sha256:[0-9a-f]{64}', value['base_image'])), 'Invalid base image')
@@ -1344,12 +1383,73 @@ def policy_fields(value):
     return {key: copy.deepcopy(value.get(key)) for key in POLICY_FIELDS}
 
 
-def validate_policy(value, *, custom_only=False):
+def native_diagnostic_profile(revision, patch):
+    if revision != profiles.RELEASE_BENCHMARK['revision']:
+        return None
+    from benchmark_native import NATIVE_PATCH_DIGEST, native_profile
+
+    return native_profile() if patch == 'sha256:' + NATIVE_PATCH_DIGEST else None
+
+
+def released_policy_identity(value, *, custom_only, static):
+    """A production score series has a distinct identity from offline candidates."""
+    fields = value['fields']
+    if fields.get('evaluator_revision') != profiles.RELEASE_BENCHMARK['revision']:
+        return False
+    from benchmark_native import BACKENDS, NATIVE_PATCH_DIGEST, released_policy, score_series
+
+    if value.get('patch_digest') != 'sha256:' + NATIVE_PATCH_DIGEST or (custom_only and value.get('producer_profile')):
+        return False
+    say = 'Invalid released benchmark policy'
+    require(not static and not custom_only and value.get('producer_profile') is None
+            and value.get('metric_set') == 'skill-evaluator-default-v2', say)
+    attempts = value.get('attempts')
+    require(type(attempts) is dict and type(attempts.get('mode')) is str, say)
+    mode = attempts['mode']
+    require(mode in reports.MODES and attempts.get('maximum') == reports.MODES[mode]
+            and attempts.get('stop_on_pass') is False and attempts.get('pass_threshold') == 0.5
+            and value.get('provenance') == 'runtime_recorded', say)
+    suite = next((name for name, backend in BACKENDS.items() if fields.get('environment') == backend), None)
+    require(suite is not None and value.get('published_id') == score_series(suite, mode), say)
+    expected = released_policy(suite)
+    require(fields == policy_fields({key: expected[key] for key in POLICY_FIELDS if key in expected})
+            and value['judge'] == {'model': expected['model'], 'provider': expected['provider'], 'enabled': True}, say)
+    return True
+
+
+def require_released_report_population(record):
+    custom_only = record['policy']['fields']['grading'] == 'custom_only'
+    if not released_policy_identity(record['policy'], custom_only=custom_only, static=False):
+        return
+    from benchmark_native import BACKENDS
+    from skill_analysis import complete_numeric
+
+    skill = record['source']['skill_id']
+    require(record['policy']['fields']['environment'] == BACKENDS.get(skill),
+            'Released report suite differs from its producer')
+    require(record['dataset']['authored_digest'] is not None and record['dataset']['staged_digest'] is not None
+            and complete_numeric(record) and not {'coverage_missing', 'case_details_missing', 'execution_incomplete',
+                                                  'metadata_missing'}.intersection(record['availability']['reasons']),
+            'Released benchmark requires an authenticated complete cohort')
+    if skill == 'gh':
+        require(all(obs['deterministic_gate'] is not None
+                    and (obs['arm'] == 'without_skill' or obs['deterministic_gate'] == 1)
+                    for obs in record['observations']), 'Released gh report lacks its required gates')
+
+
+def validate_policy(value, *, custom_only=False, static=False):
     require(type(value) is dict, 'Invalid policy')
     require(type(value.get('fields')) is dict, 'Invalid policy fields')
-    candidate = profiles.candidate_revision(value['fields'].get('evaluator_revision'),
-        producer_id=value.get('producer_profile'), patch=value.get('patch_digest'))
-    require(candidate is not None or profiles.candidate_revision(value['fields'].get('evaluator_revision')) is None,
+    runtime_revision = value['fields'].get('evaluator_revision')
+    require(static or value.get('published_id') != static_evaluator.PRODUCER, 'Static producer policy requires static evidence')
+    static_release = static and runtime_revision == static_evaluator.REVISION
+    released = released_policy_identity(value, custom_only=custom_only, static=static)
+    diagnostic = native_diagnostic_profile(runtime_revision, value.get('patch_digest')) if custom_only else None
+    candidate = None
+    if not static_release and not released:
+        candidate = diagnostic or profiles.candidate_revision(runtime_revision, producer_id=value.get('producer_profile'),
+                                                             patch=value.get('patch_digest'))
+    require(static_release or released or candidate is not None or profiles.candidate_revision(runtime_revision) is None,
             'Unsupported candidate producer identity')
     closed(value, ('id', 'published_id', 'provenance', 'patch_digest', 'fields', 'metric_set', 'judge', 'attempts') + (('producer_profile', 'scoring_policy') if candidate else ()))
     if candidate:
@@ -1375,9 +1475,25 @@ def validate_policy(value, *, custom_only=False):
             validate_build(val)
         else:
             token(val)
-    if fields['evaluator_revision'] is not None:
+    if fields['evaluator_revision'] == static_evaluator.REVISION and static:
+        require(value['published_id'] == static_evaluator.PRODUCER and value['patch_digest'] is None
+                and value['judge'] == {'model': None, 'provider': None, 'enabled': False}
+                and all(fields[key] == static_evaluator.VERSIONS[key] for key in ('python', 'harbor')),
+                'Contradictory static candidate policy')
+    elif fields['evaluator_revision'] is not None:
         profiles.by_revision(fields['evaluator_revision'])
     judge = value['judge']; closed(judge, ('model', 'provider', 'enabled'))
+    if diagnostic:
+        from benchmark_native import DIAGNOSTIC_BACKEND
+
+        require(fields['environment'] == DIAGNOSTIC_BACKEND and fields['grading'] == 'custom_only'
+                and fields['task_source'] == 'native_harbor' and fields['workspace_mode'] == 'isolated'
+                and fields['model'] == reports.POLICY['model'] and fields['provider'] == reports.POLICY['provider']
+                and value['metric_set'] == 'custom-only' and value['published_id'] is None
+                and judge == {'model': None, 'provider': None, 'enabled': False}
+                and value['attempts'] == {'mode': 'confirmation', 'maximum': reports.MODES['confirmation'],
+                                          'stop_on_pass': False, 'pass_threshold': None},
+                'Invalid released diagnostic policy')
     optional(judge['model'], token); optional(judge['provider'], token); optional(judge['enabled'], boolean)
     closed(value['attempts'], ('mode', 'maximum', 'stop_on_pass', 'pass_threshold'))
     enum(value['attempts']['mode'], ('standard', 'confirmation', 'unknown'))
@@ -1402,7 +1518,10 @@ def make_policy(fields=None, patch=None, metric_set=None, judge=None, attempts=N
     value = {'fields': policy_fields(fields or {}), 'patch_digest': patch, 'metric_set': metric_set,
              'judge': judge or {'model': None, 'provider': None, 'enabled': None},
              'attempts': attempts or {'mode': 'unknown', 'maximum': None, 'stop_on_pass': None, 'pass_threshold': None}}
-    if candidate := profiles.candidate_revision(value['fields']['evaluator_revision'], patch=patch):
+    revision = value['fields']['evaluator_revision']
+    diagnostic = native_diagnostic_profile(revision, patch) if metric_set == 'custom-only' else None
+    candidate = diagnostic or profiles.candidate_revision(revision, patch=patch)
+    if published != static_evaluator.PRODUCER and candidate:
         value.update(producer_profile=candidate['id'], scoring_policy='custom-overall-v1' if metric_set == 'custom-only' else candidate['scoring'])
     return {**value, 'id': identity(value) if provenance != 'unknown' else None,
             'provenance': provenance, 'published_id': published}
@@ -1534,9 +1653,6 @@ def validate_evidence(data, *, public=False, _observed_at=None):
     if 'scanner_runtime' in data:
         require(data.get('kind') == 'static' and data['scanner_runtime'] in SCANNER_RUNTIMES,
                 'Unsupported or contradictory scanner runtime')
-        require((data['scanner_runtime'] in RELEASED_SCANNER_RUNTIMES) ==
-                (data['policy']['fields']['evaluator_revision'] == profiles.NEXT['revision']),
-                'Scanner adapter and public producer differ')
         fields += ('scanner_runtime',)
     if 'coverage_caveats' in data:
         require(data.get('kind') == 'static' and data.get('scanner_runtime') in CAVEAT_SCANNER_RUNTIMES,
@@ -1570,7 +1686,15 @@ def validate_evidence(data, *, public=False, _observed_at=None):
     require(ds['staged_digest'] is None or ds['staged_algorithm'] == 'skill-evaluator-dataset-snapshot/1',
             'Missing staged digest algorithm')
     ids = case_ids(ds['case_ids']); require(ds['case_cohort_digest'] == identity(sorted(ids)), 'Cohort mismatch')
-    validate_policy(data['policy'])
+    validate_policy(data['policy'], static=data['kind'] == 'static')
+    if data['kind'] == 'static':
+        revision = data['policy']['fields']['evaluator_revision']
+        if 'scanner_runtime' in data:
+            require(scanner_owner_matches(data['scanner_runtime'], revision),
+                    'Scanner adapter and public producer differ')
+        if revision == static_evaluator.REVISION:
+            require(data.get('scanner_runtime') in STATIC_SCANNER_RUNTIMES,
+                    'Missing static candidate scanner provenance')
     availability = data['availability']; closed(availability, ('status', 'reasons', 'provenance'))
     enum(availability['status'], ('complete', 'incomplete', 'unavailable')); enum(availability['provenance'], PROVENANCE)
     require(type(availability['reasons']) is list and len(availability['reasons']) <= len(REASONS)
@@ -1880,7 +2004,7 @@ def validate_evidence(data, *, public=False, _observed_at=None):
             finding_indices[scanner] += 1
         require(aggregate['passed'] == all(scan['passed'] is True or not scan.get('blocking', True)
                                          for scan in validators), 'Static aggregate gate contradiction')
-        if data['policy']['fields']['evaluator_revision'] == profiles.NEXT['revision']:
+        if data['policy']['fields']['evaluator_revision'] in (profiles.NEXT['revision'], static_evaluator.REVISION):
             failing = [scan for scan in validators if scan.get('blocking', True) and scan['passed'] is not True]
             expected = ('passed' if not failing else 'incomplete'
                         if all(scan['status'] == 'incomplete' for scan in failing) else 'failed')
@@ -2104,7 +2228,12 @@ def select_run(root, name, selected, *, entries=None, directory_identities=None)
     return candidates[0]
 
 
-def validate_runtime_versions(versions):
+def scanner_owner_matches(runtime, revision):
+    expected = revision if revision in (profiles.NEXT['revision'], static_evaluator.REVISION) else None
+    return runtime.get('evaluator_revision') == expected
+
+
+def validate_runtime_versions(versions, *, historical_read=False):
     require(type(versions) is dict, 'Native versions object required')
     if 'scanner_runtime' in versions:
         require(versions['scanner_runtime'] in SCANNER_RUNTIMES
@@ -2114,9 +2243,36 @@ def validate_runtime_versions(versions):
     elif versions.get('skillspector_revision') in (SCANNER_RUNTIME_2134['skillspector_revision'],
                                                  SCANNER_RUNTIME['skillspector_revision']):
         require(False, 'Missing scanner runtime provenance')
-    profile = profiles.runtime(versions, owning=True)
+    if versions.get('producer_profile') == static_evaluator.PRODUCER:
+        require(versions.get('scanner_runtime') in STATIC_SCANNER_RUNTIMES,
+                'Missing static candidate scanner provenance')
+        return static_evaluator.validate_owner(versions)
+    historical_reader = (
+        historical_read and versions.get('evaluator_revision') in (None, profiles.HISTORICAL_REVISION)
+        and versions.get('skillevaluator') in (None, '0.3.0') and static_evaluator.is_owner()
+    )
+    if historical_reader:
+        # Authenticate the reader independently of the provenance in the input.
+        # The benchmark installation carries a separately pinned provider patch.
+        release = profiles.RELEASE_BENCHMARK
+        try:
+            benchmark_install = installed_version('aeb-gh-fixture') == release['dependencies']['aeb-gh-fixture']
+        except PackageNotFoundError:
+            benchmark_install = False
+        if benchmark_install:
+            try:
+                profiles.runtime(profiles.candidate_versions(release), owning=True)
+            except ValueError:
+                # Both reviewed native installations have the same wheel. The
+                # producer identity of the historical input is independent of
+                # which authenticated installation reads it.
+                from benchmark_native import validate_runtime
+                validate_runtime()
+        else:
+            static_evaluator.validate_install()
+    profile = profiles.runtime(versions, owning=not historical_reader)
     if 'scanner_runtime' in versions:
-        require((versions['scanner_runtime'] in RELEASED_SCANNER_RUNTIMES) == (profile is profiles.NEXT),
+        require(scanner_owner_matches(versions['scanner_runtime'], profile['revision']),
                 'Scanner adapter and evaluator owner differ')
     return profile
 
@@ -2128,7 +2284,18 @@ def native_error_count(record):
     return len(errors)
 
 
-def validate_native_metrics(agent):
+def historical_trial_ordinal(trial):
+    """Read the explicit attempt marker the original collector used."""
+    match = re.search(r'attempt0*(\d+)', trial, flags=re.IGNORECASE)
+    return int(match[1]) if match else None
+
+
+def historical_metric_mean(row, metrics):
+    # Recorded v0.3 overalls averaged native metric values before rounding.
+    return sum(row[name] for name in metrics) / len(metrics)
+
+
+def validate_native_metrics(agent, *, historical_scores=False):
     """Check native report arithmetic using the pinned producer's pure helpers."""
     from skillevaluator.tier3.harbor.collector import _compute_lift
     from skillevaluator.tier3.harbor.metrics import DEFAULT_METRICS, dimension_scores
@@ -2149,6 +2316,15 @@ def validate_native_metrics(agent):
     expected = _compute_lift(scores['with_skill'], scores['without_skill'])
     if not all(set(DEFAULT_METRICS) <= set(values) for values in scores.values()):
         expected.pop('overall', None)  # This adapter requires the v2 metric set.
+    elif historical_scores:
+        with_skill, without_skill = (
+            historical_metric_mean(scores[arm], DEFAULT_METRICS)
+            for arm in ('with_skill', 'without_skill')
+        )
+        expected['overall'] = {
+            'with_skill': round(with_skill, 4), 'without_skill': round(without_skill, 4),
+            'delta': round(with_skill - without_skill, 4),
+        }
     for key, row in lift.items():
         if key not in (*DEFAULT_METRICS, 'overall'): continue
         require(type(row) is dict, 'Invalid native metric components')
@@ -2253,7 +2429,29 @@ def validate_summary_rollups(payload, cases, ids, maximum, stop_on_pass, *, vers
         match(payload, 'avg_attempts_used', round(attempts_used / total, 4) if total else 0.0)
 
 
-def reconcile_native_arm(agent, arm, summary, observations, details, *, candidate=False):
+def validate_101_partial_rollups(payload, cases, ids, maximum, stop_on_pass, *, versioned=True):
+    """Authenticate the release's incomplete rollups without inventing a rate."""
+    partial = {'failed_cases', 'unresolved_cases', 'rate', 'rate_interval'}
+    require(partial | {'passed_cases', 'attempts_used'} <= payload.keys()
+                    and payload['rate'] is None and payload['rate_interval'] is None
+                    and set(cases) == set(ids) and maximum in reports.MODES.values() and stop_on_pass is False,
+                    'Invalid partial benchmark rollup')
+    validate_summary_rollups({key: value for key, value in payload.items() if key not in partial},
+             cases, ids, maximum, stop_on_pass, versioned=versioned)
+    require(all(type(row.get('attempts_recovered')) is int and row['attempts_recovered'] == 0
+                        and type(row.get('attempts')) is list and len(row['attempts']) <= maximum
+                        and type(row.get('passed')) is bool for row in cases.values()),
+                    'Unexpected partial benchmark attempt accounting')
+    passed = sum(row['passed'] for row in cases.values())
+    failed = sum(len(row['attempts']) == maximum and not row['passed'] for row in cases.values())
+    unresolved = len(ids) - passed - failed
+    require(payload['attempts_used'] < len(ids) * maximum
+                    and type(payload['failed_cases']) is int and payload['failed_cases'] == failed
+                    and type(payload['unresolved_cases']) is int and payload['unresolved_cases'] == unresolved,
+                    'Partial benchmark rollup count mismatch')
+
+
+def reconcile_native_arm(agent, arm, summary, observations, details, *, candidate=False, historical_scores=False):
     """Bind retained arm summaries and report metrics to logical trial scores."""
     from skillevaluator.tier3.harbor.metrics import DEFAULT_METRICS, average_metrics, dimension_scores, overall_score
     from skillevaluator.tier3.harbor.collector import _average_overall
@@ -2304,7 +2502,8 @@ def reconcile_native_arm(agent, arm, summary, observations, details, *, candidat
     for row in rewards:
         for value in row.values(): optional(value, number)
         if all(row.get(key) is not None for key in DEFAULT_METRICS):
-            require(row['overall'] == round(overall_score(row), 4), 'Native trial metric disagreement')
+            score = historical_metric_mean(row, DEFAULT_METRICS) if historical_scores else overall_score(row)
+            require(row['overall'] == round(score, 4), 'Native trial metric disagreement')
     optional(summary.get('overall_score'), number)
     if details == 'complete' and complete and rewards and len(rewards) == len(observations):
         means = average_metrics(rewards)[0]
@@ -2312,9 +2511,10 @@ def reconcile_native_arm(agent, arm, summary, observations, details, *, candidat
             require(value == means[key], 'Native arm/trial metric disagreement')
         if summary.get('overall_score') is not None:
             number(summary['overall_score'])
-            require(summary['overall_score'] == _average_overall(rewards) or
-                    candidate and
-                    abs(summary['overall_score'] - _average_overall(rewards)) <= 0.000100000001,
+            overall = (round(sum(historical_metric_mean(row, DEFAULT_METRICS) for row in rewards) / len(rewards), 4)
+                       if historical_scores else _average_overall(rewards))
+            require(summary['overall_score'] == overall or
+                    candidate and abs(summary['overall_score'] - overall) <= 0.000100000001,
                     'Native arm/trial metric disagreement')
     return complete
 
@@ -2465,11 +2665,38 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
     versions = {}
     if root / 'versions.json' in scanned_entries:
         versions = read_member(root / 'versions.json')
-        validate_runtime_versions(versions)
         ref(root / 'versions.json')
     if any(versions.get(key) is None for key in ('skillevaluator', 'evaluator_revision')):
         limitations.add('metadata_missing')
-    producer = profiles.runtime(versions, owning=True)
+    producer = validate_runtime_versions(versions, historical_read=benchmark_meta is None)
+    released_native = False
+    if producer.get('id') == versions.get('producer_profile') and versions.get('producer_profile') is not None:
+        from benchmark_native import NATIVE_PATCH_DIGEST, NATIVE_PRODUCER, released_policy, score_series
+
+        released_native = producer['id'] == NATIVE_PRODUCER
+    if released_native:
+        require(benchmark_meta is None and not recovery and not provenance, 'Unexpected released native provenance')
+        prepared_path = root / 'native-preparation.json'
+        prepared = read_member(prepared_path)
+        closed(prepared, ('schema_version', 'revision', 'skill', 'mode', 'backend', 'producer_profile',
+                          'dataset_profile', 'dataset_sha256', 'gh_manifest'))
+        mode = prepared['mode']
+        require(type(prepared['schema_version']) is int and prepared['schema_version'] == 1
+                and prepared['skill'] == name and mode in reports.MODES
+                and prepared['producer_profile'] == NATIVE_PRODUCER, 'Released preparation differs from the report')
+        revision(prepared['revision'])
+        sha('sha256:' + prepared['dataset_sha256'])
+        expected = released_policy(name)
+        require(prepared['backend'] == expected['environment'] and prepared['dataset_profile'] == expected['dataset_profile'],
+                'Released preparation policy differs from the report')
+        require((name == 'gh' and isinstance(prepared['gh_manifest'], str)
+                 and re.fullmatch(r'manifest-[0-9a-f]{64}\.json', prepared['gh_manifest']))
+                or (name == 'podman' and prepared['gh_manifest'] is None), 'Released preparation manifest differs')
+        ref(prepared_path)
+        provenance = {'schema_version': 1, 'skill': name, 'mode': mode, 'revision': prepared['revision'],
+                      'policy_id': score_series(name, mode), 'patch_sha256': NATIVE_PATCH_DIGEST,
+                      'policy': {key: expected[key] for key in POLICY_FIELDS if key in expected}}
+    historical_scores = producer['revision'] == profiles.HISTORICAL_REVISION
     if benchmark_meta is not None:
         require(producer['id'] == profiles.benchmark_profile(benchmark_meta['profile'])['producer'], 'Versioned benchmark producer mismatch')
     expected_scoring = producer['scoring']
@@ -2495,6 +2722,16 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
         # preserving its byte/node bounds without reopening the input member.
         expected = native_reports.build_dataset_snapshot(
             [entry for entry in snapshot['dataset'] if type(entry) is dict], evaluator_version=producer['version'])
+        if historical_scores:
+            # Schema 1.0 derived activation intent from expected_skill presence.
+            entries = expected['dataset']
+            positive = sum(row.get('expected_skill') is not None for row in entries)
+            negative = sum('expected_skill' in row and row['expected_skill'] is None for row in entries)
+            expected['schema_version'] = '1.0'
+            expected['dataset_summary'].update(
+                positive_tasks=positive, negative_tasks=negative,
+                unclassified_tasks=len(entries) - positive - negative,
+            )
         require(all(snapshot.get(key) == value for key, value in expected.items()), 'Invalid native snapshot')
         ids = sorted(case_ids([validate_case_id(e['id']) for e in snapshot['dataset']]))
         require(result.get('dataset_digest') == snapshot['dataset_digest']
@@ -2503,7 +2740,8 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
             require(result['dataset_digest_algorithm'] == snapshot['dataset_digest_algorithm'],
                     'Snapshot/result algorithm mismatch')
         if result.get('dataset_snapshot') is not None:
-            require(result['dataset_snapshot'] == snapshot, 'Embedded snapshot mismatch')
+            embedded = {key: value for key, value in snapshot.items() if key != 'dataset'} if released_native else snapshot
+            require(result['dataset_snapshot'] == embedded, 'Embedded snapshot mismatch')
         ref(snapshot_path)
     else:
         # Explicit summary case identities suffice for partial evidence, never guessed task names.
@@ -2561,7 +2799,10 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
     judge = config.get('judge', {})
     declared_fields = provenance.get('policy', {})
     patch_digest = 'sha256:' + provenance['patch_sha256'] if provenance.get('patch_sha256') else None
-    if profiles.is_candidate(producer):
+    if released_native:
+        require(has_attempt and attempts['pass_threshold'] == 0.5 and result['report_status'] == 'complete',
+                'Released benchmark needs complete execution and its exact attempt policy')
+    elif profiles.is_candidate(producer):
         # Missing policy metadata cannot erase an independently captured producer.
         # Supplied contradictions were rejected above; fill only recorded runtime facts.
         declared_fields = dict(declared_fields)
@@ -2588,6 +2829,8 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
         if blob is not None:
             data['dataset']['authored_digest'] = digest_bytes(blob)
             data['dataset']['authored_provenance'] = 'reconstructed_from_declared_revision'
+            if released_native and set(ids) != {str(row['id']) for row in parse_json(blob)['evals']}:
+                limitations.add('coverage_missing')
     agent = result['agents']['codex']
     native_conditions = agent['conditions']
     require(type(native_conditions) is dict and set(native_conditions) == {'with_skill', 'without_skill'}, 'Invalid native conditions')
@@ -2599,10 +2842,13 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
             for carrier in (result, agent):
                 if key in carrier:
                     require(type(carrier[key]) is int and carrier[key] == sum(values), 'Conflicting aggregate coverage')
-    if benchmark_meta is not None:
+    if released_native:
+        released_rewards = {arm: [] for arm in native_conditions}
+        data['metrics'] = reports.metric_rows(agent)
+    elif benchmark_meta is not None:
         pass  # Versioned native aggregates are checked against captured rewards below.
     elif all(k in agent for k in ('lift', 'dimensions_with_skill')):
-        complete_metrics = validate_native_metrics(agent)
+        complete_metrics = validate_native_metrics(agent, historical_scores=historical_scores)
         if not complete_metrics: limitations.add('coverage_missing')
         try:
             if complete_metrics or not _custom_admission:
@@ -2717,7 +2963,8 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                 require(expected is None or len(lookup) < expected, 'Summary attempt limit')
                 require(trial not in lookup, 'Duplicate summary trial')
                 lookup[trial] = (case, attempt)
-        validate_summary_rollups(pass_data, native_cases, ids, maximum, stop_on_pass, versioned=benchmark_meta is not None)
+        validate_summary_rollups(pass_data, native_cases, ids, maximum, stop_on_pass,
+                                 versioned=benchmark_meta is not None or released_native)
         observed = []; missing_rubric_details = False
         if trials_by_arm[arm]:
             for path in trials_by_arm[arm]:
@@ -2746,7 +2993,13 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                 require(task_case == case and task_case in known_cases, 'Trial task case identity mismatch')
                 require(case in known_cases and (matched is None or case == matched[0]), 'Trial case identity mismatch')
                 # Attempt index must be runtime recorded. A missing index never comes from directory order.
-                attempt = {'attempt': None, 'score': None, 'passed': None, **matched[1]} if matched else {'attempt': _attempt_ordinal({'_trial_name': trial}), 'score': None, 'passed': None}
+                attempt = {'attempt': None, 'score': None, 'passed': None}
+                if matched:
+                    attempt.update(matched[1])
+                elif historical_scores:
+                    attempt['attempt'] = historical_trial_ordinal(trial)
+                else:
+                    attempt['attempt'] = _attempt_ordinal({'_trial_name': trial})
                 if attempt['attempt'] is None:
                     limitations.add('metadata_missing')
                 diagnostic = None
@@ -2780,14 +3033,14 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                     for key in SCORE_FIELDS:
                         if key in reward:
                             require(reward[key] == verifier.get(key), 'Reward score mismatch')
+                    if released_native and overall is not None:
+                        released_rewards[arm].append(reward)
                 deterministic = (reward or {}).get('custom_metrics', {})
                 if _numeric_excerpts is not None:
                     deterministic = restore_captured_numeric_fields(deterministic, _numeric_excerpts, arm, native_id, case)
-                allowed = {'gh_' + k for k in ('evidence', 'activation', 'commands', 'task', 'recovery', 'authorization', 'efficiency', 'gate')}
-                require(not deterministic or name == 'gh' and set(deterministic) == allowed, 'Unsupported custom grading contract')
-                if deterministic:
-                    require(all(type(v) in (int, float) and v in (0, 1) for v in deterministic.values()), 'Invalid deterministic observation')
-                    require(deterministic['gh_gate'] == float(all(v == 1 for k, v in deterministic.items() if k != 'gh_gate')), 'Gate consistency')
+                gates = deterministic_observation(deterministic, name, released_native=released_native)
+                if released_native and name == 'gh' and reward is not None and overall is not None:
+                    require(gates['gate'] is not None, 'Missing released gh measurements')
                 locator = ()
                 if 'verifier_result' in trial_result:
                     locator = ('verifier_result',)
@@ -2804,8 +3057,7 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                        'arm': arm, 'case_id': case, 'attempt': attempt['attempt'], 'native_id': native_id,
                        'native_trial': trial, 'native_task': trial_result['task_name'], 'score': overall,
                        'scores': scores, 'rubric_pass': attempt.get('passed'),
-                       'deterministic_gate': deterministic.get('gh_gate'),
-                       'deterministic_scores': {k: deterministic.get('gh_' + k) for k in GATE_FIELDS}, 'references': obs_refs}
+                       'deterministic_gate': gates['gate'], 'deterministic_scores': gates, 'references': obs_refs}
                 if diagnostic is not None and producer in (profiles.NEXT, profiles.ACCOUNTING):
                     obs['security_evidence'] = copy.deepcopy(diagnostic['details']['security'])
                 observed.append(obs)
@@ -2833,7 +3085,10 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
         require(details != 'complete' or not lookup, 'Unmatched summary attempts')
         if orphan_rewards[arm] or missing_rubric_details:
             details = 'partial' if observed else 'unavailable'
-        if benchmark_meta is None and not reconcile_native_arm(agent, arm, summary, observed, details, candidate=profiles.is_candidate(profiles.by_version(versions.get('skillevaluator')))):
+        if benchmark_meta is None and not released_native and not reconcile_native_arm(
+            agent, arm, summary, observed, details, candidate=profiles.is_candidate(producer),
+            historical_scores=historical_scores,
+        ):
             limitations.add('coverage_missing')
         if details != 'complete':
             limitations.add('case_details_missing')
@@ -2865,6 +3120,10 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
             'rubric': {'passed_cases': pass_data.get('passed_cases'), 'total_cases': pass_data.get('total_cases'),
                        'threshold': pass_data.get('pass_threshold')}})
         data['observations'].extend(observed)
+    if released_native:
+        from benchmark_native import validate_released_aggregates
+
+        validate_released_aggregates(agent, released_rewards, ids)
     if EvaluationService.failure_reason(result) is not None or recovery or result['report_status'] != 'complete' or result.get('diagnostic_only'):
         limitations.add('execution_incomplete')
     if not config.get('evaluated_source'):
@@ -2942,6 +3201,7 @@ def static_scanner(value):
         'Secrets Detection': 'SECRETS',
         'Code Integrity & Hygiene': 'HYGIENE',
         'Unicode Smuggling Detection': 'UNICODE',
+        'Harness Compatibility': 'HARNESS',
     }
     require(type(value) is str, 'Invalid scanner identity')
     value = titles.get(value, value)
@@ -3104,7 +3364,7 @@ def normalize_static(root, name, workspace=ROOT):
                             'reasons': sorted(limitations), 'provenance': 'runtime_recorded'}
     if root / 'versions.json' in scanned_entries:
         versions, versions_digest = read_json_and_digest(root / 'versions.json', budget=budget, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)
-        producer = validate_runtime_versions(versions)
+        producer = validate_runtime_versions(versions, historical_read=not released)
         require(native.get('version', producer['version']) == producer['version'], 'Static producer version mismatch')
         if 'scanner_runtime' in versions: data['scanner_runtime'] = copy.deepcopy(versions['scanner_runtime'])
         has_caveats = any(error.startswith('skillspector complete_with_caveats:')
@@ -3382,6 +3642,11 @@ PODMAN_SOURCE_SUCCESSORS = '.github/evals/source-v40.json'
 PROBE_SOURCE_SUCCESSORS = '.github/evals/source-v41.json'
 MOUNT_SOURCE_SUCCESSORS = '.github/evals/source-v42.json'
 CAMPAIGN_SOURCE_SUCCESSORS = '.github/evals/source-v43.json'
+RETIREMENT_SOURCE_SUCCESSORS = '.github/evals/source-v44.json'
+PUBLICATION_SOURCE_SUCCESSORS = '.github/evals/source-v45.json'
+DIAGNOSTIC_SOURCE_SUCCESSORS = '.github/evals/source-v46.json'
+DIRECT_TOOL_SOURCE_SUCCESSORS = '.github/evals/source-v47.json'
+NATIVE_RETIREMENT_SOURCE_SUCCESSORS = '.github/evals/source-v48.json'
 CUSTOM_OUTCOMES = ('passed', 'failed', 'invalid', 'unsupported', 'timeout',
                    'infrastructure_error', 'interrupted', 'unknown')
 CUSTOM_MEASURED = ('passed', 'failed')
@@ -3506,7 +3771,7 @@ def custom_registry(workspace=ROOT):
         if 'adapter_sha256' in result.get('campaign', {}):
             result['campaign'] = dict(result['campaign'], adapter_sha256=version['replay_adapter'])
         profiles[successor] = result
-    for version_path in (MODEL_SUCCESSORS, SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS):
+    for version_path in (MODEL_SUCCESSORS, SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS, DIRECT_TOOL_SOURCE_SUCCESSORS, NATIVE_RETIREMENT_SOURCE_SUCCESSORS):
         version = parse_json(read_bytes(workspace / version_path))
         sha(version['replay_adapter'])
         for successor, update in version['profiles'].items():
@@ -3539,7 +3804,7 @@ def custom_registry(workspace=ROOT):
             registry['metrics'].update(version['new_metrics'])
             validate_custom_metrics(registry['metrics'])
             profiles.update(version['new_profiles'])
-    registry['active_profiles']['gh'] = 'gh-deterministic-gate-v8'
+    registry['active_profiles']['gh'] = 'gh-deterministic-gate-v10'
     return registry
 
 
@@ -3598,11 +3863,11 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v46'
+        profile_id = 'pester-effectiveness-v51'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v24'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
-        profile_id = 'gh-native-oracle-v4'
+        profile_id = 'gh-native-oracle-v6'
     profile_id = registry['active_profiles'].get(name) if profile_id is None else profile_id
     require(profile_id in registry['profiles'], 'Unknown custom metric namespace or profile')
     registered = registry['profiles'][profile_id]
@@ -3902,10 +4167,17 @@ def custom_authored_digest(workspace, name, profile):
     return digest
 
 
-def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, agent, execution_policy, numeric_excerpts=(), retrospective=None, scheduler_digest=None):
+def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, agent, execution_policy, numeric_excerpts=(),
+                   retrospective=None, scheduler_digest=None, producer_versions=None):
     """Prospective capture used by shared collection and credential-free qualification."""
     from importlib.metadata import version
     producer = profiles.by_version(version('skillevaluator'))
+    if producer_versions is not None:
+        from benchmark_native import native_versions
+
+        require(name == 'powershell-pester-6' and purpose == 'benchmark' and producer_versions == native_versions(),
+                'Invalid released diagnostic capture owner')
+        producer = profiles.runtime(producer_versions, owning=True)
     require(version('skillevaluator') == producer['version'] and version('harbor') == producer['harbor']
             and '.'.join(map(str,sys.version_info[:3])).startswith(producer['python']), 'Unsupported capture runtime')
     profile, definitions, contract = custom_contract(name, workspace, purpose=purpose)
@@ -3943,13 +4215,38 @@ def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, age
         capture['retrospective'] = copy.deepcopy(retrospective)
     else:
         require(retrospective is None, 'Unexpected retrospective metadata')
-    if profiles.is_candidate(producer):
+    if producer_versions is not None:
+        capture['producer'] = producer_versions
+    elif profiles.is_candidate(producer):
         capture['producer'] = profiles.candidate_versions(producer)
         profiles.runtime(capture['producer'], owning=True)
     return capture
 
 
-def validate_custom_capture(capture, name, workspace, *, captured_state=None):
+def restore_historical_gh_file_order(prepared, snapshot):
+    from gh_evaluations import COMPETING
+
+    prefix = f'skills/{COMPETING}/'
+    require(type(snapshot) is dict, 'Invalid historical gh preparation')
+    stored = snapshot.get('dataset')
+    require(type(stored) is list and all(type(row) is dict and type(row.get('contract')) is dict
+            and 'allowed_reads' in row['contract'] for row in stored), 'Invalid historical gh preparation')
+    case_ids([row.get('id') for row in stored])
+    require({row['id'] for row in stored} == {row['id'] for row in prepared},
+            'Historical gh preparation cohort differs')
+    by_case = {row['id']: row['contract']['allowed_reads'] for row in stored}
+    for row in prepared:
+        reads = row['contract']['allowed_reads']
+        recorded = by_case[row['id']]
+        require(type(recorded) is list and len(recorded) == len(reads)
+                and all(type(item) is str for item in recorded), 'Invalid historical gh file order')
+        offset = next((index for index, item in enumerate(reads) if item.startswith(prefix)), len(reads))
+        require(reads[:offset] == recorded[:offset] and sorted(reads[offset:]) == sorted(recorded[offset:]),
+                'Historical gh preparation file membership differs')
+        row['contract']['allowed_reads'] = recorded
+
+
+def validate_custom_capture(capture, name, workspace, *, captured_state=None, read_prepared_snapshot=None):
     require(type(capture) is dict, 'Invalid custom capture')
     closed(capture, ('schema_version', 'skill', 'contract_digest', 'purpose', 'source', 'inputs',
         'authored_digest', 'prepared_dataset_digest', 'case_ids', 'tasks', 'attempts', 'agent', 'execution_policy', 'numeric_excerpts',
@@ -3965,7 +4262,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
             for member in safe_tree(source_root, directory_identities=directories, directory_states=states, file_states=members):
                 read_bytes(member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
         for registry_member in (CUSTOM_REGISTRY, SOURCE_SUCCESSORS, MODEL_SUCCESSORS,
-                                SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS):
+                                SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS, DIRECT_TOOL_SOURCE_SUCCESSORS, NATIVE_RETIREMENT_SOURCE_SUCCESSORS):
             read_bytes(workspace / registry_member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
         if local_podman:
             for member in ('.apm/skills/podman/evals/evals.json', '.apm/skills/podman/evals/files/vendor-compose.yaml',
@@ -3974,18 +4271,36 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
         else:
             helper = 'pester_evaluations.py' if name == 'powershell-pester-6' else 'gh_evaluations.py'
             read_bytes(workspace / '.github/scripts' / helper, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
-    profile, definitions, contract = custom_contract(name, workspace, purpose=capture.get('purpose'))
+    purpose = capture['purpose']
+    profile, definitions, contract = custom_contract(name, workspace, purpose=purpose)
+    approved_inputs = custom_source_manifest(workspace, name, purpose=purpose)
+    if name == 'gh' and capture['contract_digest'] != contract and purpose in ('benchmark', 'oracle_qualification'):
+        historical = {'benchmark': 'gh-deterministic-gate-v9', 'oracle_qualification': 'gh-native-oracle-v5'}
+        profile, definitions, contract = custom_contract(name, workspace, profile_id=historical[purpose])
+        # These captures bind the original helper at bc96c28. Only its CLI
+        # changed at retirement. All other source members still match live bytes.
+        digest = 'sha256:b4a5fe5f4bf7d306ea8faa77b16d8668e0cbbab365205de29cb34aa0cc231aa0'
+        approved_inputs = [dict(row, digest=digest) if row['member'] == 'producer/gh_evaluations.py' else row
+                           for row in approved_inputs]
     require(bool(profile.get('campaign', {}).get('scheduler')) == ('scheduler_digest' in capture),
             'Missing or unexpected scheduler capture')
     if 'scheduler_digest' in capture: sha(capture['scheduler_digest'])
     require(type(capture['schema_version']) is int and capture['schema_version'] == 1 and capture['skill'] == name
             and capture['contract_digest'] == contract, 'Custom contract identity mismatch')
-    require(capture['inputs'] == custom_source_manifest(workspace, name, purpose=capture['purpose']), 'Approved custom input drift')
+    require(capture['inputs'] == approved_inputs, 'Approved custom input drift')
     identities = custom_input_identities(workspace, name, capture['inputs'], purpose=capture['purpose'])
     require(all(profile[key] == value for key, value in identities.items()), 'Unregistered grader, fixture or runtime version')
     require(capture['authored_digest'] == profile['dataset_digest'] == custom_authored_digest(workspace, name, profile),
             'Authored dataset drift')
     producer = profiles.by_revision(capture['evaluator_revision'])
+    released_diagnostic = producer is profiles.RELEASE_BENCHMARK and capture['producer'] != profiles.candidate_versions(producer)
+    if released_diagnostic:
+        from benchmark_native import DIAGNOSTIC_BACKEND, LOOPBACK_VERIFIER, native_versions
+
+        require(name == 'powershell-pester-6' and capture['purpose'] == 'benchmark'
+                and capture['producer'] == native_versions() and capture['attempts'] == reports.MODES['confirmation'],
+                'Invalid released diagnostic capture')
+        profiles.runtime(capture['producer'], owning=True)
     if profile_family(profile) == 'gh-native-oracle-v1':
         require(profiles.is_candidate(producer), 'Native gh oracle requires a qualified candidate')
     if 'campaign' in profile:
@@ -3996,7 +4311,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
     if producer is profiles.NEXT:
         require((capture['purpose'] in ('benchmark', 'oracle_qualification') or 'campaign' in profile) and capture['agent'] in ('oracle', 'codex'),
                 'New candidate is credential-free qualification only')
-    if profiles.is_candidate(producer):
+    if profiles.is_candidate(producer) and not released_diagnostic:
         require(capture['producer'] == profiles.candidate_versions(producer), 'Contradictory custom producer identity')
         profiles.runtime(capture['producer'], owning=True)
     require(type(capture['python_version']) is str and (capture['python_version'] == producer['python'] if profiles.is_candidate(producer) else
@@ -4017,12 +4332,19 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
         require(execution == {'environment': profile['campaign']['environment_mode'], 'concurrency': 1,
                 'timeout_multiplier': 1.0, 'stop_on_pass': False} and capture['attempts'] == profile['campaign'].get('trials', 1), 'Campaign execution policy drift')
     else:
-        require(execution['environment'] == ('aeb-gh-fixture' if name == 'gh' and capture['purpose'] == 'oracle_qualification' else 'docker') and execution['concurrency'] == (1 if capture['purpose'] in ('skill_effectiveness', 'skill_effectiveness_probe') else reports.POLICY['concurrency'])
+        environment = ('aeb-gh-fixture' if name == 'gh' and capture['purpose'] == 'oracle_qualification' else 'docker')
+        if released_diagnostic:
+            environment = DIAGNOSTIC_BACKEND
+        require(execution['environment'] == environment and execution['concurrency'] == (1 if capture['purpose'] in ('skill_effectiveness', 'skill_effectiveness_probe') else reports.POLICY['concurrency'])
                 and execution['stop_on_pass'] is False and execution['timeout_multiplier'] ==
                 (1.0 if capture['purpose'] in ('oracle_qualification', 'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control') else reports.POLICY['timeout_multiplier']), 'Execution policy drift')
     ids = case_ids(capture['case_ids'])
     mapping = custom_case_mapping(profile, capture['purpose'])
     prepared = custom_prepared_entries(workspace, name, ids, capture['purpose'])
+    if (capture['prepared_dataset_digest'] != identity(prepared) and read_prepared_snapshot is not None
+            and name == 'gh' and capture['purpose'] == 'benchmark'
+            and capture['evaluator_revision'] == profiles.HISTORICAL_REVISION):
+        restore_historical_gh_file_order(prepared, read_prepared_snapshot())
     require(capture['prepared_dataset_digest'] == identity(prepared), 'Prepared dataset identity mismatch')
     source_root = workspace / ('.apm/skills' if name == 'powershell-pester-6' or local_podman else '.agents/skills') / name
     if 'skill_source' in profile:
@@ -4090,6 +4412,9 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None):
         expected_skill = {row['member']: row['digest'] for row in capture['source']['content']['manifest']} if task['arm'] == 'with_skill' else {}
         require(actual_skill == expected_skill, 'Staged target skill drift')
         if name == 'powershell-pester-6':
+            if released_diagnostic:
+                require(task['members'].get('tests/docker-compose.yaml') == digest_bytes(LOOPBACK_VERIFIER.encode()),
+                        'Unapproved released verifier isolation')
             fixture_root = overlay / 'support/cases' / task['source_case_id']
             expected = {p.relative_to(fixture_root).as_posix(): digest_bytes(read_bytes(p))
                         for p in safe_tree(fixture_root) if p.relative_to(fixture_root).parts[0] != 'input'}
@@ -4196,7 +4521,9 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
         if value['id'] not in {row['id'] for row in refs}: refs.append(value)
         return value['id']
     capture = read(root / CUSTOM_CAPTURE)
-    profile, definitions = validate_custom_capture(capture, name, workspace, captured_state=(directories, states, members, budget))
+    profile, definitions = validate_custom_capture(capture, name, workspace,
+        captured_state=(directories, states, members, budget),
+        read_prepared_snapshot=lambda: read(run / 'dataset_snapshot.json'))
     scheduler = None
     if 'scheduler_digest' in capture:
         import campaign_scheduler_evidence as scheduler_evidence
@@ -4216,6 +4543,14 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
     require(config.get('judge', {}).get('enabled') is False if profile['grading'] == 'custom_only' else True,
             'Custom-only judge must be explicitly disabled')
     validate_custom_execution_config(capture['purpose'], config, capture['attempts'])
+    if 'producer_profile' in capture.get('producer', {}):
+        harbor = config['harbor']
+        execution = capture['execution_policy']
+        require(harbor['environment']['value'] == execution['environment']
+                and harbor['n_concurrent'] == execution['concurrency']
+                and harbor['timeout_multiplier'] == execution['timeout_multiplier']
+                and config['task_source'] == 'native_harbor' and config['skill_workspace']['mode'] == 'isolated',
+                'Released diagnostic run configuration differs from its capture')
     ref(run / 'result.json'); config_ref = ref(run / 'run_config.json')
     agent = result['agents'][custom_carrier(profile)]
     if profile['grading'] == 'custom_only':
@@ -4248,9 +4583,9 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
         if 'campaign' in profile:
             from evaluation_evidence import task_policy_fields
             fields.update(task_policy_fields(profile))
-        policy = make_policy(fields,
-            ('sha256:' + profiles.by_revision(capture['evaluator_revision'])['patch_sha256'] if profiles.candidate_revision(capture['evaluator_revision']) else
-             digest_bytes(read_bytes(workspace / reports.PATCH))), 'custom-only',
+        patch = ('sha256:' + capture['producer']['patch_sha256'] if profiles.candidate_revision(capture['evaluator_revision'])
+                 else digest_bytes(read_bytes(workspace / reports.PATCH)))
+        policy = make_policy(fields, patch, 'custom-only',
             {'model': None, 'provider': None, 'enabled': False},
             {'mode': 'unknown' if campaign_purpose(capture['purpose']) or capture['purpose'] in ('oracle_qualification', 'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control') else 'confirmation',
              'maximum': capture['attempts'], 'stop_on_pass': False, 'pass_threshold': None}, 'runtime_recorded')
@@ -4299,7 +4634,18 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
         lookup = {}
         pass_data = summary.get('pass_at_k') or {}
         require(type(pass_data) is dict, 'Invalid custom native pass data')
-        if pass_data:
+        release_partial = capture['evaluator_version'] == '1.0.1' and 'unresolved_cases' in pass_data
+        if release_partial:
+            require(native['execution_status'] != 'succeeded'
+                    and native['scored_attempts'] < native['expected_attempts']
+                    and pass_data.get('attempts_used') == native['scored_attempts'],
+                    'Partial custom execution population mismatch')
+            if name == 'gh' and capture['purpose'] == 'oracle_qualification':
+                require(capture['attempts'] == 1 and native['scored_attempts'] > 0,
+                        'Partial oracle execution population mismatch')
+            validate_101_partial_rollups(pass_data, pass_data.get('cases', {}), capture['case_ids'],
+                                         capture['attempts'], False, versioned=False)
+        elif pass_data:
             validate_summary_rollups(pass_data, pass_data.get('cases', {}), capture['case_ids'], capture['attempts'], False)
         if arm in (agent.get('pass_at_k') or {}):
             require(agent['pass_at_k'][arm] == pass_data, 'Custom native pass carrier contradiction')
@@ -4334,6 +4680,10 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             expected_agent = 'codex_pilot_agent:PilotCodex' if capture['purpose'] in ('cli_pilot', 'cli_pilot_probe', 'skill_effectiveness', 'skill_effectiveness_probe') else actual_agent
             if 'campaign' in profile:
                 expected_agent = profile['campaign']['agent_import']
+            elif 'producer_profile' in capture.get('producer', {}):
+                from benchmark_native import CODEX_AGENT
+
+                expected_agent = CODEX_AGENT
             configured_agent = trial_config.get('agent', {})
             require(actual_agent == capture['agent'] and expected_agent in (configured_agent.get('name'), configured_agent.get('import_path'))
                     and trial_config.get('timeout_multiplier') == capture['execution_policy']['timeout_multiplier']
@@ -4345,7 +4695,12 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                     'Native producer or runtime identity mismatch')
             matched = lookup.pop(trial_name, None)
             require(matched is None or matched[0] == case_id, 'Summary case mismatch')
-            ordinal = matched[1].get('attempt') if matched else _attempt_ordinal({'_trial_name': trial_name})
+            if matched:
+                ordinal = matched[1].get('attempt')
+            elif capture['evaluator_revision'] == profiles.HISTORICAL_REVISION:
+                ordinal = historical_trial_ordinal(trial_name)
+            else:
+                ordinal = _attempt_ordinal({'_trial_name': trial_name, 'entry_id': case_id})
             if ordinal is None and (capture['purpose'] in ('skill_effectiveness', 'skill_effectiveness_probe') or 'campaign' in profile):
                 from skillevaluator.tier3.harbor.collector import _structural_attempt_ordinal
                 ordinal = _structural_attempt_ordinal(trial_name, case_id)
@@ -4509,7 +4864,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                     'case_details': 'complete' if details_complete else 'partial' if found else 'unavailable'},
                 'execution_status': native['execution_status'], 'execution_error_count': native_error_count(native),
                 'rubric': {'passed_cases': None, 'total_cases': None, 'threshold': None}})
-        # Native custom averages are absent on incomplete arms by design.
+        # The release may retain measured custom averages on partial arms.
         native_custom = summary.get('custom_scores', {})
         expected_custom = {}
         for key, definition in definitions.items():
@@ -4524,7 +4879,8 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                 from skillevaluator.utils.redaction import is_sensitive_key
                 # 0.8 omits sensitive names, rather than retaining a redacted marker.
                 # Every restored per-trial value was validated against captured native bytes above.
-                expected_visible = {k: v for k, v in computed_custom[arm].items() if not is_sensitive_key(k)}
+                visible_scores = expected_custom if release_partial else computed_custom[arm]
+                expected_visible = {k: v for k, v in visible_scores.items() if not is_sensitive_key(k)}
                 require(native_custom == expected_visible, 'Native custom average contradiction')
             else:
                 require(native_custom == computed_custom[arm], 'Native custom average contradiction')

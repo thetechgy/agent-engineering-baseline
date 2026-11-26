@@ -13,6 +13,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+import gh_candidate
 import gh_evaluations as gh
 import skill_reports as reports
 
@@ -379,6 +380,7 @@ class GhOfflineTests(unittest.TestCase):
         result = subprocess.run(
             [
                 sys.executable,
+                "-B",
                 "-S",
                 str(gh.ROOT / ".github/scripts/skill_reports.py"),
                 "select",
@@ -400,12 +402,6 @@ class GhOfflineTests(unittest.TestCase):
         entries = gh.dataset(selected=gh.SMOKE)
         self.assertEqual(len(entries) * reports.MODES["standard"] * 2, 8)
         self.assertEqual(len(gh.dataset()) * reports.MODES["confirmation"] * 2, 144)
-        command = gh.native_command(
-            Path("/tmp/bundle/gh"), "standard", Path("/tmp/results")
-        )
-        self.assertIn("default_plus_custom", command)
-        self.assertNotIn("--skip-baseline", command)
-        self.assertNotIn("--stop-on-pass", command)
         self.assertEqual(reports.benchmark_policy("podman"), reports.POLICY)
         self.assertEqual(
             reports.benchmark_skill(gh.ROOT, "podman"), gh.ROOT / ".apm/skills/podman"
@@ -492,20 +488,34 @@ class GhOfflineTests(unittest.TestCase):
             ("search", "prs"): ["--app", "--limit"],
             ("pr", "comment"): ["--body-file", "--attach"],
         }
-        version = subprocess.check_output(["gh", "--version"], text=True)
+        environment = {**os.environ, "XDG_STATE_HOME": str(self.root / "xdg-state")}
+        version = subprocess.check_output(["gh", "--version"], text=True, env=environment)
         if "2.102.0" not in version:
             self.skipTest("help contract recorded for gh 2.102.0")
         for command, flags in commands.items():
-            help_text = subprocess.check_output(["gh", *command, "--help"], text=True)
+            help_text = subprocess.check_output(["gh", *command, "--help"], text=True, env=environment)
             for flag in flags:
                 self.assertIn(flag, help_text)
 
 
 @unittest.skipUnless(
-    importlib.util.find_spec("skillevaluator") and importlib.util.find_spec("pydantic"),
-    "pinned SkillEvaluator environment unavailable",
+    importlib.util.find_spec("aeb_gh_fixture") is not None,
+    "released native gh owner unavailable",
 )
 class GhNativeTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from importlib.metadata import version
+        from benchmark_native import validate_runtime
+        from evaluator_profiles import RELEASE_BENCHMARK, candidate_versions, runtime
+
+        if version("skillevaluator") != RELEASE_BENCHMARK["version"]:
+            raise unittest.SkipTest("requires the released native gh owner")
+        try:
+            runtime(candidate_versions(RELEASE_BENCHMARK), owning=True)
+        except ValueError:
+            validate_runtime()
+
     def test_local_gate_recovers_only_confirmed_numeric_authorization(self):
         with tempfile.TemporaryDirectory() as temporary:
             run = Path(temporary)
@@ -539,7 +549,7 @@ class GhNativeTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory(prefix="gh-graphql-verifier-") as temporary:
             root = Path(temporary)
-            skill = gh.stage(gh.ROOT, root / "bundle/gh", ["gh-003"])
+            skill = gh_candidate.stage(gh.ROOT, root / "bundle/gh", ["gh-003"])
             original = gh.dataset(selected=["gh-003"])[0]
             for with_skill in (True, False):
                 task = stage_native_harbor_tasks(skill, root / str(with_skill), with_skill=with_skill,
@@ -634,7 +644,7 @@ class GhNativeTests(unittest.TestCase):
         snapshot = "20261103T000000Z"
         with tempfile.TemporaryDirectory(prefix="gh-build-pins-") as temporary:
             root = Path(temporary)
-            skill = gh.stage(gh.ROOT, root / "bundle/gh", ["gh-001"])
+            skill = gh_candidate.stage(gh.ROOT, root / "bundle/gh", ["gh-001"])
             for with_skill in (True, False):
                 with self.subTest(with_skill=with_skill):
                     task = stage_native_harbor_tasks(
@@ -669,7 +679,7 @@ class GhNativeTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory(prefix="gh-native-") as tmp:
             root = Path(tmp)
-            skill = gh.stage(gh.ROOT, root / "bundle/gh", list(gh.SMOKE))
+            skill = gh_candidate.stage(gh.ROOT, root / "bundle/gh", list(gh.SMOKE))
             arms = []
             for with_skill in (True, False):
                 tasks = stage_native_harbor_tasks(
@@ -687,6 +697,7 @@ class GhNativeTests(unittest.TestCase):
                     config = tomllib.loads((task / "task.toml").read_text())
                     self.assertEqual(config["agent"]["user"], "agent")
                     self.assertEqual(config["verifier"]["user"], "root")
+                    self.assertNotIn("healthcheck", config["environment"])
                     self.assertTrue((task / "environment/private/cases" / (task.name + ".json")).is_file())
                     self.assertTrue((task / "tests/grader.py").is_file())
                     visible_skills = {
@@ -731,7 +742,7 @@ class GhNativeTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory(prefix="gh-grading-") as temporary:
             root = Path(temporary)
-            skill = gh.stage(gh.ROOT, root / "bundle/gh", ["gh-001"])
+            skill = gh_candidate.stage(gh.ROOT, root / "bundle/gh", ["gh-001"])
             task = stage_native_harbor_tasks(
                 skill, root / "tasks", grading_mode="default_plus_custom"
             )[0]
@@ -824,7 +835,7 @@ class GhNativeTests(unittest.TestCase):
                 completed = subprocess.run(
                     [
                         sys.executable,
-                        str(task / "tests/custom_grader_runner.py"),
+                        str(task / "tests/skill_evaluator/custom_grader_runner.py"),
                         "--mode",
                         "default_plus_custom",
                     ],
@@ -842,7 +853,7 @@ class GhNativeTests(unittest.TestCase):
     def test_selected_recovery_preserves_ids_and_never_publishes_history(self):
         with tempfile.TemporaryDirectory(prefix="gh-recovery-") as temporary:
             root = Path(temporary)
-            gh.stage(gh.ROOT, root / "bundle/gh", ["gh-002", "gh-005"])
+            gh_candidate.stage(gh.ROOT, root / "bundle/gh", ["gh-002", "gh-005"])
             run = root / "results/gh/interrupted"
             (run / "_harbor-jobs").mkdir(parents=True)
             with patch(
@@ -883,6 +894,76 @@ class GhNativeTests(unittest.TestCase):
             ).read_text()
             self.assertNotIn(token, content)
 
+    def test_prospective_native_prompt_passes_strict_admission_in_both_arms(self):
+        from aeb_gh_fixture.manifest import approve, load_manifest
+        from benchmark_native import GH_ACCESS_METRIC, gh_finalizer, prepare_gh_manifest, stage_gh
+        from click.testing import CliRunner
+        from skillevaluator import __version__
+        from skillevaluator.cli import cli
+        from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
+        from skillevaluator.tier3.harbor.report_data import build_dataset_snapshot
+
+        with tempfile.TemporaryDirectory(prefix="gh-prospective-") as tmp:
+            root = Path(tmp)
+            authored = gh.ROOT / gh.OVERLAY / "evals/evals.json"
+            original_bytes = authored.read_bytes()
+            original = gh_candidate.stage(gh.ROOT, root / "original/gh")
+            prospective = stage_gh(gh.ROOT, root / "prospective/gh")
+            relative = "evals/evals.json"
+            historical_entries = reports.read_json(original / relative)["evals"]
+            prospective_entries = reports.read_json(prospective / relative)["evals"]
+            expected = copy.deepcopy(historical_entries)
+            changed, = (entry for entry in expected if entry["id"] == "gh-001")
+            self.assertTrue(changed["prompt"].startswith("Use the gh skill to read issue 12 "))
+            changed["prompt"] = "Read issue 12 " + changed["prompt"].removeprefix("Use the gh skill to read issue 12 ")
+            self.assertEqual(prospective_entries, expected)
+            self.assertEqual(authored.read_bytes(), original_bytes)
+            grader_export = f'\n    metrics["{GH_ACCESS_METRIC}"] = metrics.pop("gh_authorization")'.encode()
+            prospective_grader = (prospective / "evals/grader.py").read_bytes()
+            self.assertEqual(prospective_grader.count(grader_export), 1)
+            self.assertEqual(prospective_grader.replace(grader_export, b''),
+                             (original / "evals/grader.py").read_bytes())
+            snapshots = [build_dataset_snapshot(entries, evaluator_version=__version__)
+                         for entries in (historical_entries, prospective_entries)]
+            self.assertNotEqual(snapshots[0]["dataset_digest"], snapshots[1]["dataset_digest"])
+            self.assertEqual(snapshots[0]["dataset_summary"], snapshots[1]["dataset_summary"])
+            result = CliRunner().invoke(cli, ["tier3", "validate", str(prospective), "--strict", "--json"])
+            self.assertEqual(result.exit_code, 0, result.output)
+            expected_prompts = {entry["id"]: entry["prompt"] for entry in expected}
+            self.assertEqual(len(expected_prompts), 24)
+            manifest = prepare_gh_manifest(prospective, root)
+            approval, _ = load_manifest(manifest)
+            agent = {"OPENAI_API_KEY": "${OPENAI_API_KEY}", "OPENAI_BASE_URL": "${OPENAI_BASE_URL}"}
+            verifier = {"SKILL_EVAL_LLM_PROVIDER": "${SKILL_EVAL_LLM_PROVIDER}",
+                        "SKILL_EVAL_LLM_MODEL": "${SKILL_EVAL_LLM_MODEL}"} | agent
+            arms = {}
+            for present in (True, False):
+                arm = "with_skill" if present else "without_skill"
+                with self.subTest(with_skill=present):
+                    tasks = stage_native_harbor_tasks(
+                        prospective, root / str(present), with_skill=present,
+                        grading_mode="default_plus_custom", workspace_mode="group",
+                        workspace_skill_paths=[prospective.parent / gh.COMPETING],
+                        custom_dockerfile_mode="preserve", runtime_env=agent, verifier_env=verifier,
+                        arm_suffix="-" + arm.replace("_", "-"),
+                    )
+                    arms[arm] = tasks
+                    self.assertEqual({task.name for task in tasks}, set(expected_prompts))
+                    for task in tasks:
+                        entry = reports.read_json(task / "tests/entry.json")
+                        self.assertEqual(entry["prompt"], expected_prompts[task.name])
+                        self.assertEqual(entry["has_skill"], present)
+                        self.assertIn(expected_prompts[task.name], (task / "instruction.md").read_text())
+            self.assertEqual(len(approval["tasks"]), 48)
+            gh_finalizer(manifest, {"codex": arms})
+            task = next(task for task in arms["without_skill"] if task.name == "gh-001")
+            approved, _ = approve(manifest, task)
+            self.assertEqual(approved["arm"], "without_skill")
+            instruction = task / "instruction.md"
+            instruction.write_bytes(instruction.read_bytes() + b"\nSynthetic drift.\n")
+            with self.assertRaisesRegex(ValueError, "Unapproved gh initialization inputs"):
+                approve(manifest, task)
+
     def test_native_strict_dataset_and_custom_reward_propagation(self):
         from click.testing import CliRunner
         from skillevaluator.cli import cli
@@ -890,7 +971,13 @@ class GhNativeTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory(prefix="gh-grader-") as tmp:
             root = Path(tmp)
-            skill = gh.stage(gh.ROOT, root / "bundle/gh", ["gh-001"])
+            warning = gh_candidate.stage(gh.ROOT, root / "warning/gh")
+            rejected = CliRunner().invoke(cli, ["tier3", "validate", str(warning), "--strict", "--json"])
+            self.assertEqual(rejected.exit_code, 1, rejected.output)
+            diagnostics = [row for row in json.loads(rejected.output) if row["status"] != "ok"]
+            self.assertEqual([(row["path"], row["status"]) for row in diagnostics], [("entry gh-001", "warning")])
+            self.assertIn("no-skill baseline", diagnostics[0]["message"])
+            skill = gh_candidate.stage(gh.ROOT, root / "bundle/gh", ["gh-002"])
             result = CliRunner().invoke(
                 cli, ["tier3", "validate", str(skill), "--strict", "--json"]
             )
@@ -898,7 +985,7 @@ class GhNativeTests(unittest.TestCase):
             task = stage_native_harbor_tasks(
                 skill, root / "tasks", grading_mode="default_plus_custom"
             )[0]
-            runner = task / "tests/custom_grader_runner.py"
+            runner = task / "tests/skill_evaluator/custom_grader_runner.py"
             fake_grader = root / "known_reward.py"
             fake_grader.write_text(
                 'import os,json\nfrom pathlib import Path\nPath(os.environ["HARBOR_REWARD_JSON"]).write_text(json.dumps({"custom_metrics":{"gh_gate":0.0}}))\n'

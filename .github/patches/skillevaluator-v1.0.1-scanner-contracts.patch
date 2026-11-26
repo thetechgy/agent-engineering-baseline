@@ -1,0 +1,49 @@
+--- a/src/skillevaluator/validators/security.py
++++ b/src/skillevaluator/validators/security.py
+@@ -2635,7 +2635,35 @@
+     ``reference_resolution``; any other row makes the analysis ``partial`` or
+     ``failed``. A report that fails this contradicts its own status.
+     """
+-    return bool(ledger_exceptions) and all(_skillspector_row_is_reference_caveat(row) for row in ledger_exceptions)
++    return bool(ledger_exceptions) and all(
++        _skillspector_complete_reference_caveat(row) for row in ledger_exceptions
++    )
++
++
++def _skillspector_complete_reference_caveat(row: Mapping[str, object]) -> bool:
++    allowed = {"reason_code", "phase", "outcome", "message", "path",
++               "start_line", "end_line", "fatal", "source_identity"}
++    path = _skillspector_report_path_key(row.get("path"))
++    message = row.get("message")
++    source = row.get("source_identity", "")
++    if (
++        not _skillspector_row_is_reference_caveat(row)
++        or not set(row).issubset(allowed)
++        or row.get("fatal") is not False
++        or row.get("outcome") != "partial"
++        or not isinstance(message, str)
++        or not message.strip()
++        or path is None
++        or ":" in path
++        or not isinstance(source, str)
++        or (source and not path.startswith(source + "/"))
++    ):
++        return False
++    for field in ("start_line", "end_line"):
++        if field not in row or (row[field] is not None and (type(row[field]) is not int or row[field] < 1)):
++            return False
++    start, end = row["start_line"], row["end_line"]
++    return end is None or (start is not None and end >= start)
+
+
+ def _skillspector_reference_caveat_notes(
+@@ -4708,6 +4736,9 @@
+                     },
+                 )
+             )
++        # The retained scanner contract treats every explicit partial scan as incomplete.
++        if isinstance(analysis_completeness, dict) and analysis_completeness.get("status") == "partial":
++            result.mark_scan_incomplete(stage_name)
+         return True
+
+     @staticmethod

@@ -381,11 +381,15 @@ class ReviewTests(unittest.TestCase):
 
     def gh_control(self):
         """The public unmeasured control and authenticated upstream source, without inference."""
+        from review_snapshots import parity_archive
+
         record = evidence.read_json(NATIVE / "gh-no-model.json")
-        configured = next(row for row in evidence.inventory(evidence.ROOT)["skills"]
-                          if row["source"]["skill_id"] == "gh")
         bundle = self.root / "gh-public"
-        write(bundle / "inventory.json", {"schema_version": 1, "kind": "inventory", "skills": [configured]})
+        bundle.mkdir()
+        with parity_archive() as archive:
+            (bundle / "inventory.json").write_bytes(
+                archive.read("gh-89f46f0-investigate-unmeasured/gh-public/inventory.json")
+            )
         write(bundle / "public-report.json", record)
         saved = self.root / "gh-analysis.json"
         write(saved, analysis.validate_analysis(None, analysis.capture_inputs([bundle])))
@@ -815,6 +819,14 @@ class ReviewTests(unittest.TestCase):
         for control in ("\x0b", "\x85", "\u202e"):
             with self.subTest(control=repr(control)), self.assertRaisesRegex(ValueError, "Control"):
                 review.selected_lines("safe" + control + "suffix", 1, 1)
+
+    def test_ai_numeric_gate_exception_does_not_allow_credentials_or_other_locations(self):
+        for value in ('secret', '<redacted>', True, 2):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                review.screen_payload({'records': {'id': {'observations': [
+                    {'deterministic_scores': {'authorization': value}}]}}})
+        with self.assertRaises(ValueError):
+            review.screen_payload({'authorization': 1})
 
     def test_nested_json_sensitive_literals_reject_at_report_boundaries(self):
         context = self.control()
@@ -2674,9 +2686,11 @@ class ReviewTests(unittest.TestCase):
         self.assertFalse(output.exists())
 
     def test_expired_public_with_independent_reviewed_local_support(self):
+        from qualify_current_evaluator import historical_podman
+
         late = datetime(2026, 10, 20, tzinfo=timezone.utc)
         with patch.object(evidence, "utc_now", return_value=late):
-            record = evidence.project(evidence.normalize_behavioral(NATIVE / "podman-native", "podman"))
+            record = evidence.parse_json(historical_podman())
             bundle, saved, rid = self.bundle(record)
             root = self.root / "retained"
             import shutil

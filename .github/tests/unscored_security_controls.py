@@ -132,15 +132,20 @@ def run_visibility(test):
             test.assertIn(b'Retained verifier security evidence', html)
             test.assertNotIn(b'abcdefgh12345678', html)
             if known: test.assertIn(known[0]['type'].encode(), html)
-            # Existing data-only rollback owner reads the same admitted record.
-            legacy = os.environ.get('SKILL_EVALUATOR_PYTHON')
-            if legacy:
-                output = destination / 'rollback'
-                # Use the public API with no native normalization or regrading.
-                code = "import sys; from pathlib import Path; sys.path.insert(0,sys.argv[1]); import skill_analysis as a, skill_report as r; c=a.capture_inputs([Path(sys.argv[2])]); Path(sys.argv[3]).write_bytes(r.render_report(a.build_analysis(c),c))"
-                result = subprocess.run([legacy, '-B', '-c', code, str(ROOT / '.github/scripts'), str(destination / 'public'), str(output)],
-                                         capture_output=True, text=True, timeout=60)
-                test.assertEqual(result.returncode, 0, result.stderr); test.assertEqual(output.read_bytes(), html)
+            # Rebuild the admitted 0.9.0 record on the 1.0.1 data host.
+            data_python = os.environ['SKILL_DATA_PYTHON']
+            output = destination / 'data-host.html'
+            code = (
+                "import sys; from pathlib import Path; sys.path.insert(0,sys.argv[1]); "
+                "import skill_analysis as a, skill_report as r; c=a.capture_inputs([Path(sys.argv[2])]); "
+                "Path(sys.argv[3]).write_bytes(r.render_report(a.build_analysis(c),c))"
+            )
+            result = subprocess.run(
+                [data_python, '-B', '-c', code, str(ROOT / '.github/scripts'), str(destination / 'public'), str(output)],
+                capture_output=True, text=True, timeout=60,
+            )
+            test.assertEqual(result.returncode, 0, result.stderr)
+            test.assertEqual(output.read_bytes(), html)
             receipt = {'fixture': kind, 'simulated': True, 'agent_task_success': False,
                 'raw_known_findings': sum(f['score_impact'] for f in rich['details']['security']['findings']),
                 'collected_known_findings': len(known), 'public_known_findings': sum(f['score_impact'] for f in observed['security_evidence']['findings']),
@@ -197,7 +202,7 @@ def standard_visibility(test, root, source):
     import skill_reports as reports
     from test_custom_metrics import synthetic_gh_native
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
-    native, run = synthetic_gh_native(root, unscoreable=True, candidate=True)
+    native, run = synthetic_gh_native(root, unscoreable=True)
     for arm in ('with', 'without'):
         trial = root / 'jobs' / ('gh-codex-' + arm) / 'gh-001__attempt1'
         shutil.copytree(source / 'verifier', trial / 'verifier')

@@ -268,6 +268,7 @@ def bundle_claims(captured, slot, prov):
             mode = record['policy']['attempts']['mode']
             if purpose != 'oracle':
                 require(mode == ('standard' if purpose == 'standard' else 'confirmation'), 'Behavioral purpose mismatch')
+                evidence.require_released_report_population(record)
             oracle = record.get('custom', {}).get('purpose') == 'oracle_qualification'
             require(oracle == (purpose == 'oracle'), 'Oracle qualification purpose mismatch')
         source = record['source']

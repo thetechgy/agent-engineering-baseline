@@ -1,0 +1,1451 @@
+{
+  "arms": [
+    {
+      "condition": {
+        "build_digest": null,
+        "competing_skills": [],
+        "execution": {
+          "authorization_policy": null,
+          "base_image_mode": "disabled",
+          "environment": "docker",
+          "fixture_boundary": null,
+          "task_source": "evals_json"
+        },
+        "fixture_digest": null,
+        "id": "sha256:50e7dde293cc8dd398aa971d12ba9524b1343a8d05bdbdb7ab86f462514b433a",
+        "instruction_digest": null,
+        "provenance": "runtime_recorded",
+        "target_present": true,
+        "workspace_mode": "isolated"
+      },
+      "coverage": {
+        "case_details": "complete",
+        "expected_attempts": 10,
+        "expected_cases": 10,
+        "recorded_attempts": 10,
+        "scored_attempts": 10,
+        "unscored_attempts": 0
+      },
+      "execution_error_count": 0,
+      "execution_status": "succeeded",
+      "name": "with_skill",
+      "rubric": {
+        "passed_cases": 10,
+        "threshold": 0.5,
+        "total_cases": 10
+      }
+    },
+    {
+      "condition": {
+        "build_digest": null,
+        "competing_skills": [],
+        "execution": {
+          "authorization_policy": null,
+          "base_image_mode": "disabled",
+          "environment": "docker",
+          "fixture_boundary": null,
+          "task_source": "evals_json"
+        },
+        "fixture_digest": null,
+        "id": "sha256:43153043c854c931c9c2fd4ceaa8f683d4f697dd75a217390491c0b23971344a",
+        "instruction_digest": null,
+        "provenance": "runtime_recorded",
+        "target_present": false,
+        "workspace_mode": "isolated"
+      },
+      "coverage": {
+        "case_details": "complete",
+        "expected_attempts": 10,
+        "expected_cases": 10,
+        "recorded_attempts": 10,
+        "scored_attempts": 10,
+        "unscored_attempts": 0
+      },
+      "execution_error_count": 0,
+      "execution_status": "succeeded",
+      "name": "without_skill",
+      "rubric": {
+        "passed_cases": 8,
+        "threshold": 0.5,
+        "total_cases": 10
+      }
+    }
+  ],
+  "availability": {
+    "provenance": "reviewed_extract",
+    "reasons": [
+      "reference_expired"
+    ],
+    "status": "incomplete"
+  },
+  "dataset": {
+    "authored_digest": "sha256:6c343468a5b508d60449d6c464b79ab100dd39d5831613b89541fb1352c321c2",
+    "authored_provenance": "reconstructed_from_declared_revision",
+    "case_cohort_digest": "sha256:d5caba195eef9ebfa4650c9d5b8be4f9925f21b177f196489b3be4adefb7813c",
+    "case_ids": [
+      "1",
+      "10",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9"
+    ],
+    "owner": "local",
+    "staged_algorithm": "skill-evaluator-dataset-snapshot/1",
+    "staged_digest": "sha256:cecc0bcea480a3c197e1b4c527009958ada3be67eb0205325f6c16123f9355fe",
+    "staged_provenance": "runtime_recorded"
+  },
+  "findings": [],
+  "kind": "behavioral",
+  "metrics": [
+    {
+      "name": "Skill Lift",
+      "unit": "score",
+      "value": 0.1207
+    },
+    {
+      "name": "Effectiveness",
+      "unit": "score",
+      "value": 0.773
+    },
+    {
+      "name": "Correctness",
+      "unit": "score",
+      "value": 0.96
+    },
+    {
+      "name": "Discoverability",
+      "unit": "score",
+      "value": 0.6937
+    }
+  ],
+  "observations": [
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "1",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:82d3dbaccf17a5b652a893024ee6be172a57edcea79c750199c081993dfd6446",
+      "references": [
+        "sha256:fe7c4f850ab4927f06617d0c555fca5f8054a76afe4bc0d4b6a3803839422d61",
+        "sha256:f37058b8dfc9a615661c519a3d5d334093a1994a5f7fd29432b953431addf166",
+        "sha256:5b1467dc967ff4a62334a7f4c51e0ab7363402b36edf0b07d641c0579c57fc9b"
+      ],
+      "rubric_pass": true,
+      "score": 0.7042,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 1.0,
+        "custom": null,
+        "goal_accuracy": 0.6,
+        "overall": 0.7042,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "10",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:755802a27ea20859f16fb3b23196a8e4be4f042fad420107ee5d645779f6202e",
+      "references": [
+        "sha256:364d73721cb6a051fd0ffcf005a1083b248fe67ad14e278fc44a2cd65141abb8",
+        "sha256:f37058b8dfc9a615661c519a3d5d334093a1994a5f7fd29432b953431addf166",
+        "sha256:7cfca202b429f38c1930c2695617e0e1414c356ceaf87219fc8fb0b7ece04a6e"
+      ],
+      "rubric_pass": true,
+      "score": 0.7113,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 1.0,
+        "custom": null,
+        "goal_accuracy": 0.58,
+        "overall": 0.7113,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.6875
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "2",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:bd73f6a7cae2a183aa69fdaa9d4a07b95d8caf1dde28b0ae7cc6beedeceb415e",
+      "references": [
+        "sha256:df05bc8d41351b7dece9cb7c78b950f808a16d33a91412ad30a6e8ed3ed12458",
+        "sha256:f37058b8dfc9a615661c519a3d5d334093a1994a5f7fd29432b953431addf166",
+        "sha256:0525ada53e35a5eaa0da4533fbda4344a98bbeb23670df1de15aa0c48b2fbecc"
+      ],
+      "rubric_pass": true,
+      "score": 0.6896,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 1.0,
+        "custom": null,
+        "goal_accuracy": 0.95,
+        "overall": 0.6896,
+        "security": 0.0,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.6875
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "3",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:3e083f4d519d48ed2d557ab0c652c7efd36492039b24b076bf5900c15020d8eb",
+      "references": [
+        "sha256:d63c28f082b902c01f9e4a534452414fbd7f9d18976aecfaaa1f6b350df46987",
+        "sha256:f37058b8dfc9a615661c519a3d5d334093a1994a5f7fd29432b953431addf166",
+        "sha256:8010ed7f3a3dc9be6e427fb87a088c90bf3d1d0744fa7a3b68475f8edb87a91f"
+      ],
+      "rubric_pass": true,
+      "score": 0.8917,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 1.0,
+        "custom": null,
+        "goal_accuracy": 0.6,
+        "overall": 0.8917,
+        "security": 1.0,
+        "skill_efficiency": 1.0,
+        "skill_execution": 0.75
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "4",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:9d1fb8b0154a7ae4d815a6c92369a46c9d414c93f1867b42d052775bdf20250d",
+      "references": [
+        "sha256:967b7ee86b1b5e6789bca67d8b3be09650e046f5dabe3e115c907123bee71894",
+        "sha256:f37058b8dfc9a615661c519a3d5d334093a1994a5f7fd29432b953431addf166",
+        "sha256:52fbf70685f6556abeeb9170e6d9739fc8ae5367ad10c9f51b55042d23f1cb05"
+      ],
+      "rubric_pass": true,
+      "score": 0.5042,
+      "scores": {
+        "accuracy": 0.8,
+        "behavior_check": 0.25,
+        "custom": null,
+        "goal_accuracy": 0.35,
+        "overall": 0.5042,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "5",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:c3b41b0675d0c05dba77213d8fe7e19ebc47eddc2e710b990412bedaa0d1bfc1",
+      "references": [
+        "sha256:086efba55e24d670e132d964d0d728aeaf3b7707fd3dadec498bcfa240c58cde",
+        "sha256:f37058b8dfc9a615661c519a3d5d334093a1994a5f7fd29432b953431addf166",
+        "sha256:c8370e2e999bfbf308fcb7b49023a8e15e7d1904a620cb0237d35c1ff63630e9"
+      ],
+      "rubric_pass": true,
+      "score": 0.7458,
+      "scores": {
+        "accuracy": 0.8,
+        "behavior_check": 0.4,
+        "custom": null,
+        "goal_accuracy": 0.4,
+        "overall": 0.7458,
+        "security": 1.0,
+        "skill_efficiency": 1.0,
+        "skill_execution": 0.875
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "6",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:a8e5cf6db0c4301bf2a54fb2319b72234e56c9556dc3de2d10b1806037099ba0",
+      "references": [
+        "sha256:dc4a4c3c1d9b6cf50f73796fb58a70dbbf80e167bf5829e0e7f913c0b22755fc",
+        "sha256:f37058b8dfc9a615661c519a3d5d334093a1994a5f7fd29432b953431addf166",
+        "sha256:d2008cfdfe9fa40ef2070cf6832a866f09be7556a31fba5f6594d71c19919099"
+      ],
+      "rubric_pass": true,
+      "score": 0.7642,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 1.0,
+        "custom": null,
+        "goal_accuracy": 0.96,
+        "overall": 0.7642,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "7",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:09d953d23eac635551571cb50afb9cea1b669a7a7860c1fa96e182c334362616",
+      "references": [
+        "sha256:3e6c7d6f6d031a89d315d4c8389b98c142b26f13c69e44b8064e6e2cd70efefc",
+        "sha256:f37058b8dfc9a615661c519a3d5d334093a1994a5f7fd29432b953431addf166",
+        "sha256:b2bde1dbb3c53c84f16634985e7f17efb7fa53fe8024ebe18a34984c303aa88b"
+      ],
+      "rubric_pass": true,
+      "score": 0.7408,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 1.0,
+        "custom": null,
+        "goal_accuracy": 0.82,
+        "overall": 0.7408,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "8",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:38394f662cefac1ecc9057e5141e43887c227c4fb197a1718183a9010bfc20bf",
+      "references": [
+        "sha256:dabcb0e9892fd67352831174e9c7578939ce526c51e8758d90a7cfc60ef1b6ac",
+        "sha256:f37058b8dfc9a615661c519a3d5d334093a1994a5f7fd29432b953431addf166",
+        "sha256:109bfefda03c2845e10bac257bfefee7a14bf2ef4139e2d5e0e24b6b99cc40ea"
+      ],
+      "rubric_pass": true,
+      "score": 0.8333,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 1.0,
+        "custom": null,
+        "goal_accuracy": 1.0,
+        "overall": 0.8333,
+        "security": 0.5,
+        "skill_efficiency": 1.0,
+        "skill_execution": 0.5
+      }
+    },
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "9",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:fa93fcd7f9ce6aab12a856c35d4ed05fe93d6ca0b3b3c0d134634fb3af3c9f5e",
+      "references": [
+        "sha256:e17e2ed8e90441019b942cbbe2b3cade10e3619a34b9ac5ae2d512d3bb13dfbd",
+        "sha256:f37058b8dfc9a615661c519a3d5d334093a1994a5f7fd29432b953431addf166",
+        "sha256:8d5bbd640cc10e020e1831f2fae536aeecac45f85927428498cb02a63f3d74ca"
+      ],
+      "rubric_pass": true,
+      "score": 0.907,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 0.6,
+        "custom": null,
+        "goal_accuracy": 0.95,
+        "overall": 0.907,
+        "security": 1.0,
+        "skill_efficiency": 0.9546,
+        "skill_execution": 0.9375
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "1",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:fe97d951f10a9d8cecaf9b0c5013f44f70fce185be703daf425ec8fd7b00259b",
+      "references": [
+        "sha256:30f64a5819976ac00dbc6ba6d152e4d47fcb6a62a895971ec923776e17000e41",
+        "sha256:2d44f166c3c18de195ee5ed016e3fb514220b7266072edd4d0106c5890b197ff",
+        "sha256:e55b0dce84a75a4a21cf218f4306bca21a50c2127774ce9a57877e4c4db87fb2"
+      ],
+      "rubric_pass": false,
+      "score": 0.3722,
+      "scores": {
+        "accuracy": 0.8,
+        "behavior_check": 0.4,
+        "custom": null,
+        "goal_accuracy": 0.2,
+        "overall": 0.3722,
+        "security": 0.0,
+        "skill_efficiency": 0.3333,
+        "skill_execution": 0.5
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "10",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:57adb1f3b3d66eea19237c85b122b37a08c87674771500f75f8eccc257deb7f1",
+      "references": [
+        "sha256:dbd11912e13e19873177bec8c8758f959c824f704f07c252ad92fea102715e05",
+        "sha256:2d44f166c3c18de195ee5ed016e3fb514220b7266072edd4d0106c5890b197ff",
+        "sha256:d531e7e7f7bc6506b07621ffceb0b80cded6a385931ead34d7c6533c99c2706d"
+      ],
+      "rubric_pass": true,
+      "score": 0.5458,
+      "scores": {
+        "accuracy": 0.6,
+        "behavior_check": 0.4,
+        "custom": null,
+        "goal_accuracy": 0.65,
+        "overall": 0.5458,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "2",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:1720e5dae0124b705ddd22a2692ff9f83027976fe3a4e9090ce65208e878ab66",
+      "references": [
+        "sha256:1386afb0e12d814f3e4160c1289ac4ef7f7d8fc4c6b80a7eb7224bc5a0489b6f",
+        "sha256:2d44f166c3c18de195ee5ed016e3fb514220b7266072edd4d0106c5890b197ff",
+        "sha256:d91ad97412f16d6c93f738a6a9bf38cdc1a38f689b544d22a6e90060c9cd6765"
+      ],
+      "rubric_pass": true,
+      "score": 0.7242,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 0.8,
+        "custom": null,
+        "goal_accuracy": 0.92,
+        "overall": 0.7242,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "3",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:7698d5fce14bb588508d49e9793873e2bbca4e094a6353e5738a0f64b4a2dcda",
+      "references": [
+        "sha256:6094943fb79809fe5f9d75d45bf107e900ba595897ca6cda14eb4048d7adcbd1",
+        "sha256:2d44f166c3c18de195ee5ed016e3fb514220b7266072edd4d0106c5890b197ff",
+        "sha256:9ededc3fcd83482c2644eb48c85b453c0e42b15d7ba653aae4e1bc491f514722"
+      ],
+      "rubric_pass": true,
+      "score": 0.675,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 0.75,
+        "custom": null,
+        "goal_accuracy": 0.3,
+        "overall": 0.675,
+        "security": 1.0,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.5
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "4",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:52ee0799efb0fa426e2db28c0847d54757a41ec7f34660ada063aef5842fc3da",
+      "references": [
+        "sha256:6d4a350040358f124f3c84ba8c52963eb842f5e133e49f96daa96c26fda39c82",
+        "sha256:2d44f166c3c18de195ee5ed016e3fb514220b7266072edd4d0106c5890b197ff",
+        "sha256:c61cd7526000c2e14c895454eeeb7c199302a64add4df5f2b660c0bc29cf1a93"
+      ],
+      "rubric_pass": false,
+      "score": 0.3958,
+      "scores": {
+        "accuracy": 0.6,
+        "behavior_check": 0.0,
+        "custom": null,
+        "goal_accuracy": 0.15,
+        "overall": 0.3958,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "5",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:3fde2c23989ef655fefb5e24a7e4ecc3791459d55cbb5f7d4eb4c7396e166b17",
+      "references": [
+        "sha256:4c33f4a493de5fb17fbc873420e84c0fae1d8cbc9c181bfac27c51694a4f29a6",
+        "sha256:2d44f166c3c18de195ee5ed016e3fb514220b7266072edd4d0106c5890b197ff",
+        "sha256:4164b748228d1c21538b27f4d42d592b166e5add606f7489faf86ebe71163fed"
+      ],
+      "rubric_pass": true,
+      "score": 0.5375,
+      "scores": {
+        "accuracy": 0.8,
+        "behavior_check": 0.4,
+        "custom": null,
+        "goal_accuracy": 0.4,
+        "overall": 0.5375,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "6",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:90fd3b54a03a289cce570bdacf71ff1bbda7b78fd30f3435c2876031fdd5d84c",
+      "references": [
+        "sha256:e0f23494fdc72a274187ec5dd43c789bd7f09b3feae6700404720bbd2270e69d",
+        "sha256:2d44f166c3c18de195ee5ed016e3fb514220b7266072edd4d0106c5890b197ff",
+        "sha256:3466149b4ca6dae4f6ff441505c6e624cb524301f419e6251789c6338a0bd649"
+      ],
+      "rubric_pass": true,
+      "score": 0.6919,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 0.6667,
+        "custom": null,
+        "goal_accuracy": 0.86,
+        "overall": 0.6919,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "7",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:03137c9ef778031426497ecbcad913a5e9b54b3a54300c3d7ac01b48666224d2",
+      "references": [
+        "sha256:709535a08e5ec7771f8826d3a368eb02410166eb525720b9d0443fa0406337d9",
+        "sha256:2d44f166c3c18de195ee5ed016e3fb514220b7266072edd4d0106c5890b197ff",
+        "sha256:ea12c2b997af5951f34b9c91e22b5a5e7ac565aa534ff7054a5f3f3fe3e5960f"
+      ],
+      "rubric_pass": true,
+      "score": 0.7542,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 1.0,
+        "custom": null,
+        "goal_accuracy": 0.9,
+        "overall": 0.7542,
+        "security": 0.5,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.625
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "8",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:0c354115563844aa0546e3103eb5e22fde94be635dc3cfa6b6ba9be36ba48e69",
+      "references": [
+        "sha256:17d905bb291a9b6c3d908bfc2ad105769cb389deadf8a45e595571944f9c3323",
+        "sha256:2d44f166c3c18de195ee5ed016e3fb514220b7266072edd4d0106c5890b197ff",
+        "sha256:6abbd148cd01884bd8230e292e99ada4f5e2e9b26abd97dffbc565331c760de0"
+      ],
+      "rubric_pass": true,
+      "score": 0.7667,
+      "scores": {
+        "accuracy": 0.6,
+        "behavior_check": 1.0,
+        "custom": null,
+        "goal_accuracy": 1.0,
+        "overall": 0.7667,
+        "security": 0.5,
+        "skill_efficiency": 1.0,
+        "skill_execution": 0.5
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "9",
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:ed15c561f8d88d3a39e29084b0f7bdc669f3a92783069021aca74c7b9f150f16",
+      "references": [
+        "sha256:9afac2ccfdb5fbea885a45e24d1c65b6e921d471c8336774a1c9a4acdc494465",
+        "sha256:2d44f166c3c18de195ee5ed016e3fb514220b7266072edd4d0106c5890b197ff",
+        "sha256:ce52d82baeafea28e2af2baee1c4d11b53c6790a3b321c5778872e93d582079e"
+      ],
+      "rubric_pass": true,
+      "score": 0.8213,
+      "scores": {
+        "accuracy": 1.0,
+        "behavior_check": 1.0,
+        "custom": null,
+        "goal_accuracy": 0.99,
+        "overall": 0.8213,
+        "security": 1.0,
+        "skill_efficiency": 0.5,
+        "skill_execution": 0.4375
+      }
+    }
+  ],
+  "policy": {
+    "attempts": {
+      "maximum": 1,
+      "mode": "standard",
+      "pass_threshold": 0.5,
+      "stop_on_pass": false
+    },
+    "fields": {
+      "authorization_policy": null,
+      "baseline": true,
+      "codex": "0.155.1",
+      "competing_revision": null,
+      "concurrency": 2,
+      "deterministic_gate": null,
+      "docker_compose": "5.0.2",
+      "environment": "docker",
+      "evaluator_revision": "ac0a04905100acdafc6c95829311a9739c340ff6",
+      "fixture_boundary": null,
+      "grading": "default",
+      "harbor": "0.13.2",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "python": "3.13",
+      "standard_attempts": 1,
+      "stop_on_pass": false,
+      "task_build": null,
+      "task_source": null,
+      "timeout_multiplier": 2.0,
+      "upstream_revision": null,
+      "workspace_mode": null
+    },
+    "id": "sha256:16ae8a1c07822601d65ca38e8d49f54e71983a1fcac974ddb59cf3f60660dcc9",
+    "judge": {
+      "enabled": true,
+      "model": "gpt-5.6-sol",
+      "provider": "openai"
+    },
+    "metric_set": "skill-evaluator-default-v2",
+    "patch_digest": "sha256:d48af476c19f06d94297e2e143f4643c74580abbcd631a599fe7b296244f3962",
+    "provenance": "runtime_recorded",
+    "published_id": null
+  },
+  "references": [
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:052b271102f237cd00445347dd4f0a5f6f9e38c1841a6f85df01bf2f74bcc053",
+      "id": "sha256:0525ada53e35a5eaa0da4533fbda4344a98bbeb23670df1de15aa0c48b2fbecc",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/2__rkgUEeu/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:89ee29c6ab16d8b9d15e8dd7b62d56c60f582725cf75a766f3f0385dd9604a65",
+      "id": "sha256:086efba55e24d670e132d964d0d728aeaf3b7707fd3dadec498bcfa240c58cde",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/5__E8DWaM8/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:3e70007bc7a1f77760b9af8d1c8ae8e1b99d2141ccd380469533636270e0488d",
+      "id": "sha256:109bfefda03c2845e10bac257bfefee7a14bf2ef4139e2d5e0e24b6b99cc40ea",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/8__Bu4W5bp/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:d7d8af43ab70bcda36c15777f6f7c0dd02541b48e01979e7fa40a75f10a077be",
+      "id": "sha256:1386afb0e12d814f3e4160c1289ac4ef7f7d8fc4c6b80a7eb7224bc5a0489b6f",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/2__hoTjctT/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:d3b90c1aa666a95c9074360313ab8aec93764d5a3b9067b2eab81c77bf3b13c5",
+      "id": "sha256:17d905bb291a9b6c3d908bfc2ad105769cb389deadf8a45e595571944f9c3323",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/8__a84KAdt/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:2c1e3e6883173b17e4ca61dd11dcf98a8d0d9e06e8b193d7e04bcbd20f134bd1",
+      "id": "sha256:2d44f166c3c18de195ee5ed016e3fb514220b7266072edd4d0106c5890b197ff",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/summary.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:3aa38973c702124786d356d2c1ca447047e5ee73b385d05d64d5528c11944beb",
+      "id": "sha256:30f64a5819976ac00dbc6ba6d152e4d47fcb6a62a895971ec923776e17000e41",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/1__3kgdcaC/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:bf07be355909d7989354eefd886b2262b6e7ad5c3929a60fd103bc43e57c5e10",
+      "id": "sha256:3466149b4ca6dae4f6ff441505c6e624cb524301f419e6251789c6338a0bd649",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/6__2KM2LXi/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:c18af83c43b46cade172702069bd6707d5d0497a43de64c8d6373e5abee49511",
+      "id": "sha256:364d73721cb6a051fd0ffcf005a1083b248fe67ad14e278fc44a2cd65141abb8",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/10__N7UxT2y/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:0357cc58f99f80a9485dffe903377726c51a8cca816e6d05c116e063136c5483",
+      "id": "sha256:38f31a1d43724eacb624a95910b66777832721ce02bf11b597e160e02607dbe8",
+      "locator": [],
+      "member": "versions.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:5abb6d1bbb7161e549e9cefacdb1733194074e6fde5708e91b7f40e1dbe02100",
+      "id": "sha256:3a34f02f09ea87b3e1ac0ea5fe69a268affa5f644552b31ee1b60a9af2ca220a",
+      "locator": [],
+      "member": "provenance.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:8eb4582c43fd7b25998c428c25d992b70d2ae8c374683fbe37755131ef10df5d",
+      "id": "sha256:3e6c7d6f6d031a89d315d4c8389b98c142b26f13c69e44b8064e6e2cd70efefc",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/7__PrjwyXh/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:642e5edf44fa87defcb4b152f948941b8354986d82b710c36a8905ddf3268a3f",
+      "id": "sha256:4164b748228d1c21538b27f4d42d592b166e5add606f7489faf86ebe71163fed",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/5__kDYz4b7/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:eebc86701c35ca745d2d3e4ef7f918f6eda23c9c314cf363404d1df8ffad6c54",
+      "id": "sha256:4c33f4a493de5fb17fbc873420e84c0fae1d8cbc9c181bfac27c51694a4f29a6",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/5__kDYz4b7/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:e0c6b481ddf86a2b34f79b4cf800dbd112c9a04641b5d00226e9273927c9a2d4",
+      "id": "sha256:52fbf70685f6556abeeb9170e6d9739fc8ae5367ad10c9f51b55042d23f1cb05",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/4__GYzQYsM/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:cc7d0bc415ef73e354db346242e5d57fc15282242a2b139adc5ab499413f2d3d",
+      "id": "sha256:5b1467dc967ff4a62334a7f4c51e0ab7363402b36edf0b07d641c0579c57fc9b",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/1__r7DmrG9/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:4a2d519258b441dbe30274dce991960326055850c02e0f054a2703b6274ffa48",
+      "id": "sha256:6094943fb79809fe5f9d75d45bf107e900ba595897ca6cda14eb4048d7adcbd1",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/3__q5YZDzK/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:df598b992a706e6715e1214d87d427ea3980a14d3bc4cedae90152a8e15c76f3",
+      "id": "sha256:6abbd148cd01884bd8230e292e99ada4f5e2e9b26abd97dffbc565331c760de0",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/8__a84KAdt/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:a7c75d166ef1c4a3ba23fb4fab1114e52ba307c7eb117f833052d5b622e271fc",
+      "id": "sha256:6d4a350040358f124f3c84ba8c52963eb842f5e133e49f96daa96c26fda39c82",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/4__rn2Fmdn/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:fc5cc5b42e724d1ce5f81cb20e00a62d00c989dacf2aeba7d4a42ba38df37205",
+      "id": "sha256:709535a08e5ec7771f8826d3a368eb02410166eb525720b9d0443fa0406337d9",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/7__FQovQui/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:9201109dc0696ebe7bdf190b8f6580e04ecae7c3528d2e7dedf64949e5e759e6",
+      "id": "sha256:7cfca202b429f38c1930c2695617e0e1414c356ceaf87219fc8fb0b7ece04a6e",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/10__N7UxT2y/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:c8e26dd1ff25bf69f15cd1375a74f89303894bd798909312ed83932943793155",
+      "id": "sha256:7f53b5c2b05de654b5121a447ee990dd195468442108bb6a99091201ecbe714b",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/attempt_policy.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:6d3c2bf25371a8559b3b5874e474bae7eaf889f23b557a1b64dda76c4e60c385",
+      "id": "sha256:8010ed7f3a3dc9be6e427fb87a088c90bf3d1d0744fa7a3b68475f8edb87a91f",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/3__GpAAayB/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:417d3cc55539891195f6ad1fa5cc853df7ac45777ebc0cd79b88ba14e391fda3",
+      "id": "sha256:8d5bbd640cc10e020e1831f2fae536aeecac45f85927428498cb02a63f3d74ca",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/9__memQq9V/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:3c90b9dbf009dd856e14ac048bf8c62f90139f5dd7205f5a74357f9eb61d55ee",
+      "id": "sha256:967b7ee86b1b5e6789bca67d8b3be09650e046f5dabe3e115c907123bee71894",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/4__GYzQYsM/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:2bbe38efc2cc1a3f4e63f3e9f02baca031a598d8904b75693461aa1c4afc37b5",
+      "id": "sha256:9afac2ccfdb5fbea885a45e24d1c65b6e921d471c8336774a1c9a4acdc494465",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/9__iikaRFW/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:6dff57d4e7b8500ce819b042913826ac6cd2a1448261c31825f0ba048aefae89",
+      "id": "sha256:9ededc3fcd83482c2644eb48c85b453c0e42b15d7ba653aae4e1bc491f514722",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/3__q5YZDzK/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:3ae5201899c877211c460c55563c7254735fa4a6005f696c5f94e1c3922f3106",
+      "id": "sha256:a9258be53b04218280ba5ea242ee8cd708ca8151faf88ed37101a86b71b9de34",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/run_config.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:5aefbf1577bb4237961f0d08f90c0e1c3ddaef1a3c11340ddc63c652d3d69724",
+      "id": "sha256:b2bde1dbb3c53c84f16634985e7f17efb7fa53fe8024ebe18a34984c303aa88b",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/7__PrjwyXh/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:fd028c02786202fec38b190dca5e00f76309060b0feb65184abd0c2e874136af",
+      "id": "sha256:c61cd7526000c2e14c895454eeeb7c199302a64add4df5f2b660c0bc29cf1a93",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/4__rn2Fmdn/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:a1ca69bcf907544bb4ad790f1875ffa5eac08ae6a83ecadbb2943b4fdcfd2f7e",
+      "id": "sha256:c8370e2e999bfbf308fcb7b49023a8e15e7d1904a620cb0237d35c1ff63630e9",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/5__E8DWaM8/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:b2461df84097991bc6e77c757ba20a6c265fefec1a6dc384a63881d43a20a7c5",
+      "id": "sha256:ce52d82baeafea28e2af2baee1c4d11b53c6790a3b321c5778872e93d582079e",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/9__iikaRFW/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:4203e79600b16f3e6b0aec27f5c9704c32e8e807540576887c621e993e741fd4",
+      "id": "sha256:d2008cfdfe9fa40ef2070cf6832a866f09be7556a31fba5f6594d71c19919099",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/6__4vyHU8G/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:490c281ea485a534caf63787fcbc79bea65cb12556805e0dbf416e82c3784ce8",
+      "id": "sha256:d531e7e7f7bc6506b07621ffceb0b80cded6a385931ead34d7c6533c99c2706d",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/10__z27VrWg/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:7d215fae5aa480cb8b9d93f93bd0fc21242ad0d90080776692bcf01d83dbc833",
+      "id": "sha256:d63c28f082b902c01f9e4a534452414fbd7f9d18976aecfaaa1f6b350df46987",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/3__GpAAayB/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:4ae992e35bcbba37528346d032e15841cfcd2507f0d27f3dad81851cc23b54d1",
+      "id": "sha256:d91ad97412f16d6c93f738a6a9bf38cdc1a38f689b544d22a6e90060c9cd6765",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/2__hoTjctT/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:47b555b11763140bc17913ef36efc0ab097615010d7f2f93b44ae53794f1c4f7",
+      "id": "sha256:d9ff54bae19fbd698b9b1e9341e1c4ff960239bba225796e5b91cac0306e8bb7",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/dataset_snapshot.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:146372a41fb7258b07a92d1affe48d8cf679733eead762e8f6890cf40ad0f9e0",
+      "id": "sha256:dabcb0e9892fd67352831174e9c7578939ce526c51e8758d90a7cfc60ef1b6ac",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/8__Bu4W5bp/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:fbf6b4105284f26ed196206a0e0dcac001ad44a4fa47bf0148cd24c4d4fb318a",
+      "id": "sha256:dbd11912e13e19873177bec8c8758f959c824f704f07c252ad92fea102715e05",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/10__z27VrWg/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:27e73d27749f94fbe6db40c4d4ca337af4185af5deee4f13e4e7ec81eadd342e",
+      "id": "sha256:dc4a4c3c1d9b6cf50f73796fb58a70dbbf80e167bf5829e0e7f913c0b22755fc",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/6__4vyHU8G/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:9662a52589d657bf21783b97cbe508b371382d7d0c15f5210bc8080960589a8d",
+      "id": "sha256:dd7bcdc9d20e72235f20add405dffbf1eee75e66570d51f3e452d490147efdce",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:51d206aa704936e65a7232efa8234be3b4c8688d0370f15e4f5fdbb7b1861806",
+      "id": "sha256:df05bc8d41351b7dece9cb7c78b950f808a16d33a91412ad30a6e8ed3ed12458",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/2__rkgUEeu/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:9d8e3dd68e71b623fb15ad5c08977f3bef77f8bf961904e48b0df56c7a5c0716",
+      "id": "sha256:e0f23494fdc72a274187ec5dd43c789bd7f09b3feae6700404720bbd2270e69d",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/6__2KM2LXi/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:8974aeaed5f2061c135ac2d2ce67ec48e4c4336a123146a8bdf1d5d1d774e180",
+      "id": "sha256:e17e2ed8e90441019b942cbbe2b3cade10e3619a34b9ac5ae2d512d3bb13dfbd",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/9__memQq9V/result.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:3ba7969667c4eca9410b650bfbaa4fcecbd226c1d2661470a7dbbcac17d215f4",
+      "id": "sha256:e55b0dce84a75a4a21cf218f4306bca21a50c2127774ce9a57877e4c4db87fb2",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/1__3kgdcaC/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:464f277f3a885ecace737a4dceb251e8fa420e85c7e4f4c71aae1327d587cffe",
+      "id": "sha256:ea12c2b997af5951f34b9c91e22b5a5e7ac565aa534ff7054a5f3f3fe3e5960f",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/without-skill/trials/7__FQovQui/reward.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:cbb44c4542dc057b639cd9e451b3f4efe1f70addbb684d4623b1c62e7db64d3c",
+      "id": "sha256:f37058b8dfc9a615661c519a3d5d334093a1994a5f7fd29432b953431addf166",
+      "locator": [],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/summary.json",
+      "provenance": "reviewed_extract"
+    },
+    {
+      "artifact_digest": "sha256:2d384b3c01ac778764fee33943c66a14e011ebcf60fbf266cf1e40880d2e5dca",
+      "artifact_id": "github-artifact-10590172928",
+      "availability": "expired",
+      "digest": "sha256:11de8db008789e099087f45f6098e684d373f286e20ca9e41a52af954e813505",
+      "id": "sha256:fe7c4f850ab4927f06617d0c555fca5f8054a76afe4bc0d4b6a3803839422d61",
+      "locator": [
+        "verifier_result",
+        "rewards"
+      ],
+      "member": "results/podman/20260919_183432_2598_6c30a245af5c/codex/with-skill/trials/1__r7DmrG9/result.json",
+      "provenance": "reviewed_extract"
+    }
+  ],
+  "run_id": "20260919_183432_2598_6c30a245af5c",
+  "scans": [],
+  "schema_version": 1,
+  "source": {
+    "content": {
+      "algorithm": "sha256-relative-file-manifest-v1",
+      "digest": "sha256:506e78b501906831944d7c6559091c898de9476d42347c56381c950d0099d07d",
+      "manifest": [
+        {
+          "digest": "sha256:96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+          "member": "EVALS.md"
+        },
+        {
+          "digest": "sha256:93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+          "member": "MAINTENANCE.md"
+        },
+        {
+          "digest": "sha256:625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+          "member": "SKILL.md"
+        },
+        {
+          "digest": "sha256:fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+          "member": "references/compose-migration.md"
+        },
+        {
+          "digest": "sha256:adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+          "member": "references/fedora-hosts.md"
+        },
+        {
+          "digest": "sha256:55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+          "member": "references/quadlet-systemd.md"
+        },
+        {
+          "digest": "sha256:6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+          "member": "references/reverse-proxy.md"
+        },
+        {
+          "digest": "sha256:a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+          "member": "references/rootless-networking.md"
+        },
+        {
+          "digest": "sha256:37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+          "member": "references/security-storage-secrets.md"
+        },
+        {
+          "digest": "sha256:465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+          "member": "references/validation.md"
+        }
+      ],
+      "provenance": "reconstructed_from_declared_revision",
+      "scope": "pinned-agent-visible"
+    },
+    "lineage": null,
+    "owner": "local",
+    "repository": "thetechgy/agent-engineering-baseline",
+    "revision": "bb3048b4ad6b6bb0c0b747cc6a4a7608d6e4f5fe",
+    "skill_id": "podman",
+    "source_path": ".apm/skills/podman"
+  }
+}

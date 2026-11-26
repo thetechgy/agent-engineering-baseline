@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Private report attachments; exact original validators, never inference or approval."""
+"""Private report attachments with authenticated original validator sources."""
 
 from dataclasses import dataclass
 from datetime import datetime
-import importlib.metadata
 import os
 from pathlib import Path
 import shutil
@@ -14,6 +13,8 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import skill_analysis as analysis
 import skill_evidence as evidence
+import private_review_runtime
+import private_review_snapshot as snapshot
 
 require = evidence.require
 LIMIT = 1024 * 1024
@@ -95,26 +96,18 @@ REGISTRY_DIGESTS['current-v5'] = '4fb8cd3f8455428b5eaeb92fb3b77873f917b6fc78f8d8
 # Exact supporting code/data required by the newer validator modules.
 SUPPORT_FILES = {'current-v5': {'.github/scripts/evaluator_profiles.py': '4343ef13d8ee21e6abda83942a3b1a0a5f25f5d35671f5932d5d34c22346b9d9', '.github/evals/evaluator-candidate.json': '9049293fbee7e2518a57a66ab3bfdb90d5412fd105d9115b6b6d5a951c0cd871'}}
 
-# Profile selection never accepts executable identities from attachment data.
-# Only setup/operator configuration supplies the two reviewed environments.
-def validator_runtime(profile):
-    require(profile in PROFILES, 'Unsupported validator profile')
-    previous = profile in ('current-v3', 'current-v4')
-    expected = PINS if profile == 'current-v5' else PREVIOUS_PINS if previous else LEGACY_PINS
-    installed = {name: importlib.metadata.version(name) for name in PINS}
-    if installed == expected:
-        return sys.executable, expected
-    variable = ('SKILL_REVIEW_PYTHON' if profile == 'current-v5' else
-                'SKILL_PREVIOUS_REVIEW_PYTHON' if previous else 'SKILL_LEGACY_REVIEW_PYTHON')
-    executable = Path(os.environ.get(variable, ''))
-    require(executable.is_absolute() and executable.is_file(), 'Pinned validator runtime unavailable')
-    return str(executable), expected
+def historical_pins(profile):
+    if profile == 'current-v5':
+        return PINS
+    if profile in ('current-v3', 'current-v4'):
+        return PREVIOUS_PINS
+    return LEGACY_PINS
 
 
 # Fixed launcher. -I ignores caller PYTHONPATH, user site and working-directory imports.
 # Audit hooks restrict audited Python operations; they are NOT an OS sandbox.
-RUNNER = r'''
-import sys, json
+AUDIT_GUARD = r'''
+import sys, json, importlib.metadata, importlib.util
 from pathlib import Path
 
 def restrict(event, args):
@@ -124,19 +117,52 @@ def restrict(event, args):
         raise PermissionError('Offline validator operation rejected')
 sys.addaudithook(restrict)
 sys.dont_write_bytecode = True
-sys.path.insert(0, sys.argv[1])
-import skill_review as review
+'''
 
+RUNNER = AUDIT_GUARD + r'''
 try:
-    import importlib.metadata
-    expected = json.loads(sys.argv[2])
-    review.require(sys.version_info[:2] == (3, 13) and
-        {name: importlib.metadata.version(name) for name in expected} == expected,
-        'Pinned validator environment required')
+    scripts, pins, original = sys.argv[1:]
+    sys.path.insert(0, scripts)
+    expected = json.loads(pins)
+    if sys.version_info[:2] != (3, 13) or {name: importlib.metadata.version(name) for name in expected} != expected:
+        raise ValueError('Pinned validator environment required')
+    if original:
+        # Historical snapshots are already authenticated by the parent. Use
+        # their context, report and rendering rules, with the saved producer
+        # version checked separately below. Keep the original source on disk
+        # for the snapshot's own implementation-digest calculation.
+        path = Path(scripts) / 'skill_review.py'
+        source = path.read_text()
+        guard = '\n    versions()\n'
+        recorded = '        "versions": versions(),\n'
+        screen = '            for key, item in node.items():\n'
+        if any(source.count(marker) != 1 for marker in (guard, recorded, screen)):
+            raise ValueError('Unrecognized historical replay interface')
+        replay = source.replace(guard, '\n', 1).replace(recorded, '', 1)
+        # The release treats token-like names as sensitive. At this exact
+        # schema location the original validator checks typed usage counters.
+        # Screen their numeric values under neutral keys; keep all saved bytes.
+        replay = replay.replace(
+            screen,
+            screen +
+            '                if (location == ("provenance", "usage") and type(item) is int\n'
+            '                        and key in ("preflight_input_tokens", "input_tokens", "output_tokens", "total_tokens")):\n'
+            '                    result[key.removesuffix("_tokens") + "_count"] = item\n'
+            '                    continue\n',
+            1,
+        )
+        spec = importlib.util.spec_from_file_location('skill_review', path)
+        review = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = review
+        exec(compile(replay, str(path), 'exec'), review.__dict__)
+    else:
+        import skill_review as review
     request = json.loads(sys.stdin.buffer.read(1024 * 1024 + 1))
     capture = review.Capture()
     raw = capture.read(Path(request['review']), limit=review.REPORT_LIMIT)
     saved = review.evidence.parse_json(raw, limit=review.REPORT_LIMIT)
+    if original:
+        review.require(saved['provenance']['versions'] == json.loads(original), 'Original producer versions differ')
     markdown = capture.read(Path(request['review']).with_name('skill-review.md'), limit=review.REPORT_LIMIT)
     context = review.prepare([Path(p) for p in request['inputs']], Path(request['analysis']),
         request['skill'], request['record_id'],
@@ -275,19 +301,24 @@ def assessment(spec, parent, capture, report, review):
 
 
 def run_validator(request, modules, capture, roots, registry, profile, assets=None):
-    executable, expected = validator_runtime(profile)
+    release_snapshot = profile in snapshot.RELEASE_PROFILES
+    original = '' if release_snapshot else evidence.encoded(
+        {**historical_pins(profile), 'python': private_review_runtime.PYTHON}).decode()
     guards = (capture.guard(),)
     temporary = evidence.write_outputs({}, input_paths=roots, input_guards=guards)
     try:
-        evidence.write_outputs({}, temporary / '.github', input_paths=roots, input_guards=guards)
-        scripts = evidence.write_outputs({}, temporary / '.github' / 'scripts', input_paths=roots,
-                                         input_guards=guards, rendered=modules)
-        if registry is not None:
-            evidence.write_outputs({}, temporary / '.github' / 'evals', input_paths=roots,
-                                   input_guards=guards, rendered={'custom-metrics.json': registry, **(assets or {})})
+        if release_snapshot:
+            scripts = snapshot.unpack(temporary, profile)
+        else:
+            evidence.write_outputs({}, temporary / '.github', input_paths=roots, input_guards=guards)
+            scripts = evidence.write_outputs({}, temporary / '.github' / 'scripts', input_paths=roots,
+                                             input_guards=guards, rendered=modules)
+            if registry is not None:
+                evidence.write_outputs({}, temporary / '.github' / 'evals', input_paths=roots,
+                                       input_guards=guards, rendered={'custom-metrics.json': registry, **(assets or {})})
         try:
-            response = subprocess.run([executable, '-I', '-B', '-c', RUNNER, str(scripts),
-                                       evidence.encoded(expected).decode()],
+            response = subprocess.run([sys.executable, '-I', '-B', '-c', RUNNER, str(scripts),
+                                       evidence.encoded(private_review_runtime.OVERLAY).decode(), original],
                 input=evidence.encoded(request), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                 cwd=temporary, env={'PATH': os.defpath, 'PYTHONDONTWRITEBYTECODE': '1', 'GIT_NO_LAZY_FETCH': '1'},
                 timeout=120, check=False)
@@ -309,10 +340,9 @@ def load(paths, captured):
     """Independently validate all supplied attachments or fail without report output."""
     require(0 < len(paths) <= analysis.MAX_REPORTS, 'Analyst attachment limit')
     try:
-        versions = {k: importlib.metadata.version(k) for k in PINS}
-    except importlib.metadata.PackageNotFoundError:
+        private_review_runtime.validate_install()
+    except ImportError:
         raise ValueError('Pinned validator environment required') from None
-    require(sys.version_info[:2] == (3, 13) and versions in (PINS, PREVIOUS_PINS, LEGACY_PINS), 'Pinned validator environment required')
     import skill_review as review  # Optional dependency, never needed by a base report.
     capture = review.Capture()
     items = []; roots = []; original_records = []; seen = set()
@@ -325,7 +355,8 @@ def load(paths, captured):
                               'review_digest', 'markdown_digest', 'inputs', 'analysis', 'source', 'support',
                               'selection', 'assessments'))
         require(type(spec['schema_version']) is int and spec['schema_version'] == 1, 'Attachment schema mismatch')
-        require(type(spec['profile']) is str and spec['profile'] in PROFILES, 'Unsupported validator profile')
+        release_snapshot = spec['profile'] in snapshot.RELEASE_PROFILES
+        require(type(spec['profile']) is str and (release_snapshot or spec['profile'] in PROFILES), 'Unsupported validator profile')
         evidence.skill_id(spec['skill']); evidence.sha(spec['record_id'])
         rid = spec['record_id']
         require(rid not in seen and rid in captured.records, 'Duplicate or missing attachment record')
@@ -352,28 +383,34 @@ def load(paths, captured):
         for key, data in (('review_digest', raw), ('markdown_digest', markdown)):
             evidence.sha(spec[key])
             require(spec[key] == evidence.digest_bytes(data), 'Analyst report digest mismatch')
-        require(spec['tooling'] is not None or spec['profile'] in ('current-v2', 'current-v3', 'current-v4'), 'Historical tooling snapshot required')
-        tooling = attachment_path(spec['tooling'], parent) if spec['tooling'] is not None else evidence.ROOT
-        modules = {}
-        revision, hashes = PROFILES[spec['profile']]
-        for name, digest in zip(MODULES, hashes):
-            data = capture.read(tooling / '.github' / 'scripts' / name)
-            require(evidence.digest_bytes(data) == 'sha256:' + digest, 'Unreviewed validator module')
-            modules[name] = data
-        assets = {}
-        for member, digest in SUPPORT_FILES.get(spec['profile'], {}).items():
-            data = capture.read(tooling / member, limit=LIMIT)
-            require(evidence.digest_bytes(data) == 'sha256:' + digest, 'Unreviewed validator supporting file')
-            if member.startswith('.github/scripts/'):
-                modules[Path(member).name] = data
-            else:
-                assets[Path(member).name] = data
-        registry = None
-        if spec['profile'] in REGISTRY_DIGESTS:
-            registry = capture.read(tooling / '.github/evals/custom-metrics.json', limit=LIMIT)
-            require(evidence.digest_bytes(registry) == 'sha256:' + REGISTRY_DIGESTS[spec['profile']],
-                    'Unreviewed metric registry')
-        roots.append(tooling)
+        if release_snapshot:
+            require(spec['tooling'] is None, 'Tooling for this profile is fixed')
+            revision, validator_execution = snapshot.identity(spec['profile'])
+            modules, registry, assets = {}, None, {}
+        else:
+            validator_execution = 'skillevaluator-1.0.1-private-review-offline-v1'
+            require(spec['tooling'] is not None or spec['profile'] in ('current-v2', 'current-v3', 'current-v4'), 'Historical tooling snapshot required')
+            tooling = attachment_path(spec['tooling'], parent) if spec['tooling'] is not None else evidence.ROOT
+            modules = {}
+            revision, hashes = PROFILES[spec['profile']]
+            for name, digest in zip(MODULES, hashes):
+                data = capture.read(tooling / '.github' / 'scripts' / name)
+                require(evidence.digest_bytes(data) == 'sha256:' + digest, 'Unreviewed validator module')
+                modules[name] = data
+            assets = {}
+            for member, digest in SUPPORT_FILES.get(spec['profile'], {}).items():
+                data = capture.read(tooling / member, limit=LIMIT)
+                require(evidence.digest_bytes(data) == 'sha256:' + digest, 'Unreviewed validator supporting file')
+                if member.startswith('.github/scripts/'):
+                    modules[Path(member).name] = data
+                else:
+                    assets[Path(member).name] = data
+            registry = None
+            if spec['profile'] in REGISTRY_DIGESTS:
+                registry = capture.read(tooling / '.github/evals/custom-metrics.json', limit=LIMIT)
+                require(evidence.digest_bytes(registry) == 'sha256:' + REGISTRY_DIGESTS[spec['profile']],
+                        'Unreviewed metric registry')
+            roots.append(tooling)
         require(type(spec['assessments']) is list and len(spec['assessments']) <= MAX_ASSESSMENTS, 'Assessment limit')
         # Capture assessment originals before any temporary output is allocated.
         # This provisional projection confers no authority: original validation
@@ -390,6 +427,7 @@ def load(paths, captured):
         require(result['records'].get(rid) == selected, 'Original and consolidated record mismatch')
         original_records.extend(result['records'].values())
         items.append({'record_id': rid, 'skill': spec['skill'], 'profile': spec['profile'], 'tooling_revision': revision,
+                      'validator_execution': validator_execution,
                       'review_digest': spec['review_digest'], 'markdown_digest': spec['markdown_digest'],
                       'reference_deadlines': sorted({evidence.REVIEWED_REFERENCE_EXPIRY[(ref['artifact_id'], ref['artifact_digest'])]
                           for record in result['records'].values() for ref in record['references']

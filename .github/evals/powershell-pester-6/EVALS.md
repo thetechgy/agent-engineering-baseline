@@ -180,12 +180,16 @@ capture qualifies the new reporting path without retroactive authentication.
 
 ## Shared verifier package
 
-Production SkillEvaluator 0.3.0/Harbor 0.13.2 and the opt-in
-0.7.2/0.24.0 candidate use the same authored verifier package. `support/test.sh`
-executes the nested grader copied into the verifier image with the runner,
-case data and minimal entry identity. Harbor receives numeric-only rewards;
-rich sidecars retain `details.outcome` and the pre-armed unscoreable status.
-Arm membership comes from captured target-skill contents and matching native
-task checksums. Grading rules, metric definitions and the five public tasks
-remain unchanged. The candidate command and remaining adoption limits are in
-[`EVALUATOR-CANDIDATE-95.md`](../EVALUATOR-CANDIDATE-95.md#shared-pester-verifier-qualification).
+For the protected **Benchmark skills** workflow, select
+`skill=powershell-pester-6` and `mode=confirmation`. The released
+SkillEvaluator 1.0.1 launcher uses Harbor 0.25.0 and the custom-only
+diagnostic profile. Five cases run three times in each arm. Only Podman
+and gh produce standard benchmark history.
+
+`support/test.sh` runs the nested grader inside the verifier image with the
+runner, case data and minimal entry identity. Harbor receives numeric rewards.
+The diagnostic sidecars retain `details.outcome` and the unscoreable status.
+Arm membership is verified against captured skill contents and native task
+checksums. The original SkillEvaluator 0.3.0 and 0.7.2 qualification results
+retain their producing profiles and verifier identities.
+[Historical qualifier](../EVALUATOR-CANDIDATE-95.md#shared-pester-verifier-qualification)

@@ -1,0 +1,519 @@
+"""Prepare and authenticate the single protected Podman compatibility smoke."""
+
+import argparse
+import json
+import os
+import re
+import shlex
+import shutil
+import subprocess
+from pathlib import Path
+import signal
+import time
+
+from benchmark_native import native_versions, validate_runtime
+from benchmark_podman import CODEX_PROFILE, SMOKE_CASE, compose_teardown_complete, configure_openai_task, scope, stage_task
+from skill_orchestration import BENCHMARK, REPOSITORY, git, identity, read_artifact
+import skill_pages as pages
+from skill_reports import outputs, read_json, require, summary, write_json
+
+MODE = 'candidate-smoke'
+BRANCH = 'qualify/skillevaluator-101-retirement'
+JOB_NAMES = {'with_skill': 'podman-codex-with', 'without_skill': 'podman-codex-without'}
+JUDGE_METRICS = ('accuracy', 'behavior_check', 'goal_accuracy')
+FILE_EDIT_CASE = 'compatibility-file-edit'
+FILE_EDIT_DATASET = {
+    'skill_name': 'podman',
+    'evals': [{
+        'id': FILE_EDIT_CASE,
+        'prompt': ('Create output/compatibility.txt in the current workspace containing a single line '
+                   'with the text podman-compatibility-fixture. Use a workspace tool to create the file, '
+                   'then report its relative path.'),
+        'expected_output': 'output/compatibility.txt contains podman-compatibility-fixture on a single line.',
+        'assertions': ['Creates the requested workspace file with the exact marker.'],
+        'files': [],
+    }],
+}
+PROVIDER_CREDENTIALS = (
+    'OPENAI_API_KEY', 'CODEX_API_KEY', 'CODEX_AUTH_JSON_PATH', 'CODEX_FORCE_AUTH_JSON',
+    'ANTHROPIC_API_KEY', 'NVIDIA_API_KEY', 'SKILL_EVAL_LLM_API_KEY',
+)
+PROVIDER_POLICY = {
+    'provider': 'openai',
+    'host': 'api.openai.com',
+    'preflight': False,
+    'judge_transport_retries': 0,
+    'judge_policy': 'strict',
+    'agent_seconds_per_arm': 300,
+    'inference_seconds': 900,
+    'max_observed_agent_tokens_before_next_arm': 120_000,
+}
+
+
+def estimate_cost(*, baseline_only=False):
+    profile = read_json(CODEX_PROFILE)
+    prices = profile['prices_per_million']
+    # The first live arm recorded about 249,000 input tokens including cache reads.
+    planned = ({'input_tokens': 300_000, 'output_tokens': 120_000} if baseline_only
+               else {'input_tokens': 400_000, 'output_tokens': 240_000})
+    return {**planned, 'basis': 'standard_short_context_uncached',
+            'usd': round((planned['input_tokens'] * prices['input'] +
+                          planned['output_tokens'] * prices['output']) / 1_000_000, 2)}
+
+
+
+def reviewed_scope(workspace, env, inputs):
+    require(env['GITHUB_REPOSITORY'] == REPOSITORY
+            and env['GITHUB_EVENT_NAME'] == 'workflow_dispatch'
+            and env['GITHUB_REF'] == 'refs/heads/' + BRANCH
+            and env['GITHUB_RUN_ATTEMPT'] == '1', 'Candidate smoke requires an initial manual feature dispatch')
+    revision = pages.sha(env['GITHUB_SHA'])
+    require(inputs['skill'] == 'podman' and inputs['mode'] == MODE
+            and inputs.get('expected_revision') == revision
+            and not any(inputs.get(key) for key in ('request_id', 'planner_run_id', 'planner_attempt')),
+            'Candidate dispatch does not match its reviewed scope')
+    require(git(workspace, 'rev-parse', 'HEAD').decode().strip() == revision
+            and not git(workspace, 'status', '--porcelain=v1', '--untracked-files=all', '--ignored'),
+            'Candidate checkout differs from the dispatched revision')
+    arms = inputs.get('candidate_smoke_arms') or 'paired'
+    require(arms in ('paired', 'without-skill'), 'Unknown candidate arm selection')
+    workload = inputs.get('candidate_smoke_workload') or 'podman-case-1'
+    require(workload in ('podman-case-1', 'file-edit-fixture'), 'Unknown candidate workload')
+    require(workload == 'podman-case-1' or arms == 'without-skill', 'The compatibility fixture requires one baseline arm')
+    selected = scope(workspace, revision, released=True)
+    baseline_only = arms == 'without-skill'
+    if baseline_only:
+        selected.update(arms=['without_skill'], planned_trials=1)
+    if workload == 'file-edit-fixture':
+        selected.update(case=FILE_EDIT_CASE, fixture_digest='sha256:' + identity(FILE_EDIT_DATASET))
+    return {'schema_version': 2, 'kind': 'podman_101_compatibility', 'run_id': pages.number(int(env['GITHUB_RUN_ID'])),
+            'attempt': 1, 'scope': selected, 'provider_policy': PROVIDER_POLICY, 'runtime': native_versions(),
+            'cost_estimate': estimate_cost(baseline_only=baseline_only)}
+
+
+def artifact_name(record):
+    return f'podman-101-compatibility-context-{record["run_id"]}-{record["attempt"]}'
+
+
+def guard(api, expected):
+    run_id, attempt = expected['run_id'], expected['attempt']
+    revision = expected['scope']['revision']
+    run = api.get(f'actions/runs/{run_id}/attempts/{attempt}')
+    require(run['id'] == run_id and run['run_attempt'] == attempt
+            and run['repository']['full_name'] == run['head_repository']['full_name'] == REPOSITORY
+            and run['head_branch'] == BRANCH and run['head_sha'] == revision
+            and run['event'] == 'workflow_dispatch' and run['path'] == BENCHMARK,
+            'Candidate run identity mismatch')
+    workflow = api.get('actions/workflows/benchmark-skills.yml')
+    require(workflow['id'] == run['workflow_id'] and workflow['path'] == BENCHMARK,
+            'Candidate workflow identity mismatch')
+    require(read_artifact(api, run, artifact_name(expected)) == expected, 'Candidate preapproval scope mismatch')
+    require(api.get('git/ref/heads/' + BRANCH)['object']['sha'] == revision,
+            'Candidate branch changed after preapproval')
+
+
+def prepare(workspace, stage, expected):
+    from qualify_codex_1691 import acquire
+
+    owner = validate_runtime()
+    require(owner == expected['runtime'], 'Candidate preparation runtime differs from the reviewed scope')
+    selected = expected['scope']
+    stage.mkdir(mode=0o700, parents=True, exist_ok=False)
+    assets = stage / 'archive'
+    assets.mkdir()
+    profile = read_json(CODEX_PROFILE)
+    acquire(profile, assets)
+    skill = workspace / '.apm/skills/podman'
+    if selected['case'] == FILE_EDIT_CASE:
+        require(selected['arms'] == ['without_skill'] and selected['planned_trials'] == 1
+                and selected['fixture_digest'] == 'sha256:' + identity(FILE_EDIT_DATASET),
+                'Compatibility fixture scope changed')
+        bundle = stage / 'fixture' / 'podman'
+        bundle.mkdir(parents=True, mode=0o700)
+        # Keep released workspace discovery confined to this synthetic source tree.
+        subprocess.run(['git', 'init', '--quiet', '--template=', str(bundle)], check=True, timeout=15,
+                       env={name: value for name, value in os.environ.items() if not name.startswith('GIT_')})
+        shutil.copyfile(skill / 'SKILL.md', bundle / 'SKILL.md')
+        write_json(bundle / 'evals/evals.json', FILE_EDIT_DATASET)
+        skill = bundle
+    task_checksums = {}
+    for arm in selected['arms']:
+        task = stage_task(skill, stage / arm, case=selected['case'],
+                          with_skill=arm == 'with_skill')
+        native = configure_openai_task(task, assets, profile)
+        task_checksums[arm] = native.checksum
+        require(native.config.agent.timeout_sec == PROVIDER_POLICY['agent_seconds_per_arm'],
+                'Candidate agent execution timeout changed')
+    return {'scope': expected, 'runtime': owner, 'codex': read_json(assets / 'integrity.json'),
+            'tasks': task_checksums}
+
+
+def execution_evidence_reasons(reward):
+    """Project bounded reason labels from the pinned verifier's failure sidecar."""
+    details = reward.get('details')
+    security = details.get('security') if isinstance(details, dict) else None
+    findings = security.get('findings') if isinstance(security, dict) else None
+    if not isinstance(findings, list):
+        return []
+    reasons = [
+        name for name in ('unsupported_path_evidence', 'unsupported_tool_wrapper')
+        if any(isinstance(finding, dict) and finding.get('type') == name for finding in findings)
+    ]
+    if security.get('supported') is False:
+        return reasons
+    # With a supported security observation, the pinned verifier's other
+    # execution-evidence rejection is a missing or ambiguous tool result.
+    if not reasons and 'supported' not in security and type(security.get('passed')) is bool:
+        return ['missing_or_ambiguous_tool_result']
+    return []
+
+
+def path_syntax(source):
+    """Describe syntax in an unresolved action without exposing any operands."""
+    if len(source) > 65536:
+        return "source_limit"
+    try:
+        lexer = shlex.shlex(source, posix=True, punctuation_chars=";&|<>()")
+        lexer.whitespace = " \t\r"
+        words = list(lexer)
+    except ValueError:
+        return "shell_lexing"
+    if any(word in {"<<", "<<<"} for word in words):
+        return "shell_here_input"
+    if any(word in {"|", "||", "&&", "&", "|&"} for word in words):
+        return "shell_control_operator"
+    if any(word in {"(", ")"} or "$(" in word or "`" in word for word in words):
+        return "shell_expansion"
+    if words:
+        executable = words[0].rsplit("/", 1)[-1]
+        if executable in {"sh", "bash", "dash", "eval", "source", "."}:
+            return "shell_interpreter"
+        if executable in {"python", "python3"}:
+            return "python_source"
+    return "unclassified"
+
+
+def path_evidence_syntax(trial, reward, entry_path):
+    """Recheck the pinned verifier's unsupported calls for this receipt only."""
+    if entry_path is None or reward.get("trajectory_source") != "trajectory.json":
+        return []
+    from unittest.mock import patch
+
+    from skillevaluator.tier3.eval_core import checks
+    from skillevaluator.tier3.harbor.templates import eval as verifier
+    from skill_evidence import read_bytes
+
+    findings = reward["details"]["security"]["findings"]
+    expected = sum(isinstance(row, dict) and row.get("type") == "unsupported_path_evidence" for row in findings)
+    syntax = []
+
+    def observe(source, paths, *, matcher):
+        outcome = classifier(source, paths, matcher=matcher)
+        if outcome == "unknown":
+            syntax.append(path_syntax(source))
+        return outcome
+
+    try:
+        classifier = checks.classify_sensitive_command
+        entry = json.loads(read_bytes(entry_path, limit=128 * 1024))
+        if entry.get("id") != reward["entry_id"] or entry.get("has_skill") is not reward["has_skill"]:
+            return []
+        trajectory = json.loads(read_bytes(trial / "agent/trajectory.json", limit=2 * 1024 * 1024))
+        calls = verifier.extract_tool_calls_as_dicts(trajectory)
+        if len(calls) > 256:
+            return []
+        expected_skill = entry.get("expected_skill") or ""
+        acceptable = verifier._resolve_acceptable_skills(entry, expected_skill)
+        with patch.object(checks, "classify_sensitive_command", observe):
+            security = verifier.check_security(trajectory, calls, expected_skill, acceptable,
+                                               agent_workdir=entry.get("agent_workdir", "/workspace"))
+    except (AttributeError, KeyError, OSError, OverflowError, RecursionError, TypeError, ValueError):
+        return []
+    if security.get("supported") is False and len(syntax) == expected:
+        return sorted(set(syntax))
+    return []
+
+
+def trial_receipt(job, *, arm, selected, receipt, entry_path=None):
+    paths = list(job.glob('*/result.json'))
+    require(len(paths) == 1, 'Expected one native trial in the selected arm')
+    path = paths[0]
+    result = read_json(path)
+    require(result['exception_info'] is None and result['finished_at']
+            and result['agent_info']['version'] == selected['agent']['cli'], 'Native trial failed')
+    usage = result.get('agent_result') or {}
+    counts = {key: usage.get(key) for key in ('n_input_tokens', 'n_output_tokens', 'n_cache_tokens')}
+    require(all(type(counts[key]) is int and counts[key] >= 0 for key in ('n_input_tokens', 'n_output_tokens')),
+            'Native usage unavailable')
+    require(counts['n_cache_tokens'] is None
+            or type(counts['n_cache_tokens']) is int and counts['n_cache_tokens'] >= 0, 'Invalid cache token usage')
+    receipt.update(state='incomplete', agent_usage=counts, failure_reason='reward_unavailable')
+    reward = read_json(path.parent / 'verifier/skill_evaluator_reward.json')
+    with_skill = arm == 'with_skill'
+    receipt['failure_reason'] = 'reward_identity'
+    require(isinstance(reward, dict) and reward.get('entry_id') == selected['case']
+            and reward.get('has_skill', with_skill) is with_skill
+            and reward.get('score_policy') == 'skill-evaluator-dimension-mean-v1', 'Native reward identity mismatch')
+
+    status = reward.get('evaluation_status')
+    receipt['failure_reason'] = 'verifier_status'
+    if status in ('failed', 'error'):
+        # Pre-judge failures can omit the contract. Export only known labels
+        # from the verifier, never its error values, tool calls, or replies.
+        errors = reward.get('evaluation_errors')
+        failed = set(errors) if isinstance(errors, dict) else set()
+        if reward.get('error') == 'No trajectory or reconstructible agent log':
+            receipt['failure_reason'] = 'trajectory_unavailable'
+        elif failed == {'execution_evidence'}:
+            receipt['failure_reason'] = 'unsupported_execution_evidence'
+            reasons = execution_evidence_reasons(reward)
+            if reasons:
+                receipt['execution_evidence_reasons'] = reasons
+            if 'unsupported_path_evidence' in reasons:
+                syntax = path_evidence_syntax(path.parent, reward, entry_path)
+                if syntax:
+                    receipt['path_evidence_syntax'] = syntax
+        elif failed == {'environment'}:
+            receipt['failure_reason'] = 'verifier_environment'
+        elif failed and failed.issubset(JUDGE_METRICS):
+            receipt['failure_reason'] = 'required_judge_failed'
+            receipt['failed_judges'] = sorted(failed)
+    require(status is None, 'Native verifier did not produce a complete measurement')
+
+    receipt['failure_reason'] = 'judge_contract'
+    require(reward.get('has_skill') is with_skill and reward.get('judge_contract') == 'skill-evaluator-judges-v2',
+            'Native judge contract mismatch')
+    receipt['failure_reason'] = 'judge_observation'
+    details = reward.get('details')
+    require(isinstance(details, dict), 'Missing judge observations')
+    judges = {}
+    for metric in JUDGE_METRICS:
+        detail = details.get(metric)
+        require(isinstance(detail, dict), 'Missing judge observation')
+        score = detail.get('score')
+        require(detail.get('judge_model_used') == selected['verifier']['model']
+                and 'judge_reasoning_effort' in detail and detail['judge_reasoning_effort'] is None
+                and detail.get('judge_fallback_used') is False and type(score) in (int, float) and 0 <= score <= 1,
+                'Missing or changed judge observation')
+        judges[metric] = score
+    if 'tool_surface' in selected['agent']:
+        from skill_evidence import read_bytes
+
+        receipt['failure_reason'] = 'tool_route_unavailable'
+        trajectory = json.loads(read_bytes(path.parent / 'agent/trajectory.json', limit=16 * 1024 * 1024))
+        calls = {call.get('function_name') for step in trajectory['steps'] for call in step.get('tool_calls') or []}
+        require('exec' not in calls and calls.intersection(('exec_command', 'apply_patch')),
+                'Native trace did not observe the reviewed direct tool route')
+        receipt['native_tool_route'] = 'direct'
+    del receipt['failure_reason']
+    receipt.update(state='complete', judge_scores=judges)
+
+
+def collect_candidate(stage, jobs, selected):
+    from skillevaluator.tier3.harbor.collector import collect_harbor_results
+
+    baseline_only = selected['arms'] == ['without_skill']
+    collected = collect_harbor_results(
+        'podman', ['codex'], stage / 'collected', jobs, expected_cases=1,
+        expected_case_ids=[selected['case']], expected_trials=1, n_attempts=1,
+        skip_with_skill=baseline_only,
+        agent_models={'codex': {'model': selected['agent']['model'], 'source': 'explicit'}},
+    )
+    agent = collected['agents']['codex']
+    conditions = agent['conditions']
+    require(set(conditions) == set(JOB_NAMES) and all(
+        conditions[arm]['execution_status'] == 'succeeded'
+        and conditions[arm]['scored_attempts'] == conditions[arm]['expected_attempts'] == 1
+        for arm in selected['arms']
+    ), 'Released collector lost a candidate arm')
+    if baseline_only:
+        skipped = conditions['with_skill']
+        require(skipped['execution_status'] == 'skipped' and skipped['scored_attempts'] == 0
+                and not agent.get('lift'), 'Baseline-only collection acquired a comparison')
+
+
+def execute(stage, expected, output, key):
+    from skillevaluator.tier3.harbor.runner import (
+        _HarborRunCancellation, _run_bounded_harbor_process, build_harbor_run_command,
+    )
+
+    # Only the selected provider key enters the Harbor process. All checked-in
+    # and retained records refer to the key by placeholder.
+    owner = validate_runtime()
+    require(owner == expected['runtime'], 'Protected candidate runtime differs from the reviewed scope')
+    env = {name: os.environ[name] for name in ('PATH', 'TMPDIR', 'DOCKER_CONFIG', 'COMPOSE_PLUGIN_ROOT')
+           if name in os.environ}
+    home = stage / 'operator-home'
+    home.mkdir(mode=0o700)
+    env.update(HOME=str(home), OPENAI_API_KEY=key, PYTHON_DOTENV_DISABLED='1', PYTHONDONTWRITEBYTECODE='1',
+               LITELLM_LOCAL_MODEL_COST_MAP='True')
+    selected = expected['scope']
+    settings = {
+        'SKILL_EVAL_LLM_PROVIDER': 'openai', 'LLM_JUDGE_MODEL': selected['verifier']['model'],
+        'LLM_JUDGE_FALLBACK_MODELS': '', 'LLM_JUDGE_RETRY_POLICY': PROVIDER_POLICY['judge_policy'],
+        'SKILL_EVAL_LLM_MAX_RETRIES': str(PROVIDER_POLICY['judge_transport_retries']),
+    }
+    env.update(settings)
+    judge = {name: '$' + '{' + name + '}' for name in settings}
+    judge['SKILL_EVAL_LLM_API_KEY'] = '$' + '{OPENAI_API_KEY}'
+    cancellation = _HarborRunCancellation()
+    old = {kind: signal.signal(kind, lambda *_: cancellation.requested.set()) for kind in (signal.SIGTERM, signal.SIGINT)}
+    deadline = time.monotonic() + PROVIDER_POLICY['inference_seconds']
+    evidence = {'context': expected, 'runtime': owner, 'history_eligible': False, 'status': 'incomplete', 'arms': {}}
+    jobs = stage / 'jobs'
+    try:
+        for arm in selected['arms']:
+            receipt = {'state': 'started', 'agent_usage': None}
+            evidence['arms'][arm] = receipt
+            write_json(output, evidence)
+            task = stage / arm / 'tasks'
+            job_name = JOB_NAMES[arm]
+            command = build_harbor_run_command(dataset_path=task, job_name=job_name, jobs_dir=jobs, agent='codex',
+                env_mode='aeb-benchmark-docker', n_attempts=1, n_concurrent=1,
+                model=selected['agent']['model'], verifier_env=judge)
+            remaining = deadline - time.monotonic() - 30
+            require(remaining > 0, 'Candidate deadline exhausted')
+            process = _run_bounded_harbor_process(command, env=env, cwd=stage, stdin_text=None,
+                timeout_seconds=remaining, max_output_bytes=8 * 1024 * 1024, diagnostic_tail_chars=1024,
+                secret_values={key}, cancellation=cancellation)
+            require(process.returncode == 0 and not process.output_exceeded, 'Native launcher failed')
+            job = jobs / job_name
+            trial_receipt(job, arm=arm, selected=selected, receipt=receipt,
+                          entry_path=task / selected["case"] / "tests/entry.json")
+            trial, = job.glob('*/result.json')
+            project = trial.parent.name.lower() + '__env'
+            receipt['teardown_complete'] = compose_teardown_complete(project)
+            require(receipt['teardown_complete'], 'Native trial left Compose resources')
+            if arm == 'with_skill':
+                used = receipt['agent_usage']
+                if (used['n_input_tokens'] + used['n_output_tokens']
+                        > PROVIDER_POLICY['max_observed_agent_tokens_before_next_arm']):
+                    evidence['stop_reason'] = 'second_arm_token_threshold'
+                    raise ValueError('First-arm agent tokens exceeded the second-arm threshold')
+        collect_candidate(stage, jobs, selected)
+        evidence['status'] = 'complete'
+    except Exception as error:
+        category = type(error).__name__
+        evidence['failure'] = category if category in (
+            'KeyError', 'OSError', 'RuntimeError', 'ValueError', '_HarborRunCancelledError',
+            '_HarborRunTimeoutError', 'TimeoutExpired') else 'Exception'
+        raise
+    finally:
+        for kind, handler in old.items():
+            signal.signal(kind, handler)
+        write_json(output, evidence)
+
+
+def cleanup(stage, expected, output):
+    evidence = read_json(output) if output.is_file() else {
+        'context': expected, 'history_eligible': False, 'status': 'incomplete', 'arms': {},
+    }
+    evidence['teardown'] = 'incomplete'
+    try:
+        require(evidence['context'] == expected, 'Diagnostic scope changed')
+        subprocess.run(['docker', 'info', '--format', '{{.ServerVersion}}'], stdout=subprocess.DEVNULL,
+                       timeout=10, check=True)
+        case = expected['scope']['case']
+        require(case in (SMOKE_CASE, FILE_EDIT_CASE), 'Unrecognized candidate cleanup case')
+        for arm in expected['scope']['arms']:
+            environment = stage / arm / 'tasks' / case / 'environment'
+            for trial in (stage / 'jobs' / JOB_NAMES[arm]).glob(case + '__*'):
+                require(trial.is_dir() and not trial.is_symlink()
+                        and re.fullmatch(re.escape(case) + r'__[A-Za-z0-9]{1,32}', trial.name),
+                        'Unexpected trial recording path')
+                project = trial.name.lower() + '__env'
+                selector = 'label=com.docker.compose.project=' + project
+                containers = subprocess.check_output(
+                    ['docker', 'container', 'ls', '--all', '--quiet', '--filter', selector], text=True, timeout=10).split()
+                for container in containers:
+                    owner = subprocess.check_output(['docker', 'container', 'inspect', '--format',
+                        '{{index .Config.Labels "com.docker.compose.project.working_dir"}}', container],
+                        text=True, timeout=10).strip()
+                    require(owner == str(environment), 'Compose resource does not belong to the staged task')
+                    subprocess.run(['docker', 'container', 'rm', '--force', container], stdout=subprocess.DEVNULL,
+                                   timeout=15, check=True)
+                networks = subprocess.check_output(
+                    ['docker', 'network', 'ls', '--quiet', '--filter', selector], text=True, timeout=10).split()
+                for network in networks:
+                    subprocess.run(['docker', 'network', 'rm', network], stdout=subprocess.DEVNULL,
+                                   timeout=15, check=True)
+                require(compose_teardown_complete(project), 'Candidate cleanup could not be confirmed')
+        evidence['teardown'] = 'complete'
+    except Exception:
+        evidence['status'] = 'incomplete'
+        raise
+    finally:
+        write_json(output, evidence)
+
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('command', choices=('context', 'prepare', 'guard', 'run', 'cleanup'))
+    parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--stage', type=Path)
+    parser.add_argument('--preparation', type=Path)
+    parser.add_argument('--authorization', type=Path)
+    args = parser.parse_args()
+    workspace = Path.cwd().resolve()
+    require(args.output.is_absolute() and args.output.resolve() == args.output
+            and not args.output.is_relative_to(workspace) and (args.command == 'cleanup' or not args.output.exists()),
+            'Use a fresh operational record outside the checkout')
+    env = os.environ
+    present = {key for key in PROVIDER_CREDENTIALS if env.get(key)}
+    if args.command == 'run':
+        require(present == {'OPENAI_API_KEY'}, 'The protected OpenAI credential is required')
+    else:
+        require(not present, 'Candidate authorization and setup run without inference credentials')
+    value = reviewed_scope(workspace, env, read_json(Path(env['GITHUB_EVENT_PATH']))['inputs'])
+    if args.command == 'context':
+        selected = value['scope']
+        cost = value['cost_estimate']
+        arms = ', '.join(selected['arms'])
+        summary(['## Candidate compatibility smoke', '',
+                 f'Revision {selected["revision"]}. Podman case {selected["case"]}. One trial in each selected arm ({arms}).',
+                 *([f'Synthetic file-edit integration fixture {selected["fixture_digest"]}.']
+                   if 'fixture_digest' in selected else []),
+                 f'Runtime {value["runtime"]["producer_profile"]}. Patch SHA-256 {value["runtime"]["patch_sha256"]}.',
+                 'Codex 0.171.0 uses gpt-6.2-sol at High with the pinned direct-tool catalog.',
+                 'The default verifier uses gpt-6.2-sol with reasoning omitted.',
+                 'The protected evaluation has a 15-minute deadline. Judge transport retries are disabled.',
+                 *(['The second arm requires recorded first-arm usage within the declared threshold.']
+                   if selected['planned_trials'] == 2 else []),
+                 f'Estimated cost is ${cost["usd"]:.2f} at the standard short-context rates '
+                 f'for {cost["input_tokens"]:,} input and {cost["output_tokens"]:,} output tokens. Billing varies.',
+                 'The operational receipt is outside canonical history.'])
+    if args.command in ('prepare', 'guard', 'run', 'cleanup'):
+        require(args.stage.is_absolute() and args.stage.resolve() == args.stage
+                and not args.stage.is_relative_to(workspace), 'Use a confined candidate staging path')
+    if args.command == 'cleanup':
+        cleanup(args.stage, value, args.output)
+        return
+    if args.command == 'prepare':
+        write_json(args.output, prepare(workspace, args.stage, value))
+        return
+    if args.command == 'guard':
+        guard(pages.GitHub(), value)
+    if args.command in ('guard', 'run'):
+        from harbor.models.task.task import Task
+
+        preparation = read_json(args.preparation)
+        require(preparation['scope'] == value and preparation['runtime'] == value['runtime'] == validate_runtime(),
+                'Prepared scope or runtime changed')
+        for arm in value['scope']['arms']:
+            staged, = (args.stage / arm / 'tasks').iterdir()
+            require(not staged.is_symlink() and Task(staged).checksum == preparation['tasks'][arm],
+                    'Staged candidate task changed')
+    if args.command == 'run':
+        require(read_json(args.authorization) == value, 'Final approval scope changed')
+        execute(args.stage, value, args.output, env['OPENAI_API_KEY'])
+        return
+    write_json(args.output, value)
+    outputs(execute='true')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except Exception:
+        raise SystemExit('Podman compatibility step failed. Inspect the bounded operational receipt.')

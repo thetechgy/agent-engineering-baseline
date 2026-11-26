@@ -44,8 +44,8 @@ class ReportTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         with patch.object(evidence, 'utc_now', return_value=CLOCK):
-            cls.historical = evidence.project(evidence.normalize_behavioral(fixtures.FIXTURES / 'podman-native', 'podman'))
-            cls.static = evidence.project(evidence.normalize_static(fixtures.FIXTURES / 'static-synthetic', 'podman'))
+            cls.historical = fixtures.presentation_projection('historical')
+            cls.static = fixtures.presentation_projection('static')
         cls.gh = evidence.read_json(fixtures.FIXTURES / 'gh-no-model.json')
 
     def setUp(self):

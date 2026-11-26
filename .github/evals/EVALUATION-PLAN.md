@@ -1,10 +1,561 @@
 # Evaluation checkpoint
 
+## SkillEvaluator 0.3.0 retirement
+
+PR #185 switches the maintained native benchmark to SkillEvaluator 1.0.1,
+Harbor 0.25.0, Python 3.14.10 and the digest-pinned native backend. The
+released launcher owns protected benchmark dispatch and local gh benchmark
+execution. Static quality, public data, and private review use their pinned
+1.0.1 environments. The explicit 0.8.0 and 0.9.0 profiles retain their
+original locks, scoring and rollback selectors. Original 0.3.0 scores,
+validators and source snapshots remain available for offline reading. Exact
+reproduction of the old runtime uses the original producing Git revision.
+[Issue #95](https://github.com/thetechgy/agent-engineering-baseline/issues/95)
+
+The protected compatibility smoke at `7b4ec47` authenticated one synthetic
+file-edit trial in the baseline arm. Codex 0.171.0 ran `gpt-6.2-sol` at High
+through the direct native tool route. Accuracy, behavior and goal judges
+completed, and the trial and runner both verified teardown. The receipt
+stays outside canonical history and measures compatibility for this scope.
+The earlier Podman case 1 receipt retains its unresolved path outcome.
+[Live compatibility receipt](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45876746946/artifacts/15145359462)
+
+New standard and confirmation runs use separate score series under the
+released producer. The Pester diagnostic remains outside score history.
+The preapproval and postapproval guard bind the released lock, patch, backend,
+launcher and policy to the reviewed scope. The temporary protected compatibility
+mode has been removed from the benchmark workflow.
+
+## SkillEvaluator retirement qualification history
+
+The migration starts from `58cb9698543c546173501887254dc7989d2db396`.
+Production benchmarks still use the reviewed 0.3.0 runtime. Keep the
+original scorer, locks and validator snapshots available at their producing
+revisions. [Issue #95](https://github.com/thetechgy/agent-engineering-baseline/issues/95)
+
+The direct-tool compatibility smoke ran one Podman case 1 baseline trial
+at `bc96c28`. The approved agent trial recorded usage. The verifier
+recorded unresolved path evidence and stopped before standard judging.
+Teardown passed. The diagnostic remains outside canonical history. Its
+bounded receipt identifies the failure category. The original command
+shape was unavailable for replay. A credential-free verifier control
+reproduced the same failure category and demonstrated the text and
+issued-access controls separately.
+[Hosted diagnostic](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45813989937)
+
+The smoke receipt now rechecks the same trial's bounded trajectory with
+the pinned verifier after an unresolved-path failure. It emits fixed
+syntax labels when the recheck matches the verifier's findings. The
+classifier, score policy, native producer and historical receipts retain
+their original identities. Production adoption remains pending under the
+compatibility gate.
+
+The next protected compatibility option uses one synthetic file-edit
+task in the baseline arm. The scope binds the fixture digest, revision,
+released launcher, Codex model and verifier policy. The fixture uses the
+same native backend and standard judges. It stays outside canonical
+history and leaves the authored Podman cases unchanged. Live execution
+requires separate authorization.
+
+- The startup-only checkpoint `dc997a64a5bc54507786f49c1734e9c1887997b7`
+  exercised released SkillEvaluator 1.0.1 staging and Harbor 0.25.0 dispatch
+  through a separately pinned backend. Both gh-007 fixture arms reached
+  readiness, retained the broker identity on repeat start, denied agent
+  access to protected state and completed teardown.
+  [Hosted startup](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45325909769)
+- Local candidate setup uses the released lock and a separate benchmark
+  request patch. The released defaults selected Codex 0.161.0 and sent Medium
+  verifier reasoning. The port dispatches Codex 0.171.0 and High through the
+  released hooks and tests the verifier with its reasoning parameter omitted.
+  Both arms of the Podman, gh and Pester datasets staged locally. Native agent
+  execution, verifier isolation, recovery and collection still require Docker
+  qualification on the candidate revision.
+- The candidate accuracy schema derives 0.8 from four of five satisfied
+  criteria. It rejects the historical scalar fixture. The score comparison
+  found 56 differences across 73 fixed vectors. Future measured records need
+  a separate producer and metric identity. The retained scores and canonical
+  Podman projection are digest-checked comparison inputs.
+- The private review candidate retains Python 3.13.18, OpenAI 2.54.0,
+  Pydantic 2.14.3 and certifi 2026.10.23. It uses the existing explicit inference
+  authorization and keeps the `not_quality_qualified` status. The candidate
+  validated the original bytes across ten attachment profiles and rejected
+  tampered source, registry, context, report and path inputs. Its replay
+  identity is separate from the report's original runtime.
+- The maintained 0.8.0 and 0.9.0 offline qualification commands replayed the
+  canonical Podman projection without a historical interpreter. Each retained
+  its own evaluator, backend, scoring and collector. Native qualification and
+  existing rollback selectors still need their own checks.
+
+The credential-free hosted checkpoint at `aa2599f` used
+`current-evaluator.yml` with `benchmark-101-fixtures=true`,
+`startup-only=false` and `candidate-next=false`. Both gh and Pester commands
+completed both arms. The gh report reader rejected redacted staging digests.
+The Pester grader returned an infrastructure error for a known-good case.
+Pester resource cleanup passed.
+[Hosted fixtures](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45360054011)
+
+Automatic Validate's legacy Pester control passed both arms of the same
+known-good case. The CI contracts job rejected the stale inventory count for
+the added uv setup step. All 51 freshness tests passed with that count updated.
+[Validate](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45360027374)
+
+The gh fixture applies its report-reader compatibility patch to a clean
+export of the dispatched source. The matching synthetic collection validated
+all 48 observations, including unresolved outcomes and their partial
+aggregates. Shared campaign source files retain their producing digests.
+Pester uses the existing literal loopback-only verifier Compose setting after
+the release validates its authored task. Local testing verified that Harbor
+selects this setting in both arms and the grader retains its isolation checks.
+The hosted Pester failure did not retain the verifier's prerequisite code.
+The next fixture run records that code from an allowlist if the failure recurs.
+
+The follow-up at `1b32b5b` passed both credential-free Docker jobs.
+The gh receipt covers 48 outcomes and clean teardown. The Pester receipt
+covers 52 outcomes and clean teardown. All 52 classifications matched the
+authenticated 0.3.0 report by case and arm, including invalid, timeout,
+unsupported and infrastructure-error controls.
+[Follow-up fixture run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45409081795)
+
+The older adoption qualifier can replay the authenticated Pester report
+without starting the original interpreter. Local staging also covers the
+candidate Pester package-preparation entry point and both arms of the
+candidate Codex loopback probe. The probe keeps the packaged Codex
+executable out of the broker's bounded task manifest, checks the pinned
+executables in the image and requires a loopback-only container at launch.
+The package build, the real Codex request and interruption path, Podman
+benchmark execution and result publication still require native qualification.
+The Codex-only run at `c1d0f61` stopped on the first `gh-001` arm.
+Harbor reported `NonZeroAgentExitCodeError`, followed by a missing
+container receipt. A local credential-free reproduction with Codex 0.171.0
+showed that the previous path resolves only in a global npm installation.
+The local install puts the package at the hoisted path. The fixture now
+uses that path, verifies the same executable and helper hashes, and writes
+the last startup stage to a bounded receipt.
+[Codex-only run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45419255253)
+
+The retry at `a558b19` passed package, agent identity, broker and
+loopback setup. Harbor entered verification in the first `gh-001` arm and
+reported `RewardFileNotFoundError`. It did not retain verifier output.
+Both completed controls and the interrupted control from earlier
+credential-free Codex execution convert to ATIF using Harbor 0.25.0.
+The candidate grader reads a converted trajectory and emits an unmeasured
+reward for the local missing-broker control. The hosted cause remains open.
+[Codex-only retry](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45421531862)
+
+The bounded receipt at `c8e26bc` found the Codex event log and no
+`trajectory.json`. The verifier failed opening that file. A local run
+through Harbor, using a verified Docker client and rootless Podman API,
+reproduced the failure after a completed Codex turn. Harbor silently
+discarded a session-copy failure when its whole-directory replacement
+encountered SkillEvaluator's protected `sessions/skills` projection.
+The 1.3.1 backend places native sessions in a separate directory and keeps
+the same Harbor ATIF converter and protected skills. It has its own wheel,
+source and producer identity. Both fixed local arms wrote ATIF, preserved
+the protected skill projection and matched the expected authorization
+verdict and synthetic usage. The interruption control observes command
+start inside the container, since Harbor can defer copying logs until
+exit. The fixed local control preserved the failed exit and unfinished
+trajectory with final usage absent. The earlier producer and reports
+retain their original identities.
+[Hosted diagnostic](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45427100340)
+
+The exact-head Validate run separately failed its 0.3.0 Codex fixture
+because the candidate's hoisted npm path was applied to the legacy global
+installation. The fixture now selects the correct path for each runtime.
+[Validate](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45427050223)
+
+The full local loopback fixture passed on both the 1.0.1 candidate and
+the still-active 0.3.0 owner, including paired authorization, interrupted
+usage, collection and reporting. The rootless Podman API reported a
+sidecar removal error on some candidate trials.
+
+The Codex-only hosted run passed at `3011034`. Its digest-verified receipt
+records authorization scores of 1 and 0 in the two arms, two fixture
+requests and the expected synthetic usage per completed arm, and an
+interrupted exit with final usage absent. All main-container teardown
+checks passed. The job log had no Compose teardown errors.
+[Hosted Codex fixture](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45446801863)
+[Automatic Validate](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45446766350)
+
+The isolated Podman fixture completed one trial per arm for case 5
+with Codex 0.171.0 under Harbor 0.25.0. The bare released stage did not
+select a non-root user. The fixture declares UID 1000 in the task and
+provides the user in the image. Each completed arm made two Codex
+requests at High and three standard-verifier requests with reasoning
+omitted through non-forwarding responders. The verifier used its
+canonical OpenAI request builder and returned 0.8 accuracy in each arm.
+Both main containers were removed. The local rootless Podman API failed
+to remove the egress sidecars automatically, and they were removed
+separately. Qualify automatic teardown on hosted Docker before adoption.
+
+The 1.0.1 publication qualifier uses its own offline profile and applies
+the reader patch to a clean export. The release distinguishes unresolved
+cases from failed cases and keeps failed judge observations in a separate
+diagnostic record. The reader verifies both against the retained trial.
+The local standard and confirmation fixtures retained 20 and 60 attempts
+in distinct series. The cancellation fixture retained 19 of 20. The
+publication route rejected mismatched mode, producer and trial identities,
+and the canonical history writer rejected all four fixture reports.
+The hosted Podman and publication checkpoint passed on `fb1e044` with
+`benchmark-101-podman=true`. The authenticated archive retained both
+startup receipts, one scored trial per arm and the four publication
+controls. The job logged no Compose teardown errors. Production
+retirement requires the separately authorized provider checkpoint.
+[Hosted Podman and publication](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45459299280)
+[Automatic Validate](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45459156356)
+
+The local private-review checkpoint registers `review-101-v1` using a
+fixed source snapshot of `c1d0f61`. The documented operator entry point
+and independent attachment validator use the same producer source.
+Synthetic Podman, gh and Pester contexts passed prepare, validate and
+attachment admission. The tests rejected caller-supplied tooling,
+changed snapshot bytes and output inside the checkout. The 1.0.1
+review interpreter also replayed the ten historical profiles with
+their original scoring and validator provenance. Archived producer
+request tests covered the identical token-count and generation context,
+provider-default reasoning, deadline and failure handling without
+inference. New results retain `not_quality_qualified`.
+
+Automatic Validate and feature-branch preapproval run the private-review
+suites in the separately pinned 1.0.1 review environment. The contracts
+runner retains the other discovered tests and the four dispatch controls
+for the legacy validator while it remains supported. Only the review test
+setup installs the hash-locked schema test dependencies. Protected
+evaluation and the production benchmark runtime remain gated separately.
+
+Pester package preparation in Validate now selects the exact 1.0.1
+candidate and its installed source, lock and backend. The former
+`--runtime retained` execution is available at the original Git revision.
+The 0.7.2 and 0.9.0 preparation modes keep their own pins. The later
+native Pester and Codex steps still qualify the current production owner.
+The local release route built the image and verified the pinned package
+versions. Rootless Podman failed automatic sidecar removal, and separate
+cleanup removed the task-owned resources. Hosted Docker teardown remains
+a gate for the replacement path.
+
+The next Podman fixture selects case 1 with one trial in each arm.
+Both arms use the released task projector and the explicit unprivileged
+agent. Its scope receipt binds the Git revision, Podman dataset, candidate
+lock, adapter and installer separately from the historical runtime identity.
+Local Podman trials used the digest-verified Codex 0.171.0 standalone
+archive and Harbor's preinstalled executable path. Both arms completed
+with two loopback Codex requests and three loopback verifier requests.
+
+The protected compatibility smoke on `e95d525` completed the with-skill
+arm for Podman case 1. Codex 0.171.0 and the three released verifier
+observations passed the runtime admission checks. The recorded agent usage
+was 248,725 input tokens and 5,820 output tokens, including 217,174 cached
+input tokens. The combined total exceeded the approved 120,000-token
+gate, so the without-skill arm did not start. Teardown completed and
+the diagnostic was excluded from canonical history. Provider billing and
+judge token usage were unavailable in the receipt.
+[Protected compatibility smoke](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45510362606)
+
+The separately approved follow-up at `cafe3bf` completed one without-skill
+trial for Podman case 1. GitHub's exact preapproval context and diagnostic
+artifact were digest-verified. The receipt recorded 167,788 input tokens
+and 9,107 output tokens, including 144,728 cached input tokens, along with
+all three verifier observations and complete teardown. The two runs used
+the same evaluator and backend pins, Codex assets, request policy and
+matching staged task inputs. Together they qualify this integration for
+both arms. The receipts remain diagnostic evidence outside benchmark
+history. They do not establish skill uplift or grader quality.
+[Baseline compatibility smoke](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45523933675)
+
+The released strict validator flags the original `gh-001` prompt because
+it tells the baseline to use the absent skill. The approved prospective
+`gh-benchmark-101-v1` recipe describes the same issue-reading task and
+projects the edit into both the dataset entry and authored task instruction.
+All 24 cases pass strict validation and stage the same prompt in both arms.
+The new dataset digest is distinct. The original dataset, grader and
+historical score and validator identities are preserved.
+
+The grouped production staging probe matched all 48 released task arms
+against the independently sealed prospective manifest and rejected a
+changed baseline instruction before launch. The manifest binds the image
+recipe that checks the pinned npm platform executable and helpers, and the
+allowed provider host.
+
+Hosted Podman qualification on `e95d525` completed case 1 in both arms
+with the same scope fingerprint as protected preapproval. Each arm reached
+the released collector with one scored fixture result and complete Docker
+teardown. Offline publication collected 20 standard attempts and 60
+confirmation attempts. The interrupted control retained 19 of 20, and all
+four fixtures remained outside canonical history.
+[Hosted Podman qualification](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45487420261)
+
+The local cutover probe uses the released runner's own projectors, with a
+small explicit operator callback for both staged arms. The Podman probe
+staged ten cases per arm. Its independently prepared case 1 smoke tasks
+still match both protected receipts after factoring the shared preparation.
+The grouped gh probe matched both released `gh-002` tasks to the operator
+manifest prepared before runtime preflight. Both probes stopped after
+staging, with credential-catalog and Harbor execution replaced by local
+controls. The production runner, protected workflow and new publication
+series still require end-to-end qualification together.
+
+The credential-free gh validation and replay commands also passed on the
+released owner. Replay accepted all 24 good traces and rejected all 13
+fault traces. The remaining Docker lifecycle check needs hosted proof.
+The Pester qualification entry point now selects the released fixture by
+default. Its other explicit maintained selectors keep their pinned owners.
+
+The released launcher verifies its source tree after applying the pinned
+request, staging and recovery patches. Clean local setup authenticated
+Python 3.14.10, SkillEvaluator 1.0.1, Harbor 0.25.0 and the 1.3.1 backend
+wheel. `benchmark_native.py` prepares the two suites before credential
+handoff and invokes the released paired runner with runtime preflight.
+The local controls intercepted preflight after staging 20 planned standard
+Podman trials and 144 planned confirmation gh trials. Neither control
+started Docker or contacted a provider. Both retained the initiating
+preflight error and stayed incomplete during recovery.
+
+In the simulated interrupted Podman job, the unmodified collector kept
+10 baseline scores and omitted nine completed with-skill scores because
+the with-skill job was pending. The recovery-only patch checks the job
+counters and each finished trial against its physical result before
+collecting those scores. It retained 19 of 20 attempts, rejected a changed
+trial identity, and kept the result outside history. Standard and
+confirmation use distinct prospective series, separate from the recorded
+historical series. Three retained-reader controls passed on the newly
+pinned installation.
+
+Local credential-free Docker runs reached real Harbor and Codex preflight
+and collected both arms for one Podman case and one gh case. The with-skill
+agent could read the staged skill and the baseline omitted it. Each arm
+received two loopback Codex responses and three verifier responses. The
+released accuracy contract produced 0.8 from four of five criteria. The gh
+verifier exported the unchanged authorization measurement as
+`gh_access_policy` because the released collector drops the original field
+name. The with-skill and baseline values were 1 and 0. The existing grader
+and historical metric identity are preserved.
+
+The Docker handoff forwards the pinned Compose configuration and a local
+Unix socket for the two reviewed backends. The released launcher renders
+reports without generation calls. Local rootless Podman left Compose
+resources after some trials and the receipts record incomplete teardown.
+Hosted launcher qualification at `5bdc85e` completed preflight, both
+fixture arms, collection and teardown for each suite. Both digest-verified
+receipts remain outside history. Use the existing protected owner while
+integrated native history admission and the adoption decision are pending.
+[Hosted launcher qualification](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45643758537)
+
+The collected gh report validates the prospective field through the same
+per-trial deterministic gate. A changed authorization score failed gate
+consistency. The two affected gh selectors and the campaign source changes
+required 91 source-only records on 369 lines in `source-v44.json`. Grader,
+fixture and replay adapter identities were checked against each parent
+profile. Earlier records are retained.
+
+The manual oracle qualification uses the released environment to read
+digest-pinned complete and partial synthetic gh controls captured with the
+original 0.3.0 collector. Replay verifies the original authored Git object
+and matches the captured competitor file order after checking membership.
+Both public projections reproduce the original observations, attempt
+identities and scores byte for byte. The partial
+control also checks unavailable gate measurements and rejects a substituted
+execution-error ledger. Feature-branch benchmark preapproval uses the
+pinned released runtime for native contracts and the original 1.0.1
+compatibility owner for its fixture producers. The old reporting setup
+selector exits before installation.
+
+The released verifier comparison found unsupported command wrappers that
+reached judge calls, a missing trajectory that produced numeric values,
+and a safety improvement attributed against unknown baseline evidence.
+The new release-specific patch restores those fail-closed conditions,
+recognizes explicit Podman socket access and preserves inert text. The
+released native v2 producer binds the new patched tree and score series.
+All 13 credential-free verifier controls passed locally. The hosted launcher
+completed pinned Codex preflight, both arms, collection and teardown for gh
+and Podman on `908502a`. [Hosted receipts](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45655584119)
+
+The protected native v2 smoke on `9a50f48` ended incomplete after the
+Podman baseline recorded Codex usage. The diagnostic reported a
+`KeyError` and complete teardown. The receipt contains no judge
+measurements. The initiating verifier condition is unknown.
+The offline reproduction used two outputs from the pinned verifier.
+Missing trajectory and unsupported execution evidence both produced
+failed sidecars whose absent judge contract triggered the same reader
+exception. The reader now preserves these outcomes as incomplete using
+fixed failure labels. The native v2 production cutover is still pending.
+[Native v2 smoke](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45695901356)
+
+The baseline retry on `8b86b7e` returned
+`unsupported_execution_evidence` with complete teardown. The pinned verifier
+stopped before judging. The receipt lacked enough detail to identify the
+condition that blocked the live trial.
+[Native v2 retry](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45712351852)
+
+The smoke receipt now projects fixed reason codes from the existing verifier
+sidecar. A sandboxed Codex 0.171.0 loopback run for Podman case 1 carried
+four tool calls through Harbor's native session converter, including
+successful calls with empty stdout. The verifier completed three fixture
+judgments. A separate native trace triggered the unresolved-path code
+before judging. Controlled variants of the successful trajectory
+verified the unsupported-wrapper and missing-or-ambiguous-result codes.
+The diagnostic contains only fixed reason codes for this boundary.
+
+Validate uses the credential-free 1.0.1 regression, fixture, review and
+presentation owners already used by feature-branch preapproval. The
+intermediate revision `f966a39` isolated the retained 0.3.0 scanner
+contracts and excluded both historical review overlays from Validate.
+The unpatched 1.0.1 adapter accepted eight mutated caveat rows and marked
+coverage incomplete even with the actual skill root supplied.
+
+The separate 1.0.1 scanner-contract owner now retains the 43 raw-envelope
+rejection controls and the explicit partial-as-incomplete rule. Its
+digest-pinned patch reproduces the unpatched result on four genuine
+SkillSpector 2.13.6 reports, then rejects all eight altered rows for each
+input. The exact scanner setup runs the Semgrep and SkillSpector tests
+with the existing executable pins. The former `quality` selector exits
+before installing tools. Published static reports retain their original
+producer identities. The retained 0.9.0 repository caveat replay
+reproduced its comparison byte for byte.
+
+The released launcher now prepares the five-case Pester confirmation
+route alongside Podman and gh. It stages both arms with the original
+Pester grader, an isolated agent and a separate loopback-only verifier.
+The new diagnostic producer keeps standard judges disabled and has no
+score series. The pinned Codex image build uses a root home so package
+checks leave the trial user's home untouched. The full preparation and
+interrupted preflight controls retain 30 planned trials as incomplete.
+The automatic Pester job exercises the released launcher with a
+non-forwarding provider fixture and checks the redacted diagnostic
+handoff. Production selection still follows the live compatibility
+gate.
+
+The shared reader change adds 89 source-only successors across 361
+lines in `source-v46.json`. The 89 prior records remain available
+under their original identities, and the new records retain the
+same grader, fixture and replay identities as their parents.
+
+The native 1.0.1 score reader now validates the released dimension means,
+explicit baseline applicability and paired lift against the trial rewards.
+Retained gh and Podman controls replay after redaction with their original
+scores and deterministic measurements. Both scoped runs fail the full-cohort
+publication gate. Disposable Pages controls admit the new standard series
+beside immutable historical scores and retain confirmation as diagnostic
+detail. This change adds 89 source-only records across 361 lines in
+`source-v45.json` with the same grader, fixture and replay identities as
+their parents. Confirm this publication path on the hosted revision before
+selecting the 1.0.1 production runtime.
+
+Registry validation checks the recorded lineage of v44 and recomputes the
+active v45 source identities. The unchanged gh profiles still check their
+current inputs. The released launcher now runs the declared mode through
+collection and redacted replay. A local gh confirmation recorded three
+attempts per arm with zero provider requests. Its scoped report stayed
+outside canonical history. Rootless teardown required manual cleanup of
+the seven task-owned Compose projects.
+
+The presentation and analysis tests read their original public Podman and
+synthetic static projections from a digest-checked fixture. The existing
+retained Podman projection also supplies the refreshed expiry control.
+The 1.0.1 data host also rebuilt the sealed Pages fixture and reproduced
+the original native Podman and static projections byte for byte. The
+retained-reader checks cover original metric rounding, failed trial
+carriers and a synthetic expansion to 6,000 attempts. Native static
+collection and private review retain dedicated runtime checks.
+
+The documented private review CLI uses the fixed 1.0.1 producer snapshot.
+Attachment admission replays the original profiles in the pinned 1.0.1
+review environment and preserves their producer and validator provenance.
+The v3 snapshot accepts the released benchmark projection and binds 12
+members from `cbfec6e`. V1 and v2 retain their original snapshots.
+All 165 review and replay tests passed without legacy interpreter aliases.
+Native fixture controls that import review preparation remain part of the
+separate native migration.
+
+| Maintained path | Retirement gate |
+| --- | --- |
+| `benchmark-skills.yml`, local `gh_evaluations.py benchmark`, standard and confirmation publication | Qualify the real executable, verifier, recovery and collector under the candidate, then bind its runtime files to the preapproval fingerprint and its publications to a new series. |
+| `setup-skillevaluator.sh` benchmark, reporting and quality, `validate.yml`, feature-branch preapproval | Move each remaining full-suite consumer to its owning runtime, then reject installation and invocation of 0.3.0 through maintained dispatch. |
+| `current-evaluator.yml`, manual candidate qualifiers, Pester and gh validation | Use authenticated offline receipts for historical comparisons and qualify active native image recipes through their supported owners. |
+| Private review generation and saved attachments | Adopt the pinned review setup after registering its future validator identity and replacing test-time historical generation. |
+| Pages, public reports, static quality, historical projections | Verify the mixed history, sealed bundles, expiry and redaction via the 1.0.1 data host. Recheck the reporting patches on a clean archive of the final commit. |
+
+The protected environment has a reviewer gate and no deployment branch
+restriction. The current confirmation input schedules three attempts per
+arm for each selected case. For the smallest maintained suite, that is 30
+task trials before preflight or judge calls.
+
+The temporary `candidate-smoke` mode accepts only an initial manual
+Podman dispatch on the retirement branch, with `expected_revision` set
+to the exact reviewed SHA. The preapproval record and the protected
+job bind the same fingerprint. The protected job prepares the two
+checksummed tasks without credentials and verifies the same-run artifact
+and branch head before the provider step. It retains a bounded diagnostic
+receipt outside canonical history.
+
+The scope is Podman case 1, one Codex 0.171.0 trial in each arm using
+`gpt-6.2-sol` at High. The standard verifier uses the same model with
+reasoning omitted and transport retries disabled. The shared inference
+deadline is 15 minutes, with a five-minute agent phase per arm. The
+second arm requires observed first-arm agent usage at or below 120,000
+input and output tokens combined. The provider host is restricted to
+`api.openai.com`. Native agent requests and billed cost can vary with
+tool use and provider transport. At Standard short-context rates, a
+planning estimate of 400,000 input and 240,000 output tokens costs about
+$3.20. Authorize the exact live scope separately after the credential-free
+qualification gates. [OpenAI API pricing](https://developers.openai.com/api/docs/pricing)
+
+### Native Codex tool request qualification
+
+The Podman case 1 baseline smoke on `466b0cc` completed the Codex trial
+and teardown. The protected verifier stopped with
+`unsupported_tool_wrapper` before making a judge request. The receipt
+does not retain the underlying call or program.
+[Protected diagnostic run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45746132396)
+
+A non-forwarding fixture with Codex 0.171.0 reproduced that failure
+class. With the bundled catalog, the CLI advertised `functions.exec`
+even with `--disable code_mode`. One literal wrapper executed and
+graded. A wrapper that supplied a variable as the shell argument also
+executed, but the verifier could not attribute its action and stopped
+before judging. The earlier benchmark fixture issued direct calls in
+response to empty top-level `tools`. It missed the tool declarations in
+developer-role `additional_tools`.
+
+The approved candidate uses the `gpt-6.2-sol` row from Codex
+`rust-v0.171.0` at `ccf9be8cc458bd6b8336fe84d68d8893f2691a5e`.
+The upstream catalog SHA-256 is
+`d50b6749506d97e5f334dbabcb666eb1689f423cf3e88cfabdcf3c536b873068`.
+Its single supported model row changes `tool_mode` to `direct`.
+The 1.3.2 backend verifies the catalog on the host and installs it in
+a protected path before startup. The loopback fixture now requires
+the direct shell and file-edit declarations in `additional_tools`
+before issuing either operation. The smoke scope, wheel and prospective
+score series bind the catalog digest. The agent still requests High,
+and the verifier request keeps reasoning omitted and zero transport
+retries in the protected smoke.
+
+The direct credential-free probe completed a shell write, a separate
+file edit and the three standard judge checks. The interruption
+control kept usage unavailable. The Podman publication fixture has a
+successor profile and its earlier profile retains the original
+producer. Its refreshed clean-source overlay collected 20 standard
+and 60 confirmation attempts, kept interruption at 19 of 20, and
+rejected incorrect mode, producer and trial identities as well as
+history admission. The gh oracle reporting overlay also applies to
+the clean source. Native hosted qualification and a separate paid
+smoke still gate production adoption.
+
+The shared evaluator registry change adds 89 source-only successors
+across 361 generated lines in `source-v47.json`. Each preserves its
+parent grader, fixture, and replay adapter. The authentic prior
+receipts retain their original producer and scores.
+
+The frozen private-review reader required a separate successor to
+recognize the direct-tool producer and released diagnostic policy.
+`review-101-v4` uses the 12-member overlay from `af379d0` with the
+existing private-review lock and request policy. Earlier saved review
+profiles keep their exact original validator snapshots.
+
 ## Model selection for new executions
 
 | Operator or workflow | Model dispatch and evidence |
 | --- | --- |
-| Manual benchmark, scheduled planner and local `gh_evaluations.py benchmark` | The benchmark policy selects `gpt-6.2-sol` for Codex 0.171.0, runtime preflight, provider and standard verifier. The agent requests High. The 0.3.0 verifier sends Chat Completions with its reasoning parameter omitted. The three judge aliases and the CLI argument use the same selection. |
+| Manual benchmark, scheduled planner and local `gh_evaluations.py benchmark` | The benchmark policy selects `gpt-6.2-sol` for Codex 0.171.0, runtime preflight, provider and standard verifier. The agent requests High. The 1.0.1 benchmark verifier sends Chat Completions with its reasoning parameter omitted. The three judge aliases and the CLI argument use the same selection. |
 | Single-case observation | The active 0.171.0 selector and the 0.169.1 rollback both send `gpt-6.2-sol` / High. |
 | New scored campaigns | Select the Codex 0.171.0 scored profile with `gpt-6.2-sol` / High. The first comparison is `pester-return-development-current-v1-1710-sol62`, with SkillEvaluator 0.8.0 and Harbor 0.24.0. |
 | Pilot, cohort and earlier Boolean and Pester comparisons | Their versioned `-sol62` selectors use Codex 0.167.0 with `gpt-6.2-sol` / High. |
@@ -19,8 +570,8 @@ single-record catalog's SHA-256. Qualification exercises a real command and file
 both outgoing requests against the controlled provider. The source record supports CLI 0.166.0
 and later. [Tagged Codex model catalog](https://github.com/openai/codex/blob/ccf9be8cc458bd6b8336fe84d68d8893f2691a5e/codex-rs/models-manager/models.json)
 
-The production verifier first tries RAGAS for goal accuracy on the canonical OpenAI endpoint. With
-the released 0.4.4 dependency, its `SingleTurnSample` rejects the list of messages before any SDK
+The historical 0.3.0 verifier first tried RAGAS for goal accuracy on the canonical OpenAI
+endpoint. With the released 0.4.4 dependency, its `SingleTurnSample` rejects the list of messages before any SDK
 request. The verifier's existing custom goal judge then sends the selected model. The 0.3.0 accuracy
 and behavior judges use the same endpoint.
 
@@ -38,7 +589,7 @@ CLI comparisons check out their original commits and send only to their non-forw
 responder. Their saved model names are part of reproduction.
 
 Replay an earlier run at its producing revision using its recorded model, prices, source identity
-and validator. Current source-v38 records retain the existing grader and fixture identities. Each
+and validator. The source-v38 records retain their recorded grader and fixture identities. Each
 versioned definition binds its new runtime, model and budget. For the previous production model
 policy with CLI 0.171.0, use revision `b458913` for offline reproduction. Restarting paid work on a
 previous model requires separate approval.
@@ -76,22 +627,25 @@ shared adapter and workflow for future runs. The fixture and grader contracts ca
 The retained replay also binds the adapter digest for its revision.
 [Upstream rollout replay contract](https://github.com/openai/codex/pull/61199).
 
-The production benchmark uses the SkillEvaluator 0.3.0 Docker dispatch patch. The trusted gh initializer reads the
-same Codex pin as the report policy. Both select 0.171.0. The benchmark agent uses `gpt-6.2-sol` at High. Each Docker
-trial runs with the execution user’s private Codex home. Direct native tools keep each command and file edit
-attributable to its own result in the existing verifier.
-Run the credential-free benchmark integration with its production setup and verified Compose:
+The released benchmark uses SkillEvaluator 1.0.1 and Harbor 0.25.0.
+The trusted gh initializer and report policy bind Codex 0.171.0. Each agent
+uses `gpt-6.2-sol` at High and its own Codex home. Direct native tools keep
+command and file-edit results attributable at the verifier.
+
+The credential-free Codex qualification uses the separately pinned fixture
+owner from `setup-static-evaluator.sh native-benchmark-candidate` and verified
+Docker Compose.
 
 ```sh
-"$SKILL_EVALUATOR_PYTHON" -B .github/scripts/qualify_benchmark_codex.py "$RUNNER_TEMP/benchmark-codex"
+"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_codex.py "$RUNNER_TEMP/benchmark-codex"
 ```
 
-The qualifier checks the standalone archive, then runs the production npm package and launcher in network-isolated
-task containers. It compares the npm executable and its three shipped helpers to the archive. The npm package omits
-`codex-exec-server`. The real gh broker, Harbor agent, verifier and collector exercise that installed layout.
-Its loopback responses supply fixture usage. For the 0.155.1 rollback, select the benchmark setup, patch and report policy
-together from `fb9c8a0`. Historical reporting and comparison
-must use the policy and source revision that produced the records.
+The fixture verifies the pinned npm executable and all three shipped helpers.
+The gh broker, Harbor agent, verifier and collector process loopback
+responses. The npm package omits `codex-exec-server`.
+To reproduce an older benchmark exactly, select its producing revision,
+setup, patches and report policy together. The 0.155.1 rollback recipe
+is at `fb9c8a0`.
 
 ## Codex 0.169.1 proposed profile for issue #95
 
@@ -1573,12 +2127,14 @@ comparisons do not produce improvement deltas.
 
 ## Qualification and limits
 
-Use `setup-skillevaluator.sh reporting` for isolated historical runtimes and
-`setup-skillevaluator.sh candidate-current` for the replacement. Then invoke
-`qualify_current_evaluator.py --output` with a new persistent evidence directory and
-`SKILL_REVIEW_PYTHON` selecting the retained historical interpreter. Disposable
-fixtures honor `TMPDIR`. The new `current-evaluator.yml` workflow reproduces this
-without model credentials, inference, judges, scheduling or Pages.
+For exact native reproduction, select the producing Git revision recorded in
+the retained evidence and use its original setup. The maintained
+`qualify_current_evaluator.py --output` command reads the authenticated
+comparison with the original scores. Select `setup-skillevaluator.sh
+candidate-current` for the 0.8.0 owner or `candidate-next` for 0.9.0.
+Use a new persistent evidence directory and honor `TMPDIR` for disposable
+fixtures. The credential-free `current-evaluator.yml` route runs these
+qualification paths with their respective owners.
 
 The integrated qualification extends that entry point with `--native`. It runs
 all 48 existing gh startup/lifecycle cases through the existing six fixed shards,

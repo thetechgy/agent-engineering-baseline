@@ -222,18 +222,22 @@ def run(output, tools, repository=evidence.ROOT, *, redact=False):
 
 
 def next_tools(tools, destination):
-    """Reuse qualified scanner executables with the exact candidate evaluator."""
+    """Reuse the released static owner's scanners with the exact 0.9.0 evaluator."""
     import evaluator_profiles as profiles
-    profile = profiles.owning_candidate()
-    assert profile is profiles.NEXT
+    import static_evaluator
+
+    profile = profiles.NEXT
     profiles.runtime(profiles.candidate_versions(profile), owning=True)
     versions = evidence.read_json(tools / 'versions.json')
-    assert versions['scanner_runtime'] == evidence.SCANNER_RUNTIME
+    scanner_runtime = dict(evidence.SCANNER_RUNTIME_NEXT, evaluator_revision=static_evaluator.REVISION)
+    expected = dict(static_evaluator.VERSIONS, scanner_runtime=scanner_runtime,
+                    scanners=scanner_runtime['versions'], skillspector_revision=scanner_runtime['skillspector_revision'])
+    evidence.require(versions == expected, 'Use scanner tools from the pinned released static setup')
     destination.mkdir(parents=True, exist_ok=False)
     (destination / 'bin').mkdir()
     for name in ('skillspector', 'semgrep', 'gitleaks', 'bandit', 'pip-audit'):
         source = (tools / ('evaluator/.venv/bin' if name in ('bandit', 'pip-audit') else 'bin') / name).resolve(strict=True)
-        assert source.is_file() and os.access(source, os.X_OK)
+        evidence.require(source.is_file() and os.access(source, os.X_OK), 'Missing pinned scanner executable')
         (destination / 'bin' / name).symlink_to(source)
     write(destination / 'versions.json', {
         **profiles.candidate_versions(profile), 'scanners': versions['scanners'],

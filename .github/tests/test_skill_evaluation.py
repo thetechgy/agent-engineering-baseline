@@ -285,6 +285,98 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(data[0]["value"], -0.1)
         self.assertRegex(self.output.read_text(), r"^history_dir=benchmarks/podman/[0-9a-f]{16}\n$")
 
+    def test_released_publisher_checks_each_exact_mode_and_series(self):
+        from benchmark_native import NATIVE_PATCH_DIGEST, released_policy, score_series
+
+        directory = self.root / "metrics"
+        legacy = self.metrics()
+        candidate = {**legacy, "policy": released_policy("podman"), "patch_sha256": NATIVE_PATCH_DIGEST,
+                     "series": score_series("podman", "standard")}
+        confirmation = {**candidate, "mode": "confirmation", "series": score_series("podman", "confirmation")}
+        reports.validate_released_metrics(confirmation, self.workspace, "podman", SHA, mode="confirmation")
+        self.assertNotEqual(candidate["series"], confirmation["series"])
+
+        reports.write_json(directory / "metrics.json", legacy)
+        with patch.dict(os.environ, {"GITHUB_EVENT_NAME": "workflow_dispatch", "GITHUB_REF": "refs/heads/main",
+                                    "BENCHMARK_MODE": "standard"}):
+            reports.publish_metrics(self.workspace, directory, "podman")
+            old_series = self.output.read_text().splitlines()[-1]
+            for supplied in (confirmation, {**candidate, "series": "0" * 16},
+                             {**candidate, "policy": legacy["policy"]}, {**candidate, "patch_sha256": "0" * 64},
+                             {**candidate, "revision": "b" * 40}, {**candidate, "dataset_digest": "../invalid"}):
+                with self.subTest(supplied=supplied):
+                    reports.write_json(directory / "released-scores.json", supplied)
+                    with self.assertRaises(ValueError):
+                        reports.publish_metrics(self.workspace, directory, "podman", released=True)
+                    self.assertEqual(self.output.read_text().splitlines()[-1], old_series)
+            reports.write_json(directory / "released-scores.json", candidate)
+            reports.publish_metrics(self.workspace, directory, "podman", released=True)
+        new_series = self.output.read_text().splitlines()[-1]
+        self.assertNotEqual(old_series, new_series)
+        self.assertEqual(new_series, f"history_dir=benchmarks/podman/{candidate['series']}")
+        result = reports.read_json(directory / "benchmark.json")
+        self.assertEqual([row["value"] for row in result], [row["value"] for row in candidate["metrics"]])
+
+    def test_released_runtime_receipt_cannot_alias_the_compatibility_owner(self):
+        import benchmark_native as native
+        import evaluator_profiles as profiles
+
+        candidate = profiles.candidate_versions(profiles.RELEASE_BENCHMARK)
+        receipt = native.native_versions()
+        self.assertEqual(profiles.runtime(receipt), native.native_profile())
+        self.assertIs(profiles.runtime(candidate), profiles.RELEASE_BENCHMARK)
+        prior = profiles.RETAINED_RELEASE_BENCHMARK
+        prior_receipt = native.native_versions(backend=prior)
+        self.assertIs(profiles.runtime(profiles.candidate_versions(prior)), prior)
+        self.assertEqual(profiles.runtime(prior_receipt), native.native_profile(backend=prior))
+        with self.assertRaises(ValueError):
+            profiles.runtime({**prior_receipt, 'codex_tool_surface': receipt['codex_tool_surface']})
+        for supplied in ({**candidate, "producer_profile": native.NATIVE_PRODUCER},
+                         {**receipt, "patch_sha256": candidate["patch_sha256"]},
+                         {**receipt, "source_tree_digest": "sha256:" + "0" * 64}):
+            with self.assertRaises(ValueError):
+                profiles.runtime(supplied)
+
+    def test_released_policy_uses_its_own_closed_identity(self):
+        import skill_evidence as evidence
+        from benchmark_native import NATIVE_PATCH_DIGEST, released_policy, score_series
+
+        for suite in ("podman", "gh"):
+            policy = released_policy(suite)
+            fields = {key: policy[key] for key in evidence.POLICY_FIELDS if key in policy}
+            judge = {"model": policy["model"], "provider": policy["provider"], "enabled": True}
+            for mode, maximum in reports.MODES.items():
+                attempts = {"mode": mode, "maximum": maximum, "stop_on_pass": False, "pass_threshold": 0.5}
+                published_id = score_series(suite, mode)
+                result = evidence.make_policy(fields, "sha256:" + NATIVE_PATCH_DIGEST, "skill-evaluator-default-v2",
+                                              judge, attempts, "runtime_recorded", published_id)
+                evidence.validate_policy(result)
+                self.assertNotIn("producer_profile", result)
+                for altered in ({**result, "published_id": score_series(suite, "confirmation" if mode == "standard" else "standard")},
+                                {**result, "judge": {**judge, "enabled": False}},
+                                {**result, "attempts": {**attempts, "pass_threshold": 0.7}},
+                                {**result, "patch_digest": "sha256:" + "0" * 64},
+                                {**result, "producer_profile": "skillevaluator-1.0.1-benchmark-candidate-v2"}):
+                    with self.subTest(suite=suite, mode=mode), self.assertRaises(ValueError):
+                        evidence.validate_policy(altered)
+
+    def test_released_gh_access_metric_is_bound_to_its_producer(self):
+        import skill_evidence as evidence
+
+        historical = {"gh_" + field: 1 for field in evidence.GATE_FIELDS}
+        released = {key: value for key, value in historical.items() if key != "gh_authorization"}
+        released["gh_access_policy"] = 1
+        self.assertEqual(evidence.deterministic_observation(historical, "gh"),
+                         evidence.deterministic_observation(released, "gh", released_native=True))
+        denied = {**released, "gh_access_policy": 0, "gh_gate": 0}
+        self.assertEqual(evidence.deterministic_observation(denied, "gh", released_native=True)["authorization"], 0)
+        for metrics, current in ((historical, True), (released, False), ({**released, "gh_authorization": 1}, True),
+                                 ({**released, "gh_access_policy": True}, True), ({**denied, "gh_gate": 1}, True)):
+            with self.subTest(metrics=metrics, released_native=current), self.assertRaises(ValueError):
+                evidence.deterministic_observation(metrics, "gh", released_native=current)
+        with self.assertRaises(ValueError):
+            evidence.deterministic_observation(released, "podman", released_native=True)
+
     def test_confirmation_artifact_cannot_masquerade_as_standard(self):
         data = self.metrics()
         data["mode"] = "confirmation"
@@ -720,6 +812,22 @@ class UpstreamTests(unittest.TestCase):
 
     def test_pinned_evaluator_patch_only_pins_codex_for_docker_runs(self):
         from skillevaluator.tier3.harbor import runner
+
+        if importlib.metadata.version('skillevaluator') == '1.0.1':
+            import benchmark_native
+
+            benchmark_native.validate_runtime()
+            build = runner.build_harbor_run_command
+            launcher = 'aeb_gh_fixture.benchmark_codex:BenchmarkCodex'
+            common = {'dataset_path': 'unused', 'job_name': 'keyless-test'}
+            for backend in benchmark_native.BACKENDS.values():
+                command = build(agent='codex', env_mode=backend, **common)
+                self.assertEqual(command[command.index('--agent') + 1], launcher)
+            for agent, environment in (('claude-code', 'aeb-benchmark-docker'), ('codex', 'docker'), ('codex', 'local')):
+                command = build(agent=agent, env_mode=environment, **common)
+                self.assertNotIn(launcher, command)
+            return
+
         from harbor.agents.installed.codex import Codex
         patch_text = (REPO / reports.PATCH).read_text()
         members = re.findall(r"^diff --git a/(\S+)", patch_text, re.MULTILINE)
@@ -851,10 +959,9 @@ class WorkflowTests(unittest.TestCase):
         steps = job["steps"]
         budget = next(step for step in steps if step.get("id") == "budget")
         evaluation = next(step for step in steps if step.get("id") == "evaluation")
-        recovery = next(step for step in steps if "skill_reports.py recover" in step.get("run", ""))
+        recovery = next(step for step in steps if "benchmark_native.py recover" in step.get("run", ""))
         staging = next(step for step in steps if step.get("id") == "artifacts")
-        for setting in ("SKILL_EVAL_LLM_MODEL", "SKILL_EVAL_JUDGE_MODEL", "LLM_JUDGE_MODEL"):
-            self.assertEqual(evaluation["env"][setting], "${{ steps.selection.outputs.model }}")
+        self.assertEqual(set(evaluation["env"]), {"OPENAI_API_KEY", "EVALUATION_DEADLINE_EPOCH"})
         self.assertIs(steps[0], budget)
         self.assertEqual(budget["timeout-minutes"], 1)
         self.assertEqual(evaluation["env"]["EVALUATION_DEADLINE_EPOCH"],
@@ -883,25 +990,19 @@ class WorkflowTests(unittest.TestCase):
                 "#!/usr/bin/env bash\nprintf '%s\\n' \"$@\" > \"$TIMEOUT_LOG\"\n"
             )
             (bin_dir / "timeout").chmod(0o700)
-            (bin_dir / "skillevaluator").write_text("#!/usr/bin/env bash\nexit 97\n")
-            (bin_dir / "skillevaluator").chmod(0o700)
             runner_temp = root / "runner"
             (runner_temp / "skill-benchmark").mkdir(parents=True)
             env = {
                 "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
                 "TIMEOUT_LOG": str(timeout_log),
-                "SKILL_EVAL_LLM_MODEL": reports.POLICY["model"],
                 "RUNNER_TEMP": str(runner_temp),
                 "GITHUB_OUTPUT": str(output),
                 "GITHUB_WORKSPACE": str(REPO),
                 "GITHUB_REPOSITORY": "owner/repo",
                 "GITHUB_SHA": "0" * 40,
-                "BENCHMARK_SKILL": "ansible",
-                "SKILL_DIR": str(REPO / '.apm/skills/ansible'),
-                "GRADING_MODE": 'default',
-                "WORKSPACE_MODE": 'isolated',
-                "ATTEMPTS": "3",
-                "SKILLEVALUATOR_RESULTS_DIR": str(runner_temp / "skill-benchmark/results"),
+                "BENCHMARK_SKILL": "gh",
+                "BENCHMARK_MODE": "confirmation",
+                "SKILL_NATIVE_BENCHMARK_PYTHON": "/reviewed/bin/python",
                 "OPENAI_API_KEY": "placeholder-for-test",
             }
 
@@ -910,20 +1011,9 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 0, completed.stderr)
             args = timeout_log.read_text().splitlines()
             self.assertEqual(args[:3], ["--signal=INT", "--kill-after=30s", "8400s"])
-            policy = reports.POLICY
-            self.assertFalse(policy["stop_on_pass"])
-            self.assertTrue(policy["baseline"])
             self.assertEqual(args[3:], [
-                "skillevaluator", "tier3", "evaluate", str(REPO / ".apm/skills/ansible"),
-                "--agents", "codex", "--agent-model", f"codex={policy['model']}",
-                "--env-mode", policy["environment"],
-                "--skill-workspace-mode", "isolated", "--grading-mode", policy["grading"],
-                "--n-attempts", "3", "--no-stop-on-pass",
-                "--n-concurrent", str(policy["concurrency"]), "--max-agents", "1",
-                "--agent-runtime-preflight", "--timeout-multiplier", f"{policy['timeout_multiplier']:g}",
-                "--progress", "plain", "--harbor-keep-jobs",
-                "--results-dir", env["SKILLEVALUATOR_RESULTS_DIR"],
-                "--evaluated-source-repository", "owner/repo", "--evaluated-source-revision", "0" * 40,
+                "/reviewed/bin/python", "-B", ".github/scripts/benchmark_native.py", "execute",
+                str(runner_temp / "skill-benchmark"), "gh", "confirmation", "0" * 40,
             ])
 
             # Little time left: the run gets what remains minus termination grace.
@@ -1039,77 +1129,64 @@ class WorkflowTests(unittest.TestCase):
         self.assertGreaterEqual(matched, 5)
 
     def test_setup_resolves_its_checkout_and_confines_tools_before_install(self):
-        setup = (REPO / '.github/scripts/setup-skillevaluator.sh').read_text()
-        self.assertNotIn('$GITHUB_WORKSPACE/.github/', setup)
-        prefix = setup.split('\nevaluator_revision=', 1)[0]
-        # Execute the actual pre-install shell path; no Git fetch or installation.
+        setup = (REPO / ".github/scripts/setup-static-evaluator.sh").read_text()
+        prefix = setup.split('mkdir -m 700 "$tools"', 1)[0]
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            tools = root / 'bin'; tools.mkdir()
-            uv = tools / 'uv'; uv.write_text('#!/bin/sh\nprintf "uv 0.13.9\\n"\n'); uv.chmod(0o755)
-            for layout in ('flat', 'trusted', 'external'):
-                workspace = root / layout / 'workspace'; workspace.mkdir(parents=True)
-                checkout = (workspace if layout == 'flat' else workspace / 'trusted checkout'
-                            if layout == 'trusted' else root / layout / 'separate checkout')
-                script = checkout / '.github/scripts/setup-skillevaluator.sh'
+            for layout in ("flat", "trusted", "external"):
+                workspace = root / layout / "workspace"
+                workspace.mkdir(parents=True)
+                checkout = (workspace if layout == "flat" else workspace / "trusted checkout"
+                            if layout == "trusted" else root / layout / "separate checkout")
+                script = checkout / ".github/scripts/setup-static-evaluator.sh"
                 script.parent.mkdir(parents=True)
-                script.write_text(prefix + '\nprintf "%s\\n" "$repository_root"\n')
+                script.write_text(prefix + '\nprintf "%s\\n" "$root"\n')
                 for inside in (False, True):
                     with self.subTest(layout=layout, tools_inside_checkout=inside):
-                        temporary = checkout / 'tools' if inside else root / layout / 'tools'
-                        env = {'PATH': str(tools) + os.pathsep + os.defpath,
-                               'RUNNER_TEMP': str(temporary), 'GITHUB_WORKSPACE': str(workspace),
-                               'GITHUB_ENV': str(root / 'environment'), 'GITHUB_PATH': str(root / 'path')}
-                        result = subprocess.run(['bash', str(script), 'reporting'], cwd=root, env=env,
+                        temporary = checkout / "tools" if inside else root / layout / "tools"
+                        env = {"PATH": os.defpath, "RUNNER_TEMP": str(temporary),
+                               "GITHUB_WORKSPACE": str(workspace), "GITHUB_ENV": str(root / "environment")}
+                        result = subprocess.run(["bash", str(script), "native-benchmark-101"], cwd=root, env=env,
                                                 text=True, capture_output=True, timeout=10)
                         if inside:
                             self.assertNotEqual(result.returncode, 0)
-                            self.assertIn('Tools must be outside the checkout.', result.stderr)
-                            self.assertFalse((temporary / 'skill-evaluation-tools').exists())
+                            self.assertIn("Tools must be outside the checkout.", result.stderr)
+                            self.assertFalse((temporary / "skill-native-benchmark-101").exists())
                         else:
                             self.assertEqual(result.returncode, 0, result.stderr)
                             self.assertEqual(result.stdout.strip(), str(checkout.resolve()))
 
-    def test_setup_private_tool_root_for_provenance_key(self):
-        setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
-        self.assertIn("umask 077", setup)
-        self.assertLess(
-            setup.index("umask 077"),
-            setup.index('mkdir -p "$tool_root/bin" "$tool_root/dependencies"'),
-        )
-        self.assertIn('chmod 700 "$tool_root"', setup)
-        self.assertIn('["docker", "compose", "version", "--short"]', setup)
-
-    def test_setup_provenance_records_the_selected_scanner_revision(self):
-        setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
-        self.assertIn("printf 'SKILL_EVALUATION_KIND=%s\\n' \"$kind\"", setup)
-        producer = setup.split("<<'PY' > \"$tool_root/versions.json\"\n", 1)[1].rsplit("\nPY", 1)[0]
+    def test_retired_setup_selectors_exit_before_install(self):
+        setup = REPO / ".github/scripts/setup-skillevaluator.sh"
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "dependencies").mkdir()
-            for name in ("semgrep", "skillspector"):
-                (root / "dependencies" / f"{name}.json").write_text(
-                    json.dumps([{"name": name, "version": "fixture-version"}]))
-            (root / 'skillspector').mkdir()
-            (root / 'skillspector/uv.lock').write_text('scanner lock fixture')
-            (root / 'benchmark').mkdir()
-            (root / 'benchmark/uv.lock').write_bytes(b'benchmark lock fixture')
-            for kind in ("quality", "benchmark"):
-                output = io.StringIO()
-                with self.subTest(kind=kind), patch.object(sys, "argv", ["-", str(root), kind, SHA, str(REPO)]), \
-                        patch.object(subprocess, "check_output", return_value="fixture-version\n"), \
-                        contextlib.redirect_stdout(output):
-                    exec(compile(producer, "setup-provenance", "exec"), {})
-                versions = json.loads(output.getvalue())
-                if kind == "quality":
-                    self.assertEqual(versions["skillspector_revision"], SHA)
-                    self.assertEqual(versions["scanners"]["skillspector"], "fixture-version")
-                    self.assertEqual(versions['scanner_runtime']['skillspector_lock'],
-                                     'sha256:' + hashlib.sha256(b'scanner lock fixture').hexdigest())
-                else:
-                    self.assertNotIn("skillspector_revision", versions)
-                    self.assertEqual(versions["lock_sha256"], hashlib.sha256(b"benchmark lock fixture").hexdigest())
-                    self.assertEqual(versions["certifi"], importlib.metadata.version("certifi"))
+            env = {"PATH": os.defpath, "RUNNER_TEMP": str(root / "tools"), "GITHUB_WORKSPACE": str(REPO),
+                   "GITHUB_ENV": str(root / "environment"), "GITHUB_PATH": str(root / "path")}
+            for kind in ("reporting", "quality", "benchmark"):
+                with self.subTest(kind=kind):
+                    result = subprocess.run(["bash", str(setup), kind], cwd=root, env=env,
+                                            text=True, capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                    self.assertEqual(list(root.iterdir()), [])
+
+    def test_setup_private_tool_root_for_provenance_key(self):
+        setup = (REPO / ".github/scripts/setup-static-evaluator.sh").read_text()
+        self.assertLess(setup.index("umask 077"), setup.index('mkdir -m 700 "$tools"'))
+        self.assertIn('python_export=SKILL_NATIVE_BENCHMARK_PYTHON', setup)
+        self.assertIn('benchmark_native.py" verify-runtime', setup)
+
+    def test_setup_provenance_records_the_pinned_benchmark_runtime(self):
+        from benchmark_native import adoption_policy, validate_adoption
+        from skill_orchestration import NATIVE_BENCHMARK_POLICY
+
+        validate_adoption(REPO)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            unreviewed = adoption_policy()
+            unreviewed["runtime"]["codex_tool_surface"]["mode"] = "unreviewed"
+            reports.write_json(root / NATIVE_BENCHMARK_POLICY, unreviewed)
+            with self.assertRaisesRegex(ValueError, "production benchmark policy differs"):
+                validate_adoption(root)
 
     def test_benchmark_contracts_allow_the_intentionally_absent_scanner(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -1141,7 +1218,7 @@ class WorkflowTests(unittest.TestCase):
                              for step in jobs["evaluate"]["steps"]))
         compose_index = jobs["evaluate"]["steps"].index(compose)
         evaluator_index = next(index for index, step in enumerate(jobs["evaluate"]["steps"])
-                               if "setup-skillevaluator.sh" in step.get("run", ""))
+                               if "setup-static-evaluator.sh native-benchmark-101" in step.get("run", ""))
         self.assertLess(compose_index, evaluator_index)
         verification = jobs["evaluate"]["steps"][compose_index + 1]
         self.assertEqual(verification["name"], "Verify pinned Docker Compose")

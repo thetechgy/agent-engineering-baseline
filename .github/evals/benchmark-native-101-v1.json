@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "runtime": {
+    "skillevaluator": "1.0.1",
+    "evaluator_revision": "914c15cb3f31562ccffdc9a7166002a87ed2ce1e",
+    "harbor": "0.25.0",
+    "python": "3.14.10",
+    "lock_sha256": "c49a8340c7312a8396c34be64d0062e8a591f201202c890b7563265958e3f364",
+    "patch_sha256": "30a03343d670e2b83aeb5519f009549c6528b3cb8235cffc4522aab64b872f57",
+    "backend_version": "1.3.2",
+    "backend_source_digest": "sha256:53faffa725ab76a65e726ab91f9799606a677ec3bc8da0ccf7aaa8b5e9f4e0cc",
+    "backend_wheel_sha256": "0899cdc4c270d5fe817b256c099457551f6b273b65aaf5418da99ae5ff60052b",
+    "codex_tool_surface": {
+      "mode": "direct",
+      "catalog_sha256": "fd533349d25b61d61028a80f4a8c2c5388895490d7116bc39e2e407b6c972095"
+    },
+    "source_tree_digest": "sha256:78dfd05becd4b4e94882aa0305fc58d28a6ef40c10813b384335fd6a7f0be1ef",
+    "producer_profile": "skillevaluator-1.0.1-benchmark-native-v2"
+  },
+  "backends": {
+    "podman": "aeb-benchmark-docker",
+    "gh": "aeb-gh-fixture",
+    "powershell-pester-6": "aeb-benchmark-docker"
+  },
+  "model": "gpt-6.2-sol",
+  "agent_reasoning_effort": "high",
+  "judge_reasoning_effort": null
+}

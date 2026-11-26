@@ -293,12 +293,11 @@ directory remains available until final task-owned cleanup. This refresh changes
 no container state, broker audit or native trial. See the [Buildx configuration
 lookup order](https://docs.docker.com/build/building/variables/#buildx_config).
 
-Retained-runtime Pester qualification uses the same explicit package-preparation
-entry point with `--runtime retained`. This selects only SkillEvaluator 0.3.0 /
-Harbor 0.13.2, under its existing SDK 2.44.0 and Pydantic 2.13.4 owning lock.
-Candidate preparation selects only 0.7.2 / 0.24.0. The current review SDK overlay
-is rejected. The retained path stages its original recipe without the candidate
-verifier override; native collection and shared/public reporting remain unchanged.
+Pester package preparation uses `--runtime release` with the pinned
+SkillEvaluator 1.0.1 / Harbor 0.25.0 benchmark candidate. The command verifies
+the release lock, patched evaluator source and installed backend before staging.
+The original 0.3.0 preparation is reproducible from Git revision `58cb969`.
+The 0.7.2 and 0.9.0 qualification owners keep their separate explicit modes.
 
 Transient package retries wait 30 and then 60 seconds, record those delays, use
 fresh fully torn-down environments, and remain within the shared 1,100-second

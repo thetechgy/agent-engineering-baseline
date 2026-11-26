@@ -1,5 +1,6 @@
 """Offline score-preservation gate. Controlled inputs are never measurements."""
 
+import hashlib
 import itertools
 import json
 import math
@@ -32,6 +33,8 @@ SOURCES = {
     },
 }
 LIMIT = 64 * 1024
+RETAINED_PROBE = Path(__file__).resolve().parents[1] / 'evals/retained/standard-scores-030.json'
+RETAINED_PROBE_SHA256 = 'cdaef12c530579d89a32d702a7fdfcce4cae332c2f962137814ff7ce4bb564b9'
 
 
 def require(condition, message):
@@ -122,8 +125,17 @@ def validate_probe(value, version):
     return value
 
 
+def retained_probe():
+    """Read the exact fixture receipt captured with the historical producer."""
+    with RETAINED_PROBE.open('rb') as stream:
+        raw = stream.read(LIMIT + 1)
+    require(len(raw) <= LIMIT and hashlib.sha256(raw).hexdigest() == RETAINED_PROBE_SHA256,
+            'Retained score receipt digest mismatch')
+    return validate_probe(json.loads(raw), '0.3.0')
+
+
 def probe(executable, version, *, source=None, lock=None):
-    require(version in PINS, 'Unsupported scoring runtime')
+    require(version == '0.7.2', 'Unsupported executable scoring runtime')
     executable = Path(executable)
     require(executable.is_absolute() and executable.is_file(), 'Pinned score probe interpreter required')
     result = subprocess.run([str(executable), '-I', '-B', '-c', PROBE, version,
@@ -149,13 +161,10 @@ def compare(retained, candidate):
         'vectors': len(vectors()), 'differences': differences}
 
 
-def qualify(candidate_python, candidate_source, candidate_lock, retained_python):
-    """Missing tooling and probe failures never fall back or manufacture evidence."""
-    if not retained_python or not Path(retained_python).is_absolute():
-        return {'schema': 1, 'status': 'unqualified', 'code': 'retained_evaluator_python_required',
-                'fixture_only': True, 'inference': False, 'remote_judges': False}
+def qualify(candidate_python, candidate_source, candidate_lock):
+    """Compare authenticated retained bytes to the existing candidate probe."""
     try:
-        retained = probe(retained_python, '0.3.0')
+        retained = retained_probe()
         candidate = probe(candidate_python, '0.7.2', source=candidate_source, lock=candidate_lock)
         return compare(retained, candidate)
     except (OSError, ValueError, TypeError, KeyError, subprocess.TimeoutExpired):

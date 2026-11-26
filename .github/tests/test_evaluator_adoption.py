@@ -62,8 +62,7 @@ class AdoptionTests(unittest.TestCase):
             self.assertTrue(any(row['scanner'] == 'SECURITY' and row['status'] == 'failed' for row in public['scans']))
             self.assertTrue(any(row['scanner'] == 'skillspector' and row['status'] == 'incomplete' for row in public['scans']))
             self.assertTrue(any(row['check'] == 'known_violation' for row in public['findings']))
-            # Hand current public evidence to the existing publisher, then rebuild
-            # with the retained host. Neither build normalizes or rescores records.
+            # Confirm the 1.0.1 data host rebuilds the 0.9.0 projection byte for byte.
             import skill_pages as pages
             from test_skill_pages import bundle, prov
             site = Path(directory) / 'site'
@@ -83,8 +82,8 @@ class AdoptionTests(unittest.TestCase):
             self.assertIn('0 with no incompleteness reported', html)
             self.assertIn('known_violation', html)
             before = pages.tree(site)
-            legacy = os.environ['SKILL_EVALUATOR_PYTHON']
-            run = subprocess.run([legacy, '-B', str(ROOT / '.github/scripts/skill_pages.py'),
+            data_python = os.environ['SKILL_DATA_PYTHON']
+            run = subprocess.run([data_python, '-B', str(ROOT / '.github/scripts/skill_pages.py'),
                                   'build', '--site', str(site)], capture_output=True, text=True, timeout=60)
             self.assertEqual(run.returncode, 0, run.stderr)
             self.assertEqual(before, pages.tree(site))
@@ -119,10 +118,13 @@ class AdoptionTests(unittest.TestCase):
         self.assertNotIn('tool', findings[0])
         self.assertNotIn('target_skill_used_before', findings[0])
 
-    def test_held_consumers_refuse_candidate_before_execution(self):
+    def test_data_host_replays_history_and_holds_operational_consumers(self):
+        from qualify_current_evaluator import historical_podman
         import skill_evidence as evidence
-        with self.assertRaisesRegex(ValueError, 'producer owning runtime'):
-            evidence.normalize_behavioral(ROOT / '.github/tests/fixtures/skill_evidence/podman-native', 'podman')
+        native = ROOT / '.github/tests/fixtures/skill_evidence/podman-native'
+        public = evidence.project(evidence.normalize_behavioral(native, 'podman'))
+        self.assertEqual(evidence.encoded(public), historical_podman())
+
         import evaluator_profiles as profiles
         import skill_reports as reports
         import skill_review
@@ -136,7 +138,7 @@ class AdoptionTests(unittest.TestCase):
         # evaluator environment also has to fail before constructing a client.
         with self.assertRaises((ValueError, PackageNotFoundError)):
             skill_review.versions()
-        with self.assertRaisesRegex(ValueError, 'Pinned validator environment required'):
+        with self.assertRaisesRegex(ValueError, 'Unexpected released evaluator environment'):
             skill_report_reviews.load([Path('not-opened.json')], None)
 
     @unittest.skipUnless(os.environ.get('EVALUATOR_ADOPTION_SCAN_OUTPUT'), 'requires retained native scanner assessment')
