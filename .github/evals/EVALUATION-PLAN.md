@@ -449,7 +449,6 @@ planning estimate of 400,000 input and 240,000 output tokens costs about
 $3.20. Authorize the exact live scope separately after the credential-free
 qualification gates. [OpenAI API pricing](https://developers.openai.com/api/docs/pricing)
 
-
 ### Native Codex tool request qualification
 
 The Podman case 1 baseline smoke on `466b0cc` completed the Codex trial

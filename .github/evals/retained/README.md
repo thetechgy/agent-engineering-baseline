@@ -57,6 +57,7 @@ select their own verified source and registry.
 `private-review-101-v4-overlay.zip` binds 12 report reader and registry members
 from `af379d06d08d621910a1abe2cce1bb04e12a72c8` to `review-101-v4`.
 The archive SHA-256 is
-`4d2dfd9e49bfc1d253d25621cf8a38023469fbaabd4b1ac16299b47d8476eafe`. The active reader recognizes the separately recorded direct-tool
-and released diagnostic evidence. The prior profiles keep their original source
+`4d2dfd9e49bfc1d253d25621cf8a38023469fbaabd4b1ac16299b47d8476eafe`.
+The active reader recognizes the separately recorded direct-tool and released
+diagnostic evidence. The prior profiles keep their original source
 snapshots and validator identities.
