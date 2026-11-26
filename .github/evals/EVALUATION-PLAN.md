@@ -17,8 +17,10 @@ Pass@k counts any passing attempt. Pass^k requires every attempt to pass
 under that arm's applicable rubric.
 
 Credential-free qualification compares the patched 1.0.1 and 1.2.1 releases.
-The protected one-trial provider compatibility check and reviewer approval
-remain production cutover gates.
+The matched static catalog produced the same scores, scanner coverage and
+severity counts for all six skills. Four skills still report incomplete
+SkillSpector coverage. The protected one-trial provider compatibility check
+and reviewer approval remain production cutover gates.
 [NVIDIA release](https://github.com/NVIDIA/SkillEvaluator/releases/tag/v1.2.1).
 
 ## SkillEvaluator 0.3.0 retirement

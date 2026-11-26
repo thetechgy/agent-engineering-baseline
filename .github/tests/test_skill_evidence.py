@@ -795,6 +795,25 @@ class EvidenceTests(unittest.TestCase):
                         if formats:
                             self.assertEqual(row['suite']['owner'], 'local' if owner == 'local' else 'overlay')
 
+    def test_released_strict_dataset_checks_captured_authored_field_types(self):
+        import static_evaluator
+
+        if evidence.installed_version('skillevaluator') != static_evaluator.VERSION:
+            self.skipTest('Requires the active released dataset contract')
+        skill = self.local(self.root, 'alpha')
+        self.dataset(skill, 'alpha')
+        path = skill / 'evals/evals.json'
+        authored = evidence.read_json(path)
+        self.assertEqual(evidence.strict_dataset(path, 'alpha')['status'], 'configured')
+        for field, value in (('expected_skill', False), ('expected_skill', ' '),
+                             ('assertions', 'one string'), ('expected_behavior', [2])):
+            with self.subTest(field=field, value=value):
+                data = copy.deepcopy(authored)
+                data['evals'][0][field] = value
+                write(path, data)
+                with self.assertRaisesRegex(ValueError, 'Strict dataset contract failed'):
+                    evidence.strict_dataset(path, 'alpha')
+
     def test_partial_clones_never_fetch_missing_objects(self):
         def git(root, *args):
             return subprocess.run(['git', '-C', str(root), *args], check=True,

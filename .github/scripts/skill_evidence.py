@@ -1098,6 +1098,10 @@ def strict_dataset(path, name, *, reader=None, directory_identities=None, direct
     require(type(data) is dict, 'Dataset object required')
     require(type(data.get('evals')) is list and len(data['evals']) <= MAX_CASES, 'Dataset case limit')
     require(type(data) is dict and data.get('skill_name') == name, 'Dataset skill mismatch')
+    if installed_version('skillevaluator') == static_evaluator.VERSION:
+        # Apply the release's authored-field rules before normalization can mask invalid values.
+        require(all(type(entry) is dict and not native_spec._dataset_field_type_errors(entry)
+                    for entry in data['evals']), 'Strict dataset contract failed')
     entries = normalize_dataset_entries(data)
     # The pinned path-based validator reopens the dataset. Apply its agentskills
     # checks to this buffer, retaining its optional-file checks separately.
@@ -2275,11 +2279,11 @@ def validate_runtime_versions(versions, *, historical_read=False):
             owner = next(entry for entry in static_evaluator.STATIC_OWNERS.values() if entry['skillevaluator'] == installed)
             static_evaluator.validate_install(owner=owner)
         else:
-            from benchmark_native import native_profile
-
             try:
                 profiles.validate_install(candidate)
             except ValueError:
+                from benchmark_native import native_profile
+
                 profiles.validate_install(native_profile(backend=candidate))
     profile = profiles.runtime(versions, owning=not historical_reader)
     if 'scanner_runtime' in versions:
@@ -4651,7 +4655,8 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
         lookup = {}
         pass_data = summary.get('pass_at_k') or {}
         require(type(pass_data) is dict, 'Invalid custom native pass data')
-        release_partial = capture['evaluator_version'] == '1.0.1' and 'unresolved_cases' in pass_data
+        release_partial = (capture['evaluator_version'] in static_evaluator.SOURCE_PINS
+                           and 'unresolved_cases' in pass_data)
         if release_partial:
             require(native['execution_status'] != 'succeeded'
                     and native['scored_attempts'] < native['expected_attempts']

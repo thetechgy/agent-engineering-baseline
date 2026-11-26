@@ -14,18 +14,18 @@ on:
       startup-owner:
         description: Evaluator for the startup-only qualification
         type: choice
-        options: ['0.9.0', '1.0.1']
+        options: ['0.9.0', '1.2.1']
         default: '0.9.0'
       benchmark-121-fixtures:
-        description: Qualify the 1.0.1 benchmark candidate with deterministic gh and Pester fixtures
+        description: Qualify the 1.2.1 benchmark candidate with deterministic gh and Pester fixtures
         type: boolean
         default: false
       benchmark-121-podman:
-        description: Qualify 1.0.1 isolated Podman and offline publication
+        description: Qualify 1.2.1 isolated Podman and offline publication
         type: boolean
         default: false
       benchmark-121-codex:
-        description: Qualify the 1.0.1 Codex launch with the non-forwarding loopback fixture
+        description: Qualify the 1.2.1 Codex launch with the non-forwarding loopback fixture
         type: boolean
         default: false
       benchmark-121-launcher:
@@ -287,7 +287,7 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' && inputs.startup-only && !inputs.benchmark-121-fixtures
       && !inputs.benchmark-121-codex && !inputs.benchmark-121-podman && !inputs.benchmark-121-launcher
-      && (inputs.candidate-next || inputs.startup-owner == '1.0.1')
+      && (inputs.candidate-next || inputs.startup-owner == '1.2.1')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     defaults:
@@ -325,13 +325,13 @@ jobs:
         run: |
           "$SKILL_NEXT_PYTHON" -I -B -c 'import sys; sys.path.insert(0,".github/scripts"); from gh_initializer_validation import startup_only; startup_only(sys.argv[1],sys.argv[2])' \
             "$RUNNER_TEMP/gh-startup.json" "$GITHUB_WORKSPACE/startup-base"
-      - name: Acquire the 1.0.1 release owner and Compose
-        if: inputs.startup-owner == '1.0.1'
+      - name: Acquire the 1.2.1 release owner and Compose
+        if: inputs.startup-owner == '1.2.1'
         run: |
           bash .github/scripts/setup-static-evaluator.sh native-startup
           bash .github/scripts/setup-compose.sh
       - name: Exercise released staging and trusted startup in both arms
-        if: inputs.startup-owner == '1.0.1'
+        if: inputs.startup-owner == '1.2.1'
         run: |
           PYTHONPATH=.github/scripts:.github/tests "$SKILL_NATIVE_STARTUP_PYTHON" -B -m unittest test_gh_startup_probe -v
           "$SKILL_NATIVE_STARTUP_PYTHON" -B .github/scripts/qualify_gh_startup_101.py "$RUNNER_TEMP/gh-startup.json"
@@ -399,7 +399,7 @@ jobs:
           if [[ "$FIXTURE_SUITE" == gh ]]; then
             fixture_source="$(mktemp -d "$RUNNER_TEMP/benchmark-121-gh-source.XXXXXX")"
             git archive "$GITHUB_SHA" | tar --extract --directory="$fixture_source"
-            git -C "$fixture_source" apply "$GITHUB_WORKSPACE/.github/patches/benchmark-101-gh-reporting.patch"
+            git -C "$fixture_source" apply "$GITHUB_WORKSPACE/.github/patches/benchmark-121-gh-reporting.patch"
             cd "$fixture_source"
           fi
           "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_101.py \

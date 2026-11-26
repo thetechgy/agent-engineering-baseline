@@ -10,6 +10,9 @@ FIXTURE_TESTS = (
     'test_cli_observation.DiagnosticContract.test_native_normalization_preserves_unavailability_and_rejects_mutation',
     'test_codex_pilot.PilotContracts.test_historical_public_record_cannot_claim_pilot_identity',
     'test_custom_metrics',
+    'test_evaluator_candidate.CandidateEvidenceTests.test_local_codex_install_uses_the_reviewed_hoisted_layout',
+    'test_evaluator_candidate.CandidateEvidenceTests.test_codex_setup_failure_without_container_receipt_keeps_primary_error',
+    'test_evaluator_candidate.CandidateEvidenceTests.test_codex_verifier_failure_receipt_excludes_raw_log_and_unknown_paths',
     'test_evaluator_090.Release090Contracts.test_native_gh_oracle_entry_point_selects_actual_owning_profile',
     'test_pester_evaluations.NativeStagingTests.test_diagnostic_completion_validates_each_native_outcome_without_standard_fields',
     'test_skill_evidence.EvidenceTests.test_standalone_cli_disables_repository_bytecode_writes',
@@ -52,6 +55,7 @@ def fixture_suite(loader):
     import evaluator_profiles as profiles
 
     profiles.runtime(profiles.candidate_versions(profiles.CURRENT_RELEASE), owning=True)
+    os.environ['CANDIDATE_EVIDENCE_CHILD'] = '1'
     sys.path.insert(0, str(TESTS))
     return loader.loadTestsFromNames(FIXTURE_TESTS)
 

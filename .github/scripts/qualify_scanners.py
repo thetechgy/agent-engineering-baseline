@@ -126,7 +126,7 @@ def run(output, tools, repository=evidence.ROOT, *, redact=False):
                 assert not raw['incomplete_scans'], 'Bad scanner control coverage was incomplete'
             else:
                 assert 'skillspector' in security['incomplete_scans'] and 'skillspector' in raw['incomplete_scans'], raw
-                if versions['skillevaluator'] in ('0.9.0', '1.0.1'):
+                if versions['skillevaluator'] in ('0.9.0', *evidence.static_evaluator.SOURCE_PINS):
                     # A confirmed finding outranks incompleteness in this release.
                     # Validate both axes with the released rehydrator.
                     reports.released_static_results(raw)

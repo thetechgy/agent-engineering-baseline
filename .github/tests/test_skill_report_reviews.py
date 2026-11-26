@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 sys.dont_write_bytecode = True
@@ -135,25 +136,26 @@ class AttachmentTests(unittest.TestCase):
                     env=env, capture_output=True, text=True, timeout=45)
                 self.assertEqual(build.returncode, 0, build.stderr)
                 emitted = evidence.read_json(planned / 'review-context.json')
-                # Generate a structural fixture from the frozen owner with no SDK call.
+                # Build the synthetic judgment from the context emitted by its frozen owner.
+                fixture_judgment = review_fixtures.judgment(SimpleNamespace(value=emitted))
                 source = attachments.AUDIT_GUARD + """
 sys.path.insert(0, sys.argv[1])
 import skill_review as review
-sys.path.insert(0, sys.argv[2])
-from test_skill_review import judgment, CONFIG
-args = json.loads(sys.argv[3])
+args = json.loads(sys.argv[2])
+judgment, config = json.load(sys.stdin)
 context = review.prepare([Path(p) for p in args['inputs']], Path(args['analysis']),
     args['skill'], args['record_id'],
     **{name: Path(args[name]) if args[name] is not None else None for name in ('source','support','selection')})
-sample = review.make_review(judgment(context), context, review.ModelConfig(**CONFIG),
+sample = review.make_review(judgment, context, review.ModelConfig(**config),
     review.Usage(preflight_input_tokens=100, input_tokens=100, output_tokens=25, total_tokens=125))
-target = Path(sys.argv[4])
+target = Path(sys.argv[3])
 (target / 'skill-review.json').write_bytes(review.evidence.encoded(sample))
 (target / 'skill-review.md').write_bytes(review.render_review(sample, context))
 """
                 fixture = base / 'review'; fixture.mkdir()
-                subprocess.run([python, '-I', '-B', '-c', source, str(scripts), str(Path(__file__).parent),
-                                json.dumps(spec), str(fixture)], env=env, check=True, timeout=45)
+                subprocess.run([python, '-I', '-B', '-c', source, str(scripts), json.dumps(spec), str(fixture)],
+                               input=json.dumps([fixture_judgment, review_fixtures.CONFIG]),
+                               env=env, text=True, check=True, timeout=45)
                 save = fixture / 'skill-review.json'
                 release_review = evidence.read_json(save)
                 self.assertEqual(emitted['implementation_digest'], release_review['provenance']['implementation_digest'])

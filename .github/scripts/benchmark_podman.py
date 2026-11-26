@@ -108,7 +108,7 @@ def compose_teardown_complete(project: str) -> bool:
 
 
 def scope(workspace: Path, revision: str, *, released=False):
-    from evaluator_profiles import RELEASE_BENCHMARK
+    from evaluator_profiles import CURRENT_RELEASE
     from skill_orchestration import candidate_podman_fingerprint
 
     return {
@@ -120,7 +120,7 @@ def scope(workspace: Path, revision: str, *, released=False):
         "planned_trials": 2,
         "attempts_per_arm": 1,
         "agent": {"cli": POLICY["codex"], "model": POLICY["model"], "reasoning_effort": "high",
-                  "tool_surface": RELEASE_BENCHMARK["codex_tool_surface"]},
+                  "tool_surface": CURRENT_RELEASE["codex_tool_surface"]},
         "verifier": {"model": POLICY["model"], "reasoning_effort": None},
         "history_eligible": False,
     }
