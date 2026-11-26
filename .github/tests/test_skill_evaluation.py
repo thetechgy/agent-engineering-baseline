@@ -959,10 +959,9 @@ class WorkflowTests(unittest.TestCase):
         steps = job["steps"]
         budget = next(step for step in steps if step.get("id") == "budget")
         evaluation = next(step for step in steps if step.get("id") == "evaluation")
-        recovery = next(step for step in steps if "skill_reports.py recover" in step.get("run", ""))
+        recovery = next(step for step in steps if "benchmark_native.py recover" in step.get("run", ""))
         staging = next(step for step in steps if step.get("id") == "artifacts")
-        for setting in ("SKILL_EVAL_LLM_MODEL", "SKILL_EVAL_JUDGE_MODEL", "LLM_JUDGE_MODEL"):
-            self.assertEqual(evaluation["env"][setting], "${{ steps.selection.outputs.model }}")
+        self.assertEqual(set(evaluation["env"]), {"OPENAI_API_KEY", "EVALUATION_DEADLINE_EPOCH"})
         self.assertIs(steps[0], budget)
         self.assertEqual(budget["timeout-minutes"], 1)
         self.assertEqual(evaluation["env"]["EVALUATION_DEADLINE_EPOCH"],
@@ -991,25 +990,19 @@ class WorkflowTests(unittest.TestCase):
                 "#!/usr/bin/env bash\nprintf '%s\\n' \"$@\" > \"$TIMEOUT_LOG\"\n"
             )
             (bin_dir / "timeout").chmod(0o700)
-            (bin_dir / "skillevaluator").write_text("#!/usr/bin/env bash\nexit 97\n")
-            (bin_dir / "skillevaluator").chmod(0o700)
             runner_temp = root / "runner"
             (runner_temp / "skill-benchmark").mkdir(parents=True)
             env = {
                 "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
                 "TIMEOUT_LOG": str(timeout_log),
-                "SKILL_EVAL_LLM_MODEL": reports.POLICY["model"],
                 "RUNNER_TEMP": str(runner_temp),
                 "GITHUB_OUTPUT": str(output),
                 "GITHUB_WORKSPACE": str(REPO),
                 "GITHUB_REPOSITORY": "owner/repo",
                 "GITHUB_SHA": "0" * 40,
-                "BENCHMARK_SKILL": "ansible",
-                "SKILL_DIR": str(REPO / '.apm/skills/ansible'),
-                "GRADING_MODE": 'default',
-                "WORKSPACE_MODE": 'isolated',
-                "ATTEMPTS": "3",
-                "SKILLEVALUATOR_RESULTS_DIR": str(runner_temp / "skill-benchmark/results"),
+                "BENCHMARK_SKILL": "gh",
+                "BENCHMARK_MODE": "confirmation",
+                "SKILL_NATIVE_BENCHMARK_PYTHON": "/reviewed/bin/python",
                 "OPENAI_API_KEY": "placeholder-for-test",
             }
 
@@ -1018,20 +1011,9 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 0, completed.stderr)
             args = timeout_log.read_text().splitlines()
             self.assertEqual(args[:3], ["--signal=INT", "--kill-after=30s", "8400s"])
-            policy = reports.POLICY
-            self.assertFalse(policy["stop_on_pass"])
-            self.assertTrue(policy["baseline"])
             self.assertEqual(args[3:], [
-                "skillevaluator", "tier3", "evaluate", str(REPO / ".apm/skills/ansible"),
-                "--agents", "codex", "--agent-model", f"codex={policy['model']}",
-                "--env-mode", policy["environment"],
-                "--skill-workspace-mode", "isolated", "--grading-mode", policy["grading"],
-                "--n-attempts", "3", "--no-stop-on-pass",
-                "--n-concurrent", str(policy["concurrency"]), "--max-agents", "1",
-                "--agent-runtime-preflight", "--timeout-multiplier", f"{policy['timeout_multiplier']:g}",
-                "--progress", "plain", "--harbor-keep-jobs",
-                "--results-dir", env["SKILLEVALUATOR_RESULTS_DIR"],
-                "--evaluated-source-repository", "owner/repo", "--evaluated-source-revision", "0" * 40,
+                "/reviewed/bin/python", "-B", ".github/scripts/benchmark_native.py", "execute",
+                str(runner_temp / "skill-benchmark"), "gh", "confirmation", "0" * 40,
             ])
 
             # Little time left: the run gets what remains minus termination grace.
@@ -1147,79 +1129,64 @@ class WorkflowTests(unittest.TestCase):
         self.assertGreaterEqual(matched, 5)
 
     def test_setup_resolves_its_checkout_and_confines_tools_before_install(self):
-        setup = (REPO / '.github/scripts/setup-skillevaluator.sh').read_text()
-        self.assertNotIn('$GITHUB_WORKSPACE/.github/', setup)
-        prefix = setup.split('\nevaluator_revision=', 1)[0]
-        # Execute the actual pre-install shell path; no Git fetch or installation.
+        setup = (REPO / ".github/scripts/setup-static-evaluator.sh").read_text()
+        prefix = setup.split('mkdir -m 700 "$tools"', 1)[0]
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            tools = root / 'bin'; tools.mkdir()
-            uv = tools / 'uv'; uv.write_text('#!/bin/sh\nprintf "uv 0.13.9\\n"\n'); uv.chmod(0o755)
-            for layout in ('flat', 'trusted', 'external'):
-                workspace = root / layout / 'workspace'; workspace.mkdir(parents=True)
-                checkout = (workspace if layout == 'flat' else workspace / 'trusted checkout'
-                            if layout == 'trusted' else root / layout / 'separate checkout')
-                script = checkout / '.github/scripts/setup-skillevaluator.sh'
+            for layout in ("flat", "trusted", "external"):
+                workspace = root / layout / "workspace"
+                workspace.mkdir(parents=True)
+                checkout = (workspace if layout == "flat" else workspace / "trusted checkout"
+                            if layout == "trusted" else root / layout / "separate checkout")
+                script = checkout / ".github/scripts/setup-static-evaluator.sh"
                 script.parent.mkdir(parents=True)
-                script.write_text(prefix + '\nprintf "%s\\n" "$repository_root"\n')
+                script.write_text(prefix + '\nprintf "%s\\n" "$root"\n')
                 for inside in (False, True):
                     with self.subTest(layout=layout, tools_inside_checkout=inside):
-                        temporary = checkout / 'tools' if inside else root / layout / 'tools'
-                        env = {'PATH': str(tools) + os.pathsep + os.defpath,
-                               'RUNNER_TEMP': str(temporary), 'GITHUB_WORKSPACE': str(workspace),
-                               'GITHUB_ENV': str(root / 'environment'), 'GITHUB_PATH': str(root / 'path')}
-                        result = subprocess.run(['bash', str(script), 'benchmark'], cwd=root, env=env,
+                        temporary = checkout / "tools" if inside else root / layout / "tools"
+                        env = {"PATH": os.defpath, "RUNNER_TEMP": str(temporary),
+                               "GITHUB_WORKSPACE": str(workspace), "GITHUB_ENV": str(root / "environment")}
+                        result = subprocess.run(["bash", str(script), "native-benchmark-101"], cwd=root, env=env,
                                                 text=True, capture_output=True, timeout=10)
                         if inside:
                             self.assertNotEqual(result.returncode, 0)
-                            self.assertIn('Tools must be outside the checkout.', result.stderr)
-                            self.assertFalse((temporary / 'skill-evaluation-tools').exists())
+                            self.assertIn("Tools must be outside the checkout.", result.stderr)
+                            self.assertFalse((temporary / "skill-native-benchmark-101").exists())
                         else:
                             self.assertEqual(result.returncode, 0, result.stderr)
                             self.assertEqual(result.stdout.strip(), str(checkout.resolve()))
 
     def test_retired_setup_selectors_exit_before_install(self):
-        setup = REPO / '.github/scripts/setup-skillevaluator.sh'
+        setup = REPO / ".github/scripts/setup-skillevaluator.sh"
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            env = {'PATH': os.defpath, 'RUNNER_TEMP': str(root / 'tools'), 'GITHUB_WORKSPACE': str(REPO),
-                   'GITHUB_ENV': str(root / 'environment'), 'GITHUB_PATH': str(root / 'path')}
-            for kind in ('reporting', 'quality'):
+            env = {"PATH": os.defpath, "RUNNER_TEMP": str(root / "tools"), "GITHUB_WORKSPACE": str(REPO),
+                   "GITHUB_ENV": str(root / "environment"), "GITHUB_PATH": str(root / "path")}
+            for kind in ("reporting", "quality", "benchmark"):
                 with self.subTest(kind=kind):
-                    result = subprocess.run(['bash', str(setup), kind], cwd=root, env=env,
+                    result = subprocess.run(["bash", str(setup), kind], cwd=root, env=env,
                                             text=True, capture_output=True, timeout=10)
                     self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
                     self.assertEqual(list(root.iterdir()), [])
 
     def test_setup_private_tool_root_for_provenance_key(self):
-        setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
-        self.assertIn("umask 077", setup)
-        self.assertLess(
-            setup.index("umask 077"),
-            setup.index('mkdir -p "$tool_root/bin" "$tool_root/dependencies"'),
-        )
-        self.assertIn('chmod 700 "$tool_root"', setup)
-        self.assertIn('["docker", "compose", "version", "--short"]', setup)
+        setup = (REPO / ".github/scripts/setup-static-evaluator.sh").read_text()
+        self.assertLess(setup.index("umask 077"), setup.index('mkdir -m 700 "$tools"'))
+        self.assertIn('python_export=SKILL_NATIVE_BENCHMARK_PYTHON', setup)
+        self.assertIn('benchmark_native.py" verify-runtime', setup)
 
     def test_setup_provenance_records_the_pinned_benchmark_runtime(self):
-        setup = (REPO / ".github/scripts/setup-skillevaluator.sh").read_text()
-        self.assertIn("printf 'SKILL_EVALUATION_KIND=%s\\n' \"$kind\"", setup)
-        producer = setup.split("<<'PY' > \"$tool_root/versions.json\"\n", 1)[1].rsplit("\nPY", 1)[0]
+        from benchmark_native import adoption_policy, validate_adoption
+        from skill_orchestration import NATIVE_BENCHMARK_POLICY
+
+        validate_adoption(REPO)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / 'benchmark').mkdir()
-            (root / 'benchmark/uv.lock').write_bytes(b'benchmark lock fixture')
-            output = io.StringIO()
-            with patch.object(sys, "argv", ["-", str(root)]), \
-                    patch.object(subprocess, "check_output", return_value="fixture-version\n"), \
-                    contextlib.redirect_stdout(output):
-                exec(compile(producer, "setup-provenance", "exec"), {})
-            versions = json.loads(output.getvalue())
-            self.assertNotIn("skillspector_revision", versions)
-            self.assertEqual(versions["lock_sha256"], hashlib.sha256(b"benchmark lock fixture").hexdigest())
-            self.assertEqual(versions["certifi"], importlib.metadata.version("certifi"))
-            self.assertEqual(versions["docker_compose"], 'fixture-version')
-            self.assertEqual(versions["evaluator_revision"], reports.POLICY["evaluator_revision"])
+            unreviewed = adoption_policy()
+            unreviewed["runtime"]["codex_tool_surface"]["mode"] = "unreviewed"
+            reports.write_json(root / NATIVE_BENCHMARK_POLICY, unreviewed)
+            with self.assertRaisesRegex(ValueError, "production benchmark policy differs"):
+                validate_adoption(root)
 
     def test_benchmark_contracts_allow_the_intentionally_absent_scanner(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -1251,7 +1218,7 @@ class WorkflowTests(unittest.TestCase):
                              for step in jobs["evaluate"]["steps"]))
         compose_index = jobs["evaluate"]["steps"].index(compose)
         evaluator_index = next(index for index, step in enumerate(jobs["evaluate"]["steps"])
-                               if "setup-skillevaluator.sh" in step.get("run", ""))
+                               if "setup-static-evaluator.sh native-benchmark-101" in step.get("run", ""))
         self.assertLess(compose_index, evaluator_index)
         verification = jobs["evaluate"]["steps"][compose_index + 1]
         self.assertEqual(verification["name"], "Verify pinned Docker Compose")

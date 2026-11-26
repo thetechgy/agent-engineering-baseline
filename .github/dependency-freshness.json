@@ -7,19 +7,30 @@
       "repo": "NVIDIA/SkillEvaluator",
       "sources": [
         {
-          "path": ".github/scripts/setup-skillevaluator.sh",
-          "pattern": "^\\s*evaluator_revision=(?P<revision>[0-9a-f]{40}) # v(?P<version>\\S+)$",
+          "path": ".github/scripts/static_evaluator.py",
+          "symbol": "VERSION",
+          "key": null,
+          "field": "version"
+        },
+        {
+          "path": ".github/scripts/static_evaluator.py",
+          "symbol": "REVISION",
+          "key": null,
+          "field": "revision"
+        },
+        {
+          "path": ".github/evals/evaluator-1.0.1-benchmark-candidate-v3.json",
+          "pattern": "^  \"revision\": \"(?P<revision>[0-9a-f]{40})\",$",
           "count": 1
         },
         {
-          "path": ".github/scripts/skill_reports.py",
-          "symbol": "POLICY",
-          "key": "evaluator_revision",
-          "field": "revision"
+          "path": ".github/evals/evaluator-1.0.1-benchmark-candidate-v3.json",
+          "pattern": "^  \"version\": \"(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)\",$",
+          "count": 1
         }
       ],
       "owner": "Maintainer review",
-      "hold": "The ordinary native benchmark still installs and runs the reviewed 0.3.0 owner. Static quality, public data and private review use separately pinned 1.0.1 roles. The 0.8.0 and 0.9.0 cohorts keep their own runtimes, locks and patches. Preserve the original scores and validator identities during adoption.",
+      "hold": "The production benchmark uses the released 1.0.1 owner and its separately pinned native backend. The explicit 0.8.0 and 0.9.0 selectors preserve their locks. Historical scores and validators keep their recorded identities.",
       "group": "evaluation-runtime compatibility group",
       "tag_prefix": "v",
       "validation": "Review the versioned offline evidence contract, released semantics, native failure and missingness controls, retained reproduction and final selected CI. Live provider routing, judge accuracy and skill benefit require separate evidence and authorization.",
@@ -67,8 +78,8 @@
           "field": "version"
         },
         {
-          "path": ".github/patches/skillevaluator-v0.3.0-pin-codex.patch",
-          "pattern": "^\\+.*\"version=(?P<version>[^\" ]+)\".*$",
+          "path": ".github/evals/codex-execution-1710.json",
+          "pattern": "^  \"cli\": \"(?P<version>[^\"\\n]+)\",$",
           "count": 1
         }
       ],
@@ -317,18 +328,17 @@
     },
     {
       "id": "harbor",
-      "label": "Harbor (benchmark/review/replay owner)",
+      "label": "Harbor (production native benchmark)",
       "repo": "harbor-framework/harbor",
       "sources": [
         {
-          "path": ".github/scripts/skill_reports.py",
-          "symbol": "POLICY",
-          "key": "harbor",
-          "field": "version"
+          "path": ".github/evals/benchmark-native-101-v1.json",
+          "pattern": "^    \"harbor\": \"(?P<version>[^\"\\n]+)\",$",
+          "count": 1
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Benchmark execution, contracts/native gh and review/replay 0.3.0 owners retain Harbor 0.13.2. Maintained frozen 0.8 controls require 0.24.0. Static quality uses SkillEvaluator 1.0.1 / Harbor 0.25.0. Public data jobs use 1.0.1 without Harbor. The explicit 0.9.0 behavioral and judge qualifiers retain Harbor 0.25.0. Production behavioral execution and live provider routing remain held. No forced override or historical rescore. Merged #142 qualifies offline behavioral evidence only. Explicit gh-runtime-090-v1 prepares 0.9.0 / Harbor 0.25.0 with held production Codex/model settings; hosted preparation does not establish live provider or model-judge compatibility. Default benchmarks stay held; no allocation is reopened. See docs/evaluations/execution-runtime-090.md.",
+      "hold": "The released 1.0.1 native benchmark and static jobs pin Harbor 0.25.0. Frozen 0.8.0 controls retain Harbor 0.24.0. The explicit 0.9.0 runtime retains its own Harbor 0.25.0 lock. Public data and private review jobs use 1.0.1 without Harbor. The retired 0.3.0 benchmark and its historical records retain their original Harbor 0.13.2 identity.",
       "group": "evaluation-runtime compatibility group",
       "tag_prefix": "v",
       "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade.",

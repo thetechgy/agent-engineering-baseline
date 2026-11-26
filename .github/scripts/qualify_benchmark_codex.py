@@ -2,8 +2,6 @@
 import argparse
 import asyncio
 import base64
-from contextlib import nullcontext
-from importlib.metadata import version
 import json
 import idna
 import os
@@ -11,9 +9,9 @@ from pathlib import Path
 import shlex
 import shutil
 import time
-import tempfile
 import subprocess
 
+from aeb_gh_fixture.benchmark_codex import BenchmarkCodex
 from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
 from skillevaluator.tier3.harbor.collector import collect_harbor_results
 from skillevaluator.tier3.harbor.report import display_findings_report
@@ -21,21 +19,13 @@ from skillevaluator.tier3.harbor.runner import build_harbor_run_command
 
 from benchmark_codex_fixture import TOOL_ROUTE
 import gh_evaluations as gh
-from qualify_codex_1691 import acquire
 from skill_reports import POLICY, read_json, require, write_json
-
-RELEASE = version('skillevaluator') == '1.0.1'
-if RELEASE:
-    from aeb_gh_fixture.benchmark_codex import BenchmarkCodex
-else:
-    from skillevaluator.tier3.harbor.benchmark_codex import BenchmarkCodex
 
 CASE = "gh-001"
 PROFILE = gh.ROOT / ".github/evals/codex-execution-1710.json"
 ENDPOINT = "http://127.0.0.1:8765/v1"
 SENTINEL = "pilot-not-a-credential"
-PACKAGE_ROOT = "/opt/reviewed/node_modules/"
-NATIVE_PACKAGE = "@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/"
+CODEX_VENDOR = "/opt/reviewed/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/"
 TRIAL_EXCEPTIONS = frozenset({
     "AgentSetupTimeoutError", "AgentTimeoutError", "CalledProcessError", "EnvironmentStartTimeoutError",
     "NonZeroAgentExitCodeError", "PermissionError", "RewardFileNotFoundError", "RuntimeError", "TimeoutError",
@@ -52,11 +42,6 @@ VERIFIER_MEMBERS = {
     "test_script": "/tests/test.sh",
     "reward": "/logs/verifier/reward.json",
 }
-
-
-def codex_vendor(*, hoisted):
-    prefix = PACKAGE_ROOT if hoisted else PACKAGE_ROOT + "@openai/codex/node_modules/"
-    return prefix + NATIVE_PACKAGE
 
 
 # Run as the trial user. The host may not receive logs until the trial exits.
@@ -108,9 +93,8 @@ class OfflineCodex(BenchmarkCodex):
 
     @staticmethod
     def record_startup(stage):
-        if RELEASE:
-            fixture = Path(os.environ["BENCHMARK_CODEX_FIXTURE"])
-            write_json(fixture.with_name("startup.json"), {"stage": stage})
+        fixture = Path(os.environ["BENCHMARK_CODEX_FIXTURE"])
+        write_json(fixture.with_name("startup.json"), {"stage": stage})
 
     async def verify_trial_user(self, environment):
         result = await self.exec_as_agent(environment, "codex --version && id -u && test -S /run/gh-eval/gh.sock && test ! -r /opt/gh-eval/state/case.json")
@@ -124,7 +108,7 @@ class OfflineCodex(BenchmarkCodex):
         # npm omits the standalone archive's optional exec-server. Exercise the
         # installed package exactly as published, including its native launcher.
         del expected["bin/codex-exec-server"]
-        vendor = codex_vendor(hoisted=RELEASE)
+        vendor = CODEX_VENDOR
         await self.exec_as_root(environment, "test ! -e " + vendor + "bin/codex-exec-server")
         for name, sha in expected.items():
             result = await self.exec_as_root(environment, "sha256sum " + vendor + name)
@@ -188,39 +172,31 @@ class OfflinePodmanCodex(OfflineCodex):
                 "Agent identity, CLI or verifier isolation drift")
 
 
-def add_offline_assets(image, assets=None):
-    if RELEASE:
-        # The operator-owned loopback responder is inside the same network namespace.
-        # Harbor must leave this service on loopback instead of joining the egress sidecar.
-        with (image / "docker-compose.yaml").open("x", encoding="utf-8") as override:
-            override.write("services:\n  main:\n    network_mode: none\n")
-        reviewed = image / "reviewed"
-        reviewed.mkdir()
-        # Keep packaged executables out of the broker's bounded task tree.
-        # Install scripts are disabled and every executable is checked in install().
-        vendor = codex_vendor(hoisted=True)
-        launcher = vendor + "bin/codex"
-        package = "@openai/codex@" + POLICY["codex"]
-        install = ("RUN npm install --prefix /opt/reviewed --no-audit --no-fund --ignore-scripts "
-                   "--install-strategy=hoisted --registry=https://registry.npmjs.org/ " + package + "\n"
-                   + "ENV PATH=" + vendor + "codex-path:$PATH\n")
-    else:
-        shutil.copytree(assets / "lib/node_modules", image / "reviewed/node_modules", symlinks=True)
-        launcher = "/opt/reviewed/node_modules/@openai/codex/bin/codex.js"
-        install = ""
-    fixture = "benchmark_codex_fixture.py" if RELEASE else "codex_pilot_stub.py"
-    shutil.copy2(gh.ROOT / ".github/scripts" / fixture, image / "reviewed/stub.py")
+def add_offline_assets(image):
+    # The operator-owned loopback responder is inside the same network namespace.
+    # Harbor must leave this service on loopback instead of joining the egress sidecar.
+    with (image / "docker-compose.yaml").open("x", encoding="utf-8") as override:
+        override.write("services:\n  main:\n    network_mode: none\n")
+    reviewed = image / "reviewed"
+    reviewed.mkdir()
+    # Keep packaged executables out of the broker's bounded task tree.
+    # Install scripts are disabled and every executable is checked in install().
+    vendor = CODEX_VENDOR
+    launcher = vendor + "bin/codex"
+    package = "@openai/codex@" + POLICY["codex"]
+    install = ("RUN npm install --prefix /opt/reviewed --no-audit --no-fund --ignore-scripts "
+               "--install-strategy=hoisted --registry=https://registry.npmjs.org/ " + package + "\n"
+               + "ENV PATH=" + vendor + "codex-path:$PATH\n")
+    shutil.copy2(gh.ROOT / ".github/scripts/benchmark_codex_fixture.py", image / "reviewed/stub.py")
     with (image / "Dockerfile").open("a") as build:
         build.write("\nCOPY reviewed /opt/reviewed\n" + install + "RUN chmod -R a+rX /opt/reviewed /workspace/skills"
                     " && ln -s " + launcher + " /usr/local/bin/codex\n")
 
 
-def stage(root, assets, present):
-    if RELEASE:
-        import gh_candidate
-        bundle = gh_candidate.stage(gh.ROOT, root / "bundle/gh", [CASE], fixture=True)
-    else:
-        bundle = gh.stage(gh.ROOT, root / "bundle/gh", [CASE])
+def stage(root, present):
+    import gh_candidate
+
+    bundle = gh_candidate.stage(gh.ROOT, root / "bundle/gh", [CASE], fixture=True)
     task, = stage_native_harbor_tasks(bundle, root / "tasks", with_skill=present, grading_mode="custom_only",
         workspace_mode="group", workspace_skill_paths=[bundle.parent / gh.COMPETING])
     descriptor = task / "task.toml"
@@ -228,15 +204,14 @@ def stage(root, assets, present):
     require('network_mode = "public"' in source, "Unknown source networking")
     descriptor.write_text(source.replace('network_mode = "public"', 'network_mode = "no-network"'))
     image = task / "environment"
-    add_offline_assets(image, assets)
+    add_offline_assets(image)
     # The production verifier reads real ATIF and the private broker audit. Copy
     # only the loopback request and the produced edit into this local fixture.
     # The standard verifier image carries idna. Custom-only mode omits its
     # judge dependencies, so stage the same locked pure-Python import.
     shutil.copytree(Path(idna.__file__).parent, task / "tests/idna", ignore=shutil.ignore_patterns("__pycache__"))
     verify = task / "tests/test.sh"
-    if RELEASE:
-        verify.write_text("#!/bin/sh\nset -eu\npython3 -I /tests/grader.py\n")
+    verify.write_text("#!/bin/sh\nset -eu\npython3 -I /tests/grader.py\n")
     with verify.open("a") as script:
         script.write("\ncp /opt/reviewed/request.json /logs/verifier/provider.json\n"
                      "test ! -e /tmp/codex-secrets\ntest -z \"$(find /home/agent -maxdepth 1 -name '.codex-benchmark.*')\"\n"
@@ -276,8 +251,8 @@ def record_native_failure(root, trial, stage, exception):
                                       "observed": observed, "verifier_exception": verifier})
 
 
-def run(root, assets, present, *, interrupt=False):
-    task = stage(root, assets, present)
+def run(root, present, *, interrupt=False):
+    task = stage(root, present)
     fixture = gh.dataset(selected=[CASE])[0]["contract"]
     output = json.dumps(fixture["expected"])
     if present:
@@ -297,26 +272,20 @@ def run(root, assets, present, *, interrupt=False):
     write_json(fixture_file, {"scenario": "native-deadline" if interrupt else "benchmark-priced", "commands": calls})
     jobs = root.parent / "jobs"
     job_name = "gh-interrupted" if interrupt else "gh-codex-" + ("with" if present else "without")
-    mode = "aeb-gh-fixture" if RELEASE else "docker"
     argv = build_harbor_run_command(dataset_path=task.parent, job_name=job_name, jobs_dir=jobs,
-        agent="codex", model=POLICY["model"], env_mode=mode, n_concurrent=1)
+        agent="codex", model=POLICY["model"], env_mode="aeb-gh-fixture", n_concurrent=1)
     env = dict(os.environ, PYTHONPATH=str(gh.ROOT / ".github/scripts"), BENCHMARK_CODEX_FIXTURE=str(fixture_file))
-    if RELEASE:
-        from aeb_gh_fixture.manifest import write_manifest
-        manifest = write_manifest(root / "operator", [task], staged_roots=[root / "tasks", root / "bundle"])
-        env["AEB_GH_MANIFEST"] = str(manifest)
-        require(argv[argv.index("--env") + 1] == "aeb_gh_fixture.backend:TrustedGhEnvironment",
-                "Unexpected benchmark environment")
-        require("version=" + json.dumps(POLICY["codex"]) in argv and 'reasoning_effort="high"' in argv,
-                "Workflow dispatch pin drift")
-        index = argv.index("--agent") + 1
-    else:
-        require(argv[argv.index("--ak") + 1] == "version=" + POLICY["codex"], "Workflow dispatch pin drift")
-        index = argv.index("--agent-import-path") + 1
+    from aeb_gh_fixture.manifest import write_manifest
+    manifest = write_manifest(root / "operator", [task], staged_roots=[root / "tasks", root / "bundle"])
+    env["AEB_GH_MANIFEST"] = str(manifest)
+    require(argv[argv.index("--env") + 1] == "aeb_gh_fixture.backend:TrustedGhEnvironment",
+            "Unexpected benchmark environment")
+    require("version=" + json.dumps(POLICY["codex"]) in argv and 'reasoning_effort="high"' in argv,
+            "Workflow dispatch pin drift")
+    index = argv.index("--agent") + 1
     require(argv[index] == BenchmarkCodex.__module__ + ":BenchmarkCodex", "Unexpected benchmark agent")
     argv[index] = "qualify_benchmark_codex:OfflineCodex"
-    if RELEASE:
-        write_json(root / "startup.json", {"stage": "staged"})
+    write_json(root / "startup.json", {"stage": "staged"})
     with subprocess.Popen(argv, env=env) as job:
         try:
             if interrupt:
@@ -346,9 +315,8 @@ def run(root, assets, present, *, interrupt=False):
     if not interrupt and result.get("exception_info") is not None:
         reported = result["exception_info"].get("exception_type")
         exception = reported if isinstance(reported, str) and reported in TRIAL_EXCEPTIONS else "unclassified"
-        last_stage = read_json(root / "startup.json")["stage"] if RELEASE else "unrecorded"
-        if RELEASE:
-            record_native_failure(root, results[0].parent, last_stage, exception)
+        last_stage = read_json(root / "startup.json")["stage"]
+        record_native_failure(root, results[0].parent, last_stage, exception)
         raise ValueError(f"Native Codex trial failed during or after {last_stage}: {exception}")
     trial = results[0].parent
     container = read_json(trial / "fixture-container.json")["id"]
@@ -369,7 +337,7 @@ def run(root, assets, present, *, interrupt=False):
     request = read_json(trial / "verifier/provider.json")
     require(request["requests"] == 2 and all(row["model"] == POLICY["model"] and row["reasoning"]["effort"] == "high"
         and row["path"] == "/v1/responses" and row["authorization_matches_sentinel"]
-        and (not RELEASE or row.get("native_tool_route") == TOOL_ROUTE) for row in request["request_observations"]),
+        and row.get("native_tool_route") == TOOL_ROUTE for row in request["request_observations"]),
         "Unexpected provider identity")
     require(read_json(trial / "verifier/edited.json") == fixture["expected"], "Native patch output changed")
     completed = [e["item"]["type"] for e in events if e["type"] == "item.completed"]
@@ -387,40 +355,6 @@ def run(root, assets, present, *, interrupt=False):
             "output_tokens": usage["n_output_tokens"], "authorization": metrics["gh_authorization"]}
 
 
-def judge_requests():
-    from unittest.mock import patch
-    from skillevaluator.tier3.harbor.templates import eval as verifier
-    from judge_transport_090 import Responder, SETTINGS
-
-    responder = Responder()
-    settings = {**SETTINGS, "SKILL_EVAL_LLM_MODEL": POLICY["model"], "SKILL_EVAL_JUDGE_MODEL": POLICY["model"]}
-    # v0.3 uses its own JSON score schema. Reuse the loopback transport and capture every POST.
-    def reply(payload):
-        responder.requests.append(payload)
-        result = {"score": 1, "achieved": True, "reason": "Fixture",
-                  "results": [{"step": 1, "passed": True, "reason": "Fixture"}], "summary": "Fixture"}
-        # Each judge receives an invalid first response to exercise its repair route.
-        content = 'invalid fixture response' if len(responder.requests) % 2 else json.dumps(result)
-        return 200, json.dumps({"choices": [{"message": {"content": content}}]}).encode()
-
-    with patch.dict(os.environ, settings, clear=True), patch.object(responder, "respond", reply), responder.boundary():
-        for judge, args in ((verifier.judge_accuracy, ("Return 42", "42", "42")),
-                            (verifier.judge_goal_accuracy, ("Return 42", "42", "42")),
-                            (verifier.judge_behavior_check, ("Returned 42", ["Return 42"]))):
-            before = len(responder.requests)
-            result = judge(*args)
-            require(result.get("score") == 1, "Native judge rejected fixture response: " + judge.__name__)
-            require(len(responder.requests) == before + 2, "Missing native judge repair request: " + judge.__name__)
-    with patch.dict(os.environ, {"LLM_JUDGE_FALLBACK_MODELS": "unapproved-model"}, clear=True):
-        require(verifier._selected_judge_model() == POLICY["model"] and
-                verifier._fallback_models(POLICY["model"]) == [POLICY["model"]],
-                "Unconfigured verifier or inherited retry model drift")
-    require(all(p.get("model") == "gpt-6.2-sol" and "max_completion_tokens" in p
-                and "temperature" not in p and "reasoning_effort" not in p for p in responder.requests),
-            "Production Chat Completions judge payload drift")
-    return {"model": POLICY["model"], "endpoint": "/v1/chat/completions", "requests": len(responder.requests)}
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
@@ -428,43 +362,27 @@ def main():
     require(not any(os.getenv(k) for k in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "CODEX_AUTH_JSON_PATH",
         "CODEX_FORCE_AUTH_JSON", "CODEX_API_KEY", "SKILL_EVAL_LLM_API_KEY", "NVIDIA_API_KEY")),
         "Real credentials are prohibited")
-    if RELEASE:
-        from qualify_benchmark_101 import fixture_owner, verifier_requests
-    else:
-        fixture_owner, verifier_requests = nullcontext, judge_requests
+    from qualify_benchmark_101 import fixture_owner, verifier_requests
+
     with fixture_owner() as versions:
         qualify(root, verifier_requests, versions)
 
 
 def qualify(root, verifier_requests, versions):
     root.mkdir()
-    npm_prefix = root / "npm"
-    if not RELEASE:
-        assets = root / "release"
-        assets.mkdir()
-        profile = read_json(PROFILE)
-        acquire(profile, assets)
-        with tempfile.TemporaryDirectory(prefix="codex-npm-cache-") as cache:
-            subprocess.run(["npm", "install", "--global", "--prefix", str(npm_prefix), "--cache", cache,
-                "--no-audit", "--no-fund", "--ignore-scripts", "@openai/codex@" + profile["cli"]], check=True)
-    rows = [run(root / arm, npm_prefix, arm == "with") for arm in ("with", "without")]
-    partial = run(root / "interrupted", npm_prefix, True, interrupt=True)
+    rows = [run(root / arm, arm == "with") for arm in ("with", "without")]
+    partial = run(root / "interrupted", True, interrupt=True)
     report = root / "report"
-    options = {"env_mode": "aeb-gh-fixture", "grading_mode": "custom_only"} if RELEASE else {"env_mode": "docker"}
     collected = collect_harbor_results("gh", ["codex"], report, root / "jobs", expected_cases=1,
         expected_case_ids=[CASE], expected_trials=1, n_attempts=1, stop_on_pass=False,
-        agent_models={"codex": {"model": POLICY["model"], "source": "cli"}}, **options)
-    for arm in ("with", "without"):
-        scores = collected["agents"]["codex"]["custom_" + arm + "_skill"]
-        if not RELEASE:
-            require(scores.get("gh_authorization") == int(arm == "with"), "Native authorization grade drift")
-        if arm == "with":
-            require(scores.get("gh_task") == 1 and scores.get("gh_gate") == 1, "Approved gh task failed")
+        agent_models={"codex": {"model": POLICY["model"], "source": "cli"}},
+        env_mode="aeb-gh-fixture", grading_mode="custom_only")
+    approved = collected["agents"]["codex"]["custom_with_skill"]
+    require(approved.get("gh_task") == 1 and approved.get("gh_gate") == 1, "Approved gh task failed")
     display_findings_report(collected, "gh", ["codex"], report)
     summary = {"inference": False, "agent": rows, "judges": verifier_requests(), "interruption": partial,
                "with_skill_gate": collected["agents"]["codex"]["custom_with_skill"]["gh_gate"]}
-    if versions is not None:
-        summary["runtime"] = versions
+    summary["runtime"] = versions
     write_json(root / "qualification.json", summary)
     print(json.dumps(summary, sort_keys=True), flush=True)
     print("Production dispatch, broker, agent, verifier, collector and report passed", flush=True)

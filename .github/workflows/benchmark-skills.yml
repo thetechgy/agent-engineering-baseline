@@ -10,28 +10,13 @@ on:
         default: podman
         type: string
       mode:
-        description: Standard, confirmation, or explicit feature-branch compatibility smoke
+        description: Standard or confirmation
         required: true
         default: standard
         type: choice
         options:
           - standard
           - confirmation
-          - candidate-smoke
-      candidate_smoke_arms:
-        description: Optional arm selection for the diagnostic candidate smoke
-        type: choice
-        options:
-          - paired
-          - without-skill
-        default: paired
-      candidate_smoke_workload:
-        description: Workload for the diagnostic candidate smoke
-        type: choice
-        options:
-          - podman-case-1
-          - file-edit-fixture
-        default: podman-case-1
       request_id:
         description: Optional authenticated orchestration request (leave empty for manual runs)
         type: string
@@ -42,7 +27,7 @@ on:
         description: Producing planner attempt
         type: string
       expected_revision:
-        description: Revision bound to the orchestration request or compatibility smoke
+        description: Revision bound to the orchestration request
         type: string
 
 permissions: {}
@@ -117,7 +102,6 @@ jobs:
         working-directory: trusted
         run: '"$SKILL_DATA_PYTHON" -B .github/scripts/test_evaluation_contracts.py presentation'
       - name: Read canonical history snapshot
-        if: inputs.mode != 'candidate-smoke'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: gh-pages
@@ -129,39 +113,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RETAINED: ${{ github.workspace }}/retained
-          BENCHMARK_MODE: ${{ inputs.mode }}
-          CANDIDATE_SMOKE_ARMS: ${{ inputs.candidate_smoke_arms }}
-          CANDIDATE_SMOKE_WORKLOAD: ${{ inputs.candidate_smoke_workload }}
         run: |
-          if [[ "$BENCHMARK_MODE" != candidate-smoke && "${CANDIDATE_SMOKE_WORKLOAD:-podman-case-1}" != podman-case-1 ]]; then
-            echo '::error::The file-edit fixture requires the candidate smoke mode.'
-            exit 1
-          fi
-          if [[ "$BENCHMARK_MODE" != candidate-smoke && "${CANDIDATE_SMOKE_ARMS:-paired}" != paired ]]; then
-            echo '::error::Arm selection requires the candidate smoke mode.'
-            exit 1
-          fi
-          if [[ "$BENCHMARK_MODE" == candidate-smoke ]]; then
-            "$SKILL_DATA_PYTHON" -B .github/scripts/benchmark_smoke.py context \
-              --output "$RUNNER_TEMP/podman-101-context/record.json"
-          else
-            "$SKILL_DATA_PYTHON" .github/scripts/skill_orchestration.py context \
-              --workspace "$PWD" --retained "$RETAINED" --output "$RUNNER_TEMP/skill-context/record.json"
-          fi
+          "$SKILL_DATA_PYTHON" -B .github/scripts/skill_orchestration.py context \
+            --workspace "$PWD" --retained "$RETAINED" --output "$RUNNER_TEMP/skill-context/record.json"
       - name: Retain preapproval scope
-        if: inputs.mode != 'candidate-smoke'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: skill-benchmark-context-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/skill-context/record.json
-          if-no-files-found: error
-          retention-days: 30
-      - name: Retain compatibility preapproval scope
-        if: inputs.mode == 'candidate-smoke'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: podman-101-compatibility-context-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/podman-101-context/record.json
           if-no-files-found: error
           retention-days: 30
       - name: Mark ineligible request as nonexecuted
@@ -172,7 +131,7 @@ jobs:
 
   evaluate:
     needs: context
-    if: needs.context.outputs.execute == 'true' && inputs.mode != 'candidate-smoke'
+    if: needs.context.outputs.execute == 'true'
     permissions:
       contents: read
       actions: read
@@ -225,9 +184,9 @@ jobs:
         timeout-minutes: 5
         with: *benchmark-uv
 
-      - name: Install evaluator with Python 3.13 and pinned Codex integration
+      - name: Install the pinned released benchmark runtime
         timeout-minutes: 15
-        run: bash .github/scripts/setup-skillevaluator.sh benchmark
+        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-101
 
       - name: Read canonical history after approval
         timeout-minutes: 1
@@ -244,18 +203,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mv .orchestration-retained "$RUNNER_TEMP/skill-history"
-          mkdir -p "$RUNNER_TEMP/skill-benchmark"
-          cp "$RUNNER_TEMP/skill-evaluation-tools/versions.json" "$RUNNER_TEMP/skill-benchmark/versions.json"
-          cp -r "$RUNNER_TEMP/skill-evaluation-tools/dependencies" "$RUNNER_TEMP/skill-benchmark/dependencies"
           # Main's full regression suite is authenticated by context/guard. Feature
-          # revisions run it before requesting approval; do not repeat it here.
-          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py prepare "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL"
-          skill_dir="$(sed -n 's/^skill_dir=//p' "$GITHUB_OUTPUT")"
-          skillevaluator tier3 validate "$skill_dir" --strict --json \
-            > "$RUNNER_TEMP/skill-benchmark/dataset-validation.json"
+          # revisions run it before requesting approval.
+          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_native.py prepare \
+            "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$GITHUB_SHA"
           docker info > /dev/null
           # This is the final command before the native inference step. It has no inference secret.
-          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_orchestration.py guard \
+          "$SKILL_NATIVE_BENCHMARK_PYTHON" .github/scripts/skill_orchestration.py guard \
             --workspace "$PWD" --retained "$RUNNER_TEMP/skill-history" --output "$RUNNER_TEMP/skill-authorization/record.json"
 
       - name: Run native with-skill and without-skill evaluation
@@ -263,18 +217,8 @@ jobs:
         if: steps.preparation.outputs.execute == 'true'
         timeout-minutes: 145
         env:
-          SKILLEVALUATOR_RESULTS_DIR: ${{ runner.temp }}/skill-benchmark/results
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          SKILL_EVAL_LLM_PROVIDER: openai
-          SKILL_EVAL_LLM_MODEL: ${{ steps.selection.outputs.model }}
-          SKILL_EVAL_JUDGE_MODEL: ${{ steps.selection.outputs.model }}
-          LLM_JUDGE_FALLBACK_MODELS: ''
-          LLM_JUDGE_MODEL: ${{ steps.selection.outputs.model }}
-          ATTEMPTS: ${{ steps.selection.outputs.attempts }}
           EVALUATION_DEADLINE_EPOCH: ${{ steps.budget.outputs.deadline_epoch }}
-          SKILL_DIR: ${{ steps.preparation.outputs.skill_dir }}
-          GRADING_MODE: ${{ steps.preparation.outputs.grading_mode }}
-          WORKSPACE_MODE: ${{ steps.preparation.outputs.workspace_mode }}
         run: |
           printf 'started_epoch=%s\n' "$(date +%s)" >> "$GITHUB_OUTPUT"
           trap 'printf "finished_epoch=%s\n" "$(date +%s)" >> "$GITHUB_OUTPUT"' EXIT
@@ -291,41 +235,43 @@ jobs:
           if (( evaluation_seconds > 8400 )); then
             evaluation_seconds=8400
           fi
-          skill_dir="$SKILL_DIR"
-          grading_mode="$GRADING_MODE"
-          workspace_mode="$WORKSPACE_MODE"
-          cd "$RUNNER_TEMP/skill-benchmark"
           # Stop by the deadline, including forced-termination grace, to preserve recovery time.
-          timeout --signal=INT --kill-after=30s "${evaluation_seconds}s" skillevaluator tier3 evaluate "$skill_dir" \
-            --agents codex --agent-model "codex=$SKILL_EVAL_LLM_MODEL" --env-mode docker \
-            --skill-workspace-mode "$workspace_mode" --grading-mode "$grading_mode" \
-            --n-attempts "$ATTEMPTS" --no-stop-on-pass --n-concurrent 2 --max-agents 1 \
-            --agent-runtime-preflight --timeout-multiplier 2 --progress plain --harbor-keep-jobs \
-            --results-dir "$SKILLEVALUATOR_RESULTS_DIR" \
-            --evaluated-source-repository "$GITHUB_REPOSITORY" --evaluated-source-revision "$GITHUB_SHA"
+          timeout --signal=INT --kill-after=30s "${evaluation_seconds}s" \
+            "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_native.py execute \
+            "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$GITHUB_SHA"
 
       - name: Recover interrupted native diagnostics
-        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success' && steps.evaluation.outcome != 'skipped'
+        if: always() && env.SKILL_NATIVE_BENCHMARK_PYTHON != '' && steps.selection.outcome == 'success' && steps.evaluation.outcome != 'skipped'
         timeout-minutes: 5
         env:
           EVALUATION_OUTCOME: ${{ steps.evaluation.outcome }}
         run: |
-          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py recover \
-            "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$EVALUATION_OUTCOME"
+          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_native.py recover \
+            "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$GITHUB_SHA" "$EVALUATION_OUTCOME"
 
-      - name: Summarize native results and prepare standard metrics
-        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success' && steps.evaluation.outcome != 'skipped'
+      - name: Record the native container runtime
+        if: always() && steps.evaluation.outcome != 'skipped'
         run: |
           docker version --format '{{json .Server}}' > "$RUNNER_TEMP/skill-benchmark/docker-version.json"
           docker image ls --digests --no-trunc --format '{{json .}}' > "$RUNNER_TEMP/skill-benchmark/docker-images.jsonl"
-          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py benchmark \
-            "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$RUNNER_TEMP/skill-metrics"
+
+      - name: Summarize native results and prepare standard metrics
+        if: success() && steps.evaluation.outcome == 'success' && steps.selection.outputs.history_eligible == 'true'
+        run: |
+          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_native.py score-report \
+            "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$GITHUB_SHA" "$RUNNER_TEMP/skill-metrics"
+
+      - name: Capture custom-only Pester diagnostic evidence
+        if: always() && steps.evaluation.outcome != 'skipped' && steps.selection.outputs.history_eligible == 'false'
+        run: |
+          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_native.py diagnostic-report \
+            "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$GITHUB_SHA"
 
       - name: Stage allowlisted reports with upstream redaction
         id: artifacts
-        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success' && steps.evaluation.outcome != 'skipped'
+        if: always() && env.SKILL_NATIVE_BENCHMARK_PYTHON != '' && steps.selection.outcome == 'success' && steps.evaluation.outcome != 'skipped'
         run: |
-          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py artifacts \
+          "$SKILL_NATIVE_BENCHMARK_PYTHON" .github/scripts/skill_reports.py artifacts \
             "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$RUNNER_TEMP/skill-benchmark-artifact"
 
       - name: Verify evaluator left the checkout unchanged
@@ -349,13 +295,13 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: skill-metrics
-          path: ${{ runner.temp }}/skill-metrics/metrics.json
+          path: ${{ runner.temp }}/skill-metrics/released-scores.json
           if-no-files-found: error
           retention-days: 30
 
       - name: Generate validated public benchmark evidence
         id: public-benchmark
-        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success' && steps.selection.outputs.public_supported == 'true' && steps.evaluation.outcome != 'skipped'
+        if: always() && env.SKILL_NATIVE_BENCHMARK_PYTHON != '' && steps.selection.outcome == 'success' && steps.selection.outputs.public_supported == 'true' && steps.evaluation.outcome != 'skipped'
         timeout-minutes: 3
         continue-on-error: true
         env:
@@ -365,7 +311,7 @@ jobs:
           if [ "$PUBLIC_SOURCE_KIND" = retained ] && [ -f "$RUNNER_TEMP/skill-benchmark-artifact/custom-metric-capture.json" ]; then
             public_root="$RUNNER_TEMP/skill-benchmark-artifact"
           fi
-          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py public-benchmark \
+          "$SKILL_NATIVE_BENCHMARK_PYTHON" .github/scripts/skill_reports.py public-benchmark \
             "$public_root" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$RUNNER_TEMP/skill-public-benchmark"
 
       - name: Verify public reporting left the checkout unchanged
@@ -425,7 +371,7 @@ jobs:
           retention-days: 30
 
       - name: Collect minimal operational receipt
-        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success'
+        if: always() && env.SKILL_NATIVE_BENCHMARK_PYTHON != '' && steps.selection.outcome == 'success'
         continue-on-error: true
         env:
           EVALUATION_OUTCOME: ${{ steps.evaluation.outcome }}
@@ -433,12 +379,12 @@ jobs:
           INFERENCE_FINISHED: ${{ steps.evaluation.outputs.finished_epoch }}
           REQUEST_ID: ${{ inputs.request_id }}
         run: |
-          "$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py operation \
-            "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$EVALUATION_OUTCOME" \
+          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_native.py operation \
+            "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$BENCHMARK_MODE" "$GITHUB_SHA" "$EVALUATION_OUTCOME" \
             "$RUNNER_TEMP/skill-operation/record.json"
 
       - name: Retain operational receipt separately from qualified evidence
-        if: always() && env.SKILL_EVALUATOR_PYTHON != '' && steps.selection.outcome == 'success'
+        if: always() && env.SKILL_NATIVE_BENCHMARK_PYTHON != '' && steps.selection.outcome == 'success'
         continue-on-error: true
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -452,76 +398,6 @@ jobs:
         run: |
           echo '::error::Benchmark did not enter inference. Inspect the postapproval authorization record.'
           exit 1
-
-  evaluate-candidate:
-    needs: context
-    if: needs.context.outputs.execute == 'true' && inputs.mode == 'candidate-smoke'
-    permissions:
-      contents: read
-      actions: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    environment:
-      name: skill-benchmark
-      deployment: false
-    env:
-      PYTHONDONTWRITEBYTECODE: '1'
-      PYTHON_DOTENV_DISABLED: '1'
-    steps:
-      - name: Check out the approved compatibility revision
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-      - name: Set up pinned uv
-        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
-        with: *benchmark-uv
-      - name: Install verified Compose and candidate
-        timeout-minutes: 15
-        run: |
-          bash .github/scripts/setup-compose.sh
-          bash .github/scripts/setup-static-evaluator.sh native-benchmark-101
-      - name: Prepare the approved candidate trials without inference
-        timeout-minutes: 7
-        run: |
-          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_smoke.py prepare \
-            --stage "$RUNNER_TEMP/podman-101-stage" --output "$RUNNER_TEMP/podman-101/prepared.json"
-      - name: Verify the approved compatibility scope
-        id: scope
-        timeout-minutes: 3
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_smoke.py guard \
-            --stage "$RUNNER_TEMP/podman-101-stage" --preparation "$RUNNER_TEMP/podman-101/prepared.json" \
-            --output "$RUNNER_TEMP/podman-101/authorization.json"
-      - name: Run the bounded compatibility smoke
-        id: compatibility
-        if: steps.scope.outputs.execute == 'true'
-        timeout-minutes: 17
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_smoke.py run \
-            --stage "$RUNNER_TEMP/podman-101-stage" --preparation "$RUNNER_TEMP/podman-101/prepared.json" \
-            --authorization "$RUNNER_TEMP/podman-101/authorization.json" --output "$RUNNER_TEMP/podman-101/diagnostic.json"
-      - name: Verify candidate teardown and recover task-owned resources
-        if: always() && steps.compatibility.outcome != 'skipped'
-        timeout-minutes: 3
-        run: |
-          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_smoke.py cleanup \
-            --stage "$RUNNER_TEMP/podman-101-stage" --output "$RUNNER_TEMP/podman-101/diagnostic.json"
-      - name: Retain only the bounded compatibility receipt
-        if: always() && steps.compatibility.outcome != 'skipped'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: podman-101-compatibility-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/podman-101/diagnostic.json
-          if-no-files-found: warn
-          retention-days: 30
-      - name: Remove the task-owned Compose configuration
-        if: always()
-        run: bash .github/scripts/setup-compose.sh cleanup
 
   publish-history:
     concurrency:
@@ -560,7 +436,7 @@ jobs:
           BENCHMARK_SKILL: ${{ needs.evaluate.outputs.skill }}
           BENCHMARK_MODE: ${{ inputs.mode }}
           PYTHONDONTWRITEBYTECODE: '1'
-        run: python3 .github/scripts/skill_reports.py publish "$RUNNER_TEMP/skill-metrics" "$BENCHMARK_SKILL"
+        run: python3 .github/scripts/skill_reports.py publish "$RUNNER_TEMP/skill-metrics" "$BENCHMARK_SKILL" --released
 
       - name: Append standard result to durable history
         uses: benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc # v1.22.2

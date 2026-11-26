@@ -121,7 +121,7 @@ class OrchestrationTests(unittest.TestCase):
     def setUpClass(cls):
         cls.base_temp = tempfile.TemporaryDirectory(prefix='skill-orchestration-base-')
         cls.base = Path(cls.base_temp.name)
-        prefixes = ('.apm/', '.agents/skills/', '.github/evals/', '.github/scripts/', '.github/patches/', '.github/workflows/')
+        prefixes = ('.apm/', '.agents/skills/', '.github/evals/', '.github/scripts/', '.github/patches/', '.github/workflows/', '.github/evaluator-backends/')
         members = git(ROOT, 'ls-files').splitlines()
         members += [orchestration.POLICY_FILE, orchestration.WORKFLOW, '.github/scripts/skill_orchestration.py']
         for name in sorted(set(members)):
@@ -186,8 +186,13 @@ class OrchestrationTests(unittest.TestCase):
             'Verify evaluator left the checkout unchanged'])
         self.api.job(run, 'publish-history', ['Validate metric allowlist and canonical series',
             'Append standard result to durable history', 'Capture and verify the exact published history commit'])
-        patch_digest = hashlib.sha256((self.workspace / reports.PATCH).read_bytes()).hexdigest()
-        policy = hashlib.sha256(json.dumps([reports.benchmark_policy(name), patch_digest], sort_keys=True).encode()).hexdigest()[:16]
+        if orchestration.NATIVE_BENCHMARK_POLICY in orchestration.manifest(self.workspace, run['head_sha']):
+            from benchmark_native import score_series
+
+            policy = score_series(name, 'standard')
+        else:
+            patch_digest = hashlib.sha256((self.workspace / reports.PATCH).read_bytes()).hexdigest()
+            policy = hashlib.sha256(json.dumps([reports.benchmark_policy(name), patch_digest], sort_keys=True).encode()).hexdigest()[:16]
         metrics = [{'name': title, 'value': 0.1, 'unit': 'score', 'extra': f'Dataset sha256:{"b" * 64}; policy {policy}'} for title in reports.METRICS]
         row = {'commit': {'id': run['head_sha'], 'url': f'https://github.com/{pages.REPOSITORY}/commit/{run["head_sha"]}', 'message': 'Fixture'},
                'date': 100, 'tool': 'customBiggerIsBetter', 'benches': metrics}
@@ -284,26 +289,14 @@ class OrchestrationTests(unittest.TestCase):
         files.pop(orchestration.NATIVE_BENCHMARK_POLICY)
         self.assertEqual(orchestration.benchmark_runtime_inputs(files), orchestration.subset(files, orchestration.RUNTIME_FILES))
 
-    def candidate_inputs(self, *, released=False):
-        members = git(ROOT, 'ls-files').splitlines()
-        members += ['.github/scripts/benchmark_podman.py', '.github/scripts/benchmark_smoke.py']
-        prefixes = orchestration.CANDIDATE_RUNTIME_FILES
-        if released:
-            prefixes += orchestration.NATIVE_RUNTIME_FILES
-        for member in orchestration.subset({name: ('100644', 'blob', '') for name in members},
-                                           prefixes):
-            source = ROOT / member
-            target = self.workspace / member
-            if not target.exists():
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(source, target)
-        return commit(self.workspace, 'Add candidate-owned inputs')
-
     def test_candidate_fingerprint_binds_release_and_dataset_without_rewriting_historical_fingerprint(self):
+        (self.workspace / orchestration.NATIVE_BENCHMARK_POLICY).unlink()
+        self.api.main = commit(self.workspace, 'Select the pre-adoption benchmark runtime')
         before = orchestration.snapshots(self.workspace, self.api.main)[1]
-        revision = self.candidate_inputs()
-        fingerprint = orchestration.candidate_podman_fingerprint(self.workspace, revision)
-        self.assertEqual(before, orchestration.snapshots(self.workspace, revision)[1])
+        fingerprint = orchestration.candidate_podman_fingerprint(self.workspace, self.api.main)
+        self.change('.github/scripts/benchmark_smoke.py', '\n# Candidate diagnostics changed\n')
+        self.assertEqual(before, orchestration.snapshots(self.workspace, self.api.main)[1])
+        self.assertNotEqual(fingerprint, orchestration.candidate_podman_fingerprint(self.workspace, self.api.main))
         for member in ('.github/scripts/setup-static-evaluator.sh',
                        '.github/evaluator-backends/candidate-101/benchmark_codex.py',
                        '.github/evaluator-backends/candidate-101/codex-catalog/models.json',
@@ -322,7 +315,7 @@ class OrchestrationTests(unittest.TestCase):
         import benchmark_smoke as smoke
         from benchmark_native import native_versions
 
-        revision = self.candidate_inputs(released=True)
+        revision = self.api.main
         env = dict(os.environ, GITHUB_SHA=revision, GITHUB_EVENT_NAME='workflow_dispatch',
                    GITHUB_REF='refs/heads/' + smoke.BRANCH)
         inputs = {'mode': smoke.MODE, 'skill': 'podman', 'expected_revision': revision}
@@ -393,7 +386,7 @@ class OrchestrationTests(unittest.TestCase):
         import benchmark_smoke as smoke
         from harbor.models.task.task import Task
 
-        revision = self.candidate_inputs(released=True)
+        revision = self.api.main
         env = dict(os.environ, GITHUB_SHA=revision, GITHUB_EVENT_NAME='workflow_dispatch',
                    GITHUB_REF='refs/heads/' + smoke.BRANCH)
         inputs = {'mode': smoke.MODE, 'skill': 'podman', 'expected_revision': revision,
@@ -484,6 +477,30 @@ class OrchestrationTests(unittest.TestCase):
         self.assertEqual(receipt, {'state': 'complete', 'agent_usage': usage, 'native_tool_route': 'direct',
                                    'judge_scores': dict.fromkeys(metrics, 0.8)})
 
+    def test_production_workflow_is_manual_protected_and_uses_the_released_owner(self):
+        workflow = yaml.safe_load((ROOT / orchestration.BENCHMARK).read_text())
+        inputs = workflow.get('on', workflow.get(True))['workflow_dispatch']['inputs']
+        self.assertEqual(inputs['mode']['default'], 'standard')
+        self.assertEqual(inputs['mode']['options'], ['standard', 'confirmation'])
+        self.assertNotIn('candidate_smoke_arms', inputs)
+        jobs = workflow['jobs']
+        self.assertEqual(set(jobs), {'context', 'evaluate', 'publish-history'})
+        job = jobs['evaluate']
+        self.assertEqual(job['environment'], {'name': 'skill-benchmark', 'deployment': False})
+        self.assertEqual(job['permissions'], {'contents': 'read', 'actions': 'read'})
+        steps = job['steps']
+        index = next(i for i, step in enumerate(steps) if step.get('id') == 'evaluation')
+        self.assertEqual(steps[index - 1]['id'], 'preparation')
+        self.assertIn('benchmark_native.py prepare', steps[index - 1]['run'])
+        self.assertIn('skill_orchestration.py guard', steps[index - 1]['run'].splitlines()[-2])
+        self.assertEqual(steps[index]['if'], "steps.preparation.outputs.execute == 'true'")
+        self.assertIn('benchmark_native.py execute', steps[index]['run'])
+        uploads = [step for step in steps if step.get('with', {}).get('name') == 'skill-metrics']
+        self.assertEqual(len(uploads), 1)
+        self.assertTrue(uploads[0]['with']['path'].endswith('/released-scores.json'))
+        self.assertIn("inputs.mode == 'standard'", uploads[0]['if'])
+        self.assertIn('history_eligible', uploads[0]['if'])
+
     @unittest.skipUnless(os.environ.get('SKILL_EVALUATION_KIND') == 'benchmark', 'requires the patched 1.0.1 verifier')
     def test_compatibility_path_observation_uses_the_native_classifier_and_redacts_the_source(self):
         import benchmark_smoke as smoke
@@ -536,36 +553,6 @@ class OrchestrationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Native verifier did not produce a complete measurement'):
             smoke.trial_receipt(job, arm='without_skill', selected=selected, receipt=receipt, entry_path=entry)
         self.assertNotIn('path_evidence_syntax', receipt)
-
-    def test_compatibility_workflow_is_manual_protected_and_excluded_from_history(self):
-        workflow = yaml.safe_load((ROOT / orchestration.BENCHMARK).read_text())
-        inputs = workflow.get('on', workflow.get(True))['workflow_dispatch']['inputs']
-        self.assertEqual(inputs['mode']['default'], 'standard')
-        self.assertIn('candidate-smoke', inputs['mode']['options'])
-        self.assertEqual(inputs['candidate_smoke_arms']['options'], ['paired', 'without-skill'])
-        self.assertEqual(inputs['candidate_smoke_arms']['default'], 'paired')
-        self.assertEqual(inputs['candidate_smoke_workload']['options'], ['podman-case-1', 'file-edit-fixture'])
-        self.assertEqual(inputs['candidate_smoke_workload']['default'], 'podman-case-1')
-        jobs = workflow['jobs']
-        context = next(step for step in jobs['context']['steps'] if step.get('id') == 'context')
-        self.assertEqual(context['env']['CANDIDATE_SMOKE_ARMS'], '${{ inputs.candidate_smoke_arms }}')
-        self.assertEqual(context['env']['CANDIDATE_SMOKE_WORKLOAD'], '${{ inputs.candidate_smoke_workload }}')
-        self.assertIn('The file-edit fixture requires the candidate smoke mode.', context['run'])
-        self.assertIn('Arm selection requires the candidate smoke mode.', context['run'])
-        job = jobs['evaluate-candidate']
-        self.assertEqual(job['environment'], {'name': 'skill-benchmark', 'deployment': False})
-        self.assertEqual(job['permissions'], {'contents': 'read', 'actions': 'read'})
-        self.assertNotIn('evaluate-candidate', jobs['publish-history']['needs'])
-        self.assertIn("inputs.mode != 'candidate-smoke'", jobs['evaluate']['if'])
-        steps = job['steps']
-        index = next(i for i, s in enumerate(steps) if s.get('id') == 'compatibility')
-        self.assertEqual(steps[index - 1]['id'], 'scope')
-        self.assertEqual(steps[index]['if'], "steps.scope.outputs.execute == 'true'")
-        self.assertEqual([s for s in steps if 'OPENAI_API_KEY' in s.get('env', {})], [steps[index]])
-        uploads = [s['with'] for s in steps if s.get('uses', '').startswith('actions/upload-artifact@')]
-        self.assertEqual(len(uploads), 1)
-        self.assertTrue(uploads[0]['name'].startswith('podman-101-compatibility-diagnostic-'))
-        self.assertTrue(uploads[0]['path'].endswith('/diagnostic.json'))
 
     def test_gh_competing_refresh_is_one_canonical_change_and_blocks_unreviewed_pin(self):
         lock_path = self.workspace / 'apm.lock.yaml'
@@ -841,16 +828,10 @@ class WorkflowAndUsageTests(unittest.TestCase):
         self.assertEqual(steps[guard + 1]['if'], "steps.preparation.outputs.execute == 'true'")
         self.assertEqual(benchmark['concurrency'], {'group': 'benchmark-skills', 'queue': 'max', 'cancel-in-progress': False})
         self.assertIn("needs.evaluate.outputs.execution_success == 'true'", benchmark['jobs']['publish-history']['if'])
-        candidate = benchmark['jobs']['evaluate-candidate']
-        self.assertEqual(candidate['environment'], evaluate['environment'])
-        setup = [step['run'] for step in candidate['steps'] if 'native-benchmark-101' in step.get('run', '')]
-        self.assertEqual(len(setup), 1)
-        steps = candidate['steps']
-        guarded = next(index for index, step in enumerate(steps) if step.get('id') == 'scope')
-        self.assertIn('benchmark_smoke.py guard', steps[guarded]['run'])
-        self.assertNotIn('OPENAI_API_KEY', steps[guarded]['env'])
-        self.assertIn('"$SKILL_NATIVE_BENCHMARK_PYTHON"', steps[guarded + 1]['run'])
-        self.assertEqual(steps[guarded + 1]['if'], "steps.scope.outputs.execute == 'true'")
+        self.assertEqual(set(benchmark['jobs']), {'context', 'evaluate', 'publish-history'})
+        self.assertEqual(sum(step.get('run', '').endswith(' native-benchmark-101') for step in steps), 1)
+        self.assertNotIn('OPENAI_API_KEY', steps[guard]['env'])
+        self.assertIn('"$SKILL_NATIVE_BENCHMARK_PYTHON"', steps[guard + 1]['run'])
         publisher = yaml.safe_load((ROOT / '.github/workflows/publish-skill-report.yml').read_text())
         self.assertEqual(publisher.get('on', publisher.get(True))['workflow_run']['workflows'], ['Validate', 'Benchmark skills'])
 
@@ -935,7 +916,7 @@ class WorkflowAndUsageTests(unittest.TestCase):
             self.assertNotIn('secrets.', json.dumps([data_setup, presentation]))
         gate = next(s for s in protected['steps'] if s.get('id') == 'preparation')
         self.assertEqual(gate['timeout-minutes'], 5)
-        self.assertIn('tier3 validate', gate['run'])
+        self.assertIn('benchmark_native.py prepare', gate['run'])
         self.assertIn('skill_orchestration.py guard', gate['run'])
 
     def test_contract_discovery_keeps_tests_outside_the_released_owners(self):

@@ -82,21 +82,17 @@ class CandidateHarnessTests(unittest.TestCase):
 
 @unittest.skipUnless(os.environ.get('CANDIDATE_EVIDENCE_CHILD') == '1', 'opt-in candidate qualification only')
 class CandidateEvidenceTests(unittest.TestCase):
-    def test_local_codex_install_and_legacy_global_install_use_distinct_layouts(self):
+    def test_local_codex_install_uses_the_reviewed_hoisted_layout(self):
         from importlib.metadata import version
 
         if version("skillevaluator") != "1.0.1":
             self.skipTest("Requires the 1.0.1 benchmark candidate")
 
-        from qualify_benchmark_codex import codex_vendor
+        from qualify_benchmark_codex import CODEX_VENDOR
 
         self.assertEqual(
-            codex_vendor(hoisted=True),
+            CODEX_VENDOR,
             "/opt/reviewed/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/",
-        )
-        self.assertEqual(
-            codex_vendor(hoisted=False),
-            "/opt/reviewed/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/",
         )
 
     def test_codex_setup_failure_without_container_receipt_keeps_primary_error(self):
@@ -125,7 +121,7 @@ class CandidateEvidenceTests(unittest.TestCase):
                  patch("aeb_gh_fixture.manifest.write_manifest", return_value=root / "manifest.json"), \
                  patch.object(fixture.subprocess, "Popen", side_effect=launch):
                 with self.assertRaisesRegex(ValueError, r"^Native Codex trial failed during or after verify_package: NonZeroAgentExitCodeError$"):
-                    fixture.run(arm, None, True)
+                    fixture.run(arm, True)
             self.assertEqual(read_json(arm / "startup.json"), {"stage": "verify_package"})
 
     def test_codex_verifier_failure_receipt_excludes_raw_log_and_unknown_paths(self):

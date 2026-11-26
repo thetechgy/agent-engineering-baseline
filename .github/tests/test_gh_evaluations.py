@@ -402,12 +402,6 @@ class GhOfflineTests(unittest.TestCase):
         entries = gh.dataset(selected=gh.SMOKE)
         self.assertEqual(len(entries) * reports.MODES["standard"] * 2, 8)
         self.assertEqual(len(gh.dataset()) * reports.MODES["confirmation"] * 2, 144)
-        command = gh.native_command(
-            Path("/tmp/bundle/gh"), "standard", Path("/tmp/results")
-        )
-        self.assertIn("default_plus_custom", command)
-        self.assertNotIn("--skip-baseline", command)
-        self.assertNotIn("--stop-on-pass", command)
         self.assertEqual(reports.benchmark_policy("podman"), reports.POLICY)
         self.assertEqual(
             reports.benchmark_skill(gh.ROOT, "podman"), gh.ROOT / ".apm/skills/podman"

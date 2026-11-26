@@ -277,8 +277,14 @@ def qualified(api, workspace, main, run, name, current, ledger):
         'Append standard result to durable history', 'Capture and verify the exact published history commit'])
     previous = snapshots(workspace, run['head_sha'])[1][name]
     require(previous['runtime'] == current['runtime'], 'Reference runtime requires qualification')
-    patch = hashlib.sha256((workspace / reports.PATCH).read_bytes()).hexdigest()
-    published_policy = hashlib.sha256(json.dumps([reports.benchmark_policy(name), patch], sort_keys=True).encode()).hexdigest()[:16]
+    if NATIVE_BENCHMARK_POLICY in manifest(workspace, run['head_sha']):
+        from benchmark_native import score_series
+
+        published_policy = score_series(name, 'standard')
+    else:
+        patch = hashlib.sha256(blob(workspace, run['head_sha'], reports.PATCH)).hexdigest()
+        published_policy = hashlib.sha256(
+            json.dumps([reports.benchmark_policy(name), patch], sort_keys=True).encode()).hexdigest()[:16]
     rows = [r for r in ledger if r['skill'] == name and r['revision'] == run['head_sha'] and r['policy'] == published_policy]
     require(rows, 'Admitted current-policy history unavailable')
     return {**previous, 'run_id': run['id'], 'attempt': run['run_attempt'], 'revision': run['head_sha'],

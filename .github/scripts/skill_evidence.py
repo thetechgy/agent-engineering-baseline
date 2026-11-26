@@ -3646,6 +3646,7 @@ RETIREMENT_SOURCE_SUCCESSORS = '.github/evals/source-v44.json'
 PUBLICATION_SOURCE_SUCCESSORS = '.github/evals/source-v45.json'
 DIAGNOSTIC_SOURCE_SUCCESSORS = '.github/evals/source-v46.json'
 DIRECT_TOOL_SOURCE_SUCCESSORS = '.github/evals/source-v47.json'
+NATIVE_RETIREMENT_SOURCE_SUCCESSORS = '.github/evals/source-v48.json'
 CUSTOM_OUTCOMES = ('passed', 'failed', 'invalid', 'unsupported', 'timeout',
                    'infrastructure_error', 'interrupted', 'unknown')
 CUSTOM_MEASURED = ('passed', 'failed')
@@ -3770,7 +3771,7 @@ def custom_registry(workspace=ROOT):
         if 'adapter_sha256' in result.get('campaign', {}):
             result['campaign'] = dict(result['campaign'], adapter_sha256=version['replay_adapter'])
         profiles[successor] = result
-    for version_path in (MODEL_SUCCESSORS, SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS, DIRECT_TOOL_SOURCE_SUCCESSORS):
+    for version_path in (MODEL_SUCCESSORS, SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS, DIRECT_TOOL_SOURCE_SUCCESSORS, NATIVE_RETIREMENT_SOURCE_SUCCESSORS):
         version = parse_json(read_bytes(workspace / version_path))
         sha(version['replay_adapter'])
         for successor, update in version['profiles'].items():
@@ -3803,7 +3804,7 @@ def custom_registry(workspace=ROOT):
             registry['metrics'].update(version['new_metrics'])
             validate_custom_metrics(registry['metrics'])
             profiles.update(version['new_profiles'])
-    registry['active_profiles']['gh'] = 'gh-deterministic-gate-v9'
+    registry['active_profiles']['gh'] = 'gh-deterministic-gate-v10'
     return registry
 
 
@@ -3862,11 +3863,11 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v50'
+        profile_id = 'pester-effectiveness-v51'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v24'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
-        profile_id = 'gh-native-oracle-v5'
+        profile_id = 'gh-native-oracle-v6'
     profile_id = registry['active_profiles'].get(name) if profile_id is None else profile_id
     require(profile_id in registry['profiles'], 'Unknown custom metric namespace or profile')
     registered = registry['profiles'][profile_id]
@@ -4261,7 +4262,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
             for member in safe_tree(source_root, directory_identities=directories, directory_states=states, file_states=members):
                 read_bytes(member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
         for registry_member in (CUSTOM_REGISTRY, SOURCE_SUCCESSORS, MODEL_SUCCESSORS,
-                                SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS, DIRECT_TOOL_SOURCE_SUCCESSORS):
+                                SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS, DIRECT_TOOL_SOURCE_SUCCESSORS, NATIVE_RETIREMENT_SOURCE_SUCCESSORS):
             read_bytes(workspace / registry_member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
         if local_podman:
             for member in ('.apm/skills/podman/evals/evals.json', '.apm/skills/podman/evals/files/vendor-compose.yaml',
@@ -4270,13 +4271,23 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
         else:
             helper = 'pester_evaluations.py' if name == 'powershell-pester-6' else 'gh_evaluations.py'
             read_bytes(workspace / '.github/scripts' / helper, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
-    profile, definitions, contract = custom_contract(name, workspace, purpose=capture.get('purpose'))
+    purpose = capture['purpose']
+    profile, definitions, contract = custom_contract(name, workspace, purpose=purpose)
+    approved_inputs = custom_source_manifest(workspace, name, purpose=purpose)
+    if name == 'gh' and capture['contract_digest'] != contract and purpose in ('benchmark', 'oracle_qualification'):
+        historical = {'benchmark': 'gh-deterministic-gate-v9', 'oracle_qualification': 'gh-native-oracle-v5'}
+        profile, definitions, contract = custom_contract(name, workspace, profile_id=historical[purpose])
+        # These captures bind the original helper at bc96c28. Only its CLI
+        # changed at retirement. All other source members still match live bytes.
+        digest = 'sha256:b4a5fe5f4bf7d306ea8faa77b16d8668e0cbbab365205de29cb34aa0cc231aa0'
+        approved_inputs = [dict(row, digest=digest) if row['member'] == 'producer/gh_evaluations.py' else row
+                           for row in approved_inputs]
     require(bool(profile.get('campaign', {}).get('scheduler')) == ('scheduler_digest' in capture),
             'Missing or unexpected scheduler capture')
     if 'scheduler_digest' in capture: sha(capture['scheduler_digest'])
     require(type(capture['schema_version']) is int and capture['schema_version'] == 1 and capture['skill'] == name
             and capture['contract_digest'] == contract, 'Custom contract identity mismatch')
-    require(capture['inputs'] == custom_source_manifest(workspace, name, purpose=capture['purpose']), 'Approved custom input drift')
+    require(capture['inputs'] == approved_inputs, 'Approved custom input drift')
     identities = custom_input_identities(workspace, name, capture['inputs'], purpose=capture['purpose'])
     require(all(profile[key] == value for key, value in identities.items()), 'Unregistered grader, fixture or runtime version')
     require(capture['authored_digest'] == profile['dataset_digest'] == custom_authored_digest(workspace, name, profile),

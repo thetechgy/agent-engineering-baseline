@@ -478,6 +478,12 @@ class CustomMetricTests(unittest.TestCase):
         captured = analysis.capture_inputs([output]); checked = analysis.validate_analysis(None, captured)
         saved = self.root / 'gh-analysis/analysis.json'; write(saved, checked)
         review_context(output, saved, 'gh', evidence.identity(public))
+        altered = copy.deepcopy(capture)
+        member = next(row for row in altered['inputs'] if row['member'] == 'producer/gh_evaluations.py')
+        member['digest'] = evidence.digest_bytes((ROOT / '.github/scripts/gh_evaluations.py').read_bytes())
+        self.assertNotEqual(capture['inputs'], altered['inputs'])
+        with self.assertRaisesRegex(ValueError, 'Approved custom input drift'):
+            evidence.validate_custom_capture(altered, 'gh', ROOT)
         with self.assertRaises(ValueError):
             path = next(run.glob('codex/with-skill/trials/*/reward.json'))
             payload = evidence.read_json(path); payload['custom_metrics']['gh_authorization'] = 0; payload['custom_metrics']['gh_gate'] = 0; write(path, payload)

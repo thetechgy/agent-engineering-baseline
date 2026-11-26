@@ -201,6 +201,18 @@ def native_versions(*, backend=None):
             "source_tree_digest": NATIVE_SOURCE_DIGEST, "producer_profile": NATIVE_PRODUCER}
 
 
+def adoption_policy():
+    return {"schema_version": 1, "runtime": native_versions(), "backends": EXECUTION_BACKENDS,
+            "model": POLICY["model"], "agent_reasoning_effort": "high", "judge_reasoning_effort": None}
+
+
+def validate_adoption(workspace):
+    from skill_orchestration import NATIVE_BENCHMARK_POLICY
+
+    require(read_json(workspace / NATIVE_BENCHMARK_POLICY) == adoption_policy(),
+            "Released production benchmark policy differs")
+
+
 def validate_runtime():
     """Verify the launcher owner without changing the prior smoke producer."""
     from evaluator_profiles import validate_install
@@ -228,7 +240,7 @@ def require_revision(workspace, revision):
     require(head.strip() == revision, "Benchmark revision differs from the checkout")
 
 
-def prepare(workspace, root, name, mode, revision):
+def prepare(workspace, root, name, mode, revision, *, gh_cases=None):
     """Prepare the reviewed dataset and runtime before entering the credential step."""
     from benchmark_smoke import PROVIDER_CREDENTIALS
     from qualify_codex_1691 import acquire
@@ -237,13 +249,14 @@ def prepare(workspace, root, name, mode, revision):
             "Benchmark preparation requires a credential-free process")
     require(name in EXECUTION_BACKENDS and mode in MODES
             and (name != pester.NAME or mode == "confirmation"), "Unqualified released benchmark selection")
+    require(gh_cases is None or name == "gh", "Case selection is available for local gh benchmarks")
     require_revision(workspace, revision)
     root = root.absolute()
     require(root.resolve() == root and not root.is_relative_to(workspace), "Use a new benchmark directory outside checkout")
     versions = validate_runtime()
     root.mkdir(mode=0o700, parents=True, exist_ok=False)
     if name == "gh":
-        skill = stage_gh(workspace, root / "bundle/gh")
+        skill = stage_gh(workspace, root / "bundle/gh", gh_cases)
     elif name == pester.NAME:
         skill = pester.stage(workspace, root / "bundle" / name)
     else:
@@ -598,23 +611,27 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     subcommands = parser.add_subparsers(dest="command", required=True)
     subcommands.add_parser("verify-runtime")
-    for command in ("prepare", "execute", "recover", "score-report", "diagnostic-report"):
+    for command in ("prepare", "execute", "recover", "score-report", "diagnostic-report", "operation"):
         entry = subcommands.add_parser(command)
         entry.add_argument("root", type=Path)
         suites = {"score-report": BACKENDS, "diagnostic-report": (pester.NAME,)}
         entry.add_argument("skill", choices=suites.get(command, EXECUTION_BACKENDS))
         entry.add_argument("mode", choices=MODES)
         entry.add_argument("revision")
-        if command == "recover":
+        if command == "prepare":
+            entry.add_argument("--gh-case", action="append")
+        if command in ("recover", "operation"):
             entry.add_argument("outcome", choices=("success", "failure", "cancelled", "skipped"))
-        if command == "score-report":
+        if command in ("score-report", "operation"):
             entry.add_argument("destination", type=Path)
     args = parser.parse_args()
+    if args.command in ("prepare", "execute"):
+        validate_adoption(ROOT)
     if args.command == "verify-runtime":
         validate_runtime()
         return 0
     if args.command == "prepare":
-        prepare(ROOT, args.root, args.skill, args.mode, args.revision)
+        prepare(ROOT, args.root, args.skill, args.mode, args.revision, gh_cases=args.gh_case)
         return 0
     if args.command == "recover":
         recover(ROOT, args.root, args.skill, args.mode, args.revision, args.outcome)
@@ -622,11 +639,27 @@ def main():
     if args.command == "diagnostic-report":
         diagnostic_report(ROOT, args.root, args.skill, args.mode, args.revision)
         return 0
-    if args.command == "score-report":
-        from skill_evidence import write_outputs
+    if args.command == "operation":
+        from skill_reports import operation_receipt
 
-        record = score_record(ROOT, args.root, args.skill, args.mode, args.revision)
+        with run_output_provenance(args.root):
+            operation_receipt(ROOT, args.root, args.skill, args.mode, args.outcome, args.destination)
+        return 0
+    if args.command == "score-report":
+        from skill_evidence import select_run, write_outputs
+        from skill_reports import summary, usage_summary
+
+        run = select_run(args.root, args.skill, None)
+        record = score_record(ROOT, args.root, args.skill, args.mode, args.revision, selected=run.name)
+        if args.skill == "gh":
+            gate = gh.deterministic_gate(run, [entry["id"] for entry in gh.dataset(ROOT)], MODES[args.mode],
+                                         authorization_metric=GH_ACCESS_METRIC)
+            write_json(args.root / "deterministic.json", {"trials": gate})
         write_outputs({"released-scores.json": record}, args.destination, workspace=ROOT, input_path=args.root)
+        lines = [f"## {args.skill} {args.mode} benchmark", "", "| Metric | Score |", "| --- | --- |"]
+        lines.extend(f"| {row['name']} | {row['value']:.4f} |" for row in record["metrics"])
+        lines.extend(["", f"Dataset `{record['dataset_digest']}`", f"Source `{args.revision}`"])
+        summary(lines + usage_summary(run))
         return 0
     require(args.command == "execute", "Unknown released benchmark command")
     from skillevaluator.evaluation import EvaluationService

@@ -27,29 +27,26 @@ The full test suite needs the existing pinned SkillEvaluator environment.
 
 ## Native model runs
 
-Use the existing protected **Benchmark skills** manual workflow with `skill=gh`.
-No workflow dispatch is necessary for offline work. The workflow keeps its existing
-runtime/model pins, deadline, recovery, artifact, and history policies. Podman's
-selection and default grading remain unchanged.
+Use the protected **Benchmark skills** manual workflow with `skill=gh`.
+The workflow validates the reviewed source and scope before the protected
+execution step. Offline dataset validation and fixture replay run locally.
 
-A prepared local environment can run the same native evaluator through:
+Prepare the released benchmark owner with
+[setup-static-evaluator.sh](../../scripts/setup-static-evaluator.sh)
+`native-benchmark-101` and use the exported interpreter for local runs.
 
 ```bash
-python3 .github/scripts/gh_evaluations.py benchmark gh --mode standard --output /tmp/gh-standard
-python3 .github/scripts/gh_evaluations.py benchmark gh --mode confirmation --output /tmp/gh-confirmation
-python3 .github/scripts/gh_evaluations.py benchmark gh --case gh-003 --output /tmp/gh-case
-python3 .github/scripts/gh_evaluations.py benchmark gh --smoke --output /tmp/gh-smoke
+"$SKILL_NATIVE_BENCHMARK_PYTHON" .github/scripts/gh_evaluations.py benchmark gh --mode standard --output "$HOME/worktrees/gh-standard"
+"$SKILL_NATIVE_BENCHMARK_PYTHON" .github/scripts/gh_evaluations.py benchmark gh --mode confirmation --output "$HOME/worktrees/gh-confirmation"
+"$SKILL_NATIVE_BENCHMARK_PYTHON" .github/scripts/gh_evaluations.py benchmark gh --case gh-003 --output "$HOME/worktrees/gh-case"
+"$SKILL_NATIVE_BENCHMARK_PYTHON" .github/scripts/gh_evaluations.py benchmark gh --smoke --output "$HOME/worktrees/gh-smoke"
 ```
 
-Use the evaluator's Python 3.13 interpreter and place its executables on `PATH`.
-The exact dependencies and Codex patch come from
-[setup-skillevaluator.sh](../../scripts/setup-skillevaluator.sh). Docker Compose
-5.8.0, Harbor 0.13.2, SkillEvaluator 0.3.0 at `ac0a049`, Codex 0.171.0, and
-`gpt-6.2-sol` are pinned. Do not substitute a newer host Codex or Podman.
-The local deterministic gate restores the redacted authorization score from the matching original
-Harbor trial and verifier sidecar for each arm. Diagnostic subsets remain outside benchmark history.
-
-The runner refuses missing runtime tools and credentials. It does not install them.
+The runtime verifies Docker Compose 5.8.0, Python 3.14.10,
+SkillEvaluator 1.0.1, Harbor 0.25.0, and the pinned native backend.
+The trial uses Codex 0.171.0 and `gpt-6.2-sol` at High. The released
+verifier reports its broker-bound authorization check as `gh_access_policy`.
+The benchmark requires an existing credential and a new output directory.
 
 Standard runs use one attempt per case per arm (48 task trials); confirmation
 runs use three (144 task trials). The bounded smoke selects `gh-002`, `gh-005`,
@@ -163,8 +160,8 @@ ambiguous observations, shell expansions, compound commands, arbitrary paths,
 and interpreter execution fail closed. Only the modeled comment is authorized;
 its duplicate dispatch fails even when the first observation reports partial upload.
 This gate evaluates recorded behavior after execution; it does not prevent a
-rejected agent call from contacting a service. Model traffic still requires the
-native runtime's public network. The broker has no model credentials and the
+rejected agent call from contacting a service. Model traffic uses the released
+runtime's provider-only network. The broker has no model credentials and the
 private files rely on Linux user permissions, not a boundary against host root.
 
 Ordinary CI additionally builds staged native tasks and exercises the actual
@@ -173,7 +170,7 @@ credentials, and no inference. It verifies private reads/modifications fail,
 valid issue collection excludes the PR and includes the closed issue, one mock
 comment succeeds, and both comparison-arm skill layouts work. Exact test containers
 and images are removed on success, failure, and handled interruption; cleanup
-is checked. CI uses a checksum-first Compose 5.6.1 plugin in a task-owned temporary
+is checked. CI uses a checksum-first Compose 5.8.0 plugin in a task-owned temporary
 directory, installed by the same helper as the manual benchmark. A focused
 credential-free Harbor check additionally exercises generated configuration,
 resource limits, startup/readiness, copy/exec, nonzero exits, repeated `up`, and

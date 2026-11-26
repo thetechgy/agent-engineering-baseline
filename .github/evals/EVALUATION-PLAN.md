@@ -1,6 +1,32 @@
 # Evaluation checkpoint
 
-## SkillEvaluator 0.3.0 retirement in progress
+## SkillEvaluator 0.3.0 retirement
+
+PR #185 switches the maintained native benchmark to SkillEvaluator 1.0.1,
+Harbor 0.25.0, Python 3.14.10 and the digest-pinned native backend. The
+released launcher owns protected benchmark dispatch and local gh benchmark
+execution. Static quality, public data, and private review use their pinned
+1.0.1 environments. The explicit 0.8.0 and 0.9.0 profiles retain their
+original locks, scoring and rollback selectors. Original 0.3.0 scores,
+validators and source snapshots remain available for offline reading. Exact
+reproduction of the old runtime uses the original producing Git revision.
+[Issue #95](https://github.com/thetechgy/agent-engineering-baseline/issues/95)
+
+The protected compatibility smoke at `7b4ec47` authenticated one synthetic
+file-edit trial in the baseline arm. Codex 0.171.0 ran `gpt-6.2-sol` at High
+through the direct native tool route. Accuracy, behavior and goal judges
+completed, and the trial and runner both verified teardown. The receipt
+stays outside canonical history and measures compatibility for this scope.
+The earlier Podman case 1 receipt retains its unresolved path outcome.
+[Live compatibility receipt](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45876746946/artifacts/15145359462)
+
+New standard and confirmation runs use separate score series under the
+released producer. The Pester diagnostic remains outside score history.
+The preapproval and postapproval guard bind the released lock, patch, backend,
+launcher and policy to the reviewed scope. The temporary protected compatibility
+mode has been removed from the benchmark workflow.
+
+## SkillEvaluator retirement qualification history
 
 The migration starts from `58cb9698543c546173501887254dc7989d2db396`.
 Production benchmarks still use the reviewed 0.3.0 runtime. Keep the
@@ -529,7 +555,7 @@ profiles keep their exact original validator snapshots.
 
 | Operator or workflow | Model dispatch and evidence |
 | --- | --- |
-| Manual benchmark, scheduled planner and local `gh_evaluations.py benchmark` | The benchmark policy selects `gpt-6.2-sol` for Codex 0.171.0, runtime preflight, provider and standard verifier. The agent requests High. The 0.3.0 verifier sends Chat Completions with its reasoning parameter omitted. The three judge aliases and the CLI argument use the same selection. |
+| Manual benchmark, scheduled planner and local `gh_evaluations.py benchmark` | The benchmark policy selects `gpt-6.2-sol` for Codex 0.171.0, runtime preflight, provider and standard verifier. The agent requests High. The 1.0.1 benchmark verifier sends Chat Completions with its reasoning parameter omitted. The three judge aliases and the CLI argument use the same selection. |
 | Single-case observation | The active 0.171.0 selector and the 0.169.1 rollback both send `gpt-6.2-sol` / High. |
 | New scored campaigns | Select the Codex 0.171.0 scored profile with `gpt-6.2-sol` / High. The first comparison is `pester-return-development-current-v1-1710-sol62`, with SkillEvaluator 0.8.0 and Harbor 0.24.0. |
 | Pilot, cohort and earlier Boolean and Pester comparisons | Their versioned `-sol62` selectors use Codex 0.167.0 with `gpt-6.2-sol` / High. |
@@ -544,8 +570,8 @@ single-record catalog's SHA-256. Qualification exercises a real command and file
 both outgoing requests against the controlled provider. The source record supports CLI 0.166.0
 and later. [Tagged Codex model catalog](https://github.com/openai/codex/blob/ccf9be8cc458bd6b8336fe84d68d8893f2691a5e/codex-rs/models-manager/models.json)
 
-The production verifier first tries RAGAS for goal accuracy on the canonical OpenAI endpoint. With
-the released 0.4.4 dependency, its `SingleTurnSample` rejects the list of messages before any SDK
+The historical 0.3.0 verifier first tried RAGAS for goal accuracy on the canonical OpenAI
+endpoint. With the released 0.4.4 dependency, its `SingleTurnSample` rejects the list of messages before any SDK
 request. The verifier's existing custom goal judge then sends the selected model. The 0.3.0 accuracy
 and behavior judges use the same endpoint.
 
@@ -563,7 +589,7 @@ CLI comparisons check out their original commits and send only to their non-forw
 responder. Their saved model names are part of reproduction.
 
 Replay an earlier run at its producing revision using its recorded model, prices, source identity
-and validator. Current source-v38 records retain the existing grader and fixture identities. Each
+and validator. The source-v38 records retain their recorded grader and fixture identities. Each
 versioned definition binds its new runtime, model and budget. For the previous production model
 policy with CLI 0.171.0, use revision `b458913` for offline reproduction. Restarting paid work on a
 previous model requires separate approval.
@@ -601,22 +627,25 @@ shared adapter and workflow for future runs. The fixture and grader contracts ca
 The retained replay also binds the adapter digest for its revision.
 [Upstream rollout replay contract](https://github.com/openai/codex/pull/61199).
 
-The production benchmark uses the SkillEvaluator 0.3.0 Docker dispatch patch. The trusted gh initializer reads the
-same Codex pin as the report policy. Both select 0.171.0. The benchmark agent uses `gpt-6.2-sol` at High. Each Docker
-trial runs with the execution user’s private Codex home. Direct native tools keep each command and file edit
-attributable to its own result in the existing verifier.
-Run the credential-free benchmark integration with its production setup and verified Compose:
+The released benchmark uses SkillEvaluator 1.0.1 and Harbor 0.25.0.
+The trusted gh initializer and report policy bind Codex 0.171.0. Each agent
+uses `gpt-6.2-sol` at High and its own Codex home. Direct native tools keep
+command and file-edit results attributable at the verifier.
+
+The credential-free Codex qualification uses the separately pinned fixture
+owner from `setup-static-evaluator.sh native-benchmark-candidate` and verified
+Docker Compose.
 
 ```sh
-"$SKILL_EVALUATOR_PYTHON" -B .github/scripts/qualify_benchmark_codex.py "$RUNNER_TEMP/benchmark-codex"
+"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_codex.py "$RUNNER_TEMP/benchmark-codex"
 ```
 
-The qualifier checks the standalone archive, then runs the production npm package and launcher in network-isolated
-task containers. It compares the npm executable and its three shipped helpers to the archive. The npm package omits
-`codex-exec-server`. The real gh broker, Harbor agent, verifier and collector exercise that installed layout.
-Its loopback responses supply fixture usage. For the 0.155.1 rollback, select the benchmark setup, patch and report policy
-together from `fb9c8a0`. Historical reporting and comparison
-must use the policy and source revision that produced the records.
+The fixture verifies the pinned npm executable and all three shipped helpers.
+The gh broker, Harbor agent, verifier and collector process loopback
+responses. The npm package omits `codex-exec-server`.
+To reproduce an older benchmark exactly, select its producing revision,
+setup, patches and report policy together. The 0.155.1 rollback recipe
+is at `fb9c8a0`.
 
 ## Codex 0.169.1 proposed profile for issue #95
 
@@ -2098,14 +2127,14 @@ comparisons do not produce improvement deltas.
 
 ## Qualification and limits
 
-For exact reproduction, select the producing Git revision recorded in the
-retained evidence. Use its `setup-skillevaluator.sh reporting` for the
-original reporting runtime and `setup-skillevaluator.sh candidate-current`
-for the 0.8.0 candidate. Then invoke
-`qualify_current_evaluator.py --output` with a new persistent evidence directory and
-`SKILL_REVIEW_PYTHON` selecting the retained historical interpreter. Disposable
-fixtures honor `TMPDIR`. The new `current-evaluator.yml` workflow reproduces this
-without model credentials, inference, judges, scheduling or Pages.
+For exact native reproduction, select the producing Git revision recorded in
+the retained evidence and use its original setup. The maintained
+`qualify_current_evaluator.py --output` command reads the authenticated
+comparison with the original scores. Select `setup-skillevaluator.sh
+candidate-current` for the 0.8.0 owner or `candidate-next` for 0.9.0.
+Use a new persistent evidence directory and honor `TMPDIR` for disposable
+fixtures. The credential-free `current-evaluator.yml` route runs these
+qualification paths with their respective owners.
 
 The integrated qualification extends that entry point with `--native`. It runs
 all 48 existing gh startup/lifecycle cases through the existing six fixed shards,

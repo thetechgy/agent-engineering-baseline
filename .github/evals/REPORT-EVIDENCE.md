@@ -227,9 +227,11 @@ prompts or trajectories are added to Actions summaries.
 ### Public bundle commands
 
 Run these examples from the checkout. Load `SKILL_QUALITY_PYTHON` from
-`setup-static-evaluator.sh quality-static` for the current native quality
-artifact. Load `SKILL_EVALUATOR_PYTHON` from the benchmark setup for the
-retained 0.3.0 native benchmark.
+`setup-static-evaluator.sh quality-static` for native quality artifacts.
+Load `SKILL_DATA_PYTHON` from `setup-static-evaluator.sh data-host` for the
+retained Podman sample. Load `SKILL_NATIVE_BENCHMARK_PYTHON` from
+`setup-static-evaluator.sh native-benchmark-101` for a complete released
+benchmark and use its producing source revision.
 
 ```bash
 export GITHUB_WORKSPACE="$(pwd)"
@@ -241,13 +243,14 @@ static_scripts=$(python3 -B .github/scripts/static_quality_ci.py tools)
   /tmp/skill-quality "$public_parent/quality"
 
 # Replay the reviewed ten-case, twenty-attempt Podman extract without inference.
-"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py public-benchmark \
+"$SKILL_DATA_PYTHON" .github/scripts/skill_reports.py public-benchmark \
   .github/tests/fixtures/skill_evidence/podman-native podman standard \
   "$public_parent/podman"
 
 # Select explicitly when an ordinary native bundle contains multiple runs.
-"$SKILL_EVALUATOR_PYTHON" .github/scripts/skill_reports.py public-benchmark \
-  /tmp/skill-benchmark podman confirmation "$public_parent/confirmation" \
+GITHUB_SHA="$(git rev-parse HEAD)" "$SKILL_NATIVE_BENCHMARK_PYTHON" \
+  .github/scripts/skill_reports.py public-benchmark \
+  "$HOME/worktrees/skill-benchmark" podman confirmation "$public_parent/confirmation" \
   --run NATIVE_RUN_ID
 ```
 
@@ -1481,18 +1484,18 @@ The static example is a UI state demonstration, not a finding about the real
 Podman skill. No model or paid endpoint is called.
 
 ```bash
-demo_parent="$(mktemp -d /tmp/skill-report-demo.XXXXXXXX)"
-"$SKILL_EVALUATOR_PYTHON" -B .github/scripts/skill_evidence.py inventory \
+demo_parent="$(mktemp -d "${TMPDIR:-/tmp}/skill-report-demo.XXXXXXXX")"
+"$SKILL_DATA_PYTHON" -B .github/scripts/skill_evidence.py inventory \
   --output "$demo_parent/inventory"
-"$SKILL_EVALUATOR_PYTHON" -B .github/scripts/skill_evidence.py normalize \
+"$SKILL_DATA_PYTHON" -B .github/scripts/skill_evidence.py normalize \
   --kind behavioral --skill podman \
   --input .github/tests/fixtures/skill_evidence/podman-native \
   --output "$demo_parent/normalized-podman"
-"$SKILL_EVALUATOR_PYTHON" -B .github/scripts/skill_evidence.py normalize \
+"$SKILL_DATA_PYTHON" -B .github/scripts/skill_evidence.py normalize \
   --kind static --skill podman \
   --input .github/tests/fixtures/skill_evidence/static-synthetic \
   --output "$demo_parent/normalized-static"
-"$SKILL_EVALUATOR_PYTHON" -B .github/scripts/skill_evidence.py project \
+"$SKILL_DATA_PYTHON" -B .github/scripts/skill_evidence.py project \
   --input .github/tests/fixtures/skill_evidence/gh-no-model.json \
   --output "$demo_parent/normalized-gh"
 
