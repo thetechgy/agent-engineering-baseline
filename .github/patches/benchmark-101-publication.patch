@@ -1,11 +1,11 @@
 diff --git a/.github/scripts/skill_evidence.py b/.github/scripts/skill_evidence.py
 --- a/.github/scripts/skill_evidence.py
 +++ b/.github/scripts/skill_evidence.py
-@@ -1663,11 +1663,15 @@
+@@ -1787,11 +1787,15 @@
                      (tail == ['trials', obs['native_trial'], 'failure.json'] and ref['locator'] == []
                       or tail == ['trials', obs['native_trial'], 'reward.json']
                          and ref['locator'] == ['details', 'security']))
-+                release_failure_ref = (data.get('benchmark', {}).get('profile') == 'behavioral-101-fixture-v1'
++                release_failure_ref = (data.get('benchmark', {}).get('profile') == 'behavioral-101-direct-fixture-v1'
 +                    and obs['score'] is None and tail == ['trials', obs['native_trial'], 'failure.json']
 +                    and ref['locator'] == [])
                  accounting_ref = (data['policy'].get('producer_profile') == profiles.ACCOUNTING['id']
@@ -18,32 +18,30 @@ diff --git a/.github/scripts/skill_evidence.py b/.github/scripts/skill_evidence.
                  trial_result_found |= trial_result
              require(trial_result_found, 'Observation reference origin mismatch')
      require(type(data['arms']) is list and len(data['arms']) <= 2, 'Invalid arms')
-@@ -2470,9 +2474,11 @@
-     if any(versions.get(key) is None for key in ('skillevaluator', 'evaluator_revision')):
-         limitations.add('metadata_missing')
-     producer = validate_runtime_versions(versions, historical_read=benchmark_meta is None)
+@@ -2697,6 +2701,7 @@
+                       'policy_id': score_series(name, mode), 'patch_sha256': NATIVE_PATCH_DIGEST,
+                       'policy': {key: expected[key] for key in POLICY_FIELDS if key in expected}}
      historical_scores = producer['revision'] == profiles.HISTORICAL_REVISION
-+    release_fixture = False
++    release_fixture = benchmark_meta is not None and benchmark_meta['profile'] == 'behavioral-101-direct-fixture-v1'
      if benchmark_meta is not None:
          require(producer['id'] == profiles.benchmark_profile(benchmark_meta['profile'])['producer'], 'Versioned benchmark producer mismatch')
-+        release_fixture = benchmark_meta['profile'] == 'behavioral-101-fixture-v1'
      expected_scoring = producer['scoring']
-     if result.get('score_policy') is not None:
-         require(result['score_policy'] == expected_scoring, 'Contradictory native scoring identity')
-@@ -2717,7 +2723,11 @@
+@@ -2963,8 +2968,12 @@
                  require(expected is None or len(lookup) < expected, 'Summary attempt limit')
                  require(trial not in lookup, 'Duplicate summary trial')
                  lookup[trial] = (case, attempt)
--        validate_summary_rollups(pass_data, native_cases, ids, maximum, stop_on_pass, versioned=benchmark_meta is not None)
+-        validate_summary_rollups(pass_data, native_cases, ids, maximum, stop_on_pass,
+-                                 versioned=benchmark_meta is not None or released_native)
 +        if release_fixture and 'unresolved_cases' in pass_data:
 +            require(native_condition['execution_status'] != 'succeeded', 'Partial rollups contradict successful execution')
 +            validate_101_partial_rollups(pass_data, native_cases, ids, maximum, stop_on_pass)
 +        else:
-+            validate_summary_rollups(pass_data, native_cases, ids, maximum, stop_on_pass, versioned=benchmark_meta is not None)
++            validate_summary_rollups(pass_data, native_cases, ids, maximum, stop_on_pass,
++                                     versioned=benchmark_meta is not None or released_native)
          observed = []; missing_rubric_details = False
          if trials_by_arm[arm]:
              for path in trials_by_arm[arm]:
-@@ -2750,10 +2760,12 @@
+@@ -3003,10 +3012,12 @@
                  if attempt['attempt'] is None:
                      limitations.add('metadata_missing')
                  diagnostic = None
@@ -58,17 +56,17 @@ diff --git a/.github/scripts/skill_evidence.py b/.github/scripts/skill_evidence.
                      diagnostic = reward
                      reward = None
                  if reward is not None:
-@@ -3395,7 +3407,8 @@
+@@ -3658,7 +3669,8 @@
                      'execution_authentication': 'not_established'}
- 
- 
+
+
 -def validate_unscored_diagnostic(reward, failure, trial, case_id, arm, producer=None, *, collector_agent=None, versioned=False):
 +def validate_unscored_diagnostic(reward, failure, trial, case_id, arm, producer=None, *, collector_agent=None,
 +                                 versioned=False, release_fixture=False):
      """Bind a collector diagnostic to native failure evidence without grading it.
- 
+
      The pinned collector omits trial_id only on its failed-judge projection.
-@@ -3436,7 +3449,7 @@
+@@ -3699,7 +3711,7 @@
              'Unscored diagnostic native failure mismatch')
      raw = ((trial.get('verifier_result') or {}).get('rewards') or {})
      if versioned:

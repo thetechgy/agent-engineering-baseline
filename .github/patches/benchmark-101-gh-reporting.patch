@@ -1,7 +1,7 @@
 diff --git a/.github/scripts/skill_reports.py b/.github/scripts/skill_reports.py
 --- a/.github/scripts/skill_reports.py
 +++ b/.github/scripts/skill_reports.py
-@@ -780,13 +780,18 @@
+@@ -798,13 +798,18 @@
              carrier = evidence.custom_carrier(campaign_profile)
              evidence.token(carrier)
      registered_cases = set()
@@ -21,19 +21,21 @@ diff --git a/.github/scripts/skill_reports.py b/.github/scripts/skill_reports.py
              import skill_evidence as evidence
              evidence.validate_custom_capture(capture, name, workspace)
              registered_cases = set(capture['case_ids'])
-@@ -841,10 +846,13 @@
+@@ -859,11 +864,14 @@
                  require('PESTER_VERIFIER_ONLY_' not in json.dumps(value), 'Protected verifier input in diagnostic artifact')
              original = value
              value = redact_sensitive_data(value)
 -            capture = (relative.as_posix() == 'custom-metric-capture.json'
--                       and original.get('producer', {}).get('skillevaluator') in ('0.8.0', '0.9.0')
--                       and ((name == 'gh' and original.get('purpose') == 'oracle_qualification')
--                            or (name in ('gh', 'podman') and str(original.get('purpose', '')).startswith('campaign-'))))
+-                       and (released_diagnostic or (
+-                           original.get('producer', {}).get('skillevaluator') in ('0.8.0', '0.9.0')
+-                           and ((name == 'gh' and original.get('purpose') == 'oracle_qualification')
+-                                or (name in ('gh', 'podman') and str(original.get('purpose', '')).startswith('campaign-'))))))
 +            capture = False
 +            if relative.as_posix() == 'custom-metric-capture.json':
 +                producer = original.get('producer', {}).get('skillevaluator')
 +                purpose = original.get('purpose', '')
-+                capture = ((name == 'gh' and purpose == 'oracle_qualification' and producer in gh_oracle_versions)
++                capture = (released_diagnostic
++                           or (name == 'gh' and purpose == 'oracle_qualification' and producer in gh_oracle_versions)
 +                           or (name in ('gh', 'podman') and str(purpose).startswith('campaign-')
 +                               and producer in campaign_versions))
              if capture:

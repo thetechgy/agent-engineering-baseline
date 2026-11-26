@@ -481,8 +481,15 @@ and the verifier request keeps reasoning omitted and zero transport
 retries in the protected smoke.
 
 The direct credential-free probe completed a shell write, a separate
-file edit and the three standard judge checks. Native hosted
-qualification and a separate paid smoke still gate production adoption.
+file edit and the three standard judge checks. The interruption
+control kept usage unavailable. The Podman publication fixture has a
+successor profile and its earlier profile retains the original
+producer. Its refreshed clean-source overlay collected 20 standard
+and 60 confirmation attempts, kept interruption at 19 of 20, and
+rejected incorrect mode, producer and trial identities as well as
+history admission. The gh oracle reporting overlay also applies to
+the clean source. Native hosted qualification and a separate paid
+smoke still gate production adoption.
 
 ## Model selection for new executions
 

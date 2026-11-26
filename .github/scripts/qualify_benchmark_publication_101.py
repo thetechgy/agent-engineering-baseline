@@ -13,7 +13,7 @@ import skill_evidence as evidence
 import skill_history
 import skill_reports as reports
 
-PROFILE = reports.read_json(ROOT / '.github/evals/benchmark-101-fixture.json')
+PROFILE = reports.read_json(ROOT / '.github/evals/benchmark-101-direct-fixture.json')
 META = {'profile': PROFILE['id'], 'origin': PROFILE['origin'], 'judgments': 'simulated'}
 
 
