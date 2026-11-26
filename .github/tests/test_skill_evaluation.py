@@ -381,6 +381,36 @@ class ReportTests(unittest.TestCase):
                     with self.subTest(suite=suite, mode=mode), self.assertRaises(ValueError):
                         evidence.validate_policy(altered)
 
+    def test_advisory_statistics_compare_verified_rewards_to_reported_values(self):
+        from skillevaluator.tier3.harbor.collector import _pass_summary
+        from skillevaluator.tier3.harbor.run_statistics import ArmInput, agent_statistics
+
+        import benchmark_native as native
+
+        cases = ["case-one", "case-two"]
+        rewards = {
+            arm: [{"entry_id": case, "_attempt_ordinal": attempt,
+                   "_trial_name": f"{case}__attempt{attempt:03d}", "has_skill": present,
+                   "score_policy": "skill-evaluator-dimension-mean-v1",
+                   "metric_set": "skill-evaluator-default-v2",
+                   "accuracy": float(present or attempt == 1),
+                   "goal_accuracy": float(present or attempt == 1),
+                   "behavior_check": 1.0, "security": 1.0}
+                  for case in cases for attempt in (1, 2, 3)]
+            for arm, present in native.GH_ARMS.items()
+        }
+        arms = {arm: ArmInput(rows, "succeeded", _pass_summary(
+            rows, n_attempts=3, pass_threshold=0.5, expected_cases=2, expected_case_ids=cases))
+            for arm, rows in rewards.items()}
+        recorded = agent_statistics(arms, expected_case_ids=cases, stop_on_pass=False, lift_eligible=True)
+        selected = native.advisory_statistics(recorded, rewards, cases, 3)
+        self.assertEqual(selected, recorded)
+        self.assertEqual(selected["lift_uncertainty"]["effectiveness"]["n_cases"], 2)
+        self.assertEqual(selected["reliability"]["with_skill"]["pass_hat_k"], 1.0)
+        altered = {**recorded, "lift_uncertainty": {"effectiveness": {"n_cases": 99}}}
+        self.assertEqual(native.advisory_statistics(altered, rewards, cases, 3), {})
+        self.assertEqual(native.advisory_statistics({}, rewards, cases, 3), {})
+
     def test_released_gh_access_metric_is_bound_to_its_producer(self):
         import skill_evidence as evidence
 

@@ -36,9 +36,9 @@ class StaticQualityRoutingTests(unittest.TestCase):
         self.assertNotIn('if', setup)
         comparison = next(step for step in quality['steps'] if 'qualify_static_evaluator.py' in step.get('run', ''))
         self.assertEqual(comparison['if'], "needs.plan.outputs.static_candidate == 'true'")
-        for selector in ('quality-next', 'quality-candidate'):
-            self.assertIn('setup-skillevaluator.sh ' + selector, comparison['run'])
-            self.assertEqual(body.count('setup-skillevaluator.sh ' + selector), 1)
+        baseline = 'setup-static-evaluator.sh quality-retained-101'
+        self.assertIn(baseline, comparison['run'])
+        self.assertEqual(body.count(baseline), 1)
         self.assertNotIn('SKILL_EVALUATOR_PYTHON', body)
         self.assertNotIn('gh_container_validation', body)
         for step in quality['steps']:

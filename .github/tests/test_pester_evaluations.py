@@ -339,7 +339,7 @@ class NativeStagingTests(unittest.TestCase):
             self.assertIsNone(summary['overall_score'])
             self.assertFalse(summary['pass_at_k'])
             retained = reports.read_json(next((destination / 'codex/with-skill/trials').glob('*/reward.json')))
-            if version('skillevaluator') == '1.0.1':
+            if version('skillevaluator') in ('1.0.1', '1.2.1'):
                 self.assertEqual(retained['evaluation_status'], 'failed')
                 self.assertEqual(retained['evaluation_errors'], {'applicability': 'Unsupported candidate; unassessed'})
                 self.assertNotIn('custom_metrics', retained)

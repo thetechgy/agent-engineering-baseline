@@ -18,7 +18,7 @@ import skill_pages as pages
 from skill_reports import outputs, read_json, require, summary, write_json
 
 MODE = 'candidate-smoke'
-BRANCH = 'qualify/skillevaluator-101-retirement'
+BRANCH = 'qualify/skillevaluator-121'
 JOB_NAMES = {'with_skill': 'podman-codex-with', 'without_skill': 'podman-codex-without'}
 JUDGE_METRICS = ('accuracy', 'behavior_check', 'goal_accuracy')
 FILE_EDIT_CASE = 'compatibility-file-edit'
@@ -75,24 +75,18 @@ def reviewed_scope(workspace, env, inputs):
     require(git(workspace, 'rev-parse', 'HEAD').decode().strip() == revision
             and not git(workspace, 'status', '--porcelain=v1', '--untracked-files=all', '--ignored'),
             'Candidate checkout differs from the dispatched revision')
-    arms = inputs.get('candidate_smoke_arms') or 'paired'
-    require(arms in ('paired', 'without-skill'), 'Unknown candidate arm selection')
-    workload = inputs.get('candidate_smoke_workload') or 'podman-case-1'
-    require(workload in ('podman-case-1', 'file-edit-fixture'), 'Unknown candidate workload')
-    require(workload == 'podman-case-1' or arms == 'without-skill', 'The compatibility fixture requires one baseline arm')
+    require(not any(inputs.get(key) for key in ('candidate_smoke_arms', 'candidate_smoke_workload')),
+            'Candidate smoke scope is fixed')
     selected = scope(workspace, revision, released=True)
-    baseline_only = arms == 'without-skill'
-    if baseline_only:
-        selected.update(arms=['without_skill'], planned_trials=1)
-    if workload == 'file-edit-fixture':
-        selected.update(case=FILE_EDIT_CASE, fixture_digest='sha256:' + identity(FILE_EDIT_DATASET))
-    return {'schema_version': 2, 'kind': 'podman_101_compatibility', 'run_id': pages.number(int(env['GITHUB_RUN_ID'])),
+    selected.update(arms=['without_skill'], planned_trials=1, case=FILE_EDIT_CASE,
+                    fixture_digest='sha256:' + identity(FILE_EDIT_DATASET))
+    return {'schema_version': 2, 'kind': 'podman_121_compatibility', 'run_id': pages.number(int(env['GITHUB_RUN_ID'])),
             'attempt': 1, 'scope': selected, 'provider_policy': PROVIDER_POLICY, 'runtime': native_versions(),
-            'cost_estimate': estimate_cost(baseline_only=baseline_only)}
+            'cost_estimate': estimate_cost(baseline_only=True)}
 
 
 def artifact_name(record):
-    return f'podman-101-compatibility-context-{record["run_id"]}-{record["attempt"]}'
+    return f'podman-121-compatibility-context-{record["run_id"]}-{record["attempt"]}'
 
 
 def guard(api, expected):

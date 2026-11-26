@@ -469,7 +469,7 @@ def validate_trial_population(run, agent, name, cases, attempts, agent_selector)
                 number(score)
                 require(score == row["score"] == result["verifier_result"]["rewards"]["overall"],
                         "Released trial score differs from its verifier or rollup")
-                rewards[arm].append(reward)
+                rewards[arm].append({**reward, "_attempt_ordinal": ordinal, "_trial_name": trial})
         require({member.name for member in trials.iterdir()} == expected, "Unexpected released trial member")
     return rewards
 
