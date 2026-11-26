@@ -1383,6 +1383,14 @@ def policy_fields(value):
     return {key: copy.deepcopy(value.get(key)) for key in POLICY_FIELDS}
 
 
+def native_diagnostic_profile(revision, patch):
+    if revision != profiles.RELEASE_BENCHMARK['revision']:
+        return None
+    from benchmark_native import NATIVE_PATCH_DIGEST, native_profile
+
+    return native_profile() if patch == 'sha256:' + NATIVE_PATCH_DIGEST else None
+
+
 def released_policy_identity(value, *, custom_only, static):
     """A production score series has a distinct identity from offline candidates."""
     fields = value['fields']
@@ -1390,7 +1398,7 @@ def released_policy_identity(value, *, custom_only, static):
         return False
     from benchmark_native import BACKENDS, NATIVE_PATCH_DIGEST, released_policy, score_series
 
-    if value.get('patch_digest') != 'sha256:' + NATIVE_PATCH_DIGEST:
+    if value.get('patch_digest') != 'sha256:' + NATIVE_PATCH_DIGEST or (custom_only and value.get('producer_profile')):
         return False
     say = 'Invalid released benchmark policy'
     require(not static and not custom_only and value.get('producer_profile') is None
@@ -1410,7 +1418,8 @@ def released_policy_identity(value, *, custom_only, static):
 
 
 def require_released_report_population(record):
-    if not released_policy_identity(record['policy'], custom_only=False, static=False):
+    custom_only = record['policy']['fields']['grading'] == 'custom_only'
+    if not released_policy_identity(record['policy'], custom_only=custom_only, static=False):
         return
     from benchmark_native import BACKENDS
     from skill_analysis import complete_numeric
@@ -1435,8 +1444,11 @@ def validate_policy(value, *, custom_only=False, static=False):
     require(static or value.get('published_id') != static_evaluator.PRODUCER, 'Static producer policy requires static evidence')
     static_release = static and runtime_revision == static_evaluator.REVISION
     released = released_policy_identity(value, custom_only=custom_only, static=static)
-    candidate = None if static_release or released else profiles.candidate_revision(runtime_revision,
-        producer_id=value.get('producer_profile'), patch=value.get('patch_digest'))
+    diagnostic = native_diagnostic_profile(runtime_revision, value.get('patch_digest')) if custom_only else None
+    candidate = None
+    if not static_release and not released:
+        candidate = diagnostic or profiles.candidate_revision(runtime_revision, producer_id=value.get('producer_profile'),
+                                                             patch=value.get('patch_digest'))
     require(static_release or released or candidate is not None or profiles.candidate_revision(runtime_revision) is None,
             'Unsupported candidate producer identity')
     closed(value, ('id', 'published_id', 'provenance', 'patch_digest', 'fields', 'metric_set', 'judge', 'attempts') + (('producer_profile', 'scoring_policy') if candidate else ()))
@@ -1471,6 +1483,17 @@ def validate_policy(value, *, custom_only=False, static=False):
     elif fields['evaluator_revision'] is not None:
         profiles.by_revision(fields['evaluator_revision'])
     judge = value['judge']; closed(judge, ('model', 'provider', 'enabled'))
+    if diagnostic:
+        from benchmark_native import DIAGNOSTIC_BACKEND
+
+        require(fields['environment'] == DIAGNOSTIC_BACKEND and fields['grading'] == 'custom_only'
+                and fields['task_source'] == 'native_harbor' and fields['workspace_mode'] == 'isolated'
+                and fields['model'] == reports.POLICY['model'] and fields['provider'] == reports.POLICY['provider']
+                and value['metric_set'] == 'custom-only' and value['published_id'] is None
+                and judge == {'model': None, 'provider': None, 'enabled': False}
+                and value['attempts'] == {'mode': 'confirmation', 'maximum': reports.MODES['confirmation'],
+                                          'stop_on_pass': False, 'pass_threshold': None},
+                'Invalid released diagnostic policy')
     optional(judge['model'], token); optional(judge['provider'], token); optional(judge['enabled'], boolean)
     closed(value['attempts'], ('mode', 'maximum', 'stop_on_pass', 'pass_threshold'))
     enum(value['attempts']['mode'], ('standard', 'confirmation', 'unknown'))
@@ -1495,8 +1518,10 @@ def make_policy(fields=None, patch=None, metric_set=None, judge=None, attempts=N
     value = {'fields': policy_fields(fields or {}), 'patch_digest': patch, 'metric_set': metric_set,
              'judge': judge or {'model': None, 'provider': None, 'enabled': None},
              'attempts': attempts or {'mode': 'unknown', 'maximum': None, 'stop_on_pass': None, 'pass_threshold': None}}
-    if published != static_evaluator.PRODUCER and (candidate := profiles.candidate_revision(
-            value['fields']['evaluator_revision'], patch=patch)):
+    revision = value['fields']['evaluator_revision']
+    diagnostic = native_diagnostic_profile(revision, patch) if metric_set == 'custom-only' else None
+    candidate = diagnostic or profiles.candidate_revision(revision, patch=patch)
+    if published != static_evaluator.PRODUCER and candidate:
         value.update(producer_profile=candidate['id'], scoring_policy='custom-overall-v1' if metric_set == 'custom-only' else candidate['scoring'])
     return {**value, 'id': identity(value) if provenance != 'unknown' else None,
             'provenance': provenance, 'published_id': published}
@@ -3619,6 +3644,7 @@ MOUNT_SOURCE_SUCCESSORS = '.github/evals/source-v42.json'
 CAMPAIGN_SOURCE_SUCCESSORS = '.github/evals/source-v43.json'
 RETIREMENT_SOURCE_SUCCESSORS = '.github/evals/source-v44.json'
 PUBLICATION_SOURCE_SUCCESSORS = '.github/evals/source-v45.json'
+DIAGNOSTIC_SOURCE_SUCCESSORS = '.github/evals/source-v46.json'
 CUSTOM_OUTCOMES = ('passed', 'failed', 'invalid', 'unsupported', 'timeout',
                    'infrastructure_error', 'interrupted', 'unknown')
 CUSTOM_MEASURED = ('passed', 'failed')
@@ -3743,7 +3769,7 @@ def custom_registry(workspace=ROOT):
         if 'adapter_sha256' in result.get('campaign', {}):
             result['campaign'] = dict(result['campaign'], adapter_sha256=version['replay_adapter'])
         profiles[successor] = result
-    for version_path in (MODEL_SUCCESSORS, SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS):
+    for version_path in (MODEL_SUCCESSORS, SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS):
         version = parse_json(read_bytes(workspace / version_path))
         sha(version['replay_adapter'])
         for successor, update in version['profiles'].items():
@@ -3835,7 +3861,7 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v48'
+        profile_id = 'pester-effectiveness-v49'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v24'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
@@ -4139,10 +4165,17 @@ def custom_authored_digest(workspace, name, profile):
     return digest
 
 
-def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, agent, execution_policy, numeric_excerpts=(), retrospective=None, scheduler_digest=None):
+def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, agent, execution_policy, numeric_excerpts=(),
+                   retrospective=None, scheduler_digest=None, producer_versions=None):
     """Prospective capture used by shared collection and credential-free qualification."""
     from importlib.metadata import version
     producer = profiles.by_version(version('skillevaluator'))
+    if producer_versions is not None:
+        from benchmark_native import native_versions
+
+        require(name == 'powershell-pester-6' and purpose == 'benchmark' and producer_versions == native_versions(),
+                'Invalid released diagnostic capture owner')
+        producer = profiles.runtime(producer_versions, owning=True)
     require(version('skillevaluator') == producer['version'] and version('harbor') == producer['harbor']
             and '.'.join(map(str,sys.version_info[:3])).startswith(producer['python']), 'Unsupported capture runtime')
     profile, definitions, contract = custom_contract(name, workspace, purpose=purpose)
@@ -4180,7 +4213,9 @@ def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, age
         capture['retrospective'] = copy.deepcopy(retrospective)
     else:
         require(retrospective is None, 'Unexpected retrospective metadata')
-    if profiles.is_candidate(producer):
+    if producer_versions is not None:
+        capture['producer'] = producer_versions
+    elif profiles.is_candidate(producer):
         capture['producer'] = profiles.candidate_versions(producer)
         profiles.runtime(capture['producer'], owning=True)
     return capture
@@ -4225,7 +4260,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
             for member in safe_tree(source_root, directory_identities=directories, directory_states=states, file_states=members):
                 read_bytes(member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
         for registry_member in (CUSTOM_REGISTRY, SOURCE_SUCCESSORS, MODEL_SUCCESSORS,
-                                SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS):
+                                SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS):
             read_bytes(workspace / registry_member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
         if local_podman:
             for member in ('.apm/skills/podman/evals/evals.json', '.apm/skills/podman/evals/files/vendor-compose.yaml',
@@ -4246,6 +4281,14 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
     require(capture['authored_digest'] == profile['dataset_digest'] == custom_authored_digest(workspace, name, profile),
             'Authored dataset drift')
     producer = profiles.by_revision(capture['evaluator_revision'])
+    released_diagnostic = producer is profiles.RELEASE_BENCHMARK and capture['producer'] != profiles.candidate_versions(producer)
+    if released_diagnostic:
+        from benchmark_native import DIAGNOSTIC_BACKEND, LOOPBACK_VERIFIER, native_versions
+
+        require(name == 'powershell-pester-6' and capture['purpose'] == 'benchmark'
+                and capture['producer'] == native_versions() and capture['attempts'] == reports.MODES['confirmation'],
+                'Invalid released diagnostic capture')
+        profiles.runtime(capture['producer'], owning=True)
     if profile_family(profile) == 'gh-native-oracle-v1':
         require(profiles.is_candidate(producer), 'Native gh oracle requires a qualified candidate')
     if 'campaign' in profile:
@@ -4256,7 +4299,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
     if producer is profiles.NEXT:
         require((capture['purpose'] in ('benchmark', 'oracle_qualification') or 'campaign' in profile) and capture['agent'] in ('oracle', 'codex'),
                 'New candidate is credential-free qualification only')
-    if profiles.is_candidate(producer):
+    if profiles.is_candidate(producer) and not released_diagnostic:
         require(capture['producer'] == profiles.candidate_versions(producer), 'Contradictory custom producer identity')
         profiles.runtime(capture['producer'], owning=True)
     require(type(capture['python_version']) is str and (capture['python_version'] == producer['python'] if profiles.is_candidate(producer) else
@@ -4277,7 +4320,10 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
         require(execution == {'environment': profile['campaign']['environment_mode'], 'concurrency': 1,
                 'timeout_multiplier': 1.0, 'stop_on_pass': False} and capture['attempts'] == profile['campaign'].get('trials', 1), 'Campaign execution policy drift')
     else:
-        require(execution['environment'] == ('aeb-gh-fixture' if name == 'gh' and capture['purpose'] == 'oracle_qualification' else 'docker') and execution['concurrency'] == (1 if capture['purpose'] in ('skill_effectiveness', 'skill_effectiveness_probe') else reports.POLICY['concurrency'])
+        environment = ('aeb-gh-fixture' if name == 'gh' and capture['purpose'] == 'oracle_qualification' else 'docker')
+        if released_diagnostic:
+            environment = DIAGNOSTIC_BACKEND
+        require(execution['environment'] == environment and execution['concurrency'] == (1 if capture['purpose'] in ('skill_effectiveness', 'skill_effectiveness_probe') else reports.POLICY['concurrency'])
                 and execution['stop_on_pass'] is False and execution['timeout_multiplier'] ==
                 (1.0 if capture['purpose'] in ('oracle_qualification', 'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control') else reports.POLICY['timeout_multiplier']), 'Execution policy drift')
     ids = case_ids(capture['case_ids'])
@@ -4354,6 +4400,9 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
         expected_skill = {row['member']: row['digest'] for row in capture['source']['content']['manifest']} if task['arm'] == 'with_skill' else {}
         require(actual_skill == expected_skill, 'Staged target skill drift')
         if name == 'powershell-pester-6':
+            if released_diagnostic:
+                require(task['members'].get('tests/docker-compose.yaml') == digest_bytes(LOOPBACK_VERIFIER.encode()),
+                        'Unapproved released verifier isolation')
             fixture_root = overlay / 'support/cases' / task['source_case_id']
             expected = {p.relative_to(fixture_root).as_posix(): digest_bytes(read_bytes(p))
                         for p in safe_tree(fixture_root) if p.relative_to(fixture_root).parts[0] != 'input'}
@@ -4482,6 +4531,14 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
     require(config.get('judge', {}).get('enabled') is False if profile['grading'] == 'custom_only' else True,
             'Custom-only judge must be explicitly disabled')
     validate_custom_execution_config(capture['purpose'], config, capture['attempts'])
+    if 'producer_profile' in capture.get('producer', {}):
+        harbor = config['harbor']
+        execution = capture['execution_policy']
+        require(harbor['environment']['value'] == execution['environment']
+                and harbor['n_concurrent'] == execution['concurrency']
+                and harbor['timeout_multiplier'] == execution['timeout_multiplier']
+                and config['task_source'] == 'native_harbor' and config['skill_workspace']['mode'] == 'isolated',
+                'Released diagnostic run configuration differs from its capture')
     ref(run / 'result.json'); config_ref = ref(run / 'run_config.json')
     agent = result['agents'][custom_carrier(profile)]
     if profile['grading'] == 'custom_only':
@@ -4514,9 +4571,9 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
         if 'campaign' in profile:
             from evaluation_evidence import task_policy_fields
             fields.update(task_policy_fields(profile))
-        policy = make_policy(fields,
-            ('sha256:' + profiles.by_revision(capture['evaluator_revision'])['patch_sha256'] if profiles.candidate_revision(capture['evaluator_revision']) else
-             digest_bytes(read_bytes(workspace / reports.PATCH))), 'custom-only',
+        patch = ('sha256:' + capture['producer']['patch_sha256'] if profiles.candidate_revision(capture['evaluator_revision'])
+                 else digest_bytes(read_bytes(workspace / reports.PATCH)))
+        policy = make_policy(fields, patch, 'custom-only',
             {'model': None, 'provider': None, 'enabled': False},
             {'mode': 'unknown' if campaign_purpose(capture['purpose']) or capture['purpose'] in ('oracle_qualification', 'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control') else 'confirmation',
              'maximum': capture['attempts'], 'stop_on_pass': False, 'pass_threshold': None}, 'runtime_recorded')
@@ -4611,6 +4668,10 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             expected_agent = 'codex_pilot_agent:PilotCodex' if capture['purpose'] in ('cli_pilot', 'cli_pilot_probe', 'skill_effectiveness', 'skill_effectiveness_probe') else actual_agent
             if 'campaign' in profile:
                 expected_agent = profile['campaign']['agent_import']
+            elif 'producer_profile' in capture.get('producer', {}):
+                from benchmark_native import CODEX_AGENT
+
+                expected_agent = CODEX_AGENT
             configured_agent = trial_config.get('agent', {})
             require(actual_agent == capture['agent'] and expected_agent in (configured_agent.get('name'), configured_agent.get('import_path'))
                     and trial_config.get('timeout_multiplier') == capture['execution_policy']['timeout_multiplier']

@@ -129,6 +129,9 @@ class OfflineCodex(BenchmarkCodex):
             result = await self.exec_as_root(environment, "sha256sum " + vendor + name)
             require(result.stdout.split()[0] == sha, "Container release bytes differ")
 
+    def fixture_path(self):
+        return Path(os.environ["BENCHMARK_CODEX_FIXTURE"])
+
     async def install(self, environment):
         self.record_startup("verify_package")
         await self.verify_package(environment)
@@ -148,7 +151,7 @@ class OfflineCodex(BenchmarkCodex):
 
         self.record_startup("start_loopback_provider")
         # Every byte supplied to the native agent is public fixture data.
-        fixture = read_json(Path(os.environ["BENCHMARK_CODEX_FIXTURE"]))
+        fixture = read_json(self.fixture_path())
         commands = base64.b64encode(json.dumps(fixture["commands"]).encode()).decode()
         argv = ["python3", "/opt/reviewed/stub.py", "/opt/reviewed/request.json", fixture["scenario"],
                 "Zml4dHVyZQ==", commands]

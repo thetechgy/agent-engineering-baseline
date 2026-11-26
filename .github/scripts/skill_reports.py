@@ -574,7 +574,15 @@ def diagnostic_benchmark_report(workspace, root, name, mode):
     result = read_json(run / 'result.json')
     require(service.failure_reason(result) is None and result['report_status'] == 'complete',
             'Diagnostic comparison is incomplete or unscoreable')
-    validate_benchmark_versions(read_json(root / 'versions.json'))
+    released = (root / 'native-preparation.json').exists()
+    environment = 'docker'
+    if released:
+        from benchmark_native import DIAGNOSTIC_BACKEND, validate_preparation
+
+        validate_preparation(workspace, root, name, mode, os.environ['GITHUB_SHA'])
+        environment = DIAGNOSTIC_BACKEND
+    else:
+        validate_benchmark_versions(read_json(root / 'versions.json'))
     require(result['skill_name'] == name and set(result['agents']) == {'codex'}, 'Diagnostic identity mismatch')
     config = result['run_config']
     require(config['grading']['mode'] == 'custom_only' and config['judge']['enabled'] is False,
@@ -584,8 +592,8 @@ def diagnostic_benchmark_report(workspace, root, name, mode):
     require(evaluated_source_revision(config['evaluated_source']) == os.environ['GITHUB_SHA'],
             'Diagnostic source mismatch')
     harbor = config['harbor']
-    require(harbor['environment']['value'] == 'docker' and harbor['n_attempts'] == MODES[mode]
-            and harbor['n_concurrent'] == 2 and harbor['stop_on_pass'] is False
+    require(harbor['environment']['value'] == environment and harbor['n_attempts'] == MODES[mode]
+            and harbor['n_concurrent'] == POLICY['concurrency'] and harbor['stop_on_pass'] is False
             and harbor['timeout_multiplier'] == POLICY['timeout_multiplier'], 'Diagnostic execution policy mismatch')
     cases = len(read_json(skill / 'evals/evals.json')['evals'])
     expected_ids = {entry['id'] for entry in read_json(skill / 'evals/evals.json')['evals']}
@@ -692,6 +700,15 @@ def capture_benchmark_custom(workspace, root, name):
     runs = [path for path in entries if path.name != 'latest' and path.is_dir() and not path.is_symlink()]
     if len(runs) != 1: return  # Public selection remains explicit for ambiguous runs.
     run = runs[0]
+    producer = (read_json(root / 'versions.json') if benchmark_options(name)['diagnostic_only']
+                and (root / 'native-preparation.json').exists() else None)
+    config_path = run / 'run_config.json'
+    recovery_path = root / 'provenance.json'
+    if (producer is not None and not config_path.exists() and not config_path.is_symlink()
+            and recovery_path.is_file() and read_json(recovery_path).get('status') == 'incomplete'):
+        # A force-stopped runner may never write its final configuration.
+        # Keep the native diagnostics without manufacturing a capture.
+        return
     tasks = run / '_harbor-tasks/codex'
     if not tasks.exists(): return
     rows = []
@@ -699,11 +716,11 @@ def capture_benchmark_custom(workspace, root, name):
         task_root = evidence.safe_path(tasks / directory, directory=True)
         candidates = [path for path in task_root.iterdir() if path.is_dir()]
         rows.extend(evidence.capture_custom_tasks(workspace, name, candidates, arm))
-    config = read_json(run / 'run_config.json')
+    config = read_json(config_path)
     prepared_ids = {row['id'] for row in read_json(benchmark_skill(workspace, name, root) / 'evals/evals.json')['evals']}
     if prepared_ids != set(evidence.custom_contract(name, workspace)[0]['cases']): return
     capture = evidence.custom_capture(workspace, name, benchmark_skill(workspace, name, root), rows,
-        purpose='benchmark', attempts=config['harbor']['n_attempts'], agent='codex',
+        purpose='benchmark', attempts=config['harbor']['n_attempts'], agent='codex', producer_versions=producer,
         execution_policy={'environment': config['harbor']['environment']['value'],
             'concurrency': config['harbor']['n_concurrent'], 'timeout_multiplier': config['harbor']['timeout_multiplier'],
             'stop_on_pass': config['harbor']['stop_on_pass']},
@@ -758,13 +775,14 @@ def benchmark_artifacts(workspace, root, name, destination):
             "Artifact staging must be separate from raw results")
     preparation = root / "native-preparation.json"
     released = preparation.exists()
+    released_diagnostic = released and benchmark_options(name)['diagnostic_only']
     if released:
         from benchmark_native import native_versions
 
-        require(read_json(root / "versions.json") == native_versions()
-                and read_json(preparation)["skill"] == name and not (root / "custom-metric-capture.json").exists(),
+        require(read_json(root / "versions.json") == native_versions() and read_json(preparation)["skill"] == name
+                and (released_diagnostic or not (root / "custom-metric-capture.json").exists()),
                 "Released benchmark artifact producer differs")
-    else:
+    if not released or released_diagnostic:
         capture_benchmark_custom(workspace, root, name)
     files = regular_tree(
         root,
@@ -842,9 +860,10 @@ def benchmark_artifacts(workspace, root, name, destination):
             original = value
             value = redact_sensitive_data(value)
             capture = (relative.as_posix() == 'custom-metric-capture.json'
-                       and original.get('producer', {}).get('skillevaluator') in ('0.8.0', '0.9.0')
-                       and ((name == 'gh' and original.get('purpose') == 'oracle_qualification')
-                            or (name in ('gh', 'podman') and str(original.get('purpose', '')).startswith('campaign-'))))
+                       and (released_diagnostic or (
+                           original.get('producer', {}).get('skillevaluator') in ('0.8.0', '0.9.0')
+                           and ((name == 'gh' and original.get('purpose') == 'oracle_qualification')
+                                or (name in ('gh', 'podman') and str(original.get('purpose', '')).startswith('campaign-'))))))
             if capture:
                 value = preserve_custom_capture_hashes(original, value, workspace, name)
             if registered_cases:
@@ -1020,7 +1039,7 @@ def public_benchmark(workspace, root, name, mode, destination, selected=None):
     qualification = evidence.campaign_purpose(data.get('custom', {}).get('purpose')) or data.get('custom', {}).get('purpose') in ('oracle_qualification', 'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control')
     require(qualification or attempts["mode"] in (mode, "unknown") and attempts["maximum"] in (None, MODES[mode]),
             "Public benchmark mode mismatch")
-    if evidence.released_policy_identity(data['policy'], custom_only=False, static=False):
+    if evidence.released_policy_identity(data['policy'], custom_only=benchmark_options(name)['diagnostic_only'], static=False):
         from benchmark_native import score_record
 
         scores = score_record(workspace, Path(root), name, mode, os.environ["GITHUB_SHA"], selected=data["run_id"])

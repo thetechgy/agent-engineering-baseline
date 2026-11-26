@@ -19,12 +19,16 @@ import benchmark_native as native
 from benchmark_podman import compose_teardown_complete
 from benchmark_smoke import PROVIDER_CREDENTIALS
 import gh_evaluations as gh
+import pester_evaluations as pester
 from qualify_benchmark_101 import restrict_network
 from qualify_benchmark_codex import OfflineCodex, OfflinePodmanCodex
 from skill_reports import MODES, POLICY, benchmark_artifacts, read_json, require, write_json
 
 
 CASES = {"podman": "1", "gh": "gh-001"}
+PESTER_SOLUTIONS = {"pester-001": "classic.Tests.ps1", "pester-002": "classic.Tests.ps1",
+                    "pester-003": "external.Tests.ps1", "pester-004": "discovery.Tests.ps1",
+                    "pester-005": "good.json"}
 SENTINEL = "native-launcher-test-not-a-provider-credential"
 
 
@@ -32,11 +36,15 @@ class FixtureInput:
     async def install(self, environment):
         fixture_home = Path(os.environ["NATIVE_LAUNCHER_FIXTURE_HOME"])
         job = self.logs_dir.parent.parent.name
-        fixture = fixture_home / (job + ".json")
-        require(job in {"runtime-preflight-codex", "gh-codex-with", "gh-codex-without",
-                        "podman-codex-with", "podman-codex-without"} and fixture.is_file(),
+        identity = job
+        if job in {f"{pester.NAME}-codex-with", f"{pester.NAME}-codex-without"}:
+            case = self.logs_dir.parent.name.split("__", 1)[0]
+            require(case in PESTER_SOLUTIONS, "Unexpected Pester fixture case")
+            identity += "-" + case
+        fixture = fixture_home / (identity + ".json")
+        require(fixture.is_file(),
                 "Unexpected released launcher fixture job")
-        os.environ["BENCHMARK_CODEX_FIXTURE"] = str(fixture)
+        self._fixture_path = fixture
         await super().install(environment)
         trial = self.logs_dir.parent
         resource = read_json(trial / "fixture-container.json")
@@ -47,7 +55,7 @@ class FixtureInput:
         write_json(trial / "fixture-container.json", {**resource, "project": project})
         if job == "runtime-preflight-codex":
             return
-        suite, _, arm = job.split("-")
+        suite, arm = job.rsplit("-codex-", 1)
         skill = f"/workspace/skills/{suite}/SKILL.md"
         condition = f"test -r {skill} && test ! -w {skill}" if arm == "with" else f"test ! -e {skill}"
         if suite == "gh":
@@ -55,6 +63,9 @@ class FixtureInput:
             condition += f" && test -r {other} && test ! -w {other}"
         result = await self.exec_as_agent(environment, "test -x /workspace/skills && " + condition)
         require(result.return_code == 0, "Native fixture skill visibility or permissions changed")
+
+    def fixture_path(self):
+        return self._fixture_path
 
     def record_startup(self, stage):
         write_json(self.logs_dir.parent / "fixture-startup.json", {"stage": stage})
@@ -68,7 +79,24 @@ class PodmanFixture(FixtureInput, OfflinePodmanCodex):
     pass
 
 
-def isolate_task(task):
+class PesterFixture(FixtureInput, OfflineCodex):
+    async def verify_trial_user(self, environment):
+        version = await self.exec_as_agent(environment, "codex --version")
+        require(version.return_code == 0 and version.stdout.strip() == "codex-cli " + self._version,
+                "Pester trial could not invoke the pinned Codex executable")
+        user = await self.exec_as_agent(environment, "id -u")
+        require(user.return_code == 0 and user.stdout.strip() == "1000", "Pester trial did not run as UID 1000")
+        isolation = await self.exec_as_agent(environment, "test ! -e /tests/entry.json && test ! -e /opt/pester-runtime/Runner.ps1")
+        require(isolation.return_code == 0, "Pester trial exposed a protected verifier input")
+
+    async def run(self, instruction, environment, context):
+        await super().run(instruction, environment, context)
+        request = await self.exec_as_root(environment, "cat /opt/reviewed/request.json")
+        require(request.return_code == 0, "Missing loopback request receipt")
+        write_json(self.logs_dir / "pester-codex-requests.json", json.loads(request.stdout))
+
+
+def isolate_task(task, *, standard_judges=True):
     """Replace the provider route and preserve the released grader sequence."""
     descriptor = task / "task.toml"
     source = descriptor.read_text()
@@ -79,8 +107,12 @@ def isolate_task(task):
     reviewed = image / "reviewed"
     reviewed.mkdir(exist_ok=True)
     shutil.copyfile(native.ROOT / ".github/scripts/codex_pilot_stub.py", reviewed / "stub.py")
-    shutil.copyfile(native.ROOT / ".github/scripts/qualify_benchmark_podman.py", reviewed / "podman_fixture.py")
     with (image / "Dockerfile").open("a") as build:
+        if not standard_judges:
+            build.write("\nCOPY --chown=0:0 reviewed/stub.py /opt/reviewed/stub.py\n"
+                        "RUN chmod a+r /opt/reviewed/stub.py\n")
+            return
+        shutil.copyfile(native.ROOT / ".github/scripts/qualify_benchmark_podman.py", reviewed / "podman_fixture.py")
         build.write("\nCOPY --chown=0:0 reviewed/stub.py reviewed/podman_fixture.py /opt/reviewed/\n"
                     "RUN chmod a+r /opt/reviewed/stub.py /opt/reviewed/podman_fixture.py\n")
     verifier = task / "tests/test.sh"
@@ -107,12 +139,23 @@ def commands(name, present):
 def controls(root, name):
     root.mkdir(mode=0o700)
     fixtures = {}
-    for job, present in (("runtime-preflight-codex", True), (f"{name}-codex-with", True),
-                         (f"{name}-codex-without", False)):
-        path = root / (job + ".json")
-        payload = ["printf runtime-ready"] if job == "runtime-preflight-codex" else commands(name, present)
-        write_json(path, {"scenario": "benchmark-priced", "commands": payload})
-        fixtures[job] = path
+    preflight = root / "runtime-preflight-codex.json"
+    write_json(preflight, {"scenario": "benchmark-priced", "commands": ["printf runtime-ready"]})
+    fixtures["runtime-preflight-codex"] = preflight
+    for arm, present in (("with", True), ("without", False)):
+        job = f"{name}-codex-{arm}"
+        if name == pester.NAME:
+            support = native.ROOT / pester.OVERLAY / "support"
+            for case, filename in PESTER_SOLUTIONS.items():
+                submitted = (support / "qualification" / case / filename).read_text()
+                destination = ("summary.json" if filename.endswith(".json") else "Subject.Tests.ps1")
+                payload = ["printf %s " + shlex.quote(submitted) + " > output/" + destination]
+                write_json(root / (job + "-" + case + ".json"), {"scenario": "benchmark-priced", "commands": payload})
+            fixtures[job] = root
+        else:
+            path = root / (job + ".json")
+            write_json(path, {"scenario": "benchmark-priced", "commands": commands(name, present)})
+            fixtures[job] = path
     return fixtures
 
 
@@ -136,11 +179,21 @@ def inspect_trial(result_path, *, preflight, suite):
         require(result["verifier_result"] is None, "Runtime preflight performed verification")
         return {"codex": result["agent_info"]["version"], "teardown_complete": teardown, "verification_disabled": True}
     verifier = trial / "verifier"
-    judge = read_json(verifier / "judge-requests.json")
-    requests = read_json(verifier / "codex-requests.json")["request_observations"]
+    request_path = (trial / "agent/pester-codex-requests.json" if suite == pester.NAME
+                    else verifier / "codex-requests.json")
+    requests = read_json(request_path)["request_observations"]
     require(len(requests) == 2 and all(item["model"] == POLICY["model"] and item["path"] == "/v1/responses"
             and item["reasoning"]["effort"] == "high" and item["authorization_matches_sentinel"] for item in requests),
             "Codex fixture request contract differs")
+    if suite == pester.NAME:
+        raw = read_json(verifier / "custom_reward.json")
+        sidecar = read_json(verifier / "skill_evaluator_reward.json")
+        require(not (verifier / "judge-requests.json").exists() and sidecar["evaluation_status"] == "complete"
+                and raw["entry_id"] == sidecar["entry_id"]
+                and raw["details"]["outcome"]["classification"] == "passed", "Pester fixture grading differs")
+        return {"codex_requests": len(requests), "judge_requests": 0,
+                "custom": raw["custom_metrics"], "teardown_complete": teardown}
+    judge = read_json(verifier / "judge-requests.json")
     require(len(judge) == 3 and {item["metric"] for item in judge} == {"accuracy", "behavior_check", "goal_accuracy"}
             and all(item["request_policy_matches"] for item in judge), "Verifier fixture request contract differs")
     reward = read_json(verifier / "skill_evaluator_reward.json")
@@ -193,6 +246,7 @@ def qualify(output, name, revision, *, mode="standard"):
     local_skill = native.local_skill
     gh_task = native.configure_gh_task
     podman_task = native.configure_openai_task
+    pester_task = native.configure_pester_task
     build = runner.build_harbor_run_command
     launch_environment = runner._harbor_launch_environment
     workspace = native.ROOT
@@ -208,7 +262,9 @@ def qualify(output, name, revision, *, mode="standard"):
         require(len(dataset["evals"]) == 1, "Unexpected Podman fixture scope")
         write_json(source, dataset)
 
-    fixture_agent = "qualify_native_execution:" + ("GhFixture" if name == "gh" else "PodmanFixture")
+    fixture_agent = "qualify_native_execution:" + {
+        "gh": "GhFixture", "podman": "PodmanFixture", pester.NAME: "PesterFixture",
+    }[name]
 
     def build_fixture(**kwargs):
         argv = build(**kwargs)
@@ -235,11 +291,16 @@ def qualify(output, name, revision, *, mode="standard"):
         podman_task(task, assets, profile)
         isolate_task(task)
 
+    def configure_pester(task, profile):
+        pester_task(task, profile)
+        isolate_task(task, standard_judges=False)
+
     root = output / "run"
     with (patch.object(native, "stage_gh", side_effect=lambda source, dest: stage_gh(source, dest, [CASES[name]])),
           patch.object(native, "local_skill", return_value=subset),
           patch.object(native, "configure_gh_task", side_effect=configure_gh),
-          patch.object(native, "configure_openai_task", side_effect=configure_podman)):
+          patch.object(native, "configure_openai_task", side_effect=configure_podman),
+          patch.object(native, "configure_pester_task", side_effect=configure_pester)):
         native.prepare(workspace, root, name, mode, revision)
         sys.addaudithook(restrict_network)
         with (patch.object(runtime_preflight, "probe_model", side_effect=catalog),
@@ -252,7 +313,8 @@ def qualify(output, name, revision, *, mode="standard"):
     failure = EvaluationService.failure_reason(result)
     if failure is not None or result.get("report_status") != "complete":
         write_json(output / "failure.json", {"schema_version": 1, "revision": revision, "suite": name,
-            "case": CASES[name], "status": "incomplete", "history_eligible": False,
+            "cases": list(PESTER_SOLUTIONS) if name == pester.NAME else [CASES[name]],
+            "status": "incomplete", "history_eligible": False,
             "execution_status": result.get("execution_status"), "report_status": result.get("report_status")})
         raise ValueError("Released launcher fixture failed. Inspect the bounded native progress output.")
     jobs = Path(result["harbor_jobs_dir"])
@@ -260,8 +322,12 @@ def qualify(output, name, revision, *, mode="standard"):
     for job in fixtures:
         preflight = job == "runtime-preflight-codex"
         results = sorted((jobs / job).glob("*/result.json"))
-        require(len(results) == (1 if preflight else attempts), "Released fixture attempt count differs")
+        cases = len(PESTER_SOLUTIONS) if name == pester.NAME else 1
+        require(len(results) == (1 if preflight else attempts * cases), "Released fixture attempt count differs")
         observed[job] = [inspect_trial(path, preflight=preflight, suite=name) for path in results]
+    if name == pester.NAME:
+        qualify_pester_publication(workspace, output, root, mode, revision, fixture_agent, observed)
+        return
     run = Path(result["run_dir"])
     native.validate_collected_pair(result, run, root, name, mode, revision, [CASES[name]],
                                    agent_selector=fixture_agent)
@@ -308,10 +374,41 @@ def qualify(output, name, revision, *, mode="standard"):
     write_json(output / "qualification.json", receipt)
 
 
+def qualify_pester_publication(workspace, output, root, mode, revision, fixture_agent, observed):
+    import skill_evidence as evidence
+    import skill_reports as reports
+
+    with (patch.object(native, "CODEX_AGENT", fixture_agent), patch.dict(os.environ, GITHUB_SHA=revision)):
+        reports.benchmark_report(workspace, root, pester.NAME, mode, output / "scores")
+        require(not (output / "scores").exists(), "Pester acquired standard scores")
+        retained = output / "retained"
+        reports.benchmark_artifacts(workspace, root, pester.NAME, retained)
+        destination = output / "public"
+        reports.public_benchmark(workspace, retained, pester.NAME, mode, destination)
+        members = (destination / "skills" / pester.NAME / "behavioral").glob("*/public-report.json")
+        public = read_json(next(members))
+        require(public["availability"]["status"] == "complete"
+                and public["policy"]["producer_profile"] == native.NATIVE_PRODUCER
+                and public["policy"]["judge"]["enabled"] is False
+                and public["policy"]["published_id"] is None, "Pester replay changed diagnostic status")
+    try:
+        evidence.normalize_behavioral(retained, pester.NAME, workspace=workspace)
+    except ValueError as error:
+        require(str(error) == "Native producer or runtime identity mismatch", "Fixture identity rejected at the wrong boundary")
+    else:
+        raise ValueError("Fixture adapter was admitted as production Codex")
+    require(all(row["teardown_complete"] for job in observed.values() for row in job),
+            "Pester fixture left Compose resources")
+    write_json(output / "qualification.json", {"schema_version": 1, "revision": revision, "suite": pester.NAME,
+        "producer": native.NATIVE_PRODUCER, "cases": sorted(PESTER_SOLUTIONS), "observed": observed, "mode": mode,
+        "provider_requests": 0, "history_eligible": False, "redacted_replay_verified": True,
+        "fixture_agent_rejected_in_production": True, "origin": "non_forwarding_fixture"})
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
-    parser.add_argument("suite", choices=CASES)
+    parser.add_argument("suite", choices=(*CASES, pester.NAME))
     parser.add_argument("revision")
     parser.add_argument("--mode", choices=MODES, default="standard")
     args = parser.parse_args()

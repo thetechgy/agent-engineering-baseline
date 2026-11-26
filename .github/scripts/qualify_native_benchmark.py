@@ -76,6 +76,7 @@ def qualify(root, name, mode, revision):
     native.prepare(native.ROOT, root, name, mode, revision)
     sys.addaudithook(restrict_network)
     observed = []
+    diagnostic = name not in native.BACKENDS
     docker_host = "unix:///run/aeb-qualification/docker.sock"
     docker_config = root / "compose-plugin"
 
@@ -86,11 +87,11 @@ def qualify(root, name, mode, revision):
         return runtime_preflight.ModelProbeResult(True, provider.provider, provider.model, "Synthetic catalog result")
 
     def backend(**options):
-        require(options["env_mode"] == native.BACKENDS[name], "Released backend selection differs")
+        require(options["env_mode"] == native.EXECUTION_BACKENDS[name], "Released backend selection differs")
         return prerequisites(options["environment_kwargs"]) if name == "gh" else []
 
     def preflight(*, dataset, agent, model, env_mode, run_env, timeout_multiplier, agent_import_path, **_):
-        require(agent == "codex" and model == POLICY["model"] and env_mode == native.BACKENDS[name]
+        require(agent == "codex" and model == POLICY["model"] and env_mode == native.EXECUTION_BACKENDS[name]
                 and agent_import_path == "aeb_gh_fixture.benchmark_codex:BenchmarkCodex"
                 and run_env["OPENAI_API_KEY"] == SENTINEL and timeout_multiplier == POLICY["timeout_multiplier"],
                 "Released runtime preflight contract differs")
@@ -103,9 +104,16 @@ def qualify(root, name, mode, revision):
             entry = read_json(path / "tests/entry.json")
             task = Task(path)
             environment = task.config.environment.resolve_baseline()
-            require(entry["has_skill"] is True and task.config.agent.user == "agent"
+            require(task.config.agent.user == "agent"
                     and environment.network_mode.value == "allowlist" and environment.allowed_hosts == ["api.openai.com"],
                     "Staged native preflight task is outside the approved policy")
+            if diagnostic:
+                require(entry["grading_mode"] == "custom_only" and task.config.verifier.user == "root"
+                        and task.config.verifier.environment.network_mode.value == "no-network"
+                        and (path / "tests/docker-compose.yaml").read_text() == native.LOOPBACK_VERIFIER,
+                        "Pester preflight lost its isolated verifier")
+            else:
+                require(entry["has_skill"] is True, "Preflight selected the wrong skill arm")
             if name == "gh":
                 row, _ = approve(os.environ[MANIFEST_ENV], path)
                 require(row["arm"] == "with_skill", "Preflight selected the wrong sealed arm")
@@ -121,7 +129,7 @@ def qualify(root, name, mode, revision):
           patch.object(runner, "_run_agent_pair", side_effect=AssertionError("Native matrix escaped qualification")) as launch):
         result = native.execute(native.ROOT, root, name, mode, revision, SENTINEL)
         launch.assert_not_called()
-    count = 24 if name == "gh" else 10
+    count = {"gh": 24, "podman": 10, native.pester.NAME: 5}[name]
     reason = EvaluationService.failure_reason(result)
     require(observed == [count] and result["execution_status"] == "failed" and reason and STOP in reason,
             "Release launcher did not reach or retain the expected preflight result")
@@ -133,33 +141,59 @@ def qualify(root, name, mode, revision):
             and config["harbor"]["n_attempts"] == MODES[mode]
             and config["harbor"]["n_concurrent"] == POLICY["concurrency"], "Released plan or dataset changed")
     require(SENTINEL.encode() not in (retained / "result.json").read_bytes(), "Fixture credential entered diagnostics")
-    historical_patch = hashlib.sha256((native.ROOT / PATCH).read_bytes()).hexdigest()
-    historical_policy = json.dumps([benchmark_policy(name), historical_patch], sort_keys=True).encode()
-    series = {native.score_series(name, current) for current in MODES}
-    require(len(series) == len(MODES) and hashlib.sha256(historical_policy).hexdigest()[:16] not in series,
-            "Released score modes share a series with each other or historical scores")
+    if diagnostic:
+        require(config["judge"]["enabled"] is False and config["grading"]["mode"] == "custom_only",
+                "Released Pester preflight configured standard judging")
+    else:
+        historical_patch = hashlib.sha256((native.ROOT / PATCH).read_bytes()).hexdigest()
+        historical_policy = json.dumps([benchmark_policy(name), historical_patch], sort_keys=True).encode()
+        series = {native.score_series(name, current) for current in MODES}
+        require(len(series) == len(MODES) and hashlib.sha256(historical_policy).hexdigest()[:16] not in series,
+                "Released score modes share a series with each other or historical scores")
     native.recover(native.ROOT, root, name, mode, revision, "failure")
     recovery = read_json(root / "provenance.json")
+    expected_series = None if diagnostic else native.score_series(name, mode)
     require(recovery["diagnostic_only"] is True and recovery["status"] == "incomplete"
-            and recovery["native_series"] == native.score_series(name, mode), "Preflight failure acquired a completed series")
+            and recovery.get("native_series") == expected_series, "Preflight failure acquired a completed series")
     incomplete = read_json(retained / "result.json")
     require(incomplete["report_status"] == "incomplete" and incomplete["error"] == result["error"],
             "Recovery lost or changed the initiating preflight error")
+    if diagnostic:
+        from copy import deepcopy
+
+        import skill_evidence as evidence
+        from skill_reports import capture_benchmark_custom
+
+        capture_benchmark_custom(native.ROOT, root, name)
+        capture = read_json(root / evidence.CUSTOM_CAPTURE)
+        evidence.validate_custom_capture(capture, name, native.ROOT)
+        require(capture["producer"] == native.native_versions() and len(capture["tasks"]) == count * 2,
+                "Released Pester capture lost its owner or paired tasks")
+        altered = deepcopy(capture)
+        task = altered["tasks"][0]
+        task["members"]["tests/docker-compose.yaml"] = evidence.digest_bytes(b"services: {}")
+        task["task_checksum"] = evidence.custom_task_checksum(task["members"])
+        try:
+            evidence.validate_custom_capture(altered, name, native.ROOT)
+        except ValueError as error:
+            require(str(error) == "Unapproved released verifier isolation", "Unexpected Pester isolation rejection")
+        else:
+            raise ValueError("Pester capture admitted a substituted verifier network")
     interruption = interrupted_podman(root, revision) if name == "podman" and mode == "standard" else None
     write_json(root / "qualification.json", {
         "schema_version": 1, "revision": revision, "skill": name, "mode": mode, "producer": native.NATIVE_PRODUCER,
-        "backend": native.BACKENDS[name], "cases_per_arm": count, "dataset_digest": snapshot["dataset_digest"],
+        "backend": native.EXECUTION_BACKENDS[name], "cases_per_arm": count, "dataset_digest": snapshot["dataset_digest"],
         "planned_trials": count * MODES[mode] * 2, "docker_started": False, "provider_requests": 0,
         "matrix_started": False, "preflight_intercepted": True, "docker_host_handoff_verified": True,
         "history_eligible": False,
-        "recovery": "incomplete", "native_series": recovery["native_series"], "interruption": interruption,
+        "recovery": "incomplete", "native_series": recovery.get("native_series"), "interruption": interruption,
     })
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("root", type=Path)
-    parser.add_argument("skill", choices=native.BACKENDS)
+    parser.add_argument("skill", choices=native.EXECUTION_BACKENDS)
     parser.add_argument("mode", choices=MODES)
     parser.add_argument("revision")
     args = parser.parse_args()

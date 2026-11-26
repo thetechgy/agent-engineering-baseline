@@ -362,6 +362,23 @@ before installing tools. Published static reports retain their original
 producer identities. The retained 0.9.0 repository caveat replay
 reproduced its comparison byte for byte.
 
+The released launcher now prepares the five-case Pester confirmation
+route alongside Podman and gh. It stages both arms with the original
+Pester grader, an isolated agent and a separate loopback-only verifier.
+The new diagnostic producer keeps standard judges disabled and has no
+score series. The pinned Codex image build uses a root home so package
+checks leave the trial user's home untouched. The full preparation and
+interrupted preflight controls retain 30 planned trials as incomplete.
+The automatic Pester job exercises the released launcher with a
+non-forwarding provider fixture and checks the redacted diagnostic
+handoff. Production selection still follows the live compatibility
+gate.
+
+The shared reader change adds 89 source-only successors across 361
+lines in `source-v46.json`. The 89 prior records remain available
+under their original identities, and the new records retain the
+same grader, fixture and replay identities as their parents.
+
 The native 1.0.1 score reader now validates the released dimension means,
 explicit baseline applicability and paired lift against the trial rewards.
 Retained gh and Podman controls replay after redaction with their original

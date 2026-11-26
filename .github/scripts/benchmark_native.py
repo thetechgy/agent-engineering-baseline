@@ -17,6 +17,7 @@ import tomllib
 from benchmark_podman import CODEX_PROFILE, codex_members, configure_agent, configure_openai_task
 import gh_candidate
 import gh_evaluations as gh
+import pester_evaluations as pester
 from skill_reports import (MODES, POLICY, benchmark_options, benchmark_policy, local_skill, read_json,
                            recover_benchmark, require, write_json)
 
@@ -26,6 +27,8 @@ NATIVE_PRODUCER = "skillevaluator-1.0.1-benchmark-native-v2"
 NATIVE_SOURCE_DIGEST = "sha256:78dfd05becd4b4e94882aa0305fc58d28a6ef40c10813b384335fd6a7f0be1ef"
 NATIVE_PATCH_DIGEST = "30a03343d670e2b83aeb5519f009549c6528b3cb8235cffc4522aab64b872f57"
 BACKENDS = {"podman": "aeb-benchmark-docker", "gh": "aeb-gh-fixture"}
+DIAGNOSTIC_BACKEND = BACKENDS["podman"]
+EXECUTION_BACKENDS = {**BACKENDS, pester.NAME: DIAGNOSTIC_BACKEND}
 ENVIRONMENTS = {
     "podman": "skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment",
     "gh": "aeb_gh_fixture.backend:TrustedGhEnvironment",
@@ -34,7 +37,8 @@ CODEX_AGENT = "aeb_gh_fixture.benchmark_codex:BenchmarkCodex"
 GH_DATASET_PROFILE = "gh-benchmark-101-v1"
 GH_ACCESS_METRIC = "gh_access_policy"
 GH_ARMS = {"with_skill": True, "without_skill": False}
-GH_CODEX_VENDOR = "/opt/reviewed/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl"
+NPM_CODEX_VENDOR = "/opt/reviewed/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl"
+LOOPBACK_VERIFIER = "services:\n  main:\n    network_mode: none\n"
 
 
 def stage_gh(workspace, destination, selected=None, *, fixture=False):
@@ -65,38 +69,74 @@ def stage_gh(workspace, destination, selected=None, *, fixture=False):
     return bundle
 
 
-def configure_gh_task(task, profile):
-    """Pin the image's native Codex assets without adding them to the task tree."""
+def configure_npm_codex_task(task, profile, *, build_home=None):
+    """Pin Codex and its agent-only provider route in an authored image."""
     descriptor = task / "task.toml"
     source = descriptor.read_text()
     config = tomllib.loads(source)
     network = 'network_mode = "public"'
     require(source.count(network) == 1 and "healthcheck" not in config["environment"]
             and config["agent"]["user"] == "agent" and config["verifier"]["user"] == "root",
-            "Unexpected staged gh environment contract")
+            "Unexpected native agent or verifier environment")
     descriptor.write_text(source.replace(network, 'network_mode = "allowlist"\nallowed_hosts = ["api.openai.com"]'))
 
     members = codex_members(profile)
     del members["bin/codex-exec-server"]  # The npm platform package has no standalone exec-server.
     require(set(members) == {"bin/codex", "bin/codex-code-mode-host", "codex-resources/bwrap", "codex-path/rg"}
             and all(re.fullmatch(r"[0-9a-f]{64}", digest) for digest in members.values()),
-            "Unexpected gh Codex package integrity set")
+            "Unexpected Codex package integrity set")
     checksums = shlex.join(f"{digest}  {name}" for name, digest in sorted(members.items()))
     paths = shlex.join(sorted(members))
     package = shlex.quote("@openai/codex@" + profile["cli"])
     version = shlex.quote("codex-cli " + profile["cli"])
+    install_home = f"export HOME={shlex.quote(build_home)} && " if build_home else ""
     with (task / "environment/Dockerfile").open("a") as build:
         build.write("\nRUN chgrp -R agent /workspace/skills && chmod -R g+rX,go-w /workspace/skills\n"
-                    "RUN npm install --prefix /opt/reviewed --no-audit --no-fund --ignore-scripts "
+                    f"RUN {install_home}npm install --prefix /opt/reviewed --no-audit --no-fund --ignore-scripts "
                     f"--install-strategy=hoisted --registry=https://registry.npmjs.org/ {package} "
-                    f"&& cd {GH_CODEX_VENDOR} && test ! -e bin/codex-exec-server && test ! -L bin/codex-exec-server "
+                    f"&& cd {NPM_CODEX_VENDOR} && test ! -e bin/codex-exec-server && test ! -L bin/codex-exec-server "
                     f"&& for member in {paths}; do "
-                    f'test "$(realpath -- "$member")" = "{GH_CODEX_VENDOR}/$member" || exit 1; done '
+                    f'test "$(realpath -- "$member")" = "{NPM_CODEX_VENDOR}/$member" || exit 1; done '
                     f"&& printf '%s\\n' {checksums} | sha256sum --check --strict "
                     "&& chown -hR 0:0 /opt/reviewed && chmod -R a+rX,go-w /opt/reviewed "
-                    f"&& ln -s {GH_CODEX_VENDOR}/bin/codex /usr/local/bin/codex "
+                    f"&& ln -s {NPM_CODEX_VENDOR}/bin/codex /usr/local/bin/codex "
                     f'&& test "$(/usr/local/bin/codex --version)" = {version}\n'
-                    f"ENV PATH={GH_CODEX_VENDOR}/codex-path:$PATH\n")
+                    f"ENV PATH={NPM_CODEX_VENDOR}/codex-path:$PATH\n")
+
+
+def configure_gh_task(task, profile):
+    configure_npm_codex_task(task, profile)
+
+
+def configure_pester_task(task, profile):
+    """Keep the authored scorer and its separate loopback-only container."""
+    config = tomllib.loads((task / "task.toml").read_text())
+    require(config["verifier"]["environment_mode"] == "separate"
+            and config["verifier"]["environment"] == {"network_mode": "no-network", "cpus": 2, "memory_mb": 2048}
+            and not config["verifier"].get("env"), "Unexpected Pester verifier environment")
+    # The authored image sets HOME=/home/agent. The build's root-owned npm
+    # and Codex checks must not initialize caches in the trial user's home.
+    configure_npm_codex_task(task, profile, build_home="/root")
+    with (task / "environment/Dockerfile").open("a") as build:
+        build.write("RUN test ! -e /home/agent/.codex && test ! -L /home/agent/.codex\n")
+    # The verifier checks for exactly the loopback interface. A managed egress
+    # namespace with no permitted destinations does not satisfy that contract.
+    with (task / "tests/docker-compose.yaml").open("x", encoding="utf-8") as override:
+        override.write(LOOPBACK_VERIFIER)
+
+
+def pester_finalizer(skill, emitted):
+    profile = read_json(CODEX_PROFILE)
+    cases = {entry["id"] for entry in read_json(skill / "evals/evals.json")["evals"]}
+    require(set(emitted) == {"codex"} and set(emitted["codex"]) == set(GH_ARMS),
+            "Released Pester runner did not stage both arms")
+    for arm, tasks in emitted["codex"].items():
+        require(len(tasks) == len(cases) and {task.name for task in tasks} == cases,
+                "Incomplete staged Pester population")
+        for task in tasks:
+            peer = task / "environment/skills" / pester.NAME / "SKILL.md"
+            require(peer.is_file() is GH_ARMS[arm], "Unexpected staged Pester skill arm")
+            configure_pester_task(task, profile)
 
 
 def prepare_gh_manifest(bundle, root):
@@ -168,8 +208,17 @@ def validate_runtime():
     return native_versions()
 
 
+def dataset_profile(name):
+    return {"gh": GH_DATASET_PROFILE, pester.NAME: "pester-pilot-v3", "podman": "podman-authored"}[name]
+
+
 def dataset_sha256(skill):
     return hashlib.sha256((skill / "evals/evals.json").read_bytes()).hexdigest()
+
+
+def pester_bundle_sha256(skill):
+    members = {name: digest for name, digest in pester.manifest(skill).items() if not name.startswith(".git/")}
+    return hashlib.sha256(json.dumps(members, sort_keys=True).encode()).hexdigest()
 
 
 def require_revision(workspace, revision):
@@ -185,13 +234,19 @@ def prepare(workspace, root, name, mode, revision):
 
     require(not any(os.environ.get(key) for key in PROVIDER_CREDENTIALS),
             "Benchmark preparation requires a credential-free process")
-    require(name in BACKENDS and mode in MODES, "Unqualified released benchmark selection")
+    require(name in EXECUTION_BACKENDS and mode in MODES
+            and (name != pester.NAME or mode == "confirmation"), "Unqualified released benchmark selection")
     require_revision(workspace, revision)
     root = root.absolute()
     require(root.resolve() == root and not root.is_relative_to(workspace), "Use a new benchmark directory outside checkout")
     versions = validate_runtime()
     root.mkdir(mode=0o700, parents=True, exist_ok=False)
-    skill = stage_gh(workspace, root / "bundle/gh") if name == "gh" else local_skill(workspace, name, dataset=True)
+    if name == "gh":
+        skill = stage_gh(workspace, root / "bundle/gh")
+    elif name == pester.NAME:
+        skill = pester.stage(workspace, root / "bundle" / name)
+    else:
+        skill = local_skill(workspace, name, dataset=True)
     validation = [sys.executable, "-B", "-c", "from skillevaluator.cli import cli; cli()",
                   "tier3", "validate", str(skill), "--strict", "--json"]
     with (root / "dataset-validation.json").open("x") as receipt:
@@ -199,7 +254,7 @@ def prepare(workspace, root, name, mode, revision):
     manifest = None
     if name == "gh":
         manifest = prepare_gh_manifest(skill, root).name
-    else:
+    elif name == "podman":
         assets = root / "archive"
         assets.mkdir(mode=0o700)
         acquire(read_json(CODEX_PROFILE), assets)
@@ -207,9 +262,10 @@ def prepare(workspace, root, name, mode, revision):
     write_json(root / "versions.json", versions)
     write_json(root / "native-preparation.json", {
         "schema_version": 1, "revision": revision, "skill": name, "mode": mode,
-        "backend": BACKENDS[name], "producer_profile": NATIVE_PRODUCER,
-        "dataset_profile": GH_DATASET_PROFILE if name == "gh" else "podman-authored",
+        "backend": EXECUTION_BACKENDS[name], "producer_profile": NATIVE_PRODUCER,
+        "dataset_profile": dataset_profile(name),
         "dataset_sha256": dataset_sha256(skill), "gh_manifest": manifest,
+        **({"pester_bundle_sha256": pester_bundle_sha256(skill)} if name == pester.NAME else {}),
     })
 
 
@@ -252,17 +308,19 @@ def provider_environment(home, key, manifest=None):
 
 
 def validate_preparation(workspace, root, name, mode, revision):
-    require(name in BACKENDS and mode in MODES, "Invalid released selection")
+    require(name in EXECUTION_BACKENDS and mode in MODES
+            and (name != pester.NAME or mode == "confirmation"), "Invalid released selection")
     require_revision(workspace, revision)
     root = root.absolute()
     require(root.resolve() == root and not root.is_relative_to(workspace), "Invalid prepared benchmark location")
     prepared = read_json(root / "native-preparation.json")
     require(read_json(root / "versions.json") == validate_runtime(), "Prepared benchmark runtime differs")
-    skill = root / "bundle/gh" if name == "gh" else local_skill(workspace, name, dataset=True)
+    skill = root / "bundle" / name if name in ("gh", pester.NAME) else local_skill(workspace, name, dataset=True)
     require(prepared == {"schema_version": 1, "revision": revision, "skill": name, "mode": mode,
-                          "backend": BACKENDS[name], "producer_profile": NATIVE_PRODUCER,
-                          "dataset_profile": GH_DATASET_PROFILE if name == "gh" else "podman-authored",
-                          "dataset_sha256": dataset_sha256(skill), "gh_manifest": prepared.get("gh_manifest")},
+                          "backend": EXECUTION_BACKENDS[name], "producer_profile": NATIVE_PRODUCER,
+                          "dataset_profile": dataset_profile(name),
+                          "dataset_sha256": dataset_sha256(skill), "gh_manifest": prepared.get("gh_manifest"),
+                          **({"pester_bundle_sha256": pester_bundle_sha256(skill)} if name == pester.NAME else {})},
             "Prepared benchmark scope differs")
     return root, skill, prepared
 
@@ -284,17 +342,18 @@ def execute(workspace, root, name, mode, revision, key, *, progress_reporter=Non
         load_manifest(manifest)
         finalizer = partial(gh_finalizer, manifest)
     else:
-        require(prepared["gh_manifest"] is None, "Unexpected Podman approval manifest")
-        finalizer = partial(podman_finalizer, skill, root / "archive")
+        require(prepared["gh_manifest"] is None, "Unexpected isolated benchmark approval manifest")
+        finalizer = (partial(pester_finalizer, skill) if name == pester.NAME
+                     else partial(podman_finalizer, skill, root / "archive"))
 
     options = benchmark_options(name)
     include = [skill.parent / gh.COMPETING] if name == "gh" else None
     with provider_environment(root / "operator-home", key, manifest):
         return run_harbor_eval(
-            skill, ["codex"], env_mode=BACKENDS[name], n_attempts=MODES[mode], n_concurrent=POLICY["concurrency"],
+            skill, ["codex"], env_mode=EXECUTION_BACKENDS[name], n_attempts=MODES[mode], n_concurrent=POLICY["concurrency"],
             max_agents=1, stop_on_pass=False, grading_mode=options["grading_mode"],
             skill_workspace_mode=options["workspace_mode"], include_skills=include,
-            custom_dockerfile_mode="preserve" if name == "gh" else "disabled",
+            custom_dockerfile_mode="disabled" if name == "podman" else "preserve",
             timeout_multiplier=POLICY["timeout_multiplier"], agent_runtime_preflight=True, keep_harbor_jobs=True,
             output_dir=resolve_results_root(skill, root / "results"), agent_models={"codex": POLICY["model"]},
             evaluated_source={"repository": REPOSITORY, "commit": revision}, progress_reporter=progress_reporter,
@@ -469,6 +528,7 @@ def score_record(workspace, root, name, mode, revision, *, selected=None):
 
     from skill_evidence import select_run
 
+    require(name in BACKENDS, "Released diagnostic suite cannot produce standard scores")
     root, skill, _ = validate_preparation(workspace, root, name, mode, revision)
     if (root / "provenance.json").exists():
         require(read_json(root / "provenance.json").get("status") != "incomplete",
@@ -487,11 +547,13 @@ def score_record(workspace, root, name, mode, revision, *, selected=None):
 
 def recover(workspace, root, name, mode, revision, outcome):
     root, _, _ = validate_preparation(workspace, root, name, mode, revision)
-    recover_benchmark(workspace, root, name, mode, outcome, environment=BACKENDS[name])
+    recover_benchmark(workspace, root, name, mode, outcome, environment=EXECUTION_BACKENDS[name])
     if outcome != "success":
         original = read_json(root / "provenance.json")
+        score_provenance = ({"native_policy": released_policy(name), "native_series": score_series(name, mode)}
+                            if name in BACKENDS else {})
         write_json(root / "provenance.json", {**original, "skill": name, "mode": mode, "revision": revision,
-                                             "native_policy": released_policy(name), "native_series": score_series(name, mode)})
+                                             **score_provenance})
 
 
 def main():
@@ -501,7 +563,7 @@ def main():
     for command in ("prepare", "execute", "recover", "score-report"):
         entry = subcommands.add_parser(command)
         entry.add_argument("root", type=Path)
-        entry.add_argument("skill", choices=BACKENDS)
+        entry.add_argument("skill", choices=BACKENDS if command == "score-report" else EXECUTION_BACKENDS)
         entry.add_argument("mode", choices=MODES)
         entry.add_argument("revision")
         if command == "recover":
