@@ -157,7 +157,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0 # Recover the frozen gh fixture authored revision.
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Require an initially clean checkout
@@ -189,6 +189,8 @@ jobs:
           shellcheck .github/scripts/setup-skillevaluator.sh .github/scripts/setup-skill-scanners.sh .github/scripts/setup-static-evaluator.sh .github/scripts/collect-static-quality.sh .github/scripts/setup-compose.sh
           "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/test_evaluation_contracts.py released-contracts
 
+      - name: Acquire the pinned historical gh fixture source
+        run: bash .github/scripts/setup-historical-gh-fixture.sh
       - name: Verify captured fixture contracts with the pinned compatibility owner
         run: |
           "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py fixture-contracts

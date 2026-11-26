@@ -52,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0 # Recover the frozen gh fixture authored revision.
+          fetch-depth: 0
           persist-credentials: false
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
         with:
@@ -68,6 +68,8 @@ jobs:
         run: bash .github/scripts/setup-static-evaluator.sh review-contracts
       - name: Install retained private-review validators
         run: bash .github/scripts/setup-static-evaluator.sh review-retained-101
+      - name: Acquire the pinned historical gh fixture source
+        run: bash .github/scripts/setup-historical-gh-fixture.sh
       - name: Verify historical report and custom semantics
         run: |
           "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B -m unittest discover -s .github/tests -p test_custom_metrics.py

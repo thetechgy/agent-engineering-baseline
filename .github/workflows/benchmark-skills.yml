@@ -92,6 +92,10 @@ jobs:
         if: github.ref != 'refs/heads/main'
         working-directory: trusted
         run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-candidate
+      - name: Acquire the pinned historical gh fixture source
+        if: github.ref != 'refs/heads/main'
+        working-directory: trusted
+        run: bash .github/scripts/setup-historical-gh-fixture.sh
       - name: Verify captured custom report fixtures using their released owner
         if: github.ref != 'refs/heads/main'
         working-directory: trusted

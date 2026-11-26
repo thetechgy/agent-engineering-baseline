@@ -1523,11 +1523,13 @@ It tests historical values, independent validation, all-skill coverage, stable
 rendering, support links, escaping, restrictive CSP hashes, semantic landmarks,
 table headers/captions, theme contrast, corrupted input, private permissions,
 input replacement and output confinement. Run the offline contracts in their
-pinned environments.
+pinned environments. The fixture setup fetches the original authored Git
+commit if it is missing from a fresh checkout.
 
 ```bash
 SKILL_EVALUATION_KIND=benchmark "$SKILL_NATIVE_BENCHMARK_PYTHON" -B \
   .github/scripts/test_evaluation_contracts.py released-contracts
+bash .github/scripts/setup-historical-gh-fixture.sh
 "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py fixture-contracts
 "$SKILL_DATA_PYTHON" -B .github/scripts/test_evaluation_contracts.py presentation
 "$SKILL_REVIEW_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py private-review

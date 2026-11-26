@@ -230,6 +230,23 @@ class CIPowerShellTests(unittest.TestCase):
         self.assertIn('git archive "$GITHUB_SHA"', publications['run'])
         self.assertIn('benchmark-121-publication.patch', publications['run'])
 
+    def test_historical_gh_checkout_is_prepared_before_replay(self):
+        import yaml
+
+        for workflow, job, replay in (
+                ('validate.yml', 'ci-contracts', 'fixture-contracts'),
+                ('benchmark-skills.yml', 'context', 'fixture-contracts'),
+                ('current-evaluator.yml', 'cohorts', 'test_custom_metrics.py')):
+            with self.subTest(workflow=workflow):
+                steps = yaml.safe_load((ROOT / '.github/workflows' / workflow).read_text())['jobs'][job]['steps']
+                acquisition = next(step for step in steps if step.get('run') ==
+                                   'bash .github/scripts/setup-historical-gh-fixture.sh')
+                test = next(step for step in steps if replay in step.get('run', ''))
+                self.assertLess(steps.index(acquisition), steps.index(test))
+                for key in ('if', 'working-directory'):
+                    self.assertEqual(acquisition.get(key), test.get(key))
+                self.assertNotIn('secrets.', yaml.safe_dump(acquisition))
+
     def test_selected_jobs_feed_an_always_running_gate_without_privileged_calls(self):
         import yaml
         workflow = yaml.safe_load((ROOT / '.github/workflows/validate.yml').read_text())
