@@ -5,7 +5,7 @@ import importlib.metadata
 import static_evaluator
 
 PYTHON = '3.13.18'
-LOCK = 'ddb43ba1bd0ea29ddaba65548b033facaf1972f2783a4ab7c9bbc440640f0c93'
+LOCK = 'de37abd87a5603daf2d253ec450f200eab0530ae4b03c852cb2de32e7178142b'
 OPENAI_VERSION = '2.54.0'
 PYDANTIC_VERSION = '2.14.3'
 PINS = {'openai': OPENAI_VERSION, 'pydantic': PYDANTIC_VERSION, 'skillevaluator': static_evaluator.VERSION}
