@@ -491,6 +491,11 @@ history admission. The gh oracle reporting overlay also applies to
 the clean source. Native hosted qualification and a separate paid
 smoke still gate production adoption.
 
+The shared evaluator registry change adds 89 source-only successors
+across 361 generated lines in `source-v47.json`. Each preserves its
+parent grader, fixture, and replay adapter. The authentic prior
+receipts retain their original producer and scores.
+
 ## Model selection for new executions
 
 | Operator or workflow | Model dispatch and evidence |
