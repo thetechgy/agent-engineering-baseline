@@ -58,6 +58,12 @@ select their own verified source and registry.
 from `af379d06d08d621910a1abe2cce1bb04e12a72c8` to `review-101-v4`.
 The archive SHA-256 is
 `4d2dfd9e49bfc1d253d25621cf8a38023469fbaabd4b1ac16299b47d8476eafe`.
-The active reader recognizes the separately recorded direct-tool and released
+The v4 reader recognizes the separately recorded direct-tool and released
 diagnostic evidence. The prior profiles keep their original source
 snapshots and validator identities.
+
+`private-review-101-v5-overlay.zip` binds eight reporting and registry members
+from `f2d5d766ce5149dcc80dc851e64895c442d4e912` to `review-101-v5`. Its
+SHA-256 is `21ac911579c5f4ccfb3d11f3db1bf2b1e5fc748a44e5f64650d1fa06659e206a`.
+The v5 producer and validator use the released benchmark reader and source-v48
+registry. Profiles v1 through v4 keep their original snapshot chains.

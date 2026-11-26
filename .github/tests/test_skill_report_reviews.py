@@ -89,7 +89,7 @@ class AttachmentTests(unittest.TestCase):
         import private_review_snapshot as snapshot
 
         for profile, member in ((snapshot.PROFILE, 'SNAPSHOT'), (snapshot.V2_PROFILE, 'V2_OVERLAY'),
-                                (snapshot.V3_PROFILE, 'V3_OVERLAY'),
+                                (snapshot.V3_PROFILE, 'V3_OVERLAY'), (snapshot.V4_PROFILE, 'V4_OVERLAY'),
                                 (snapshot.ACTIVE_PROFILE, 'ACTIVE_OVERLAY')):
             with self.subTest(profile=profile):
                 changed = self.root / 'changed.zip'
@@ -104,11 +104,12 @@ class AttachmentTests(unittest.TestCase):
         import json
         import shutil
         import private_review_snapshot as snapshot
-        from private_review_snapshot import ACTIVE_PROFILE, PROFILE, V2_PROFILE, V3_PROFILE, unpack
+        from private_review_snapshot import ACTIVE_PROFILE, PROFILE, V2_PROFILE, V3_PROFILE, V4_PROFILE, unpack
 
         cases = (('current-v5', False, ACTIVE_PROFILE), ('gh-89f46f0', False, ACTIVE_PROFILE),
                  (None, True, ACTIVE_PROFILE), ('current-v5', False, PROFILE), ('current-v5', False, V2_PROFILE),
-                 ('current-v5', False, V3_PROFILE))
+                 ('current-v5', False, V3_PROFILE), ('current-v5', False, V4_PROFILE),
+                 ('gh-89f46f0', False, V4_PROFILE), (None, True, V4_PROFILE))
         for key, pester, profile in cases:
             with self.subTest(fixture=key or 'pester', profile=profile), tempfile.TemporaryDirectory() as directory:
                 base = Path(directory)
