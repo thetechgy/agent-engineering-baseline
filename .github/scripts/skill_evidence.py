@@ -4308,7 +4308,8 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
     producer = profiles.by_revision(capture['evaluator_revision'])
     from benchmark_native import NATIVE_OWNERS
 
-    recorded_owner = capture['producer'].get('producer_profile') if type(capture['producer']) is dict else None
+    recorded = capture.get('producer')
+    recorded_owner = recorded.get('producer_profile') if type(recorded) is dict else None
     released_diagnostic = type(recorded_owner) is str and recorded_owner in NATIVE_OWNERS
     if released_diagnostic:
         from benchmark_native import DIAGNOSTIC_BACKEND, LOOPBACK_VERIFIER, native_versions
