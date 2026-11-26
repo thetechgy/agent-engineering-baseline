@@ -1,5 +1,7 @@
 """Run the evaluator contract tests in their owning environments."""
 import argparse
+from importlib.metadata import version
+import os
 from pathlib import Path
 import sys
 import unittest
@@ -14,6 +16,7 @@ FIXTURE_TESTS = (
     'test_skill_evidence.EvidenceTests.test_standalone_cli_disables_repository_bytecode_writes',
 )
 REVIEW_MODULES = ('test_skill_review', 'test_skill_report_reviews', 'test_historical_review_replay')
+SCANNER_MODULES = ('test_scanner_caveats', 'test_semgrep', 'test_skillspector')
 PRESENTATION_MODULES = (
     'test_skill_analysis', 'test_skill_report', 'test_skill_pages', 'test_public_reports',
     'test_evaluator_scoring_compatibility',
@@ -31,7 +34,7 @@ def cases(suite):
 def contract_suite(loader, *, released=False):
     excluded = (*REVIEW_MODULES, *PRESENTATION_MODULES)
     if released:
-        excluded += FIXTURE_TESTS
+        excluded += (*FIXTURE_TESTS, *SCANNER_MODULES)
     discovered = loader.discover(str(TESTS))
     return unittest.TestSuite(
         case for case in cases(discovered)
@@ -54,6 +57,13 @@ def fixture_suite(loader):
     return loader.loadTestsFromNames(FIXTURE_TESTS)
 
 
+def legacy_scanner_suite(loader):
+    if os.environ.get('SKILL_EVALUATION_KIND') != 'quality' or version('skillevaluator') != '0.3.0':
+        raise ValueError('Install the retained scanner contract owner first')
+    sys.path.insert(0, str(TESTS))
+    return loader.loadTestsFromNames(SCANNER_MODULES)
+
+
 def review_suite(loader):
     import private_review_runtime
 
@@ -73,7 +83,8 @@ def presentation_suite(loader):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     suites = {'contracts': contract_suite, 'released-contracts': released_suite, 'fixture-contracts': fixture_suite,
-              'private-review': review_suite, 'presentation': presentation_suite}
+              'legacy-scanner-contracts': legacy_scanner_suite, 'private-review': review_suite,
+              'presentation': presentation_suite}
     parser.add_argument('owner', choices=suites)
     owner = parser.parse_args().owner
     loader = unittest.TestLoader()

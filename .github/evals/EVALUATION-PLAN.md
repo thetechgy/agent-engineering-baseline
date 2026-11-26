@@ -345,6 +345,15 @@ before judging. Controlled variants of the successful trajectory
 verified the unsupported-wrapper and missing-or-ambiguous-result codes.
 The diagnostic contains only fixed reason codes for this boundary.
 
+Validate now uses the credential-free 1.0.1 regression, fixture, review
+and presentation owners already used by feature-branch preapproval.
+Its retained 0.3.0 scanner contracts run in a step-local environment.
+The scanner bootstrap installs its evaluator and pinned external tools.
+The two historical review overlays are outside the Validate setup.
+The retained scanner step preserves all 43 caveat mutation checks while
+the 1.0.1 adapter comparison remains open. A direct 1.0.1 replacement
+accepted eight mutated caveat rows in the retained fixture.
+
 The native 1.0.1 score reader now validates the released dimension means,
 explicit baseline applicability and paired lift against the trial rewards.
 Retained gh and Podman controls replay after redaction with their original

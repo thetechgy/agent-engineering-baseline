@@ -135,7 +135,7 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    # Prior run: 21m tests + 7.5m container checks; retain room for offline evidence.
+    # Budget the released contracts, retained scanner controls and native fixtures together.
     timeout-minutes: 45
     env:
       PYTHONDONTWRITEBYTECODE: '1'
@@ -157,8 +157,8 @@ jobs:
           version: '0.13.9'
           enable-cache: false
 
-      - name: Install evaluator and security scanners with Python 3.13
-        run: bash .github/scripts/setup-skillevaluator.sh quality
+      - name: Install the pinned released benchmark runtime for regression checks
+        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-101
 
       - name: Install the pinned private-review test environment
         run: bash .github/scripts/setup-static-evaluator.sh review-contracts
@@ -167,11 +167,29 @@ jobs:
         run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-candidate
 
       - name: Test CI contracts without inference
+        env:
+          SKILL_EVALUATION_KIND: benchmark
         run: |
           shellcheck .github/scripts/setup-skillevaluator.sh .github/scripts/setup-skill-scanners.sh .github/scripts/setup-static-evaluator.sh .github/scripts/collect-static-quality.sh .github/scripts/setup-compose.sh
-          "$SKILL_REVIEW_PYTHON" -B .github/scripts/test_evaluation_contracts.py contracts
+          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/test_evaluation_contracts.py released-contracts
+
+      - name: Verify captured fixture contracts with the pinned compatibility owner
+        run: |
+          "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py fixture-contracts
           "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/gh_evaluations.py validate gh
           "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/gh_evaluations.py replay gh
+
+      - name: Test retained scanner contracts in their pinned environment
+        run: |
+          export RUNNER_TEMP="$RUNNER_TEMP/legacy-scanner-contracts"
+          mkdir -m 700 "$RUNNER_TEMP"
+          export GITHUB_ENV="$RUNNER_TEMP/owner.env" GITHUB_PATH="$RUNNER_TEMP/owner.path"
+          bash .github/scripts/setup-skillevaluator.sh quality
+          set -a
+          source "$GITHUB_ENV"
+          set +a
+          export PATH="$(dirname -- "$SKILL_EVALUATOR_PYTHON"):$RUNNER_TEMP/skill-evaluation-tools/bin:$PATH"
+          "$SKILL_EVALUATOR_PYTHON" -B .github/scripts/test_evaluation_contracts.py legacy-scanner-contracts
 
       - name: Test private review and attachments without inference
         run: '"$SKILL_REVIEW_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py private-review'

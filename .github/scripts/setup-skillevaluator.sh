@@ -217,21 +217,23 @@ if [ "$kind" = benchmark ]; then evaluator_bin="$benchmark_root/.venv/bin"; fi
 "$evaluator_bin/skillevaluator" --version
 git -C "$tool_root/evaluator" diff --exit-code -- uv.lock pyproject.toml
 
-# Current and historical private review overlays keep their respective locks.
-git -C "$tool_root/evaluator" worktree add --quiet --detach "$tool_root/review" "$evaluator_revision"
-review_patch="$repository_root/.github/patches/skillevaluator-v0.3.0-review-runtime.patch"
-git -C "$tool_root/review" apply --check "$review_patch"
-git -C "$tool_root/review" apply "$review_patch"
-review_lock_sha256=4df95f60d91da22824193c00fbfaa51acdc9f910a6a09c0b3856c5188eb25b6e
-printf '%s  %s\n' "$review_lock_sha256" "$tool_root/review/uv.lock" | sha256sum --check --strict
-git -C "$tool_root/review" diff --exit-code -- pyproject.toml
-uv sync --project "$tool_root/review" --python 3.13 --managed-python \
-  --frozen --no-dev --extra security --extra tier3
-review_bin="$tool_root/review/.venv/bin"
-uv pip check --python "$review_bin/python"
-printf '%s  %s\n' "$review_lock_sha256" "$tool_root/review/uv.lock" | sha256sum --check --strict
-uv pip list --python "$review_bin/python" --format json > "$tool_root/dependencies/review.json"
-"$review_bin/python" - <<'PYREVIEW' > "$tool_root/review-versions.json"
+# Keep the protected 0.3.0 benchmark setup intact until its cutover qualifies.
+if [ "$kind" = benchmark ]; then
+  # Current and historical private review overlays keep their respective locks.
+  git -C "$tool_root/evaluator" worktree add --quiet --detach "$tool_root/review" "$evaluator_revision"
+  review_patch="$repository_root/.github/patches/skillevaluator-v0.3.0-review-runtime.patch"
+  git -C "$tool_root/review" apply --check "$review_patch"
+  git -C "$tool_root/review" apply "$review_patch"
+  review_lock_sha256=4df95f60d91da22824193c00fbfaa51acdc9f910a6a09c0b3856c5188eb25b6e
+  printf '%s  %s\n' "$review_lock_sha256" "$tool_root/review/uv.lock" | sha256sum --check --strict
+  git -C "$tool_root/review" diff --exit-code -- pyproject.toml
+  uv sync --project "$tool_root/review" --python 3.13 --managed-python \
+    --frozen --no-dev --extra security --extra tier3
+  review_bin="$tool_root/review/.venv/bin"
+  uv pip check --python "$review_bin/python"
+  printf '%s  %s\n' "$review_lock_sha256" "$tool_root/review/uv.lock" | sha256sum --check --strict
+  uv pip list --python "$review_bin/python" --format json > "$tool_root/dependencies/review.json"
+  "$review_bin/python" - <<'PYREVIEW' > "$tool_root/review-versions.json"
 import importlib.metadata, json, sys
 expected = {'certifi': '2026.10.23', 'openai': '2.54.0', 'pydantic': '2.14.3', 'pydantic-core': '2.50.4',
             'typing-inspection': '0.4.5', 'skillevaluator': '0.3.0', 'harbor': '0.13.2'}
@@ -240,16 +242,17 @@ assert sys.version_info[:2] == (3, 13) and actual == expected
 print(json.dumps(actual, indent=2))
 PYREVIEW
 
-# Frozen current-v3/v4 attachments keep their original review dependency set.
-git -C "$tool_root/evaluator" worktree add --quiet --detach "$tool_root/review-previous" "$evaluator_revision"
-git -C "$tool_root/review-previous" apply --check "$repository_root/.github/patches/skillevaluator-v0.3.0-review-runtime-v1.patch"
-git -C "$tool_root/review-previous" apply "$repository_root/.github/patches/skillevaluator-v0.3.0-review-runtime-v1.patch"
-previous_review_lock_sha256=99e40a0c414b500dba410fe1e6e687f48e4c10209397997732392ffd472520c4
-printf '%s  %s\n' "$previous_review_lock_sha256" "$tool_root/review-previous/uv.lock" | sha256sum --check --strict
-uv sync --project "$tool_root/review-previous" --python 3.13 --managed-python \
-  --frozen --no-dev --extra security --extra tier3
-uv pip check --python "$tool_root/review-previous/.venv/bin/python"
-printf '%s  %s\n' "$previous_review_lock_sha256" "$tool_root/review-previous/uv.lock" | sha256sum --check --strict
+  # Frozen current-v3/v4 attachments keep their original review dependency set.
+  git -C "$tool_root/evaluator" worktree add --quiet --detach "$tool_root/review-previous" "$evaluator_revision"
+  git -C "$tool_root/review-previous" apply --check "$repository_root/.github/patches/skillevaluator-v0.3.0-review-runtime-v1.patch"
+  git -C "$tool_root/review-previous" apply "$repository_root/.github/patches/skillevaluator-v0.3.0-review-runtime-v1.patch"
+  previous_review_lock_sha256=99e40a0c414b500dba410fe1e6e687f48e4c10209397997732392ffd472520c4
+  printf '%s  %s\n' "$previous_review_lock_sha256" "$tool_root/review-previous/uv.lock" | sha256sum --check --strict
+  uv sync --project "$tool_root/review-previous" --python 3.13 --managed-python \
+    --frozen --no-dev --extra security --extra tier3
+  uv pip check --python "$tool_root/review-previous/.venv/bin/python"
+  printf '%s  %s\n' "$previous_review_lock_sha256" "$tool_root/review-previous/uv.lock" | sha256sum --check --strict
+fi
 
 if [ "$kind" = quality ]; then
   # shellcheck source-path=SCRIPTDIR
@@ -263,9 +266,11 @@ printf '%s\n' "$evaluator_bin" "$tool_root/bin" >> "$GITHUB_PATH"
 {
   printf 'SKILL_EVALUATION_KIND=%s\n' "$kind"
   printf 'SKILL_EVALUATOR_PYTHON=%s/python\n' "$evaluator_bin"
-  printf 'SKILL_LEGACY_REVIEW_PYTHON=%s/python\n' "$legacy_evaluator_bin"
-  printf 'SKILL_PREVIOUS_REVIEW_PYTHON=%s/review-previous/.venv/bin/python\n' "$tool_root"
-  printf 'SKILL_REVIEW_PYTHON=%s/python\n' "$review_bin"
+  if [ "$kind" = benchmark ]; then
+    printf 'SKILL_LEGACY_REVIEW_PYTHON=%s/python\n' "$legacy_evaluator_bin"
+    printf 'SKILL_PREVIOUS_REVIEW_PYTHON=%s/review-previous/.venv/bin/python\n' "$tool_root"
+    printf 'SKILL_REVIEW_PYTHON=%s/python\n' "$review_bin"
+  fi
   printf 'XDG_CACHE_HOME=%s\nXDG_STATE_HOME=%s\n' "$XDG_CACHE_HOME" "$XDG_STATE_HOME"
   printf 'SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE=%s/provenance.key\n' "$tool_root"
 } >> "$GITHUB_ENV"

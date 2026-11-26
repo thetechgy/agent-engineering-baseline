@@ -1519,14 +1519,20 @@ direct/exploratory/incompatible cross-run comparisons and comparison limits.
 It tests historical values, independent validation, all-skill coverage, stable
 rendering, support links, escaping, restrictive CSP hashes, semantic landmarks,
 table headers/captions, theme contrast, corrupted input, private permissions,
-input replacement and output confinement. Run all offline contracts together:
+input replacement and output confinement. Run the offline contracts in their
+pinned environments.
 
 ```bash
-"$SKILL_REVIEW_PYTHON" -B .github/scripts/test_evaluation_contracts.py contracts
+SKILL_EVALUATION_KIND=benchmark "$SKILL_NATIVE_BENCHMARK_PYTHON" -B \
+  .github/scripts/test_evaluation_contracts.py released-contracts
+"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py fixture-contracts
 "$SKILL_DATA_PYTHON" -B .github/scripts/test_evaluation_contracts.py presentation
 "$SKILL_REVIEW_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py private-review
 pwsh -NoLogo -NoProfile -File ./scripts/Invoke-Validation.ps1
 ```
+
+Validate runs the retained scanner contracts in an isolated 0.3.0 scanner
+environment while the scanner adapter comparison is open.
 
 ### Privacy and accessibility
 
@@ -2315,13 +2321,11 @@ Ordinary multilingual text and emoji joiners remain supported.
 
 ### Offline verification and usefulness qualification
 
-Run the production-path offline suite in the pinned environment:
+Run the production-path offline suites in the pinned environments.
 
 ```bash
-"$SKILL_REVIEW_PYTHON" -B -m unittest discover \
-  -s .github/tests -p 'test_skill*.py' -v
-"$SKILL_REVIEW_PYTHON" -B -m unittest discover \
-  -s .github/tests -p test_public_reports.py -v
+"$SKILL_REVIEW_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py private-review
+"$SKILL_DATA_PYTHON" -B .github/scripts/test_evaluation_contracts.py presentation
 ```
 
 The review suite uses the actual pinned SDK and mocked HTTP transport, including
