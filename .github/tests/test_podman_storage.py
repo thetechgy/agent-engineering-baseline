@@ -1,4 +1,4 @@
-"""Contract regressions for the qualification-only Podman storage campaign."""
+"""Contract regressions for the Podman storage campaigns."""
 
 import copy
 from importlib.metadata import PackageNotFoundError, version
@@ -8,20 +8,23 @@ import tempfile
 import unittest
 
 from evaluation_campaign import purpose
-from evaluation_campaign_selection import selected_task
+from evaluation_campaign_protocol import frozen, protocol
+from evaluation_campaign_selection import registration, selected_task
 import evaluation_evidence
-from evaluation_tasks import ROOT
+from evaluation_tasks import ROOT, load
+import evaluator_profiles
 import skill_evidence as evidence
 import skill_reports as reports
 
 CAMPAIGN = "podman-storage-v1-1710-sol62"
+COMPARISON = "podman-storage-current-v1-1720-sol62"
 TASK_ROOT = ROOT / ".github/evals/podman/storage"
 GRADE = runpy.run_path(str(TASK_ROOT / "grade.py"))["grade"]
 
 
 def owning_runtime():
     try:
-        return version("skillevaluator") == "0.8.0" and version("harbor") == "0.24.0"
+        return (version("skillevaluator"), version("harbor")) in (("0.8.0", "0.24.0"), ("1.2.1", "0.25.0"))
     except PackageNotFoundError:
         return False
 
@@ -42,6 +45,42 @@ class PodmanStorageContract(unittest.TestCase):
         self.assertEqual(task.definition["authorized_live_attempts"], 0)
         with self.assertRaisesRegex(ValueError, "cannot enable inference"):
             task.cases("live")
+
+    def test_comparison_reuses_controls_and_binds_matched_serial_schedule(self):
+        qualification = selected_task(CAMPAIGN)
+        task = selected_task(COMPARISON)
+        proposal = frozen(task)
+        control, = registration(task)["controls"]
+        latest = load(ROOT / control)
+        self.assertEqual(task.definition["runtime_profile"], latest.definition["runtime_profile"])
+        self.assertEqual(task.entry(), latest.entry())
+        self.assertEqual(latest.controls(), qualification.controls())
+        self.assertEqual(proposal["runtime"]["resolved"]["cli"], "0.172.0")
+        self.assertEqual(proposal["runtime"]["resolved"]["model"], "gpt-6.2-sol")
+        self.assertEqual(proposal["evaluator"], evaluator_profiles.NATIVE_1720)
+        self.assertEqual(proposal["authorized_live_attempts"], 0)
+        self.assertEqual([(row["variant"], row["trial"]) for row in proposal["schedule"]],
+                         [("current", 1), ("absent", 1), ("absent", 2), ("current", 2),
+                          ("current", 3), ("absent", 3)])
+        rule = protocol(task)["decision_criteria"]
+        self.assertEqual(evidence.digest_bytes((ROOT / rule["path"]).read_bytes()),
+                         "sha256:" + rule["sha256"])
+        self.assertEqual(set(proposal["source_identities"]), {"live", "experiment-probe"})
+        control = task.fixture_control("unsupported-grading", proposal["schedule"][0])
+        self.assertEqual(GRADE(task.payload(control).decode()),
+                         ("unsupported", "unresolved_quadlet_volume"))
+
+    def test_comparison_refuses_missing_or_contradictory_grade(self):
+        task = selected_task(COMPARISON)
+        for classification in ("passed", "failed"):
+            grade = float(classification == "passed")
+            outcome = {"classification": classification, "code": "evaluated"}
+            task.validate_result(outcome, {"overall": grade, "podman_postgres_storage": grade})
+            for metrics in ({"overall": grade}, {"overall": grade, "podman_postgres_storage": 1 - grade},
+                            {"overall": 1 - grade, "podman_postgres_storage": grade}):
+                with self.subTest(classification=classification, metrics=metrics):
+                    with self.assertRaisesRegex(ValueError, "contradictory Podman storage evidence"):
+                        task.validate_result(outcome, metrics)
 
     def test_quadlet_bind_overlay_and_companion_volume_cover_the_data_directory(self):
         prompt = "[Container]\nImage=docker.io/library/postgres:18\n"
@@ -97,16 +136,17 @@ class PodmanStorageContract(unittest.TestCase):
 
     def test_successors_preserve_historical_grading_and_bind_current_sources(self):
         registry = evidence.custom_registry()
-        active_purposes = {"pester-effectiveness-v54": "skill_effectiveness",
+        active_purposes = {"pester-effectiveness-v55": "skill_effectiveness",
                            "gh-deterministic-gate-v12": "benchmark",
                            "gh-native-oracle-v8": "oracle_qualification",
-                           "pester-cli-pilot-retained-v25": "cli_pilot",
+                           "pester-cli-pilot-retained-v26": "cli_pilot",
                            "pester-pilot-v3-source-v51": "benchmark",
                            "pester-pilot-v4": "benchmark-1720"}
         for member in (evidence.CAMPAIGN_SOURCE_SUCCESSORS, evidence.RETIREMENT_SOURCE_SUCCESSORS,
                        evidence.PUBLICATION_SOURCE_SUCCESSORS, evidence.DIAGNOSTIC_SOURCE_SUCCESSORS,
                        evidence.DIRECT_TOOL_SOURCE_SUCCESSORS, evidence.NATIVE_RETIREMENT_SOURCE_SUCCESSORS,
-                       evidence.RELEASE_121_SOURCE_SUCCESSORS, evidence.GH_SKILL_SOURCE_SUCCESSORS, evidence.NATIVE_1720_SOURCE_SUCCESSORS):
+                       evidence.RELEASE_121_SOURCE_SUCCESSORS, evidence.GH_SKILL_SOURCE_SUCCESSORS, evidence.NATIVE_1720_SOURCE_SUCCESSORS,
+                       evidence.PODMAN_COMPARISON_SOURCE_SUCCESSORS):
             version_data = reports.read_json(ROOT / member)
             for profile_id, binding in version_data["profiles"].items():
                 with self.subTest(profile=profile_id):
@@ -126,8 +166,21 @@ class PodmanStorageContract(unittest.TestCase):
                         self.assertEqual(current["skill_id"], "podman")
                         self.assertNotEqual(binding["grader_digest"], parent["grader_digest"])
                         fields["grader_digest"] = binding["grader_digest"]
+                    if "adapter_sha256" in parent.get("campaign", {}):
+                        fields["campaign"] = dict(parent["campaign"], adapter_sha256=version_data["replay_adapter"])
+                    if "campaign" in binding:
+                        self.assertEqual(member, evidence.PODMAN_COMPARISON_SOURCE_SUCCESSORS)
+                        self.assertEqual(current["skill_id"], "podman")
+                        comparison = selected_task(COMPARISON)
+                        self.assertIn(binding["campaign"]["definition"],
+                                      [comparison.member, *registration(comparison)["controls"]])
+                        if binding["campaign"]["scheduler"]:
+                            fields["qualification_cases"] = {case: case for case in parent["cases"]}
+                        fields.update(campaign=dict(parent["campaign"], **binding["campaign"]),
+                                      runtime=dict(parent["runtime"], profile=binding["runtime_profile"],
+                                                   cli=binding["cli"]))
                     self.assertEqual(current, dict(parent, id=profile_id, **fields))
-                    if member == evidence.NATIVE_1720_SOURCE_SUCCESSORS or profile_id in active_purposes:
+                    if member == evidence.PODMAN_COMPARISON_SOURCE_SUCCESSORS or profile_id in active_purposes:
                         purpose_id = active_purposes.get(profile_id, profile_id)
                         selected, _, _ = evidence.custom_contract(current["skill_id"], ROOT, purpose=purpose_id)
                         self.assertEqual(selected["id"], profile_id)
@@ -139,7 +192,15 @@ class PodmanStorageContract(unittest.TestCase):
         from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
         from evaluation_runtime import adapter_for, read_profile
 
-        task = selected_task(CAMPAIGN)
+        if version("skillevaluator") == "1.2.1":
+            control, = registration(selected_task(COMPARISON))["controls"]
+            task = load(ROOT / control)
+            try:
+                evaluator_profiles.validate_install(evaluator_profiles.NATIVE_1720)
+            except ValueError as error:
+                self.skipTest(str(error))
+        else:
+            task = selected_task(CAMPAIGN)
         mode = "oracle"
         profile, _, _ = evidence.custom_contract("podman", purpose=purpose(task, mode))
         selected = read_profile(ROOT / task.definition["runtime_profile"])
@@ -157,6 +218,8 @@ class PodmanStorageContract(unittest.TestCase):
                     self.assertTrue((path / "environment/input/evals/files/vendor-compose.yaml").is_file())
                     self.assertFalse((path / "environment/solution").exists())
                     self.assertFalse((path / "environment/tests").exists())
+                    self.assertEqual((path / "tests/docker-compose.yaml").read_text(),
+                                     "services:\n  main:\n    network_mode: none\n")
 
             capture = evidence.custom_capture(ROOT, "podman", bundle, rows, purpose=purpose(task, mode),
                 attempts=1, agent="oracle",

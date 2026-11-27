@@ -1,5 +1,6 @@
 """Task-owned staging for the case 2 PostgreSQL mount qualification."""
 
+import hashlib
 import json
 from pathlib import Path
 import shlex
@@ -25,6 +26,29 @@ class PodmanStorage(Task):
     ))
     probe_controls = ("covered", "vendor-mount")
 
+    def __init__(self, definition, member):
+        super().__init__(definition, member)
+        if 'protocol' in definition:
+            rule = HOME / "DECISION-RULE.md"
+            expected = {"path": rule.relative_to(ROOT).as_posix(),
+                        "sha256": hashlib.sha256(rule.read_bytes()).hexdigest()}
+            require(reports.read_json(ROOT / definition["protocol"])["decision_criteria"] == expected,
+                    "Podman decision rule drift")
+
+    def fixture_control(self, scenario, row):
+        if scenario == "invalid":
+            return "invalid"
+        if scenario == "unsupported-grading":
+            return "unsupported"
+        return "vendor-mount" if row["trial"] == 3 else "covered"
+
+    def validate_result(self, outcome, metrics):
+        classification = outcome.get("classification")
+        require(classification in ("passed", "failed") and outcome.get("code") == "evaluated"
+                and type(metrics.get(METRIC)) in (int, float)
+                and metrics[METRIC] == metrics.get("overall") == float(classification == "passed"),
+                "Missing or contradictory Podman storage evidence")
+
     def controls(self):
         return {
             "covered": ("passed", "persistent_mount_covers_data_directory"),
@@ -41,6 +65,10 @@ class PodmanStorage(Task):
                 + "The supplied paths are under input/. " + definition["deliverable"]}
 
     def payload(self, control):
+        if control == "invalid":
+            return b"# Missing container section\n"
+        if control == "unsupported":
+            return b"[Container]\nImage=docker.io/library/postgres:18\nVolume=db-data.volume:/var/lib/postgresql\n"
         require(control in self.controls(), "Unknown Podman control")
         return (HOME / "controls" / (control + ".container")).read_bytes()
 
@@ -57,7 +85,6 @@ class PodmanStorage(Task):
                                  ("tests/Dockerfile", "Verifier.Dockerfile"),
                                  ("task.toml", "task.toml")):
             shutil.copyfile(HOME / template, native / member)
-        (native / "tests/docker-compose.yaml").write_text("services:\n  main:\n    network_mode: none\n")
         return bundle
 
     def expected_members(self, case, arm):
@@ -75,6 +102,8 @@ class PodmanStorage(Task):
 
     def configure(self, task, control, mode, present):
         arm = "with_skill" if present else "without_skill"
+        # The evaluator checks authored Compose before this trusted staging hook.
+        (task / "tests/docker-compose.yaml").write_text("services:\n  main:\n    network_mode: none\n")
         (task / "tests/entry.json").write_bytes(self.expected_members(task.name, arm)["tests/entry.json"])
         with (task / "environment/Dockerfile").open("a") as dockerfile:
             dockerfile.write("RUN chmod -R a+rX /workspace/input\n")

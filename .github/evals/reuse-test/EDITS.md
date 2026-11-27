@@ -80,3 +80,42 @@ non-forwarding CLI probe.
 For hosted qualification dispatch `evaluation-campaign.yml` with
 `campaign=podman-storage-v1-1710-sol62` and leave both `allocation` and
 `preparation_artifact` empty.
+
+## Item 9 scored comparison preparation
+
+The scored selector is `podman-storage-current-v1-1720-sol62`. Its controls
+and scored rehearsal use Codex CLI 0.172.0, SkillEvaluator 1.2.1, Harbor
+0.25.0, and Python 3.14.10. The task-owned rule and protocol declare one
+six-slot pair at GPT-6.2 Sol High. Source and registry bindings preserve the
+earlier selection. These counts cover preparation through the paid gate.
+
+| Shared file | Added | Removed | Class | Why the engine needed it | Could be data |
+| --- | ---: | ---: | --- | --- | --- |
+| `.github/evals/campaigns/codex-1720-scored.json` | 11 | 0 | Evidence and registry | Pin the reviewed Codex 0.172.0 scored runtime. | Already data. |
+| `.github/evals/codex-execution-1720-scored.json` | 32 | 0 | Evidence and registry | Bind the current CLI and helper hashes and the existing scored execution policy. | Already data. |
+| `.github/evals/source-v52.json` | 413 | 0 | Evidence and registry | Admit the Podman comparison and controls and bind the source changes for the existing campaigns and pilot profiles. | Already data. The digests can be derived from reviewed inputs. |
+| `.github/scripts/codex_pilot_agent.py` | 3 | 3 | Evidence and registry | Run the scored request and accounting fixture for the new CLI profile. | The profile capability could be data. |
+| `.github/scripts/evaluation_campaign.py` | 1 | 1 | Runner-coupled | Select the new source identities for current execution. | The active identity could be registered data. |
+| `.github/scripts/evaluation_campaign_protocol.py` | 2 | 2 | Runner-coupled | Admit the reviewed probe-only descriptor substitution for the new scored profile. | The profile capability could be data. |
+| `.github/scripts/evaluation_campaign_selection.py` | 2 | 1 | Runner-coupled | Resolve the two new Podman definitions through the task-owned selection file. | The registry location could be data. |
+| `.github/scripts/evaluation_codex.py` | 5 | 5 | Runner-coupled | Apply the scored runtime and request checks and label native events with the emitting CLI. | The eligible profiles could be data. The event and request checks remain executable. |
+| `.github/scripts/evaluation_evidence.py` | 5 | 0 | Evidence and registry | Resolve the evaluator owner selected by a campaign profile. | The owner identity comes from registration. |
+| `.github/scripts/evaluation_runtime.py` | 11 | 2 | Runner-coupled | Admit and bind the current scored CLI and evaluator owner. | Runtime capabilities and owning setup could be registered data. |
+| `.github/scripts/evaluation_tasks.py` | 9 | 2 | Runner-coupled | Admit the exact comparison and control paths. | The adapter and allowed paths could be data. |
+| `.github/scripts/evaluator_profiles.py` | 2 | 2 | Evidence and registry | Resolve the latest installed evaluator build by its exact pins. | Already backed by pinned profile data. |
+| `.github/scripts/setup-campaign-authentication.sh` | 7 | 2 | Workflow and orchestration | Use the repository’s current native evaluator setup for the selected owner. | The setup profile could be registered data. |
+| `.github/scripts/skill_evidence.py` | 34 | 17 | Evidence and registry | Bind the new scored profiles and use the selected evaluator in native and public admission. Preserve retained Pester inputs. | Profile and retained input identities could be data. |
+| `.github/tests/test_judge_calibration.py` | 1 | 1 | Tests | Check the historical scoring profiles against their current source successors. | The successor could be resolved from registration. |
+| `.github/tests/test_pester_return_contract.py` | 11 | 3 | Tests | Project out only the reviewed Podman registration before checking the frozen Pester hash. | Reviewable registration data could avoid this source projection. |
+| `.github/tests/test_podman_storage.py` | 72 | 9 | Tests | Check matching, grading, latest-runtime staging, and source and rule bindings. | The verdict fixtures are data. Admission checks stay executable. |
+| `.github/workflows/evaluation-campaign.yml` | 14 | 12 | Workflow and orchestration | Offer the scored Podman selection through the existing preparation and gate and install its required uv version. | The workflow choices could be derived from registration. |
+
+| Class | Files | Added | Removed |
+| --- | ---: | ---: | ---: |
+| Evidence and registry | 7 | 500 | 22 |
+| Runner-coupled | 6 | 30 | 13 |
+| Workflow and orchestration | 2 | 21 | 14 |
+| Tests | 3 | 84 | 13 |
+| **Total** | **18** | **635** | **62** |
+
+Runner-coupled changes account for 43 of 697 changed lines.

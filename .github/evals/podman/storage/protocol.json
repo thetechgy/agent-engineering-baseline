@@ -1,0 +1,71 @@
+{
+  "id": "podman-storage-current-v1-1720-sol62",
+  "definition": ".github/evals/podman/storage/comparison.json",
+  "version": 1,
+  "attempt_slots": 6,
+  "trials_per_arm": 3,
+  "automatic_retries": 0,
+  "replacements": 0,
+  "concurrency": 1,
+  "primary_outcome": "persistent storage covers the effective PostgreSQL 18 data directory",
+  "separate_outcomes": [
+    "valid task failure",
+    "invalid",
+    "unsupported",
+    "runtime failure",
+    "successful skill access",
+    "usage",
+    "elapsed seconds"
+  ],
+  "interpretation": "Compare current Podman guidance with matched no skill for case 2. No execution authorization.",
+  "budget": {
+    "estimate_usd": 3.0,
+    "stop_estimate_usd": 5,
+    "overshoot_reserve_usd": 3,
+    "planning_allocation_usd": 8,
+    "billing_limit_enforced": false,
+    "pricing_verified": "2026-11-27",
+    "pricing_source": "https://developers.openai.com/api/docs/pricing",
+    "prices_per_million": {
+      "input": 2,
+      "cached_input": 0.1,
+      "output": 10,
+      "cache_write_30m": 2.5,
+      "cache_write_12h": 5
+    }
+  },
+  "stop_rules": [
+    "estimated_usage_threshold",
+    "unknown_usage",
+    "execution_infrastructure_failure",
+    "cleanup_failure",
+    "missing_grading_evidence",
+    "missing_usable_evidence",
+    "unsupported_grading",
+    "verifier_failure",
+    "missing_native_observation",
+    "unsupported_runtime_protocol",
+    "security_or_identity_drift"
+  ],
+  "agent_seconds": 600,
+  "launch_seconds": 1200,
+  "cleanup_grace_seconds": 80,
+  "protected_environment": "skill-benchmark",
+  "authorized_live_attempts": 0,
+  "qualification_scenarios": [
+    "complete",
+    "interruption",
+    "missing-evidence",
+    "unsupported-runtime",
+    "invalid",
+    "unsupported-grading",
+    "threshold",
+    "unknown-usage",
+    "verifier-failure",
+    "cleanup-failure"
+  ],
+  "decision_criteria": {
+    "path": ".github/evals/podman/storage/DECISION-RULE.md",
+    "sha256": "ba4e2a2b4a84be34b3996a94ecada9ab5b6805bd8e82a6fa2de0652a625c7821"
+  }
+}

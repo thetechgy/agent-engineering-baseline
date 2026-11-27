@@ -15,6 +15,11 @@ def task(profile):
     return load(ROOT / profile['campaign']['definition'])
 
 
+def producer(profile):
+    from evaluation_runtime import evaluator, read_profile
+    return evaluator(read_profile(ROOT / task(profile).definition['runtime_profile']))
+
+
 def source_manifest(workspace, name, purpose):
     import skill_evidence as e
     profile, _, _ = e.custom_contract(name, workspace, purpose=purpose)
