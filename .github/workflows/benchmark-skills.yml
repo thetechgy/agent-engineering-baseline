@@ -17,7 +17,6 @@ on:
         options:
           - standard
           - confirmation
-          - candidate-smoke
       request_id:
         description: Optional authenticated orchestration request (leave empty for manual runs)
         type: string
@@ -111,7 +110,6 @@ jobs:
         working-directory: trusted
         run: '"$SKILL_DATA_PYTHON" -B .github/scripts/test_evaluation_contracts.py presentation'
       - name: Read canonical history snapshot
-        if: inputs.mode != 'candidate-smoke'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: gh-pages
@@ -123,29 +121,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RETAINED: ${{ github.workspace }}/retained
-          BENCHMARK_MODE: ${{ inputs.mode }}
         run: |
-          if [[ "$BENCHMARK_MODE" == candidate-smoke ]]; then
-            "$SKILL_DATA_PYTHON" -B .github/scripts/benchmark_smoke.py context \
-              --output "$RUNNER_TEMP/podman-121-context/record.json"
-          else
-            "$SKILL_DATA_PYTHON" -B .github/scripts/skill_orchestration.py context \
-              --workspace "$PWD" --retained "$RETAINED" --output "$RUNNER_TEMP/skill-context/record.json"
-          fi
+          "$SKILL_DATA_PYTHON" -B .github/scripts/skill_orchestration.py context \
+            --workspace "$PWD" --retained "$RETAINED" --output "$RUNNER_TEMP/skill-context/record.json"
       - name: Retain preapproval scope
-        if: inputs.mode != 'candidate-smoke'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: skill-benchmark-context-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/skill-context/record.json
-          if-no-files-found: error
-          retention-days: 30
-      - name: Retain compatibility preapproval scope
-        if: inputs.mode == 'candidate-smoke'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: podman-121-compatibility-context-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/podman-121-context/record.json
           if-no-files-found: error
           retention-days: 30
       - name: Mark ineligible request as nonexecuted
@@ -156,7 +139,7 @@ jobs:
 
   evaluate:
     needs: context
-    if: needs.context.outputs.execute == 'true' && inputs.mode != 'candidate-smoke'
+    if: needs.context.outputs.execute == 'true'
     permissions:
       contents: read
       actions: read
@@ -427,76 +410,6 @@ jobs:
         run: |
           echo '::error::Benchmark did not enter inference. Inspect the postapproval authorization record.'
           exit 1
-
-  evaluate-candidate:
-    needs: context
-    if: needs.context.outputs.execute == 'true' && inputs.mode == 'candidate-smoke'
-    permissions:
-      contents: read
-      actions: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    environment:
-      name: skill-benchmark
-      deployment: false
-    env:
-      PYTHONDONTWRITEBYTECODE: '1'
-      PYTHON_DOTENV_DISABLED: '1'
-    steps:
-      - name: Check out the approved compatibility revision
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-      - name: Set up pinned uv
-        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
-        with: *benchmark-uv
-      - name: Install verified Compose and candidate
-        timeout-minutes: 15
-        run: |
-          bash .github/scripts/setup-compose.sh
-          bash .github/scripts/setup-static-evaluator.sh native-benchmark-121
-      - name: Prepare the approved candidate trials without inference
-        timeout-minutes: 7
-        run: |
-          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_smoke.py prepare \
-            --stage "$RUNNER_TEMP/podman-121-stage" --output "$RUNNER_TEMP/podman-121/prepared.json"
-      - name: Verify the approved compatibility scope
-        id: scope
-        timeout-minutes: 3
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_smoke.py guard \
-            --stage "$RUNNER_TEMP/podman-121-stage" --preparation "$RUNNER_TEMP/podman-121/prepared.json" \
-            --output "$RUNNER_TEMP/podman-121/authorization.json"
-      - name: Run the bounded compatibility smoke
-        id: compatibility
-        if: steps.scope.outputs.execute == 'true'
-        timeout-minutes: 17
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_smoke.py run \
-            --stage "$RUNNER_TEMP/podman-121-stage" --preparation "$RUNNER_TEMP/podman-121/prepared.json" \
-            --authorization "$RUNNER_TEMP/podman-121/authorization.json" --output "$RUNNER_TEMP/podman-121/diagnostic.json"
-      - name: Verify candidate teardown and recover task-owned resources
-        if: always() && steps.compatibility.outcome != 'skipped'
-        timeout-minutes: 3
-        run: |
-          "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/benchmark_smoke.py cleanup \
-            --stage "$RUNNER_TEMP/podman-121-stage" --output "$RUNNER_TEMP/podman-121/diagnostic.json"
-      - name: Retain only the bounded compatibility receipt
-        if: always() && steps.compatibility.outcome != 'skipped'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: podman-121-compatibility-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/podman-121/diagnostic.json
-          if-no-files-found: warn
-          retention-days: 30
-      - name: Remove the task-owned Compose configuration
-        if: always()
-        run: bash .github/scripts/setup-compose.sh cleanup
 
   publish-history:
     concurrency:
