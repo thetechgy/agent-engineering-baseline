@@ -110,6 +110,8 @@ class PodmanStorageContract(unittest.TestCase):
                     current = registry["profiles"][profile_id]
                     parent = registry["profiles"][binding["parent"]]
                     fields = {"runtime_digest": binding["runtime_digest"]}
+                    if "upstream_revision" in binding:
+                        fields["upstream_revision"] = binding["upstream_revision"]
                     if "grader_digest" in binding:
                         self.assertEqual(member, evidence.CAMPAIGN_SOURCE_SUCCESSORS)
                         self.assertEqual(current["skill_id"], "podman")

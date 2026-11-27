@@ -3796,6 +3796,11 @@ def custom_registry(workspace=ROOT):
             parent = profiles[update['parent']]
             sha(update['runtime_digest'])
             result = dict(parent, id=successor, runtime_digest=update['runtime_digest'])
+            if 'upstream_revision' in update:
+                require(version_path == GH_SKILL_SOURCE_SUCCESSORS and parent['skill_id'] == 'gh',
+                        'Unregistered upstream successor')
+                revision(update['upstream_revision'])
+                result['upstream_revision'] = update['upstream_revision']
             if 'grader_digest' in update:
                 require(version_path in (MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS)
                         and parent['skill_id'] == 'podman',
@@ -4380,7 +4385,8 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
     require(capture['source']['skill_id'] == name
             and capture['source']['owner'] == ('local' if name == 'powershell-pester-6' or local_podman else 'upstream')
             and (name != 'gh' or capture['source']['repository'] == 'cli/cli'
-                 and capture['source']['revision'] == reports.benchmark_policy('gh')['upstream_revision']
+                 and capture['source']['revision'] == profile.get('upstream_revision',
+                     reports.benchmark_policy('gh')['upstream_revision'])
                  and capture['source']['source_path'] == 'skills/gh')
             and skill_content(source_root)['digest'] == capture['source']['content']['digest'],
             'Declared skill content drift')
@@ -4600,6 +4606,8 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             model=config.get('provider', {}).get('model'), provider=config.get('provider', {}).get('name'))
         if profile_family(profile) == 'gh-native-oracle-v1':
             gh_policy = reports.benchmark_policy('gh')
+            if 'upstream_revision' in profile:
+                gh_policy['upstream_revision'] = profile['upstream_revision']
             fields.update({key: gh_policy[key] for key in ('workspace_mode', 'upstream_revision', 'competing_revision',
                 'authorization_policy', 'fixture_boundary', 'task_build')})
         if 'campaign' in profile:
@@ -5031,6 +5039,8 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
                 and data['policy'].get('producer_profile') in {p['id'] for p in profiles.CANDIDATES}
                 and data['policy']['fields']['environment'] == 'aeb-gh-fixture', 'Native gh oracle profile mismatch')
         gh_policy = reports.benchmark_policy('gh')
+        if 'upstream_revision' in profile:
+            gh_policy['upstream_revision'] = profile['upstream_revision']
         require(all(data['policy']['fields'][key] == gh_policy[key] for key in ('workspace_mode', 'upstream_revision',
                 'competing_revision', 'authorization_policy', 'fixture_boundary', 'task_build')), 'Native gh staging policy mismatch')
     require(data['policy']['fields']['grading'] == profile['grading'], 'Custom grading policy mismatch')
