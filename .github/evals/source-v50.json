@@ -38,107 +38,107 @@
     },
     "campaign-gh-codex-1691-lifecycle-v1-source-v50-probe": {
       "parent": "campaign-gh-codex-1691-lifecycle-v1-source-v49-probe",
-      "runtime_digest": "sha256:252c92bb22e3e14924f79e19b3f5c370528638c24e8a14620cb381cee04dc6b2",
+      "runtime_digest": "sha256:bc0c183361a156d60f511c30516a1e03512fbe469ed8f7c6ecc7f3a0a33c8018",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-read-090-v1-lifecycle-v1-source-v50-oracle": {
       "parent": "campaign-gh-read-090-v1-lifecycle-v1-source-v49-oracle",
-      "runtime_digest": "sha256:db1ea2e12b7f2a15196bc3e73496189ad2212b3b4ad0e819b46968f6273c7da7",
+      "runtime_digest": "sha256:76013a3dd386aa25904727fda119079323b87b7d14fe5c03c87288298ef440ac",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-read-090-v1-lifecycle-v1-source-v50-probe": {
       "parent": "campaign-gh-read-090-v1-lifecycle-v1-source-v49-probe",
-      "runtime_digest": "sha256:db1ea2e12b7f2a15196bc3e73496189ad2212b3b4ad0e819b46968f6273c7da7",
+      "runtime_digest": "sha256:76013a3dd386aa25904727fda119079323b87b7d14fe5c03c87288298ef440ac",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-read-090-v1-sol62-lifecycle-v1-source-v50-oracle": {
       "parent": "campaign-gh-read-090-v1-sol62-lifecycle-v1-source-v49-oracle",
-      "runtime_digest": "sha256:5f84655e44a4e73d197e4e44ab941a3076b32e4eb11193a0192db7d81a3d1291",
+      "runtime_digest": "sha256:cf607bc99b3334924a04530941e3f2a26bb4683d8b88f32f7e3861201ac56cdb",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-read-090-v1-sol62-lifecycle-v1-source-v50-probe": {
       "parent": "campaign-gh-read-090-v1-sol62-lifecycle-v1-source-v49-probe",
-      "runtime_digest": "sha256:5f84655e44a4e73d197e4e44ab941a3076b32e4eb11193a0192db7d81a3d1291",
+      "runtime_digest": "sha256:cf607bc99b3334924a04530941e3f2a26bb4683d8b88f32f7e3861201ac56cdb",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-read-v1-sol62-lifecycle-v1-source-v50-oracle": {
       "parent": "campaign-gh-read-v1-sol62-lifecycle-v1-source-v49-oracle",
-      "runtime_digest": "sha256:162a40ad131ec0b161ba5a041e0456b30ad3e93a38328c3f32edb75cf3733a27",
+      "runtime_digest": "sha256:2a4bedefb217ab7a6b76a8bb5b119b3cc9064bc794c163446f4372558f2b4f18",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-read-v1-sol62-lifecycle-v1-source-v50-probe": {
       "parent": "campaign-gh-read-v1-sol62-lifecycle-v1-source-v49-probe",
-      "runtime_digest": "sha256:162a40ad131ec0b161ba5a041e0456b30ad3e93a38328c3f32edb75cf3733a27",
+      "runtime_digest": "sha256:2a4bedefb217ab7a6b76a8bb5b119b3cc9064bc794c163446f4372558f2b4f18",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-read-v4-lifecycle-v1-source-v50-oracle": {
       "parent": "campaign-gh-read-v4-lifecycle-v1-source-v49-oracle",
-      "runtime_digest": "sha256:44695b877d33505938824257a2f7a39d65446356f76084972ffa016d9ef3e43d",
+      "runtime_digest": "sha256:d46cf907c5ae6aa997c0e93768687aead0433dcc5c0a669e947ad78d5e0a289b",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-read-v4-lifecycle-v1-source-v50-probe": {
       "parent": "campaign-gh-read-v4-lifecycle-v1-source-v49-probe",
-      "runtime_digest": "sha256:44695b877d33505938824257a2f7a39d65446356f76084972ffa016d9ef3e43d",
+      "runtime_digest": "sha256:d46cf907c5ae6aa997c0e93768687aead0433dcc5c0a669e947ad78d5e0a289b",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-runtime-090-v1-lifecycle-v1-source-v50-experiment-probe": {
       "parent": "campaign-gh-runtime-090-v1-lifecycle-v1-source-v49-experiment-probe",
-      "runtime_digest": "sha256:27e9b845fa43c56c6adb4f5ba575e9a16cfc6508ac1ffbb89361f16ade6f5b32",
+      "runtime_digest": "sha256:7399a75aabc6302b40ebaf7bb7126aeb9e5ad9dd999968054de833e0e9f41d15",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-runtime-090-v1-lifecycle-v1-source-v50-live": {
       "parent": "campaign-gh-runtime-090-v1-lifecycle-v1-source-v49-live",
-      "runtime_digest": "sha256:27e9b845fa43c56c6adb4f5ba575e9a16cfc6508ac1ffbb89361f16ade6f5b32",
+      "runtime_digest": "sha256:7399a75aabc6302b40ebaf7bb7126aeb9e5ad9dd999968054de833e0e9f41d15",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-runtime-090-v1-sol62-lifecycle-v1-source-v50-experiment-probe": {
       "parent": "campaign-gh-runtime-090-v1-sol62-lifecycle-v1-source-v49-experiment-probe",
-      "runtime_digest": "sha256:dda5d6ef9d3aa60e20c9445cc6692826a481429176fbe040408c9bc941742b26",
+      "runtime_digest": "sha256:d62a2895d91d2dc7a6790ed4b8aed84e8f5f0922afceb068384c96d0e511ac4e",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-runtime-090-v1-sol62-lifecycle-v1-source-v50-live": {
       "parent": "campaign-gh-runtime-090-v1-sol62-lifecycle-v1-source-v49-live",
-      "runtime_digest": "sha256:dda5d6ef9d3aa60e20c9445cc6692826a481429176fbe040408c9bc941742b26",
+      "runtime_digest": "sha256:d62a2895d91d2dc7a6790ed4b8aed84e8f5f0922afceb068384c96d0e511ac4e",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-task-permission-v2-lifecycle-v1-source-v50-experiment-probe": {
       "parent": "campaign-gh-task-permission-v2-lifecycle-v1-source-v49-experiment-probe",
-      "runtime_digest": "sha256:2ee2a527aaf7ef71e751c7c2ec98413ef70bb7ee79de5ed8ac990a2a5e1baa3f",
+      "runtime_digest": "sha256:d78ac7c21f3db132e4cd74edd4441fb4fe750ce1ff73b526d4daa31b7fd68cf9",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-task-permission-v2-lifecycle-v1-source-v50-live": {
       "parent": "campaign-gh-task-permission-v2-lifecycle-v1-source-v49-live",
-      "runtime_digest": "sha256:2ee2a527aaf7ef71e751c7c2ec98413ef70bb7ee79de5ed8ac990a2a5e1baa3f",
+      "runtime_digest": "sha256:d78ac7c21f3db132e4cd74edd4441fb4fe750ce1ff73b526d4daa31b7fd68cf9",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-task-permission-v2-lifecycle-v1-source-v50-oracle": {
       "parent": "campaign-gh-task-permission-v2-lifecycle-v1-source-v49-oracle",
-      "runtime_digest": "sha256:8628149cf8cfec109aaa94aacf08c98d8c1a935fa5db483270d9067a5496e4cf",
+      "runtime_digest": "sha256:339210edbac06597e9a37603cbcf6d07d901b9d456d3d8ca985069f6fea70b0a",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-task-permission-v2-lifecycle-v1-source-v50-probe": {
       "parent": "campaign-gh-task-permission-v2-lifecycle-v1-source-v49-probe",
-      "runtime_digest": "sha256:8628149cf8cfec109aaa94aacf08c98d8c1a935fa5db483270d9067a5496e4cf",
+      "runtime_digest": "sha256:339210edbac06597e9a37603cbcf6d07d901b9d456d3d8ca985069f6fea70b0a",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-task-permission-v2-sol62-lifecycle-v1-source-v50-experiment-probe": {
       "parent": "campaign-gh-task-permission-v2-sol62-lifecycle-v1-source-v49-experiment-probe",
-      "runtime_digest": "sha256:3b66145a241b909184a0f6e4844739d2624995db33985dc36b0cb52c9165016b",
+      "runtime_digest": "sha256:3166e7e40b7c9a6eceb822320b9c41bebffd482e42c032338a1dd2eac9bec20b",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-task-permission-v2-sol62-lifecycle-v1-source-v50-live": {
       "parent": "campaign-gh-task-permission-v2-sol62-lifecycle-v1-source-v49-live",
-      "runtime_digest": "sha256:3b66145a241b909184a0f6e4844739d2624995db33985dc36b0cb52c9165016b",
+      "runtime_digest": "sha256:3166e7e40b7c9a6eceb822320b9c41bebffd482e42c032338a1dd2eac9bec20b",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-task-permission-v2-sol62-lifecycle-v1-source-v50-oracle": {
       "parent": "campaign-gh-task-permission-v2-sol62-lifecycle-v1-source-v49-oracle",
-      "runtime_digest": "sha256:93581eef94e7d680dd71161bd4cfe77d3159faac01bfc8fefef60c5ae1e917b8",
+      "runtime_digest": "sha256:0cae457fc493df3ac6f35b69f92f8165228c504e8a4ab784b273ad897ad60ec3",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-gh-task-permission-v2-sol62-lifecycle-v1-source-v50-probe": {
       "parent": "campaign-gh-task-permission-v2-sol62-lifecycle-v1-source-v49-probe",
-      "runtime_digest": "sha256:93581eef94e7d680dd71161bd4cfe77d3159faac01bfc8fefef60c5ae1e917b8",
+      "runtime_digest": "sha256:0cae457fc493df3ac6f35b69f92f8165228c504e8a4ab784b273ad897ad60ec3",
       "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "campaign-pester-admission-controls-v1-lifecycle-v1-source-v50-oracle": {
@@ -372,6 +372,16 @@
     "campaign-podman-storage-v1-1710-sol62-lifecycle-v1-source-v50-probe": {
       "parent": "campaign-podman-storage-v1-1710-sol62-lifecycle-v1-source-v49-probe",
       "runtime_digest": "sha256:e916804a1d5dc8bd54a3c1c2685df819a682f5206e08908bb67d92bc0882a92d"
+    },
+    "gh-deterministic-gate-v11": {
+      "parent": "gh-deterministic-gate-v10",
+      "runtime_digest": "sha256:8036ba9486fadf6924ca2f30c3649ab5316cb0233913b3b9eb834150dbc503b1",
+      "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
+    },
+    "gh-native-oracle-v7": {
+      "parent": "gh-native-oracle-v6",
+      "runtime_digest": "sha256:8036ba9486fadf6924ca2f30c3649ab5316cb0233913b3b9eb834150dbc503b1",
+      "upstream_revision": "529111a21612ff1e29dc45e567a157df24e0e243"
     },
     "pester-effectiveness-v53": {
       "parent": "pester-effectiveness-v52",
