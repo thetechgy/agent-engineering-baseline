@@ -18,8 +18,9 @@ diff --git a/.github/scripts/skill_evidence.py b/.github/scripts/skill_evidence.
                  trial_result_found |= trial_result
              require(trial_result_found, 'Observation reference origin mismatch')
      require(type(data['arms']) is list and len(data['arms']) <= 2, 'Invalid arms')
-@@ -2697,6 +2701,7 @@
-                       'policy_id': score_series(name, mode, owner=owner), 'patch_sha256': producer['patch_sha256'],
+@@ -2697,7 +2701,8 @@
+                       'policy_id': score_series(name, mode, owner=owner, gh_revision=gh_revision),
+                       'patch_sha256': producer['patch_sha256'],
                        'policy': {key: expected[key] for key in POLICY_FIELDS if key in expected}}
      historical_scores = producer['revision'] == profiles.HISTORICAL_REVISION
 +    release_fixture = benchmark_meta is not None and benchmark_meta['profile'] == 'behavioral-121-direct-fixture-v1'

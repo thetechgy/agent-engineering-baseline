@@ -178,7 +178,7 @@ def run(root, present, case, assets, profile):
 def main(output, case=CASE, revision=None):
     from skillevaluator.tier3.harbor.collector import collect_harbor_results
 
-    from benchmark_podman import CODEX_PROFILE, SMOKE_CASE, scope
+    from benchmark_podman import RETAINED_CODEX_PROFILE, SMOKE_CASE, scope
     from qualify_benchmark_101 import ROOT, fixture_owner
     from qualify_codex_1691 import acquire
     from skill_reports import read_json, require, write_json
@@ -200,7 +200,7 @@ def main(output, case=CASE, revision=None):
     with fixture_owner() as versions:
         assets = root / 'release'
         assets.mkdir()
-        profile = read_json(CODEX_PROFILE)
+        profile = read_json(RETAINED_CODEX_PROFILE)
         acquire(profile, assets)
         arms = {arm: run(root, present, case, assets, profile)
                 for arm, present in (('with_skill', True), ('without_skill', False))}

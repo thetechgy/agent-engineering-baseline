@@ -10,6 +10,7 @@ from skill_reports import POLICY, benchmark_options, read_json, require
 
 CODEX_ROOT = "/opt/reviewed/codex"
 CODEX_PROFILE = Path(__file__).resolve().parents[1] / "evals/codex-execution-1720.json"
+RETAINED_CODEX_PROFILE = CODEX_PROFILE.with_name("codex-execution-1710.json")
 SMOKE_CASE = "1"
 
 
@@ -111,6 +112,7 @@ def scope(workspace: Path, revision: str, *, released=False):
     from evaluator_profiles import CURRENT_RELEASE
     from skill_orchestration import candidate_podman_fingerprint
 
+    profile = CODEX_PROFILE if released else RETAINED_CODEX_PROFILE
     return {
         "revision": revision,
         "fingerprint": candidate_podman_fingerprint(workspace, revision, released=released),
@@ -119,7 +121,7 @@ def scope(workspace: Path, revision: str, *, released=False):
         "arms": ["with_skill", "without_skill"],
         "planned_trials": 2,
         "attempts_per_arm": 1,
-        "agent": {"cli": read_json(CODEX_PROFILE)["cli"], "model": POLICY["model"], "reasoning_effort": "high",
+        "agent": {"cli": read_json(profile)["cli"], "model": POLICY["model"], "reasoning_effort": "high",
                   "tool_surface": CURRENT_RELEASE["codex_tool_surface"]},
         "verifier": {"model": POLICY["model"], "reasoning_effort": None},
         "history_eligible": False,

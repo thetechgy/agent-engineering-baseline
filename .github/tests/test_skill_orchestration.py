@@ -320,13 +320,17 @@ class OrchestrationTests(unittest.TestCase):
     def test_compatibility_scope_requires_exact_initial_dispatch_and_preapproval(self):
         import benchmark_smoke as smoke
         from benchmark_native import native_versions
+        from benchmark_podman import scope
 
         revision = self.api.main
+        retained = scope(self.workspace, revision)
+        self.assertEqual(retained['agent']['cli'], '0.171.0')
         env = dict(os.environ, GITHUB_SHA=revision, GITHUB_EVENT_NAME='workflow_dispatch',
                    GITHUB_REF='refs/heads/' + smoke.BRANCH)
         inputs = {'mode': smoke.MODE, 'skill': 'podman', 'expected_revision': revision}
         record = smoke.reviewed_scope(self.workspace, env, inputs)
         self.assertEqual(record['runtime'], native_versions())
+        self.assertEqual(record['scope']['agent']['cli'], '0.172.0')
         self.assertEqual(record['scope']['fingerprint'],
                          orchestration.candidate_podman_fingerprint(self.workspace, revision, released=True))
         self.assertEqual(record['scope']['case'], '1')
