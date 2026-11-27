@@ -18,7 +18,7 @@ install_skill_scanners() {
   skillspector_lock_sha256=dce3490ca4850bfc44169abd5a5b93d3ee0d62e3bc9b95eb7d8fab9da25f7f80
   printf '%s  %s\n' "$skillspector_lock_sha256" "$repository_root/.github/locks/skillspector.lock" | sha256sum --check --strict
   cp "$repository_root/.github/locks/skillspector.lock" "$tool_root/skillspector/uv.lock"
-  uv sync --project "$tool_root/skillspector" --python 3.13 --managed-python --locked --no-dev
+  uv sync --project "$tool_root/skillspector" --python 3.13 --managed-python --frozen --no-dev
   uv pip check --python "$tool_root/skillspector/.venv/bin/python"
   uv pip check --python "$tool_root/semgrep/bin/python"
   printf '%s  %s\n' "$skillspector_lock_sha256" "$tool_root/skillspector/uv.lock" | sha256sum --check --strict
