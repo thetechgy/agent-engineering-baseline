@@ -1279,6 +1279,22 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(set(workflow.get("on", workflow.get(True))), {"workflow_dispatch"})
         jobs = workflow["jobs"]
         self.assertEqual(jobs["evaluate"]["permissions"], {"contents": "read", "actions": "read"})
+        context_steps = jobs["context"]["steps"]
+        private_review = next(
+            (index, step) for index, step in enumerate(context_steps)
+            if "test_evaluation_contracts.py private-review" in step.get("run", "")
+        )
+        for owner in ("review-contracts", "review-retained-101", "review-retained-121"):
+            with self.subTest(owner=owner):
+                install = [
+                    (index, step) for index, step in enumerate(context_steps)
+                    if step.get("run") == f"bash .github/scripts/setup-static-evaluator.sh {owner}"
+                ]
+                self.assertEqual(len(install), 1)
+                index, step = install[0]
+                self.assertLess(index, private_review[0])
+                self.assertEqual(step["if"], private_review[1]["if"])
+                self.assertEqual(step["working-directory"], private_review[1]["working-directory"])
         self.assertEqual(jobs["evaluate"]["environment"], {"name": "skill-benchmark", "deployment": False})
         checkout = next(step for step in jobs["evaluate"]["steps"]
                         if step.get("uses", "").startswith("actions/checkout@"))
