@@ -304,6 +304,7 @@ def prepare(workspace, root, name, mode, revision, *, gh_cases=None):
         "backend": EXECUTION_BACKENDS[name], "producer_profile": NATIVE_PRODUCER,
         "dataset_profile": dataset_profile(name),
         "dataset_sha256": dataset_sha256(skill), "gh_manifest": manifest,
+        **({"gh_upstream_revision": gh.UPSTREAM} if name == "gh" else {}),
         **({"pester_bundle_sha256": pester_bundle_sha256(skill)} if name == pester.NAME else {}),
     })
 
@@ -382,6 +383,7 @@ def validate_preparation(workspace, root, name, mode, revision):
                           "backend": EXECUTION_BACKENDS[name], "producer_profile": NATIVE_PRODUCER,
                           "dataset_profile": dataset_profile(name),
                           "dataset_sha256": dataset_sha256(skill), "gh_manifest": prepared.get("gh_manifest"),
+                          **({"gh_upstream_revision": gh.UPSTREAM} if name == "gh" else {}),
                           **({"pester_bundle_sha256": pester_bundle_sha256(skill)} if name == pester.NAME else {})},
             "Prepared benchmark scope differs")
     return root, skill, prepared
@@ -615,13 +617,19 @@ def statistics_summary(statistics):
     return ["", "### Advisory benchmark statistics", "", *lines]
 
 
-def released_policy(name, *, owner=NATIVE_PRODUCER):
+def released_policy(name, *, owner=NATIVE_PRODUCER, gh_revision=None):
     require(name in BACKENDS and owner in NATIVE_OWNERS, "Unsupported released score policy")
     if owner == RETAINED_NATIVE_PRODUCER:
-        return read_json(ROOT / ".github/evals/benchmark-native-101-policies.json")[name]
+        policy = read_json(ROOT / ".github/evals/benchmark-native-101-policies.json")[name]
+        require(gh_revision is None or policy.get("upstream_revision") == gh_revision,
+                "Unreviewed upstream attribution for retained release")
+        return policy
     profile = NATIVE_OWNERS[owner]["backends"][0]
     options = benchmark_options(name)
-    return {**benchmark_policy(name), "grading": options["grading_mode"], "workspace_mode": options["workspace_mode"],
+    if gh_revision is None:
+        gh_revision = gh.UPSTREAM
+    return {**benchmark_policy(name, gh_revision=gh_revision),
+            "grading": options["grading_mode"], "workspace_mode": options["workspace_mode"],
             "evaluator_revision": profile["revision"], "harbor": profile["harbor"],
             "python": profile["python"], "environment": BACKENDS[name],
             "producer_profile": owner, "scoring_policy": profile["scoring"],
@@ -630,10 +638,11 @@ def released_policy(name, *, owner=NATIVE_PRODUCER):
             "dataset_profile": GH_DATASET_PROFILE if name == "gh" else "podman-authored"}
 
 
-def score_series(name, mode, *, owner=NATIVE_PRODUCER):
+def score_series(name, mode, *, owner=NATIVE_PRODUCER, gh_revision=None):
     require(mode in MODES, "Unsupported released score mode")
     pins = NATIVE_OWNERS[owner]
-    identity = [released_policy(name, owner=owner), pins["patch_sha256"], pins["backends"][0]["codex_tool_surface"], mode]
+    identity = [released_policy(name, owner=owner, gh_revision=gh_revision),
+                pins["patch_sha256"], pins["backends"][0]["codex_tool_surface"], mode]
     material = json.dumps(identity, sort_keys=True).encode()
     return hashlib.sha256(material).hexdigest()[:16]
 

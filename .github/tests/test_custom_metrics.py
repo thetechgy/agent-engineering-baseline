@@ -190,7 +190,7 @@ def synthetic_gh_native(root, *, unscoreable=False, candidate_metrics=None):
     from skillevaluator.tier3.dataset_utils import load_dataset_entries
     from evaluator_profiles import owning_candidate, candidate_versions
     profile = owning_candidate()
-    candidate_policy = {**reports.benchmark_policy('gh'), 'evaluator_revision': profile['revision'],
+    candidate_policy = {**reports.benchmark_policy('gh', gh_revision=gh.UPSTREAM), 'evaluator_revision': profile['revision'],
                         'harbor': profile['harbor'], 'python': profile['python']}
     from gh_candidate import stage as candidate_stage
     bundle = candidate_stage(ROOT, root / 'bundle/gh')
@@ -453,6 +453,25 @@ class CustomMetricTests(unittest.TestCase):
                 elif change == 'applicability': m['applicability'] = 'not_applicable'
                 else: m['denominator'] = 0
                 with self.assertRaises(ValueError): evidence.validate_public(data)
+
+    @unittest.skipUnless(os.environ.get('CANDIDATE_EVIDENCE_CHILD') == '1', 'requires the pinned candidate owner')
+    def test_standard_gh_admission_binds_the_refreshed_skill_revision(self):
+        from gh_evaluations import UPSTREAM
+
+        native, _ = synthetic_gh_native(self.root)
+        data = evidence.project(evidence.normalize_behavioral(native, 'gh'))
+        evidence.validate_public(data)
+        self.assertEqual(data['source']['revision'], UPSTREAM)
+        self.assertEqual(data['policy']['fields']['upstream_revision'], UPSTREAM)
+        self.assertEqual(data['custom']['profile_id'], evidence.custom_registry()['active_profiles']['gh'])
+        self.assertEqual(len(data['observations']), 48)
+
+        provenance = native / 'provenance.json'
+        recorded = reports.read_json(provenance)
+        recorded['policy']['upstream_revision'] = reports.RETAINED_GH_REVISION
+        reports.write_json(provenance, recorded)
+        with self.assertRaisesRegex(ValueError, 'Captured source origin contradiction'):
+            evidence.normalize_behavioral(native, 'gh')
 
     def test_gh_default_plus_custom_native_admission_preserves_routing_and_gate_semantics(self):
         native, run = historical_gh_native(self.root)

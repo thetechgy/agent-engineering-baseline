@@ -1422,8 +1422,10 @@ def released_policy_identity(value, *, custom_only, static):
             and attempts.get('stop_on_pass') is False and attempts.get('pass_threshold') == 0.5
             and value.get('provenance') == 'runtime_recorded', say)
     suite = next((name for name, backend in BACKENDS.items() if fields.get('environment') == backend), None)
-    require(suite is not None and value.get('published_id') == score_series(suite, mode, owner=owner), say)
-    expected = released_policy(suite, owner=owner)
+    require(suite is not None, say)
+    gh_revision = fields.get('upstream_revision')
+    require(value.get('published_id') == score_series(suite, mode, owner=owner, gh_revision=gh_revision), say)
+    expected = released_policy(suite, owner=owner, gh_revision=gh_revision)
     require(fields == policy_fields({key: expected[key] for key in POLICY_FIELDS if key in expected})
             and value['judge'] == {'model': expected['model'], 'provider': expected['provider'], 'enabled': True}, say)
     return True
@@ -2603,7 +2605,8 @@ def reconcile_policy(fields, versions, config, agent, attempt_policy):
                     and harbor[config_key] == attempt_policy[key], 'Attempt policy disagreement')
 
 
-def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, native_layout=False, _numeric_excerpts=None, _custom_admission=False):
+def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, native_layout=False,
+                             _numeric_excerpts=None, _custom_admission=False, _captured_gh_revision=None):
     from skillevaluator.tier3.harbor import report_data as native_reports
     from skillevaluator.evaluation import EvaluationService
     from skillevaluator.tier3.case_ids import validate_case_id
@@ -2694,15 +2697,23 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
         require(benchmark_meta is None and not recovery and not provenance, 'Unexpected released native provenance')
         prepared_path = root / 'native-preparation.json'
         prepared = read_member(prepared_path)
-        closed(prepared, ('schema_version', 'revision', 'skill', 'mode', 'backend', 'producer_profile',
-                          'dataset_profile', 'dataset_sha256', 'gh_manifest'))
+        require(type(prepared) is dict, 'Invalid released preparation')
+        fields = ('schema_version', 'revision', 'skill', 'mode', 'backend', 'producer_profile',
+                  'dataset_profile', 'dataset_sha256', 'gh_manifest')
+        gh_revision = None
+        if name == 'gh':
+            gh_revision = prepared.get('gh_upstream_revision', reports.RETAINED_GH_REVISION)
+            if 'gh_upstream_revision' in prepared:
+                revision(gh_revision)
+                fields += ('gh_upstream_revision',)
+        closed(prepared, fields)
         mode = prepared['mode']
         require(type(prepared['schema_version']) is int and prepared['schema_version'] == 1
                 and prepared['skill'] == name and mode in reports.MODES
                 and prepared['producer_profile'] == owner, 'Released preparation differs from the report')
         revision(prepared['revision'])
         sha('sha256:' + prepared['dataset_sha256'])
-        expected = released_policy(name, owner=owner)
+        expected = released_policy(name, owner=owner, gh_revision=gh_revision)
         require(prepared['backend'] == expected['environment'] and prepared['dataset_profile'] == expected['dataset_profile'],
                 'Released preparation policy differs from the report')
         require((name == 'gh' and isinstance(prepared['gh_manifest'], str)
@@ -2710,7 +2721,8 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                 or (name == 'podman' and prepared['gh_manifest'] is None), 'Released preparation manifest differs')
         ref(prepared_path)
         provenance = {'schema_version': 1, 'skill': name, 'mode': mode, 'revision': prepared['revision'],
-                      'policy_id': score_series(name, mode, owner=owner), 'patch_sha256': producer['patch_sha256'],
+                      'policy_id': score_series(name, mode, owner=owner, gh_revision=gh_revision),
+                      'patch_sha256': producer['patch_sha256'],
                       'policy': {key: expected[key] for key in POLICY_FIELDS if key in expected}}
     historical_scores = producer['revision'] == profiles.HISTORICAL_REVISION
     if benchmark_meta is not None:
@@ -2782,11 +2794,18 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
     repo = associated_repository(workspace, repo, budget=budget)
     if repo is None:
         rev = None
-    upstream = provenance.get('policy', {}).get('upstream_revision')
-    for key in ('upstream_revision', 'competing_revision'):
-        recorded = provenance.get('policy', {}).get(key)
-        require(recorded is None or name == 'gh' and recorded == reports.benchmark_policy('gh')[key],
-                'Unreviewed upstream attribution')
+    declared_fields = provenance.get('policy', {})
+    upstream = declared_fields.get('upstream_revision')
+    competing = declared_fields.get('competing_revision')
+    require(competing is None or name == 'gh' and competing == reports.benchmark_policy('gh')['competing_revision'],
+            'Unreviewed upstream attribution')
+    if _captured_gh_revision is not None:
+        require(name == 'gh' and upstream in (None, _captured_gh_revision), 'Captured source origin contradiction')
+        upstream = _captured_gh_revision
+        declared_fields = {**declared_fields, 'upstream_revision': upstream}
+    if upstream is not None:
+        require(name == 'gh', 'Unreviewed upstream attribution')
+        reports.benchmark_policy('gh', gh_revision=upstream)
     historical_owner = 'upstream' if upstream is not None else 'local'
     src_path = 'skills/' + name if historical_owner == 'upstream' else '.apm/skills/' + name
     src_repo = 'cli/cli' if historical_owner == 'upstream' and name == 'gh' else repo
@@ -2813,7 +2832,6 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
     attempts = {'mode': provenance.get('mode', 'unknown'), 'maximum': maximum,
                 'stop_on_pass': stop_on_pass, 'pass_threshold': attempt_policy.get('pass_threshold')}
     judge = config.get('judge', {})
-    declared_fields = provenance.get('policy', {})
     patch_digest = 'sha256:' + provenance['patch_sha256'] if provenance.get('patch_sha256') else None
     if released_native:
         require(has_attempt and attempts['pass_threshold'] == 0.5 and result['report_status'] == 'complete',
@@ -4382,14 +4400,18 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
         configured = next(row['source'] for row in inventory(workspace)['skills']
                           if row['source']['skill_id'] == name)
         require(capture['source'] == configured, 'Podman source identity drift')
+    retained_gh = name == 'gh' and 'upstream_revision' not in profile
+    if retained_gh:
+        # Reviewed deployed bytes from the historical gh fixture checkout.
+        source_digest = 'sha256:842bbb633e603664537c3f2ed5b6dcc95471705c5215cb78d94110c623f539b4'
+    else:
+        source_digest = skill_content(source_root)['digest']
     require(capture['source']['skill_id'] == name
             and capture['source']['owner'] == ('local' if name == 'powershell-pester-6' or local_podman else 'upstream')
             and (name != 'gh' or capture['source']['repository'] == 'cli/cli'
-                 and capture['source']['revision'] == profile.get('upstream_revision',
-                     reports.benchmark_policy('gh')['upstream_revision'])
+                 and capture['source']['revision'] == profile.get('upstream_revision', reports.RETAINED_GH_REVISION)
                  and capture['source']['source_path'] == 'skills/gh')
-            and skill_content(source_root)['digest'] == capture['source']['content']['digest'],
-            'Declared skill content drift')
+            and source_digest == capture['source']['content']['digest'], 'Declared skill content drift')
     require(set(ids) == set(mapping) and bool(ids), 'Unknown custom case')
     if capture['purpose'] == 'oracle_qualification':
         require(set(ids) == set(mapping) and capture['agent'] == 'oracle' and capture['attempts'] == 1,
@@ -4592,7 +4614,9 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
     # Retain the supported v1 standard path and its arithmetic/gate checks.
     standard = None
     if profile['grading'] == 'default_plus_custom':
-        standard = _normalize_behavioral_v1(root, name, selected, workspace, native_layout=native_layout, _numeric_excerpts=numeric_excerpts, _custom_admission=True)
+        standard = _normalize_behavioral_v1(root, name, selected, workspace, native_layout=native_layout,
+                                            _numeric_excerpts=numeric_excerpts, _custom_admission=True,
+                                            _captured_gh_revision=capture['source']['revision'] if name == 'gh' else None)
         data = copy.deepcopy(dict(standard))
         require(all(data['source'][key] == capture['source'][key] for key in
                     ('skill_id', 'owner', 'repository', 'revision', 'source_path')), 'Captured source origin contradiction')
