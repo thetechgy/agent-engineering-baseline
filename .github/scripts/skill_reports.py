@@ -40,6 +40,7 @@ METRICS = {
 }
 MODES = {"standard": POLICY["standard_attempts"], "confirmation": 3}
 PATCH = ".github/patches/skillevaluator-v0.3.0-pin-codex.patch"
+RETAINED_GH_REVISION = "63837fb778d6a39f02be0ce76ff89f2bc8d74bdc"
 GH_TASK_BUILD = {
     "base_image": "python:3.12-slim-trixie@sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30",
     "apt_snapshot": "20261103T000000Z",
@@ -193,14 +194,19 @@ def prepare_benchmark(workspace, root, name):
     return source
 
 
-def benchmark_policy(name):
+def benchmark_policy(name, *, gh_revision=RETAINED_GH_REVISION):
     if benchmark_options(name)['diagnostic_only']:
         return {**POLICY, 'grading': 'custom_only', 'workspace_mode': 'isolated', 'diagnostic_only': True}
-    return {**POLICY, "grading": "default_plus_custom", "upstream_revision":
-            "63837fb778d6a39f02be0ce76ff89f2bc8d74bdc", "deterministic_gate": 3, "workspace_mode": "group",
+    if name != "gh":
+        return POLICY
+    from gh_evaluations import UPSTREAM
+
+    require(gh_revision in (RETAINED_GH_REVISION, UPSTREAM), "Unreviewed upstream attribution")
+    return {**POLICY, "grading": "default_plus_custom", "upstream_revision": gh_revision,
+            "deterministic_gate": 3, "workspace_mode": "group",
             "fixture_boundary": "root-broker-unprivileged-agent-v1", "authorization_policy": "per-case-allowlist-v1",
             "task_source": "native_harbor", "task_build": GH_TASK_BUILD,
-            "competing_revision": "1683f50e94c9fd489191f73d7c8f7e2bd871bd0c"} if name == "gh" else POLICY
+            "competing_revision": "1683f50e94c9fd489191f73d7c8f7e2bd871bd0c"}
 
 
 def released_static_results(payload):
@@ -516,8 +522,11 @@ def benchmark_report(workspace, root, name, mode, destination):
         require(condition["execution_status"] == "succeeded" and not condition["execution_errors"]
                 and condition["scored_attempts"] == condition["expected_attempts"] == cases * MODES[mode],
                 "Incomplete with-skill/baseline coverage")
+    policy = benchmark_policy(name)
     if name == "gh":
         import gh_evaluations as gh
+        gh.verify_skill(workspace)
+        policy = benchmark_policy(name, gh_revision=gh.UPSTREAM)
         expected_ids = [entry["id"] for entry in gh.dataset(workspace)]
         require(cases == len(expected_ids), "Diagnostic subset cannot publish benchmark history")
         if (root / "selection.json").exists():
@@ -537,7 +546,7 @@ def benchmark_report(workspace, root, name, mode, destination):
     rows = metric_rows(agent)
     provenance = {
         "schema_version": 1, "skill": name, "mode": mode, "revision": revision,
-        "policy": benchmark_policy(name), "patch_sha256": hashlib.sha256((workspace / PATCH).read_bytes()).hexdigest(),
+        "policy": policy, "patch_sha256": hashlib.sha256((workspace / PATCH).read_bytes()).hexdigest(),
         "dataset_digest": result["dataset_digest"], "metrics": rows,
     }
     # Reuse the exact same allowlist contract on both sides of the artifact boundary.
@@ -634,7 +643,9 @@ def validate_metrics(data, workspace, name, revision, *, mode="standard"):
             "History identity/mode mismatch")
     benchmark_skill(workspace, name)
     require(bool(re.fullmatch(r"[0-9a-f]{40}", revision)) and data["revision"] == revision, "Revision mismatch")
-    require(data["policy"] == benchmark_policy(name), "Benchmark policy mismatch")
+    policy = data["policy"]
+    require(type(policy) is dict and policy == benchmark_policy(name, gh_revision=policy.get("upstream_revision")),
+            "Benchmark policy mismatch")
     require(data["patch_sha256"] == hashlib.sha256((workspace / PATCH).read_bytes()).hexdigest(), "Patch mismatch")
     require(bool(re.fullmatch(r"sha256:[0-9a-f]{64}", data["dataset_digest"])), "Invalid dataset digest")
     validate_history_metric_rows(data["metrics"])
@@ -666,9 +677,12 @@ def validate_released_metrics(data, workspace, name, revision, *, mode, historic
     policy = data['policy']
     require(type(policy) is dict and type(data['patch_sha256']) is str, "Invalid released history producer")
     owner = native_owner(policy.get('evaluator_revision'), 'sha256:' + data['patch_sha256'])
+    gh_revision = policy.get("upstream_revision") if historical else None
     require(owner is not None and (historical or owner == NATIVE_PRODUCER)
-            and policy == released_policy(name, owner=owner), "Released history producer or policy differs")
-    require(data["series"] == score_series(name, mode, owner=owner), "Released history series differs")
+            and policy == released_policy(name, owner=owner, gh_revision=gh_revision),
+            "Released history producer or policy differs")
+    require(data["series"] == score_series(name, mode, owner=owner, gh_revision=gh_revision),
+            "Released history series differs")
     require(isinstance(data["dataset_digest"], str) and re.fullmatch(r"sha256:[0-9a-f]{64}", data["dataset_digest"]),
             "Invalid released history dataset digest")
     validate_history_metric_rows(data["metrics"])
@@ -686,7 +700,7 @@ def publish_metrics(workspace, root, name, *, released=False):
     else:
         data = read_json(root / "metrics.json", limit=16384)
         validate_metrics(data, workspace, name, os.environ["GITHUB_SHA"])
-        policy_id = hashlib.sha256(json.dumps([benchmark_policy(name), data["patch_sha256"]], sort_keys=True).encode()).hexdigest()[:16]
+        policy_id = hashlib.sha256(json.dumps([data["policy"], data["patch_sha256"]], sort_keys=True).encode()).hexdigest()[:16]
     rows = [{**row, "extra": f"Dataset {data['dataset_digest']}; policy {policy_id}"} for row in data["metrics"]]
     write_json(root / "benchmark.json", rows)
     outputs(history_dir=f"benchmarks/{name}/{policy_id}")

@@ -9,7 +9,7 @@ illustrative; replay never contacts them.
 
 ## Pinned references
 
-- **CLI skill:** [cli/cli at 63837fb (GitHub CLI 2.103.3)](https://github.com/cli/cli/blob/63837fb778d6a39f02be0ce76ff89f2bc8d74bdc/skills/gh/SKILL.md).
+- **CLI skill:** [cli/cli at 529111a (GitHub CLI 2.106.0)](https://github.com/cli/cli/blob/529111a21612ff1e29dc45e567a157df24e0e243/skills/gh/SKILL.md).
   APM lockfile deployment owner and hashes are checked before staging.
   Historical review controls retain the unchanged ec5b512 source separately at
   `.github/tests/fixtures/skill_review/gh-ec5b512.zip`, matching their

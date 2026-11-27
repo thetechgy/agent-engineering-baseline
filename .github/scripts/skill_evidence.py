@@ -1422,8 +1422,10 @@ def released_policy_identity(value, *, custom_only, static):
             and attempts.get('stop_on_pass') is False and attempts.get('pass_threshold') == 0.5
             and value.get('provenance') == 'runtime_recorded', say)
     suite = next((name for name, backend in BACKENDS.items() if fields.get('environment') == backend), None)
-    require(suite is not None and value.get('published_id') == score_series(suite, mode, owner=owner), say)
-    expected = released_policy(suite, owner=owner)
+    require(suite is not None, say)
+    gh_revision = fields.get('upstream_revision')
+    require(value.get('published_id') == score_series(suite, mode, owner=owner, gh_revision=gh_revision), say)
+    expected = released_policy(suite, owner=owner, gh_revision=gh_revision)
     require(fields == policy_fields({key: expected[key] for key in POLICY_FIELDS if key in expected})
             and value['judge'] == {'model': expected['model'], 'provider': expected['provider'], 'enabled': True}, say)
     return True
@@ -2603,7 +2605,8 @@ def reconcile_policy(fields, versions, config, agent, attempt_policy):
                     and harbor[config_key] == attempt_policy[key], 'Attempt policy disagreement')
 
 
-def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, native_layout=False, _numeric_excerpts=None, _custom_admission=False):
+def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, native_layout=False,
+                             _numeric_excerpts=None, _custom_admission=False, _captured_gh_revision=None):
     from skillevaluator.tier3.harbor import report_data as native_reports
     from skillevaluator.evaluation import EvaluationService
     from skillevaluator.tier3.case_ids import validate_case_id
@@ -2694,15 +2697,23 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
         require(benchmark_meta is None and not recovery and not provenance, 'Unexpected released native provenance')
         prepared_path = root / 'native-preparation.json'
         prepared = read_member(prepared_path)
-        closed(prepared, ('schema_version', 'revision', 'skill', 'mode', 'backend', 'producer_profile',
-                          'dataset_profile', 'dataset_sha256', 'gh_manifest'))
+        require(type(prepared) is dict, 'Invalid released preparation')
+        fields = ('schema_version', 'revision', 'skill', 'mode', 'backend', 'producer_profile',
+                  'dataset_profile', 'dataset_sha256', 'gh_manifest')
+        gh_revision = None
+        if name == 'gh':
+            gh_revision = prepared.get('gh_upstream_revision', reports.RETAINED_GH_REVISION)
+            if 'gh_upstream_revision' in prepared:
+                revision(gh_revision)
+                fields += ('gh_upstream_revision',)
+        closed(prepared, fields)
         mode = prepared['mode']
         require(type(prepared['schema_version']) is int and prepared['schema_version'] == 1
                 and prepared['skill'] == name and mode in reports.MODES
                 and prepared['producer_profile'] == owner, 'Released preparation differs from the report')
         revision(prepared['revision'])
         sha('sha256:' + prepared['dataset_sha256'])
-        expected = released_policy(name, owner=owner)
+        expected = released_policy(name, owner=owner, gh_revision=gh_revision)
         require(prepared['backend'] == expected['environment'] and prepared['dataset_profile'] == expected['dataset_profile'],
                 'Released preparation policy differs from the report')
         require((name == 'gh' and isinstance(prepared['gh_manifest'], str)
@@ -2710,7 +2721,8 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
                 or (name == 'podman' and prepared['gh_manifest'] is None), 'Released preparation manifest differs')
         ref(prepared_path)
         provenance = {'schema_version': 1, 'skill': name, 'mode': mode, 'revision': prepared['revision'],
-                      'policy_id': score_series(name, mode, owner=owner), 'patch_sha256': producer['patch_sha256'],
+                      'policy_id': score_series(name, mode, owner=owner, gh_revision=gh_revision),
+                      'patch_sha256': producer['patch_sha256'],
                       'policy': {key: expected[key] for key in POLICY_FIELDS if key in expected}}
     historical_scores = producer['revision'] == profiles.HISTORICAL_REVISION
     if benchmark_meta is not None:
@@ -2782,11 +2794,18 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
     repo = associated_repository(workspace, repo, budget=budget)
     if repo is None:
         rev = None
-    upstream = provenance.get('policy', {}).get('upstream_revision')
-    for key in ('upstream_revision', 'competing_revision'):
-        recorded = provenance.get('policy', {}).get(key)
-        require(recorded is None or name == 'gh' and recorded == reports.benchmark_policy('gh')[key],
-                'Unreviewed upstream attribution')
+    declared_fields = provenance.get('policy', {})
+    upstream = declared_fields.get('upstream_revision')
+    competing = declared_fields.get('competing_revision')
+    require(competing is None or name == 'gh' and competing == reports.benchmark_policy('gh')['competing_revision'],
+            'Unreviewed upstream attribution')
+    if _captured_gh_revision is not None:
+        require(name == 'gh' and upstream in (None, _captured_gh_revision), 'Captured source origin contradiction')
+        upstream = _captured_gh_revision
+        declared_fields = {**declared_fields, 'upstream_revision': upstream}
+    if upstream is not None:
+        require(name == 'gh', 'Unreviewed upstream attribution')
+        reports.benchmark_policy('gh', gh_revision=upstream)
     historical_owner = 'upstream' if upstream is not None else 'local'
     src_path = 'skills/' + name if historical_owner == 'upstream' else '.apm/skills/' + name
     src_repo = 'cli/cli' if historical_owner == 'upstream' and name == 'gh' else repo
@@ -2813,7 +2832,6 @@ def _normalize_behavioral_v1(root, name, selected=None, workspace=ROOT, *, nativ
     attempts = {'mode': provenance.get('mode', 'unknown'), 'maximum': maximum,
                 'stop_on_pass': stop_on_pass, 'pass_threshold': attempt_policy.get('pass_threshold')}
     judge = config.get('judge', {})
-    declared_fields = provenance.get('policy', {})
     patch_digest = 'sha256:' + provenance['patch_sha256'] if provenance.get('patch_sha256') else None
     if released_native:
         require(has_attempt and attempts['pass_threshold'] == 0.5 and result['report_status'] == 'complete',
@@ -3664,6 +3682,7 @@ DIAGNOSTIC_SOURCE_SUCCESSORS = '.github/evals/source-v46.json'
 DIRECT_TOOL_SOURCE_SUCCESSORS = '.github/evals/source-v47.json'
 NATIVE_RETIREMENT_SOURCE_SUCCESSORS = '.github/evals/source-v48.json'
 RELEASE_121_SOURCE_SUCCESSORS = '.github/evals/source-v49.json'
+GH_SKILL_SOURCE_SUCCESSORS = '.github/evals/source-v50.json'
 CUSTOM_OUTCOMES = ('passed', 'failed', 'invalid', 'unsupported', 'timeout',
                    'infrastructure_error', 'interrupted', 'unknown')
 CUSTOM_MEASURED = ('passed', 'failed')
@@ -3788,13 +3807,18 @@ def custom_registry(workspace=ROOT):
         if 'adapter_sha256' in result.get('campaign', {}):
             result['campaign'] = dict(result['campaign'], adapter_sha256=version['replay_adapter'])
         profiles[successor] = result
-    for version_path in (MODEL_SUCCESSORS, SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS, DIRECT_TOOL_SOURCE_SUCCESSORS, NATIVE_RETIREMENT_SOURCE_SUCCESSORS, RELEASE_121_SOURCE_SUCCESSORS):
+    for version_path in (MODEL_SUCCESSORS, SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS, DIRECT_TOOL_SOURCE_SUCCESSORS, NATIVE_RETIREMENT_SOURCE_SUCCESSORS, RELEASE_121_SOURCE_SUCCESSORS, GH_SKILL_SOURCE_SUCCESSORS):
         version = parse_json(read_bytes(workspace / version_path))
         sha(version['replay_adapter'])
         for successor, update in version['profiles'].items():
             parent = profiles[update['parent']]
             sha(update['runtime_digest'])
             result = dict(parent, id=successor, runtime_digest=update['runtime_digest'])
+            if 'upstream_revision' in update:
+                require(version_path == GH_SKILL_SOURCE_SUCCESSORS and parent['skill_id'] == 'gh',
+                        'Unregistered upstream successor')
+                revision(update['upstream_revision'])
+                result['upstream_revision'] = update['upstream_revision']
             if 'grader_digest' in update:
                 require(version_path in (MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS)
                         and parent['skill_id'] == 'podman',
@@ -3821,7 +3845,7 @@ def custom_registry(workspace=ROOT):
             registry['metrics'].update(version['new_metrics'])
             validate_custom_metrics(registry['metrics'])
             profiles.update(version['new_profiles'])
-    registry['active_profiles']['gh'] = 'gh-deterministic-gate-v10'
+    registry['active_profiles']['gh'] = 'gh-deterministic-gate-v11'
     return registry
 
 
@@ -3880,11 +3904,11 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v52'
+        profile_id = 'pester-effectiveness-v53'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v24'
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
-        profile_id = 'gh-native-oracle-v6'
+        profile_id = 'gh-native-oracle-v7'
     profile_id = registry['active_profiles'].get(name) if profile_id is None else profile_id
     require(profile_id in registry['profiles'], 'Unknown custom metric namespace or profile')
     registered = registry['profiles'][profile_id]
@@ -4279,7 +4303,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
             for member in safe_tree(source_root, directory_identities=directories, directory_states=states, file_states=members):
                 read_bytes(member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
         for registry_member in (CUSTOM_REGISTRY, SOURCE_SUCCESSORS, MODEL_SUCCESSORS,
-                                SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS, DIRECT_TOOL_SOURCE_SUCCESSORS, NATIVE_RETIREMENT_SOURCE_SUCCESSORS, RELEASE_121_SOURCE_SUCCESSORS):
+                                SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS, DIRECT_TOOL_SOURCE_SUCCESSORS, NATIVE_RETIREMENT_SOURCE_SUCCESSORS, RELEASE_121_SOURCE_SUCCESSORS, GH_SKILL_SOURCE_SUCCESSORS):
             read_bytes(workspace / registry_member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
         if local_podman:
             for member in ('.apm/skills/podman/evals/evals.json', '.apm/skills/podman/evals/files/vendor-compose.yaml',
@@ -4292,13 +4316,23 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
     profile, definitions, contract = custom_contract(name, workspace, purpose=purpose)
     approved_inputs = custom_source_manifest(workspace, name, purpose=purpose)
     if name == 'gh' and capture['contract_digest'] != contract and purpose in ('benchmark', 'oracle_qualification'):
-        historical = {'benchmark': 'gh-deterministic-gate-v9', 'oracle_qualification': 'gh-native-oracle-v5'}
-        profile, definitions, contract = custom_contract(name, workspace, profile_id=historical[purpose])
-        # These captures bind the original helper at bc96c28. Only its CLI
-        # changed at retirement. All other source members still match live bytes.
-        digest = 'sha256:b4a5fe5f4bf7d306ea8faa77b16d8668e0cbbab365205de29cb34aa0cc231aa0'
-        approved_inputs = [dict(row, digest=digest) if row['member'] == 'producer/gh_evaluations.py' else row
-                           for row in approved_inputs]
+        # Retained capture contracts bind the reviewed helper at production.
+        # Other members still match the current authored fixture inputs.
+        retained = {
+            'benchmark': ('gh-deterministic-gate-v10', 'gh-deterministic-gate-v9'),
+            'oracle_qualification': ('gh-native-oracle-v6', 'gh-native-oracle-v5'),
+        }
+        helper_digests = (
+            'sha256:cfc192e54d1397a3ffb15760194b33cae19343bacead1c17d4ee3dc8de21c632',
+            'sha256:b4a5fe5f4bf7d306ea8faa77b16d8668e0cbbab365205de29cb34aa0cc231aa0',
+        )
+        for retained_id, digest in zip(retained.get(purpose, ()), helper_digests):
+            candidate = custom_contract(name, workspace, profile_id=retained_id)
+            if capture['contract_digest'] == candidate[2]:
+                profile, definitions, contract = candidate
+                approved_inputs = [dict(row, digest=digest) if row['member'] == 'producer/gh_evaluations.py' else row
+                                   for row in approved_inputs]
+                break
     require(bool(profile.get('campaign', {}).get('scheduler')) == ('scheduler_digest' in capture),
             'Missing or unexpected scheduler capture')
     if 'scheduler_digest' in capture: sha(capture['scheduler_digest'])
@@ -4376,13 +4410,18 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
         configured = next(row['source'] for row in inventory(workspace)['skills']
                           if row['source']['skill_id'] == name)
         require(capture['source'] == configured, 'Podman source identity drift')
+    retained_gh = name == 'gh' and 'upstream_revision' not in profile
+    if retained_gh:
+        # Reviewed deployed bytes from the historical gh fixture checkout.
+        source_digest = 'sha256:842bbb633e603664537c3f2ed5b6dcc95471705c5215cb78d94110c623f539b4'
+    else:
+        source_digest = skill_content(source_root)['digest']
     require(capture['source']['skill_id'] == name
             and capture['source']['owner'] == ('local' if name == 'powershell-pester-6' or local_podman else 'upstream')
             and (name != 'gh' or capture['source']['repository'] == 'cli/cli'
-                 and capture['source']['revision'] == reports.benchmark_policy('gh')['upstream_revision']
+                 and capture['source']['revision'] == profile.get('upstream_revision', reports.RETAINED_GH_REVISION)
                  and capture['source']['source_path'] == 'skills/gh')
-            and skill_content(source_root)['digest'] == capture['source']['content']['digest'],
-            'Declared skill content drift')
+            and source_digest == capture['source']['content']['digest'], 'Declared skill content drift')
     require(set(ids) == set(mapping) and bool(ids), 'Unknown custom case')
     if capture['purpose'] == 'oracle_qualification':
         require(set(ids) == set(mapping) and capture['agent'] == 'oracle' and capture['attempts'] == 1,
@@ -4585,7 +4624,9 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
     # Retain the supported v1 standard path and its arithmetic/gate checks.
     standard = None
     if profile['grading'] == 'default_plus_custom':
-        standard = _normalize_behavioral_v1(root, name, selected, workspace, native_layout=native_layout, _numeric_excerpts=numeric_excerpts, _custom_admission=True)
+        standard = _normalize_behavioral_v1(root, name, selected, workspace, native_layout=native_layout,
+                                            _numeric_excerpts=numeric_excerpts, _custom_admission=True,
+                                            _captured_gh_revision=capture['source']['revision'] if name == 'gh' else None)
         data = copy.deepcopy(dict(standard))
         require(all(data['source'][key] == capture['source'][key] for key in
                     ('skill_id', 'owner', 'repository', 'revision', 'source_path')), 'Captured source origin contradiction')
@@ -4599,6 +4640,8 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             model=config.get('provider', {}).get('model'), provider=config.get('provider', {}).get('name'))
         if profile_family(profile) == 'gh-native-oracle-v1':
             gh_policy = reports.benchmark_policy('gh')
+            if 'upstream_revision' in profile:
+                gh_policy['upstream_revision'] = profile['upstream_revision']
             fields.update({key: gh_policy[key] for key in ('workspace_mode', 'upstream_revision', 'competing_revision',
                 'authorization_policy', 'fixture_boundary', 'task_build')})
         if 'campaign' in profile:
@@ -5030,6 +5073,8 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
                 and data['policy'].get('producer_profile') in {p['id'] for p in profiles.CANDIDATES}
                 and data['policy']['fields']['environment'] == 'aeb-gh-fixture', 'Native gh oracle profile mismatch')
         gh_policy = reports.benchmark_policy('gh')
+        if 'upstream_revision' in profile:
+            gh_policy['upstream_revision'] = profile['upstream_revision']
         require(all(data['policy']['fields'][key] == gh_policy[key] for key in ('workspace_mode', 'upstream_revision',
                 'competing_revision', 'authorization_policy', 'fixture_boundary', 'task_build')), 'Native gh staging policy mismatch')
     require(data['policy']['fields']['grading'] == profile['grading'], 'Custom grading policy mismatch')
