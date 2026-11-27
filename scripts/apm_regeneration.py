@@ -110,7 +110,7 @@ def omit_locked_instruction(root):
         output.unlink()
 
 
-def native_checks(apm, root, refresh, environment=None):
+def native_checks(apm, root, refresh, environment=None, *, update=True):
     environment = dict(os.environ if environment is None else environment)
     lock_path = root / "apm.lock.yaml"
     previous_lock = lock_path.read_bytes() if refresh and lock_path.is_file() else None
@@ -119,8 +119,9 @@ def native_checks(apm, root, refresh, environment=None):
         run([str(apm), *arguments], root, env=environment)
 
     if refresh:
-        apm_run("update", "--yes")
-        # Update alone leaves consent-gated executables undeployed.
+        if update:
+            apm_run("update", "--yes")
+        # Deploy consent-gated executables with the reviewed dependencies.
         apm_run("install", "--trust-bin")
     lock = lock_path.read_bytes()
     apm_run("install", "--frozen", "--trust-bin")
@@ -195,7 +196,8 @@ def regenerate(source, apm, mode):
             raise RuntimeError("APM executable does not match the recorded lockfile generator")
         print(reported.strip(), flush=True)
     before = inventory(source)
-    if mode == "refresh":
+    refresh = mode in ("refresh", "relock")
+    if refresh:
         dirty = {os.fsdecode(name) for name in git(source, "diff", "--name-only", "-z", "HEAD", "--",
                                                    *sorted(OUTPUTS), ".agents/skills").split(b"\0") if name}
     tracked = {os.fsdecode(name) for name in git(source, "ls-files", "-z").split(b"\0") if name}
@@ -211,9 +213,9 @@ def regenerate(source, apm, mode):
         environment = {**git_environment(), "HOME": str(home), "XDG_CONFIG_HOME": str(home / ".config"),
                        "XDG_CACHE_HOME": str(home / ".cache"), "TMPDIR": directory}
         environment.pop("APM_HOME", None)
-        if mode == "refresh":
+        if refresh:
             omit_locked_instruction(scratch)
-        native_checks(apm, scratch, mode == "refresh", environment)
+        native_checks(apm, scratch, refresh, environment, update=mode == "refresh")
         if inventory(source) != before:
             raise RuntimeError("Checkout changed during regeneration; nothing was published")
         after = inventory(scratch)
@@ -224,7 +226,7 @@ def regenerate(source, apm, mode):
             raise RuntimeError("APM changed non-output paths: " + ", ".join(unexpected))
         if mode == "validate" and changed:
             raise RuntimeError("APM regeneration differs from checkout: " + ", ".join(changed))
-        if mode == "refresh":
+        if refresh:
             conflicts = sorted(dirty.intersection(changed))
             if conflicts:
                 raise RuntimeError("Refresh requires unchanged generated outputs; back up or reconcile: " + ", ".join(conflicts))
@@ -240,7 +242,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repository", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--apm", type=Path, required=True)
-    parser.add_argument("--mode", choices=("validate", "refresh"), default="validate")
+    parser.add_argument("--mode", choices=("validate", "refresh", "relock"), default="validate",
+                        help="Relock deploys manifest pins without advancing dependencies.")
     arguments = parser.parse_args()
     if not arguments.apm.is_absolute():
         parser.error("--apm must be an absolute executable path")
