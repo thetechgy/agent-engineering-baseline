@@ -48,7 +48,7 @@ class RegenerationTests(unittest.TestCase):
         path.write_text(content)
 
     @staticmethod
-    def materialize(apm, scratch, refresh, environment=None):
+    def materialize(apm, scratch, refresh, environment=None, *, update=True):
         skill = scratch / ".agents/skills/fixture/SKILL.md"
         assert not skill.exists(), "Cold regeneration reused deployed skills"
         assert not (scratch / ".apm-local").exists(), "Local identity was copied"
@@ -74,7 +74,7 @@ class RegenerationTests(unittest.TestCase):
         before = regeneration.inventory(self.source)
         staged = self.git("diff", "--cached", "--binary")
 
-        def check(apm, scratch, refresh, environment):
+        def check(apm, scratch, refresh, environment, *, update=True):
             self.materialize(apm, scratch, refresh)
             self.assertNotEqual(environment["HOME"], os.environ.get("HOME"))
             self.assertNotIn("APM_HOME", environment)
@@ -116,7 +116,7 @@ class RegenerationTests(unittest.TestCase):
 
     @unittest.skipIf(os.name == "nt", "Executable file mode is a Unix boundary")
     def test_generated_executable_mode_drift_fails(self):
-        def changed_mode(apm, scratch, refresh, environment):
+        def changed_mode(apm, scratch, refresh, environment, *, update=True):
             self.materialize(apm, scratch, refresh)
             (scratch / ".agents/skills/fixture/SKILL.md").chmod(0o755)
 
@@ -136,7 +136,7 @@ class RegenerationTests(unittest.TestCase):
             with self.subTest(path=name):
                 before = regeneration.inventory(self.source)
 
-                def change(apm, scratch, refresh, environment):
+                def change(apm, scratch, refresh, environment, *, update=True):
                     self.materialize(apm, scratch, refresh)
                     (scratch / name).write_text("unexpected\n")
 
@@ -147,7 +147,7 @@ class RegenerationTests(unittest.TestCase):
     def test_untracked_output_collision_and_concurrent_edit_block_refresh(self):
         self.write(".agents/skills/new/SKILL.md", "user skill\n")
 
-        def collide(apm, scratch, refresh, environment):
+        def collide(apm, scratch, refresh, environment, *, update=True):
             self.materialize(apm, scratch, refresh)
             path = scratch / ".agents/skills/new/SKILL.md"
             path.parent.mkdir(parents=True)
@@ -157,7 +157,7 @@ class RegenerationTests(unittest.TestCase):
             self.invoke("refresh", collide)
         self.assertEqual((self.source / ".agents/skills/new/SKILL.md").read_text(), "user skill\n")
 
-        def concurrent(apm, scratch, refresh, environment):
+        def concurrent(apm, scratch, refresh, environment, *, update=True):
             self.materialize(apm, scratch, refresh)
             self.write("apm.yml", "concurrent edit\n")
 
@@ -168,7 +168,7 @@ class RegenerationTests(unittest.TestCase):
     def test_failed_native_command_never_publishes(self):
         before = regeneration.inventory(self.source)
         with self.assertRaises(subprocess.CalledProcessError):
-            self.invoke("refresh", lambda *args: regeneration.run(["sh", "-c", "exit 23"], self.root))
+            self.invoke("refresh", lambda *args, **kwargs: regeneration.run(["sh", "-c", "exit 23"], self.root))
         self.assertEqual(before, regeneration.inventory(self.source))
 
     def test_refresh_refuses_preexisting_generated_edits(self):
@@ -188,7 +188,7 @@ class RegenerationTests(unittest.TestCase):
         before = regeneration.inventory(self.source)
         self.assertNotIn(".agents/skills/new/SKILL.md", before)
 
-        def collide(apm, scratch, refresh, environment):
+        def collide(apm, scratch, refresh, environment, *, update=True):
             self.materialize(apm, scratch, refresh)
             output = scratch / ".agents/skills/new/SKILL.md"
             output.parent.mkdir(parents=True)
@@ -208,7 +208,7 @@ class RegenerationTests(unittest.TestCase):
                 raise OSError("Injected publication failure")
             return copy(source, destination)
 
-        def change(apm, scratch, refresh, environment):
+        def change(apm, scratch, refresh, environment, *, update=True):
             self.materialize(apm, scratch, refresh)
             (scratch / ".agents/skills/fixture/SKILL.md").chmod(0o755)
             (scratch / ".codex/config.toml").write_text("refreshed config\n")
@@ -222,6 +222,19 @@ class RegenerationTests(unittest.TestCase):
 
 @unittest.skipIf(os.name == "nt", "Full validation uses the Linux script PTY utility")
 class NativeAuditTests(unittest.TestCase):
+    def test_relock_installs_and_compiles_without_updating_pins(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "apm.lock.yaml").write_text("reviewed lock\n")
+            with patch.object(regeneration, "run") as run:
+                regeneration.native_checks(root / "apm", root, True, update=False)
+            commands = [call.args[0][1:] for call in run.call_args_list]
+            self.assertEqual(commands, [
+                ["install", "--trust-bin"], ["install", "--frozen", "--trust-bin"],
+                ["compile", "--target", "codex,copilot", "--validate"],
+                ["compile", "--target", "codex,copilot"],
+            ])
+
     def test_refresh_reconciles_executable_assets_and_stops_on_command_failure(self):
         commands = ["update --yes", "install --trust-bin", "install --frozen --trust-bin",
                     "compile --target codex,copilot --validate", "compile --target codex,copilot"]
