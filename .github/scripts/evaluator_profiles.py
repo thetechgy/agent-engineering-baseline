@@ -16,7 +16,7 @@ RETAINED_RELEASE_BENCHMARK = json.loads((Path(__file__).resolve().parents[1] / '
 RELEASE_BENCHMARK = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-1.0.1-benchmark-candidate-v3.json').read_text())
 CURRENT_RELEASE = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-1.2.1-benchmark-candidate-v1.json').read_text())
 NATIVE_1720 = json.loads((Path(__file__).resolve().parents[1] / 'evals/evaluator-1.2.1-benchmark-launcher-1720-v1.json').read_text())
-CANDIDATES = (CANDIDATE, NEXT, RETAINED_NEXT, ACCOUNTING, CURRENT_RELEASE, RELEASE_BENCHMARK, RETAINED_RELEASE_BENCHMARK)
+CANDIDATES = (CANDIDATE, NEXT, RETAINED_NEXT, ACCOUNTING, CURRENT_RELEASE, RELEASE_BENCHMARK, RETAINED_RELEASE_BENCHMARK, NATIVE_1720)
 BENCHMARK_ACCOUNTING = json.loads((Path(__file__).resolve().parents[1] / 'evals/benchmark-090-accounting-v1.json').read_text())
 
 
@@ -136,7 +136,7 @@ def validate_install(profile):
 
 def candidate_versions(profile=None):
     p = CANDIDATE if profile is None else profile
-    if not is_candidate(p) and p is not NATIVE_1720:
+    if not is_candidate(p):
         raise ValueError('Unsupported candidate profile')
     value = {'skillevaluator': p['version'], 'evaluator_revision': p['revision'], 'harbor': p['harbor'],
              'python': p['python'], 'lock_sha256': p['lock_sha256'], 'patch_sha256': p['patch_sha256']}

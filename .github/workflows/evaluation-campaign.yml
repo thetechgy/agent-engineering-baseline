@@ -17,6 +17,7 @@ on:
           - pester-return-development-current-v1-sol62
           - pester-return-development-current-v1-1710-sol62
           - podman-storage-v1-1710-sol62
+          - podman-storage-current-v1-1720-sol62
           - pester-return-development-candidate-v1-sol62
           - pester-return-transfer-current-v3-sol62
           - pester-return-transfer-candidate-v3-sol62
@@ -41,6 +42,7 @@ env:
   OBSERVATION_SKILL: ${{ inputs.skill }}
   OBSERVATION_CASE: ${{ inputs.case }}
   CAMPAIGN_ID: ${{ inputs.campaign || 'boolean-effectiveness-v1-sol62' }}
+  CAMPAIGN_UV_VERSION: ${{ inputs.campaign == 'podman-storage-current-v1-1720-sol62' && '0.13.10' || '0.13.9' }}
   CAMPAIGN_SETUP: ${{ inputs.campaign == 'judge-calibration-090-v1-sol62' && 'candidate-accounting' || (inputs.campaign == 'case-observation-1691' || inputs.campaign == 'case-observation' || inputs.campaign == 'gh-runtime-090-v1-sol62' || inputs.campaign == 'gh-task-permission-v2-sol62') && 'candidate-next' || 'candidate-current' }}
 concurrency:
   group: reusable-evaluation-${{ inputs.allocation != '' && format('live-{0}', github.ref) || format('diagnostic-{0}', github.run_id) }}
@@ -63,7 +65,7 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version: '0.13.9'
+          version: ${{ env.CAMPAIGN_UV_VERSION }}
           enable-cache: false
       - name: Acquire pinned credential-free tools
         run: |
@@ -155,7 +157,7 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version: '0.13.9'
+          version: ${{ env.CAMPAIGN_UV_VERSION }}
           enable-cache: false
       - name: Acquire pinned credential-free replay tools
         run: |
@@ -200,7 +202,7 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version: '0.13.9'
+          version: ${{ env.CAMPAIGN_UV_VERSION }}
           enable-cache: false
       - name: Acquire frozen credential-free consumption tools
         run: |
@@ -248,7 +250,7 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version: '0.13.9'
+          version: ${{ env.CAMPAIGN_UV_VERSION }}
           enable-cache: false
       - name: Acquire frozen credential-free consumption tools
         run: |
@@ -298,7 +300,7 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version: '0.13.9'
+          version: ${{ env.CAMPAIGN_UV_VERSION }}
           enable-cache: false
       - name: Acquire pinned authentication owning runtime
         run: bash .github/scripts/setup-campaign-authentication.sh "$CAMPAIGN_ID"
@@ -347,7 +349,7 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version: '0.13.9'
+          version: ${{ env.CAMPAIGN_UV_VERSION }}
           enable-cache: false
       - name: Prepare pinned tools without model credentials
         run: |

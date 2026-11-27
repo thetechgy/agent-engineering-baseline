@@ -13,7 +13,7 @@ from harbor.agents.installed.codex import Codex
 from codex_pilot_contract import PROFILE, ROOT, configuration, model_arguments
 from codex_pilot_runtime import usage_source
 from evaluation_runtime import (CODEX_CACHE_WRITE_PROFILES, CODEX_FIXTURE_PROFILE, CODEX_FROZEN_PROFILES,
-                                CODEX_OBSERVATION_PROFILES, CODEX_SCORED_1710_PROFILE)
+                                CODEX_OBSERVATION_PROFILES, CODEX_SCORED_PROFILES)
 
 BINARY = '/opt/codex/bin/codex'
 HOME = '/home/agent/.codex-pilot'
@@ -177,7 +177,7 @@ class PilotCodex(Codex):
             commands = base64.b64encode(json.dumps(self.fixture_commands(payload)).encode()).decode()
             await self.probe_preflight(environment, env)
             if scenario == 'success':
-                if self.profile['id'] == CODEX_SCORED_1710_PROFILE:
+                if self.profile['id'] in CODEX_SCORED_PROFILES:
                     scenario = 'scored-priced'
                 elif self.profile['id'] == CODEX_FIXTURE_PROFILE:
                     scenario = 'priced-success'
@@ -189,7 +189,7 @@ class PilotCodex(Codex):
                 f'python3 /opt/pilot/codex_pilot_stub.py {logs}/probe.json {scenario} {shlex.quote(payload)} {shlex.quote(commands)} '
                 f'>{logs}/stub.log 2>&1 & echo $! >{HOME}/stub.pid'))
             if (scenario in ('case-observation', 'case-observation-priced')
-                    or self.profile['id'] == CODEX_SCORED_1710_PROFILE):
+                    or self.profile['id'] in CODEX_SCORED_PROFILES):
                 # A startup reconnect is a terminal error in the existing trace contract.
                 await self.exec_as_agent(environment, command=(
                     f"timeout 5 sh -c 'until test -f {logs}/probe.ready; do sleep 0.05; done'"))

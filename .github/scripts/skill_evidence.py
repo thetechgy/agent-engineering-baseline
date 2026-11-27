@@ -1470,6 +1470,7 @@ def validate_policy(value, *, custom_only=False, static=False):
             'Unsupported candidate producer identity')
     closed(value, ('id', 'published_id', 'provenance', 'patch_digest', 'fields', 'metric_set', 'judge', 'attempts') + (('producer_profile', 'scoring_policy') if candidate else ()))
     if candidate:
+        require(candidate is not profiles.NATIVE_1720 or custom_only, 'Scored launcher requires custom-only grading')
         require(value['judge']['enabled'] is False, 'Offline candidate judging must remain unavailable')
         require(value['producer_profile'] == candidate['id'] and value['scoring_policy'] == ('custom-overall-v1' if custom_only else candidate['scoring']), 'Unsupported candidate scoring profile')
         require(value['fields']['harbor'] == candidate['harbor'] and value['fields']['python'] == candidate['python'], 'Contradictory candidate policy')
@@ -1538,6 +1539,8 @@ def make_policy(fields=None, patch=None, metric_set=None, judge=None, attempts=N
     revision = value['fields']['evaluator_revision']
     diagnostic = native_diagnostic_profile(revision, patch, producer) if metric_set == 'custom-only' else None
     candidate = diagnostic or profiles.candidate_revision(revision, patch=patch)
+    if candidate is profiles.NATIVE_1720 and metric_set != 'custom-only':
+        candidate = None  # The same build also owns the released standard benchmark.
     if published not in static_evaluator.STATIC_PRODUCERS and candidate:
         value.update(producer_profile=candidate['id'], scoring_policy='custom-overall-v1' if metric_set == 'custom-only' else candidate['scoring'])
     return {**value, 'id': identity(value) if provenance != 'unknown' else None,
@@ -3687,6 +3690,7 @@ NATIVE_RETIREMENT_SOURCE_SUCCESSORS = '.github/evals/source-v48.json'
 RELEASE_121_SOURCE_SUCCESSORS = '.github/evals/source-v49.json'
 GH_SKILL_SOURCE_SUCCESSORS = '.github/evals/source-v50.json'
 NATIVE_1720_SOURCE_SUCCESSORS = '.github/evals/source-v51.json'
+PODMAN_COMPARISON_SOURCE_SUCCESSORS = '.github/evals/source-v52.json'
 CUSTOM_OUTCOMES = ('passed', 'failed', 'invalid', 'unsupported', 'timeout',
                    'infrastructure_error', 'interrupted', 'unknown')
 CUSTOM_MEASURED = ('passed', 'failed')
@@ -3811,7 +3815,7 @@ def custom_registry(workspace=ROOT):
         if 'adapter_sha256' in result.get('campaign', {}):
             result['campaign'] = dict(result['campaign'], adapter_sha256=version['replay_adapter'])
         profiles[successor] = result
-    for version_path in (MODEL_SUCCESSORS, SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS, DIRECT_TOOL_SOURCE_SUCCESSORS, NATIVE_RETIREMENT_SOURCE_SUCCESSORS, RELEASE_121_SOURCE_SUCCESSORS, GH_SKILL_SOURCE_SUCCESSORS, NATIVE_1720_SOURCE_SUCCESSORS):
+    for version_path in (MODEL_SUCCESSORS, SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS, DIRECT_TOOL_SOURCE_SUCCESSORS, NATIVE_RETIREMENT_SOURCE_SUCCESSORS, RELEASE_121_SOURCE_SUCCESSORS, GH_SKILL_SOURCE_SUCCESSORS, NATIVE_1720_SOURCE_SUCCESSORS, PODMAN_COMPARISON_SOURCE_SUCCESSORS):
         version = parse_json(read_bytes(workspace / version_path))
         sha(version['replay_adapter'])
         for successor, update in version['profiles'].items():
@@ -3840,6 +3844,14 @@ def custom_registry(workspace=ROOT):
                 result['grader_digest'] = update['grader_digest']
             if 'adapter_sha256' in result.get('campaign', {}):
                 result['campaign'] = dict(result['campaign'], adapter_sha256=version['replay_adapter'])
+            if version_path == PODMAN_COMPARISON_SOURCE_SUCCESSORS and 'campaign' in update:
+                require(parent['semantics'] == 'podman-storage-v1', 'Unregistered Podman comparison profile')
+                campaign = update['campaign']
+                closed(campaign, ('definition', 'mode', 'trials', 'scheduler'))
+                result['campaign'] = dict(parent['campaign'], **campaign)
+                if campaign['scheduler']:
+                    result['qualification_cases'] = {case: case for case in parent['cases']}
+                result['runtime'] = dict(parent['runtime'], profile=update['runtime_profile'], cli=update['cli'])
             if 'definition' in update:
                 member = update['definition']
                 result['campaign'] = dict(result['campaign'], definition=member)
@@ -3917,9 +3929,9 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v54'
+        profile_id = 'pester-effectiveness-v55'
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-cli-pilot-retained-v25'
+        profile_id = 'pester-cli-pilot-retained-v26'
     if profile_id is None and name == 'powershell-pester-6':
         if purpose in ('benchmark', 'oracle_qualification'):
             profile_id = 'pester-pilot-v3-source-v51'
@@ -4247,7 +4259,12 @@ def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, age
                    retrospective=None, scheduler_digest=None, producer_versions=None):
     """Prospective capture used by shared collection and credential-free qualification."""
     from importlib.metadata import version
-    producer = profiles.by_version(version('skillevaluator'))
+    profile, definitions, contract = custom_contract(name, workspace, purpose=purpose)
+    if 'campaign' in profile:
+        from evaluation_evidence import producer as campaign_producer
+        producer = campaign_producer(profile)
+    else:
+        producer = profiles.by_version(version('skillevaluator'))
     if producer_versions is not None:
         from benchmark_native import native_versions
 
@@ -4257,7 +4274,6 @@ def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, age
         producer = profiles.runtime(producer_versions, owning=True)
     require(version('skillevaluator') == producer['version'] and version('harbor') == producer['harbor']
             and '.'.join(map(str,sys.version_info[:3])).startswith(producer['python']), 'Unsupported capture runtime')
-    profile, definitions, contract = custom_contract(name, workspace, purpose=purpose)
     validate_custom_purpose(purpose)
     expected = custom_case_mapping(profile, purpose)
     dataset = read_json(bundle / 'evals/evals.json')
@@ -4347,16 +4363,22 @@ def retained_capture_inputs(name, purpose):
         'pilot/.github/scripts/codex_pilot_contract.py': 'sha256:fcdfec836a9866fffbdfbe04d91c33368deb7be1e760aca33a52a0d09628584d',
         'pilot/.github/scripts/codex_pilot_runtime.py': 'sha256:f5d6b9c39aadecb89a7d6742bec06af21209e3d259a44be453ef4cfaf0b8c81d',
     }
+    agent = {'pilot/.github/scripts/codex_pilot_agent.py': 'sha256:9af48d36f8001099cf6b7b5b1e18debacca80803249fde6813c926d66874725d'}
     if purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay'):
-        return (('pester-cli-pilot-retained-v24', pilot),)
+        return (('pester-cli-pilot-retained-v25', agent),
+                ('pester-cli-pilot-retained-v24', {**pilot, **agent}))
     if purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         common = {**pilot, 'producer/scripts/evaluator_profiles.py':
                   'sha256:400a1a22e473463aee061134d6e906c6e45a136b9aff8d297445882526a38a5b'}
         return (
-            ('pester-effectiveness-v53', {**common,
+            ('pester-effectiveness-v54', {**agent, 'producer/scripts/evaluator_profiles.py':
+             'sha256:a3a579f7f6c59ffd255ed214041c604684fbb3c526df04927e22418d52776c7d', 'pilot/.github/scripts/skill_evidence.py':
+             'sha256:3c873f898a019ba2243e5c496a0a34bae28df972f29da1490f109ab9ac595ba8',
+             'pilot/.github/scripts/skill_reports.py': 'sha256:1ed86b12af864fc39892b911050791e59ed1e9805bb5e27a2d5b522b4276528c'}),
+            ('pester-effectiveness-v53', {**common, **agent,
              'pilot/.github/scripts/skill_evidence.py': 'sha256:356d7698675e4b697196bf3eeba86f5adfd3bfd744f4bc6c7df9eef628835643',
              'pilot/.github/scripts/skill_reports.py': 'sha256:877b4f7c953b5ee2bad587829e010a89420a5251918243629fd2e7d4480fb569'}),
-            ('pester-effectiveness-v52', {**common,
+            ('pester-effectiveness-v52', {**common, **agent,
              'pilot/.github/scripts/skill_evidence.py': 'sha256:8d10d84d3bacc8e824d013265d6b670fe19378fb96bb14ff238a5952052126de',
              'pilot/.github/scripts/skill_reports.py': 'sha256:20bc74785c8c500cc00b2b3116816ed0c22df2443b67c16ef00dec95e6ce9123'}),
         )
@@ -4379,7 +4401,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
             for member in safe_tree(source_root, directory_identities=directories, directory_states=states, file_states=members):
                 read_bytes(member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
         for registry_member in (CUSTOM_REGISTRY, SOURCE_SUCCESSORS, MODEL_SUCCESSORS,
-                                SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS, DIRECT_TOOL_SOURCE_SUCCESSORS, NATIVE_RETIREMENT_SOURCE_SUCCESSORS, RELEASE_121_SOURCE_SUCCESSORS, GH_SKILL_SOURCE_SUCCESSORS, NATIVE_1720_SOURCE_SUCCESSORS):
+                                SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS, DIRECT_TOOL_SOURCE_SUCCESSORS, NATIVE_RETIREMENT_SOURCE_SUCCESSORS, RELEASE_121_SOURCE_SUCCESSORS, GH_SKILL_SOURCE_SUCCESSORS, NATIVE_1720_SOURCE_SUCCESSORS, PODMAN_COMPARISON_SOURCE_SUCCESSORS):
             read_bytes(workspace / registry_member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
         if local_podman:
             for member in ('.apm/skills/podman/evals/evals.json', '.apm/skills/podman/evals/files/vendor-compose.yaml',
@@ -4427,10 +4449,9 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
     if profile_family(profile) == 'gh-native-oracle-v1':
         require(profiles.is_candidate(producer), 'Native gh oracle requires a qualified candidate')
     if 'campaign' in profile:
-        from evaluation_evidence import task as campaign_task
-        from evaluation_runtime import evaluator, read_profile
-        require(producer is evaluator(read_profile(ROOT / campaign_task(profile).definition['runtime_profile'])),
-                'Campaign requires the selected owning evaluator')
+        from evaluation_evidence import producer as campaign_producer
+        producer = campaign_producer(profile)
+        require(capture['evaluator_revision'] == producer['revision'], 'Campaign evaluator revision drift')
     if producer is profiles.NEXT:
         require((capture['purpose'] in ('benchmark', 'oracle_qualification') or 'campaign' in profile) and capture['agent'] in ('oracle', 'codex'),
                 'New candidate is credential-free qualification only')
@@ -4721,7 +4742,8 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
             {'model': None, 'provider': None, 'enabled': False},
             {'mode': 'unknown' if campaign_purpose(capture['purpose']) or capture['purpose'] in ('oracle_qualification', 'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control') else 'confirmation',
              'maximum': capture['attempts'], 'stop_on_pass': False, 'pass_threshold': None}, 'runtime_recorded',
-            producer=capture.get('producer', {}).get('producer_profile'))
+            producer=(profiles.runtime(capture['producer'])['id'] if 'campaign' in profile
+                      else capture.get('producer', {}).get('producer_profile')))
         data = evidence(name, 'behavioral', capture['case_ids'], capture['source'], policy)
         data['run_id'] = run.name
         data['dataset'].update(owner='overlay', authored_digest=capture['authored_digest'],
@@ -5130,9 +5152,8 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
             'Effectiveness profile/purpose mismatch')
     if 'campaign' in profile:
         from evaluation_evidence import validate_policy as validate_campaign_policy
-        from evaluation_runtime import evaluator, read_profile
-        from evaluation_evidence import task as campaign_task
-        producer = evaluator(read_profile(ROOT / campaign_task(profile).definition['runtime_profile']))
+        from evaluation_evidence import producer as campaign_producer
+        producer = campaign_producer(profile)
         require(custom['purpose'] == profile['id'] and data['policy'].get('producer_profile') == producer['id'], 'Campaign purpose/profile mismatch')
         validate_campaign_policy(profile, data['policy']['fields'], data['policy']['attempts']['maximum'], custom['agent_version'])
     if pilot_profile:

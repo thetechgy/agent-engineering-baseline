@@ -14,7 +14,7 @@ from codex_pilot_agent import PilotCodex
 from codex_pilot_environment import PilotEnvironment
 from evaluation_campaign_core import require
 from evaluation_runtime import (CODEX_FIXTURE_PROFILE, CODEX_FROZEN_PROFILES, CODEX_OBSERVATION_1710_PROFILE,
-                                CODEX_OBSERVATION_PROFILES, CODEX_SCORED_1710_PROFILE,
+                                CODEX_OBSERVATION_PROFILES, CODEX_SCORED_PROFILES,
                                 ROOT, failure_reason, read_profile)
 
 
@@ -46,11 +46,11 @@ def exec_trajectory(raw, adapter, *, diagnostics=None):
     """
     from harbor.agents.installed.codex import Agent, Trajectory
     profile_id = adapter.profile.get('id')
-    scored = profile_id == CODEX_SCORED_1710_PROFILE
+    scored = profile_id in CODEX_SCORED_PROFILES
     successor = profile_id in (CODEX_FIXTURE_PROFILE, *CODEX_OBSERVATION_PROFILES)
     observation = (profile_id in CODEX_OBSERVATION_PROFILES
                    and getattr(getattr(adapter, 'task', None), 'diagnostic_observation', False))
-    protocol = ('codex-0.171.0-exec-json' if scored or profile_id == CODEX_OBSERVATION_1710_PROFILE
+    protocol = (f'codex-{adapter.profile["cli"]}-exec-json' if scored or profile_id == CODEX_OBSERVATION_1710_PROFILE
                 else 'codex-0.169.1-exec-json' if successor else 'codex-0.167-exec-json')
     pending = {}; completed = set(); steps = []; notes = []; informational = []
     session = None; turns = 0; actions = 0; terminal = False
@@ -564,7 +564,7 @@ def native_observation(trial, native, present, row, rows, *, task, live=False, r
         if selected['id'] in CODEX_FROZEN_PROFILES or selected['cli'] == '0.155.1':
             require(probe.get('authorization_matches_sentinel') is True and probe.get('path') == '/v1/responses',
                     'Observed CLI credential source or endpoint drift')
-        if selected['id'] == CODEX_SCORED_1710_PROFILE:
+        if selected['id'] in CODEX_SCORED_PROFILES:
             requests = probe['request_observations']
             require(len(requests) == 2 and all(
                 request['path'] == '/v1/responses' and request['model'] == selected['model']
@@ -586,7 +586,7 @@ def native_observation(trial, native, present, row, rows, *, task, live=False, r
     from skillevaluator.utils.redaction import redact_sensitive_text
     require(redact_sensitive_text(submitted.decode()) == submitted.decode(), 'Submission needs protected retention')
     row['submission'] = dict(receipt, file=task.output)
-    scored = selected['id'] == CODEX_SCORED_1710_PROFILE
+    scored = selected['id'] in CODEX_SCORED_PROFILES
     row['skill_access'] = skill_access(trial, present, native, allow_bash=selected['id'] == CODEX_FIXTURE_PROFILE or scored,
                                        allow_sh_c=scored, expected_skill=task.definition['skill'] if scored else None)
     if scored and present and not live and task.probe_origin == 'tool':

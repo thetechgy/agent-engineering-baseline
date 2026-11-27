@@ -1,0 +1,11 @@
+{
+  "id": "codex-1720-scored-v1",
+  "adapter": "codex",
+  "frozen_profile": ".github/evals/codex-execution-1720-scored.json",
+  "frozen_profile_sha256": "d1f6b3062ca486b87079f2543017ebb5a32e792fbabba40b6f650c946cedc97b",
+  "capabilities": [
+    "non-forwarding-cli-probe",
+    "exact-authorized-live"
+  ],
+  "inference_enabled": false
+}

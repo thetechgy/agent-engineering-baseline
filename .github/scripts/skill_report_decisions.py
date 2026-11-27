@@ -32,7 +32,7 @@ padding:.85rem 1rem}
 .decision-card th,.decision-card td{padding:.35rem .5rem}
 .decision-card caption{margin-bottom:.25rem}
 .decision-card .finding-result{font-variant-numeric:tabular-nums}
-.replay-card{grid-column:1/-1}
+.replay-card,.stopped-card{grid-column:1/-1}
 .replay-card>p{max-width:none}
 .replay-card details{margin:.5rem 0}
 @media(min-width:50rem){.decision-results{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
@@ -472,6 +472,29 @@ def decision_guidance(card):
                    if key in card)
 
 
+def stopped_campaign_card(card, records, live):
+    evidence.closed(card, ('skill', 'case', 'attribution', 'stopped', 'notes'))
+    evidence.token(card['case'])
+    binding = card['stopped']
+    evidence.closed(binding, ('source', 'reason'))
+    sid = binding['source']
+    evidence.sha(sid)
+    evidence.token(binding['reason'])
+    require(sid in live, 'Stopped campaign requires live evidence')
+    record = records[sid]
+    require(record['source']['skill_id'] == card['skill'] and record['dataset']['case_ids'] == [card['case']],
+            'Stopped campaign skill or case mismatch')
+    witness = scheduler_witness(record)
+    require(witness.get('state') == 'stopped' and witness.get('stop_reason') == binding['reason'],
+            'Stopped campaign reason mismatch')
+    require(type(card['notes']) is list and 0 < len(card['notes']) <= 4, 'Stopped campaign notes')
+    notes = ''.join('<p>' + cited_text(note) + '</p>' for note in card['notes'])
+    return ('<article class="decision-card stopped-card"><h3>' + label(card['skill']) + '</h3><p class="muted">' +
+            report.code(card['case']) + ' · ' + source_link(card['attribution']) + '</p>' +
+            '<p class="lead"><strong>Inconclusive. The authorized comparison stopped.</strong></p>' + notes +
+            '<p>' + report.link('record', (sid,), 'Partial grades and scheduler witness') + '</p></article>')
+
+
 def decision_section(manifest, result, records, receipts, replays, population, qualifications, observations, live):
     evidence.closed(manifest, ('schema_version', 'receipts', 'decisions')
                     + (('historical_reports',) if 'historical_reports' in manifest else ()))
@@ -484,6 +507,10 @@ def decision_section(manifest, result, records, receipts, replays, population, q
              '<h2 id="review-decisions">Skill improvement findings</h2><div class="decision-cards">']
     for card in cards:
         evidence.skill_id(card['skill'])
+        if 'stopped' in card:
+            parts.append(stopped_campaign_card(card, records, live))
+            summaries[card['skill']] = 'Incomplete matched evidence'
+            continue
         if 'observation' in card:
             parts.append(observation_card(card, *observations[card['skill'], card['case']]))
             continue

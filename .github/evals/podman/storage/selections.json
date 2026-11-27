@@ -5,6 +5,17 @@
       "definition": ".github/evals/podman/storage/qualification.json",
       "controls": [".github/evals/podman/storage/qualification.json"],
       "producers": []
+    },
+    "podman-storage-current-v1-1720-sol62": {
+      "definition": ".github/evals/podman/storage/comparison.json",
+      "controls": [".github/evals/podman/storage/comparison-controls.json"],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "preparation/evidence"
+        }
+      ]
     }
   }
 }

@@ -11,6 +11,34 @@
   ],
   "decisions": [
     {
+      "skill": "podman",
+      "case": "podman-002",
+      "attribution": {
+        "label": "GPT-6.2 Sol at High · Codex CLI 0.172.0",
+        "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/46029485365"
+      },
+      "stopped": {
+        "source": "sha256:6dc87d3ac6ab82b7ec98c5eab47bed126d4373b66e3459ae557f0d6a44e2a2bb",
+        "reason": "security_or_identity_drift"
+      },
+      "notes": [
+        {
+          "text": "The mount verifier passed both submissions. Slot 2, the no-skill attempt, failed the submission byte check. Four slots stayed unlaunched.",
+          "source": {
+            "label": "Retained live artifact",
+            "url": "https://github.com/thetechgy/agent-engineering-baseline/actions/runs/46029485365/artifacts/15213549620"
+          }
+        },
+        {
+          "text": "One case with three planned attempts per arm. The cases were written alongside the skill. In two earlier GPT-5.6 Sol benchmarks with Codex CLI 0.155.1, both arms corrected the case 2 mount.",
+          "source": {
+            "label": "Decision rule and prior results",
+            "url": "https://github.com/thetechgy/agent-engineering-baseline/blob/d31f7dc1b80810e7e0a8027e684105df3c0c84e7/.github/evals/podman/storage/DECISION-RULE.md"
+          }
+        }
+      ]
+    },
+    {
       "skill": "powershell-pester-6",
       "case": "pester-transfer-batch-v1",
       "decision": "Keep current guidance. Close this case on GPT-6.2 Sol.",

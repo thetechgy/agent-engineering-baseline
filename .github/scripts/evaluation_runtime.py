@@ -12,7 +12,9 @@ CODEX_OBSERVATION_1720_PROFILE = 'codex-1720-observation-v1'
 CODEX_OBSERVATION_PROFILES = (CODEX_OBSERVATION_PROFILE, CODEX_OBSERVATION_1710_PROFILE,
                               CODEX_OBSERVATION_1720_PROFILE)
 CODEX_SCORED_1710_PROFILE = 'codex-1710-scored-v1'
-CODEX_CACHE_WRITE_PROFILES = (*CODEX_OBSERVATION_PROFILES, CODEX_SCORED_1710_PROFILE)
+CODEX_SCORED_1720_PROFILE = 'codex-1720-scored-v1'
+CODEX_SCORED_PROFILES = (CODEX_SCORED_1710_PROFILE, CODEX_SCORED_1720_PROFILE)
+CODEX_CACHE_WRITE_PROFILES = (*CODEX_OBSERVATION_PROFILES, *CODEX_SCORED_PROFILES)
 CODEX_090_PROFILES = {
     'codex-090-diagnostic-v1-sol62': '.github/evals/codex-execution-090-sol62.json',
     'codex-090-diagnostic-v1': '.github/evals/codex-execution-090.json',
@@ -24,6 +26,7 @@ CODEX_090_PROFILES = {
 CODEX_FROZEN_PROFILES = {
     **CODEX_090_PROFILES,
     CODEX_SCORED_1710_PROFILE: '.github/evals/codex-execution-1710-scored.json',
+    CODEX_SCORED_1720_PROFILE: '.github/evals/codex-execution-1720-scored.json',
 }
 
 
@@ -50,7 +53,7 @@ def validate_codex(value):
             'Qualified Codex profile drift')
     live_profiles = ('codex-authorized-campaign-v1', 'codex-authorized-campaign-v1-sol62',
                      'codex-090-diagnostic-v1', 'codex-090-diagnostic-v1-sol62', *CODEX_OBSERVATION_PROFILES,
-                     CODEX_SCORED_1710_PROFILE)
+                     *CODEX_SCORED_PROFILES)
     capabilities = (['non-forwarding-cli-probe', 'exact-authorized-live'] if value['id'] in live_profiles
                     else ['oracle', 'non-forwarding-cli-probe'])
     if value['id'] == CODEX_FIXTURE_PROFILE:
@@ -66,6 +69,8 @@ def validate_codex(value):
 
 def evaluator(runtime):
     import evaluator_profiles as profiles
+    if runtime['profile']['id'] == CODEX_SCORED_1720_PROFILE:
+        return profiles.NATIVE_1720
     return profiles.NEXT if runtime['profile']['id'] in CODEX_090_PROFILES else profiles.CANDIDATE
 
 
@@ -88,6 +93,10 @@ def source_inputs(runtime, workspace):
     if frozen:
         extra = [{'member': 'runtime/' + Path(frozen).name,
                   'digest': e.digest_bytes(e.read_bytes(workspace / frozen))}]
+    if runtime['profile']['id'] == CODEX_SCORED_1720_PROFILE:
+        extra.extend({'member': 'runtime/' + member, 'digest': e.digest_bytes(e.read_bytes(workspace / member))}
+                     for member in ('.github/evals/evaluator-1.2.1-benchmark-launcher-1720-v1.json',
+                                    '.github/scripts/setup-static-evaluator.sh'))
     return extra + pilot_inputs(workspace) + [{'member': 'runtime/evaluation_codex.py',
         'digest': e.digest_bytes(e.read_bytes(workspace / '.github/scripts/evaluation_codex.py'))}]
 

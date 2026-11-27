@@ -51,7 +51,7 @@ class ReturnContract(unittest.TestCase):
                         "        adapters['batch-summary-static-templates'] = StaticTemplateBatchSummary",
                     "definition.get('adapter') == 'podman-storage'":
                         "if definition.get('adapter') == 'podman-storage':\n"
-                        "        require(path == ROOT / '.github/evals/podman/storage/qualification.json', 'Unregistered Podman definition')\n"
+                        "        require(path in PODMAN_DEFINITIONS, 'Unregistered Podman definition')\n"
                         "        adapters['podman-storage'] = runpy.run_path(str(path.with_name('task.py')))['PodmanStorage']",
                     "definition.get('adapter') == 'gh-permission'":
                         "if definition.get('adapter') == 'gh-permission':\n"
@@ -78,12 +78,20 @@ class ReturnContract(unittest.TestCase):
                 for node in sorted(hooks, key=lambda n:n.lineno, reverse=True):
                     del lines[node.lineno - 1:node.end_lineno]
                 raw = b''.join(lines)
-                # The Podman registration adds one import and one exact definition path.
+                # Project out the reviewed Podman loader registration.
+                podman_definitions = (
+                    b"PODMAN_DEFINITIONS = (\n"
+                    b"    ROOT / '.github/evals/podman/storage/qualification.json',\n"
+                    b"    ROOT / '.github/evals/podman/storage/comparison.json',\n"
+                    b"    ROOT / '.github/evals/podman/storage/comparison-controls.json',\n"
+                    b")\n\n\n")
+                self.assertEqual(raw.count(podman_definitions), 1)
+                raw = raw.replace(podman_definitions, b'')
                 self.assertEqual(raw.count(b'import runpy\n'), 1)
                 raw = raw.replace(b'import runpy\n', b'')
                 podman_path_guard = (
                     b"    require(path.resolve() == path and (path.is_relative_to(ROOT / '.github/evals/campaigns') "
-                    b"or path == ROOT / '.github/evals/podman/storage/qualification.json'), 'Unregistered definition path')\n"
+                    b"or path in PODMAN_DEFINITIONS), 'Unregistered definition path')\n"
                 )
                 self.assertEqual(raw.count(podman_path_guard), 1)
                 raw = raw.replace(podman_path_guard,

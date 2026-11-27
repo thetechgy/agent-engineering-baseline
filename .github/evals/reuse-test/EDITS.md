@@ -80,3 +80,63 @@ non-forwarding CLI probe.
 For hosted qualification dispatch `evaluation-campaign.yml` with
 `campaign=podman-storage-v1-1710-sol62` and leave both `allocation` and
 `preparation_artifact` empty.
+
+## Item 9 scored comparison preparation
+
+The scored selector is `podman-storage-current-v1-1720-sol62`. Its controls
+and scored rehearsal use Codex CLI 0.172.0, SkillEvaluator 1.2.1, Harbor
+0.25.0, and Python 3.14.10. The task-owned rule and protocol declare one
+six-slot pair at GPT-6.2 Sol High. Source and registry bindings preserve the
+earlier selection. These counts cover preparation through the paid gate.
+
+| Shared file | Added | Removed | Class | Why the engine needed it | Could be data |
+| --- | ---: | ---: | --- | --- | --- |
+| `.github/evals/campaigns/codex-1720-scored.json` | 11 | 0 | Evidence and registry | Pin the reviewed Codex 0.172.0 scored runtime. | Already data. |
+| `.github/evals/codex-execution-1720-scored.json` | 32 | 0 | Evidence and registry | Bind the current CLI and helper hashes and the existing scored execution policy. | Already data. |
+| `.github/evals/source-v52.json` | 413 | 0 | Evidence and registry | Admit the Podman comparison and controls and bind the source changes for the existing campaigns and pilot profiles. | Already data. The digests can be derived from reviewed inputs. |
+| `.github/scripts/codex_pilot_agent.py` | 3 | 3 | Evidence and registry | Run the scored request and accounting fixture for the new CLI profile. | The profile capability could be data. |
+| `.github/scripts/evaluation_campaign.py` | 1 | 1 | Runner-coupled | Select the new source identities for current execution. | The active identity could be registered data. |
+| `.github/scripts/evaluation_campaign_protocol.py` | 2 | 2 | Runner-coupled | Admit the reviewed probe-only descriptor substitution for the new scored profile. | The profile capability could be data. |
+| `.github/scripts/evaluation_campaign_selection.py` | 2 | 1 | Runner-coupled | Resolve the two new Podman definitions through the task-owned selection file. | The registry location could be data. |
+| `.github/scripts/evaluation_codex.py` | 5 | 5 | Runner-coupled | Apply the scored runtime and request checks and label native events with the emitting CLI. | The eligible profiles could be data. The event and request checks remain executable. |
+| `.github/scripts/skill_reports.py` | 6 | 4 | Report | Preserve only authenticated Podman capture digests under the latest redactor. | The validated campaign registration already supplies the owner. |
+| `.github/scripts/evaluation_evidence.py` | 5 | 0 | Evidence and registry | Resolve the evaluator owner selected by a campaign profile. | The owner identity comes from registration. |
+| `.github/scripts/evaluation_runtime.py` | 11 | 2 | Runner-coupled | Admit and bind the current scored CLI and evaluator owner. | Runtime capabilities and owning setup could be registered data. |
+| `.github/scripts/evaluation_tasks.py` | 9 | 2 | Runner-coupled | Admit the exact comparison and control paths. | The adapter and allowed paths could be data. |
+| `.github/scripts/evaluator_profiles.py` | 2 | 2 | Evidence and registry | Resolve the latest installed evaluator build by its exact pins. | Already backed by pinned profile data. |
+| `.github/scripts/setup-campaign-authentication.sh` | 7 | 2 | Workflow and orchestration | Use the repository’s current native evaluator setup for the selected owner. | The setup profile could be registered data. |
+| `.github/scripts/skill_evidence.py` | 38 | 17 | Evidence and registry | Bind the new scored profiles and use the selected evaluator in native and public admission. Preserve retained Pester inputs. | Profile and retained input identities could be data. |
+| `.github/tests/test_judge_calibration.py` | 1 | 1 | Tests | Check the historical scoring profiles against their current source successors. | The successor could be resolved from registration. |
+| `.github/tests/test_pester_return_contract.py` | 11 | 3 | Tests | Project out only the reviewed Podman registration before checking the frozen Pester hash. | Reviewable registration data could avoid this source projection. |
+| `.github/tests/test_podman_storage.py` | 79 | 9 | Tests | Check matching, grading, latest-runtime staging, and source and rule bindings. | The verdict fixtures are data. Admission checks stay executable. |
+| `.github/workflows/evaluation-campaign.yml` | 8 | 6 | Workflow and orchestration | Offer the scored Podman selection through the existing preparation and gate and install its required uv version. | The workflow choices could be derived from registration. |
+
+| Class | Files | Added | Removed |
+| --- | ---: | ---: | ---: |
+| Evidence and registry | 7 | 504 | 22 |
+| Runner-coupled | 6 | 30 | 13 |
+| Report | 1 | 6 | 4 |
+| Workflow and orchestration | 2 | 15 | 8 |
+| Tests | 3 | 91 | 13 |
+| **Total** | **19** | **646** | **60** |
+
+Runner-coupled changes account for 43 of 706 changed lines.
+
+## Item 9 stopped comparison and report
+
+The first live dispatch stopped after two verifier grades when slot 2 failed
+its native observation. This reporting change adds the stop card and the
+byte-preserved partial bundle. The results did not require runner or grader
+changes. The table counts additional edits to shared files since the execution
+revision `d31f7dc`.
+
+| Shared file | Added | Removed | Class | Why it changed | Could be data |
+| --- | ---: | ---: | --- | --- | --- |
+| `.github/evals/REPORT-EVIDENCE.md` | 9 | 4 | Report | Include the retained input in the report command and explain the stopped result. | The input list could be part of the manifest. |
+| `.github/scripts/skill_report_decisions.py` | 28 | 1 | Report | Show inconclusive live evidence only when the admitted witness records the stated stop. | The finding notes and citations are data. The stop check remains executable. |
+| `.github/tests/test_skill_report_decisions.py` | 43 | 17 | Tests | Cover the stopped card and reject a mismatched stop reason. Include its retained input in the renderer tests. | Test fixture inputs and evidence identities could be registered. |
+| `docs/evaluations/report-decisions.json` | 28 | 0 | Report | Cite the stopped record, runtime and earlier case 2 evidence. | Already data. |
+| **Total** | **108** | **22** | | | |
+
+The report phase changed four shared files and zero runner-coupled lines.
+Totals exclude the task-specific receipt and bundle and this edit log.
