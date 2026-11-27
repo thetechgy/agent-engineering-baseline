@@ -104,27 +104,7 @@
           "count": 1
         },
         {
-          "path": ".github/workflows/cli-observation-comparison.yml",
-          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
-          "count": 1
-        },
-        {
-          "path": ".github/workflows/codex-1691-qualification.yml",
-          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
-          "count": 2
-        },
-        {
-          "path": ".github/workflows/codex-pilot.yml",
-          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
-          "count": 6
-        },
-        {
           "path": ".github/workflows/current-evaluator.yml",
-          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
-          "count": 6
-        },
-        {
-          "path": ".github/workflows/evaluation-campaign.yml",
           "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
           "count": 6
         },
@@ -155,7 +135,7 @@
         },
         {
           "path": ".github/scripts/setup-skillevaluator.sh",
-          "pattern": "^test .*uv --version.* = \\'(?P<version>[^\\']+)\\'$",
+          "pattern": "test .*uv_version.* = \\'(?P<version>[^\\']+)\\'",
           "count": 1
         },
         {
@@ -168,7 +148,7 @@
       "hold": null,
       "group": null,
       "tag_prefix": "",
-      "validation": "Qualify current frozen/hash-lock installs and compiler behavior. The immutable return-contract workflow separately retains uv 0.13.7; it appears in runtime selectors and is not a contradictory current-compiler pin.",
+      "validation": "Qualify current frozen/hash-lock installs and compiler behavior. Evidence-bound workflows retain uv 0.13.7, 0.13.8, or 0.13.9. Their invocation pins remain in the workflow sources.",
       "package": {
         "ecosystem": "pip",
         "name": "uv"
@@ -223,7 +203,7 @@
       "hold": null,
       "group": null,
       "tag_prefix": "v",
-      "validation": "Regenerate the reviewed wheel-only hash lock with the pinned compiler; qualify clean, bad, failed and missing scanner evidence and consolidated reporting. Released Semgrep still requires MCP ==1.29.0, while the independent SkillSpector lock admits MCP <2; do not override either constraint.",
+      "validation": "Regenerate the reviewed wheel-only hash lock with the pinned compiler; qualify clean, bad, failed and missing scanner evidence and consolidated reporting. Semgrep requires MCP ==1.29.0 and OpenTelemetry 1.37.x. Resolve SkillSpector separately within its released manifest.",
       "package": {
         "ecosystem": "pip",
         "name": "semgrep"

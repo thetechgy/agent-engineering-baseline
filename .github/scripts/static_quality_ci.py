@@ -23,6 +23,7 @@ def write_versions(tools):
         static_evaluator.VERSION: (static_evaluator.VERSIONS, evidence.SCANNER_RUNTIME_STATIC_CANDIDATE),
         '1.0.1': (static_evaluator.RETAINED, evidence.SCANNER_RUNTIME_RETAINED_STATIC),
     }[installed]
+    runtime = static_evaluator.current_scanner_runtime(runtime)
     versions = dict(owner, scanners=runtime['versions'],
                     skillspector_revision=runtime['skillspector_revision'], scanner_runtime=runtime)
     static_evaluator.validate_owner(versions)

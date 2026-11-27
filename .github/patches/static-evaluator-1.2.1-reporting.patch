@@ -2,6 +2,51 @@ diff --git a/.github/scripts/skill_evidence.py b/.github/scripts/skill_evidence.
 index aa3465b..0aee22e 100644
 --- a/.github/scripts/skill_evidence.py
 +++ b/.github/scripts/skill_evidence.py
+@@ -71,6 +71,9 @@
+ SCANNER_2134_UNPATCHED, SCANNER_2134_NEXT = scanner_adapters(SCANNER_RUNTIME_2134)
+ SCANNER_2136_INITIAL_UNPATCHED, SCANNER_2136_INITIAL_NEXT = scanner_adapters(
+     SCANNER_RUNTIME_2136_INITIAL)
++SCANNER_2136_UNPATCHED, SCANNER_2136_NEXT = scanner_adapters(SCANNER_RUNTIME)
++SCANNER_RUNTIME_2136 = SCANNER_RUNTIME
++SCANNER_RUNTIME = static_evaluator.current_scanner_runtime(SCANNER_RUNTIME_2136)
+ SCANNER_RUNTIME_CURRENT_UNPATCHED, SCANNER_RUNTIME_NEXT = scanner_adapters(SCANNER_RUNTIME)
+ SCANNER_RUNTIME_STATIC_CANDIDATE = {
+     **SCANNER_RUNTIME_CURRENT_UNPATCHED, 'evaluator_revision': static_evaluator.REVISION,
+@@ -82,15 +85,22 @@
+ SCANNER_2136_INITIAL_STATIC = {
+     **SCANNER_2136_INITIAL_UNPATCHED, 'evaluator_revision': static_evaluator.RETAINED['evaluator_revision']
+ }
+-STATIC_SCANNER_RUNTIMES = (SCANNER_2136_INITIAL_STATIC, SCANNER_RUNTIME_RETAINED_STATIC,
++SCANNER_2136_STATIC = {
++    **SCANNER_RUNTIME_STATIC_CANDIDATE, **SCANNER_2136_UNPATCHED,
++}
++SCANNER_2136_RETAINED_STATIC = {
++    **SCANNER_RUNTIME_RETAINED_STATIC, **SCANNER_2136_UNPATCHED,
++}
++STATIC_SCANNER_RUNTIMES = (SCANNER_2136_INITIAL_STATIC, SCANNER_2136_STATIC,
++                           SCANNER_2136_RETAINED_STATIC, SCANNER_RUNTIME_RETAINED_STATIC,
+                            SCANNER_RUNTIME_STATIC_CANDIDATE)
+-RELEASED_SCANNER_RUNTIMES = (SCANNER_2134_NEXT, SCANNER_2136_INITIAL_NEXT, SCANNER_RUNTIME_NEXT,
++RELEASED_SCANNER_RUNTIMES = (SCANNER_2134_NEXT, SCANNER_2136_INITIAL_NEXT, SCANNER_2136_NEXT, SCANNER_RUNTIME_NEXT,
+                              *STATIC_SCANNER_RUNTIMES)
+ CAVEAT_SCANNER_RUNTIMES = (SCANNER_RUNTIME_PREVIOUS, SCANNER_RUNTIME_2134,
+-                           SCANNER_RUNTIME_2136_INITIAL, SCANNER_RUNTIME,
++                           SCANNER_RUNTIME_2136_INITIAL, SCANNER_RUNTIME_2136, SCANNER_RUNTIME,
+                            *RELEASED_SCANNER_RUNTIMES)
+ SCANNER_RUNTIMES = (SCANNER_RUNTIME_UNPATCHED, SCANNER_2134_UNPATCHED,
+-                    SCANNER_2136_INITIAL_UNPATCHED, SCANNER_RUNTIME_CURRENT_UNPATCHED,
++                    SCANNER_2136_INITIAL_UNPATCHED, SCANNER_2136_UNPATCHED, SCANNER_RUNTIME_CURRENT_UNPATCHED,
+                     *CAVEAT_SCANNER_RUNTIMES)
+
+ ROOT = Path(__file__).resolve().parents[2]
+@@ -2253,6 +2263,7 @@
+                 and versions.get('skillspector_revision') == versions['scanner_runtime']['skillspector_revision'],
+                 'Unsupported or contradictory scanner provenance')
+     elif versions.get('skillspector_revision') in (SCANNER_RUNTIME_2134['skillspector_revision'],
++                                                 SCANNER_RUNTIME_2136['skillspector_revision'],
+                                                  SCANNER_RUNTIME['skillspector_revision']):
+         require(False, 'Missing scanner runtime provenance')
+     if versions.get('producer_profile') in static_evaluator.STATIC_PRODUCERS:
 @@ -2994,11 +3034,11 @@ def normalize_static(root, name, workspace=ROOT):
      require(type(native['incomplete_scans']) is list and len(native['incomplete_scans']) <= 100, 'Scanner limit')
      for scanner in native['incomplete_scans']:

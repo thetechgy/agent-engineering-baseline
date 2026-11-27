@@ -265,7 +265,8 @@ class FreshnessTests(unittest.TestCase):
         self.assertEqual({source["path"] for source in sources}, {
             *(p.relative_to(ROOT).as_posix() for p in (ROOT / '.github/workflows').glob('*.yml')
               if 'uses: astral-sh/setup-uv@' in p.read_text()
-              and p.name != 'pester-return-qualification.yml'),
+              and p.name not in ('pester-return-qualification.yml', 'codex-1691-qualification.yml',
+                                 'codex-pilot.yml', 'evaluation-campaign.yml', 'cli-observation-comparison.yml')),
             ".github/scripts/setup-skillevaluator.sh",
             ".github/scripts/setup-static-evaluator.sh",
         })
