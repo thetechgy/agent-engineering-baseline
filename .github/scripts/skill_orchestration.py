@@ -312,10 +312,17 @@ def validation(api, workspace, main):
         return None, 'validation_unavailable'
     latest = max(runs, key=lambda r: r['id'])
     run, jobs = authenticate(api, workspace, main, latest['id'], latest['run_attempt'], pages.WORKFLOWS['validate'])
-    require(run['head_sha'] == main and jobs, 'Validation revision/jobs mismatch')
-    if run['status'] != 'completed' or run['conclusion'] != 'success' or any(j['conclusion'] != 'success' for j in jobs):
-        return {'run_id': run['id'], 'attempt': run['run_attempt']}, 'validation_unsuccessful'
-    return {'run_id': run['id'], 'attempt': run['run_attempt']}, None
+    require(run['head_sha'] == main, 'Validation revision mismatch')
+    record = {'run_id': run['id'], 'attempt': run['run_attempt']}
+    if (run['status'] != 'completed' or run['conclusion'] != 'success'
+            or any(job['conclusion'] not in ('success', 'skipped') for job in jobs)):
+        return record, 'validation_unsuccessful'
+    # The aggregate checks that selected jobs succeed and unselected jobs skip.
+    try:
+        pages.successful_job(jobs, 'Selected validation results', ['Require every selected check to succeed'])
+    except ValueError:
+        return record, 'validation_unsuccessful'
+    return record, None
 
 
 def demand(name, snapshot, anchor):

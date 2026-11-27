@@ -163,6 +163,10 @@ class OrchestrationTests(unittest.TestCase):
         self.api.validation_runs.clear()
         run = self.api.run(20, pages.WORKFLOWS['validate'], conclusion=conclusion)
         self.api.job(run, 'Full validation (PowerShell 7 and Bash)', conclusion=conclusion)
+        self.api.job(run, 'native-deadline', conclusion='skipped')
+        self.api.job(run, 'pester-admission', conclusion='skipped')
+        self.api.job(run, 'Selected validation results', ['Require every selected check to succeed'],
+                     conclusion=conclusion)
         return run
 
     def change(self, member, text='\nFixture update\n'):
@@ -740,7 +744,9 @@ class OrchestrationTests(unittest.TestCase):
                                    'GITHUB_OUTPUT': str(github_output), 'GITHUB_SHA': self.api.main}), patch.object(pages, 'GitHub', return_value=self.api), patch.object(reports, 'summary'):
             result = orchestration.main(['plan', '--workspace', str(self.workspace), '--retained', str(self.retained), '--output', str(output)])
         self.assertEqual(result, 0)
-        self.assertEqual(pages.parse(output.read_bytes())['validation']['run_id'], 20)
+        saved = pages.parse(output.read_bytes())
+        self.assertEqual(saved['validation']['run_id'], 20)
+        self.assertEqual(next(row for row in saved['health'] if row['skill'] == 'gh')['status'], 'disabled')
         self.assertEqual(github_output.read_text(), 'has_requests=false\n')
         self.assertFalse(self.api.posts)
 
@@ -772,6 +778,43 @@ class OrchestrationTests(unittest.TestCase):
                 orchestration.context(self.workspace, self.retained, self.api, {**inputs, 'mode': 'standard'}, phase='preapproval')
             with self.assertRaises(ValueError):
                 orchestration.context(self.workspace, self.retained, self.api, {**inputs, 'planner_run_id': '30'}, phase='preapproval')
+
+    def test_main_manual_context_accepts_selected_validation_with_intentional_skips(self):
+        inputs = {'skill': 'podman', 'mode': 'standard'}
+        for phase in ('preapproval', 'postapproval'):
+            with self.subTest(phase=phase), patch.object(reports, 'summary'):
+                value = orchestration.context(self.workspace, self.retained, self.api, inputs, phase=phase)
+                self.assertTrue(value['execute'])
+                self.assertEqual(value['status'], 'manual')
+
+    def test_validation_rejects_incomplete_selected_gate_after_green_workflow(self):
+        run = self.api.validation_runs[0]
+        key = run['id'], run['run_attempt']
+        jobs = self.api.jobs[key]
+        gate = jobs[-1]
+        missing_gate = jobs[:-1]
+        gate_step = gate['steps'][0]
+        cases = {
+            'missing job': missing_gate,
+            'duplicate job': [*jobs, gate],
+            'skipped job': [*missing_gate, dict(gate, conclusion='skipped')],
+            'missing step': [*missing_gate, dict(gate, steps=[])],
+            'duplicate step': [*missing_gate, dict(gate, steps=[gate_step, gate_step])],
+            'failed step': [*missing_gate, dict(gate, steps=[dict(gate_step, conclusion='failure')])],
+            'cancelled sibling': [dict(jobs[0], conclusion='cancelled'), *jobs[1:]],
+        }
+        for label, roster in cases.items():
+            with self.subTest(label=label):
+                self.api.jobs[key] = roster
+                selected, error = orchestration.validation(self.api, self.workspace, self.api.main)
+                self.assertEqual(selected, {'run_id': 20, 'attempt': 1})
+                self.assertEqual(error, 'validation_unsuccessful')
+
+    def test_validation_does_not_fall_back_while_latest_run_is_queued(self):
+        self.api.run(21, pages.WORKFLOWS['validate'], conclusion=None, status='queued')
+        selected, error = orchestration.validation(self.api, self.workspace, self.api.main)
+        self.assertEqual(selected, {'run_id': 21, 'attempt': 1})
+        self.assertEqual(error, 'validation_unsuccessful')
 
     def test_main_manual_context_requires_authenticated_validation(self):
         self.validate('failure')
