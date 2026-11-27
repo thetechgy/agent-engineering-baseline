@@ -76,6 +76,10 @@ jobs:
         if: github.ref != 'refs/heads/main'
         working-directory: trusted
         run: bash .github/scripts/setup-static-evaluator.sh review-retained-101
+      - name: Install retained SkillEvaluator 1.2.1 private-review validator
+        if: github.ref != 'refs/heads/main'
+        working-directory: trusted
+        run: bash .github/scripts/setup-static-evaluator.sh review-retained-121
       - name: Validate reviewed feature revision without inference
         if: github.ref != 'refs/heads/main'
         timeout-minutes: 25
