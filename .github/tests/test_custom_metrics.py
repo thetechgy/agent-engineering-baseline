@@ -509,6 +509,24 @@ class CustomMetricTests(unittest.TestCase):
             import gh_evaluations as gh
             gh.deterministic_gate(run, sorted(public['dataset']['case_ids']), 1)
 
+    def test_gh_retained_source_successor_requires_its_own_helper_digest(self):
+        native, run = historical_gh_native(self.root)
+        capture = evidence.read_json(native / evidence.CUSTOM_CAPTURE)
+        _, _, previous = evidence.custom_contract('gh', ROOT, profile_id='gh-deterministic-gate-v10')
+        capture['contract_digest'] = previous
+        helper = next(member for member in capture['inputs'] if member['member'] == 'producer/gh_evaluations.py')
+        original = helper['digest']
+        helper['digest'] = 'sha256:cfc192e54d1397a3ffb15760194b33cae19343bacead1c17d4ee3dc8de21c632'
+        def snapshot():
+            return evidence.read_json(run / 'dataset_snapshot.json')
+
+        profile, _ = evidence.validate_custom_capture(capture, 'gh', ROOT, read_prepared_snapshot=snapshot)
+        self.assertEqual(profile['id'], 'gh-deterministic-gate-v10')
+
+        helper['digest'] = original
+        with self.assertRaisesRegex(ValueError, 'Approved custom input drift'):
+            evidence.validate_custom_capture(capture, 'gh', ROOT, read_prepared_snapshot=snapshot)
+
     def test_incomplete_gh_native_admission_preserves_unavailable_gates_and_exact_error_ledgers(self):
         from skillevaluator.tier3.harbor import report_data as native_reports
         native, run = historical_gh_native(self.root, unscoreable=True)

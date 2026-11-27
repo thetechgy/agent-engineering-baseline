@@ -4315,14 +4315,24 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
     purpose = capture['purpose']
     profile, definitions, contract = custom_contract(name, workspace, purpose=purpose)
     approved_inputs = custom_source_manifest(workspace, name, purpose=purpose)
-    if name == 'gh' and capture['contract_digest'] != contract and purpose in ('benchmark', 'oracle_qualification'):
-        historical = {'benchmark': 'gh-deterministic-gate-v9', 'oracle_qualification': 'gh-native-oracle-v5'}
-        profile, definitions, contract = custom_contract(name, workspace, profile_id=historical[purpose])
-        # These captures bind the original helper at bc96c28. Only its CLI
-        # changed at retirement. All other source members still match live bytes.
-        digest = 'sha256:b4a5fe5f4bf7d306ea8faa77b16d8668e0cbbab365205de29cb34aa0cc231aa0'
-        approved_inputs = [dict(row, digest=digest) if row['member'] == 'producer/gh_evaluations.py' else row
-                           for row in approved_inputs]
+    if name == 'gh' and capture['contract_digest'] != contract:
+        # Retained capture contracts bind the reviewed helper at production.
+        # Other members still match the current authored fixture inputs.
+        retained = {
+            'benchmark': ('gh-deterministic-gate-v10', 'gh-deterministic-gate-v9'),
+            'oracle_qualification': ('gh-native-oracle-v6', 'gh-native-oracle-v5'),
+        }
+        helper_digests = (
+            'sha256:cfc192e54d1397a3ffb15760194b33cae19343bacead1c17d4ee3dc8de21c632',
+            'sha256:b4a5fe5f4bf7d306ea8faa77b16d8668e0cbbab365205de29cb34aa0cc231aa0',
+        )
+        for retained_id, digest in zip(retained.get(purpose, ()), helper_digests):
+            candidate = custom_contract(name, workspace, profile_id=retained_id)
+            if capture['contract_digest'] == candidate[2]:
+                profile, definitions, contract = candidate
+                approved_inputs = [dict(row, digest=digest) if row['member'] == 'producer/gh_evaluations.py' else row
+                                   for row in approved_inputs]
+                break
     require(bool(profile.get('campaign', {}).get('scheduler')) == ('scheduler_digest' in capture),
             'Missing or unexpected scheduler capture')
     if 'scheduler_digest' in capture: sha(capture['scheduler_digest'])
