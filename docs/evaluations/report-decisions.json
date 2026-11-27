@@ -1,5 +1,14 @@
 {
   "schema_version": 1,
+  "inputs": [
+    "pester-transfer-decision/execution-v6/data/current",
+    "pester-transfer-decision/execution-v6/data/candidate",
+    "pester-return-contract-development/data/historical-development-current",
+    "pester-return-contract-development/data/pester-return-development-candidate-v1",
+    "pester-return-contract-development/stage-1-sol62/data",
+    "pester-return-contract-development/stage-1-1710-sol62/data",
+    "podman-storage-comparison/data"
+  ],
   "receipts": [
     {
       "member": "task-permission-v2/execution-auth-20261116-02/receipts.json",

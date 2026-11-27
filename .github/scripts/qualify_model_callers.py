@@ -14,6 +14,7 @@ from evaluation_campaign import no_credentials
 from evaluation_campaign_selection import selected_task
 from evaluation_codex import agent_config
 from evaluation_runtime import ROOT, read_profile
+from evaluation_registration import LEGACY_SELECTIONS, task_families
 from qualify_codex_1691 import acquire, check_digest, probe
 from qualify_codex_1710 import run_exec
 from skill_reports import POLICY, read_json, require, write_json
@@ -29,10 +30,9 @@ def qualify(root):
     config, _ = launch_config(root, {"position": 1, "trial": 1, "case": "pester-001",
                                      "arm": "with_skill"}, root / "pester-001")
     routes[pilot["cli"]].append(("pester-cohort", pilot, read_json(config)["agent"]["model_name"]))
-    registries = (".github/evals/campaigns/selections-sol62.json",
-                  ".github/evals/campaigns/selections-1710-sol62.json",
-                  ".github/evals/podman/storage/selections.json")
-    choices = {name for registry in registries for name in read_json(ROOT / registry)["campaigns"]}
+    registries = [ROOT / member for member in LEGACY_SELECTIONS]
+    registries.extend(family.registry for family in task_families(ROOT).values())
+    choices = {name for registry in registries for name in read_json(registry)["campaigns"]}
     import yaml
     workflow = yaml.safe_load((ROOT / ".github/workflows/evaluation-campaign.yml").read_text())
     options = workflow.get("on", workflow.get(True))["workflow_dispatch"]["inputs"]["campaign"]["options"]

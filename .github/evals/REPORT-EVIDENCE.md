@@ -1408,27 +1408,14 @@ persistent output directory outside the checkout.
 ```bash
 report_parent="$HOME/worktrees/skill-decision-review"
 mkdir -m 700 "$report_parent"
-pester_data="docs/evaluations/pester-transfer-decision/execution-v6/data"
-development="docs/evaluations/pester-return-contract-development"
-inputs=(
-  --input "$pester_data/current" --input "$pester_data/candidate"
-  --input "$development/data/historical-development-current"
-  --input "$development/data/pester-return-development-candidate-v1"
-  --input "$development/stage-1-sol62/data"
-  --input "$development/stage-1-1710-sol62/data"
-  --input docs/evaluations/podman-storage-comparison/data
-)
-
-"$SKILL_DATA_PYTHON" -B "$public_scripts/skill_analysis.py" \
-  "${inputs[@]}" \
-  --output "$report_parent/analysis"
-
 "$SKILL_DATA_PYTHON" -B .github/scripts/skill_report_decisions.py \
-  "${inputs[@]}" \
-  --analysis "$report_parent/analysis/analysis.json" \
   --decisions docs/evaluations/report-decisions.json \
   --output "$report_parent/html"
 ```
+
+The manifest lists the retained bundles. For a different bundle set, supply
+repeatable `--input` flags. Supply `--analysis` to reuse a saved analysis for
+exactly those bundles.
 
 Open `"$report_parent/html/report.html"`. Follow the result links for scores,
 the receipt links for provenance, and the run links for logs.

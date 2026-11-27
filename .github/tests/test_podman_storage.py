@@ -136,7 +136,10 @@ class PodmanStorageContract(unittest.TestCase):
 
     def test_successors_preserve_historical_grading_and_bind_current_sources(self):
         registry = evidence.custom_registry()
-        active_purposes = {"pester-effectiveness-v55": "skill_effectiveness",
+        from evaluation_registration import current_source, registration as onboarding
+
+        current_campaign_sources = f".github/evals/source-v{current_source(ROOT)}.json"
+        active_purposes = {onboarding(ROOT)["current_effectiveness"]: "skill_effectiveness",
                            "gh-deterministic-gate-v12": "benchmark",
                            "gh-native-oracle-v8": "oracle_qualification",
                            "pester-cli-pilot-retained-v26": "cli_pilot",
@@ -146,7 +149,7 @@ class PodmanStorageContract(unittest.TestCase):
                        evidence.PUBLICATION_SOURCE_SUCCESSORS, evidence.DIAGNOSTIC_SOURCE_SUCCESSORS,
                        evidence.DIRECT_TOOL_SOURCE_SUCCESSORS, evidence.NATIVE_RETIREMENT_SOURCE_SUCCESSORS,
                        evidence.RELEASE_121_SOURCE_SUCCESSORS, evidence.GH_SKILL_SOURCE_SUCCESSORS, evidence.NATIVE_1720_SOURCE_SUCCESSORS,
-                       evidence.PODMAN_COMPARISON_SOURCE_SUCCESSORS):
+                       evidence.PODMAN_COMPARISON_SOURCE_SUCCESSORS, current_campaign_sources):
             version_data = reports.read_json(ROOT / member)
             for profile_id, binding in version_data["profiles"].items():
                 with self.subTest(profile=profile_id):
@@ -180,11 +183,20 @@ class PodmanStorageContract(unittest.TestCase):
                                       runtime=dict(parent["runtime"], profile=binding["runtime_profile"],
                                                    cli=binding["cli"]))
                     self.assertEqual(current, dict(parent, id=profile_id, **fields))
-                    if member == evidence.PODMAN_COMPARISON_SOURCE_SUCCESSORS or profile_id in active_purposes:
+                    if member in (evidence.PODMAN_COMPARISON_SOURCE_SUCCESSORS, current_campaign_sources) or profile_id in active_purposes:
                         purpose_id = active_purposes.get(profile_id, profile_id)
-                        selected, _, _ = evidence.custom_contract(current["skill_id"], ROOT, purpose=purpose_id)
-                        self.assertEqual(selected["id"], profile_id)
-                        actual = evidence.custom_input_identities(ROOT, current["skill_id"], purpose=purpose_id)
+                        if evidence.campaign_purpose(purpose_id) or profile_id in active_purposes:
+                            selected, _, _ = evidence.custom_contract(current["skill_id"], ROOT, purpose=purpose_id)
+                            self.assertEqual(selected["id"], profile_id)
+                        if profile_id == "pester-effectiveness-v55":
+                            inputs = evidence.custom_source_manifest(ROOT, current["skill_id"], purpose="skill_effectiveness")
+                            digests = dict(evidence.retained_capture_inputs(current["skill_id"], "skill_effectiveness"))[profile_id]
+                            inputs = [dict(row, digest=digests.get(row["member"], row["digest"])) for row in inputs]
+                            actual = evidence.custom_input_identities(ROOT, current["skill_id"], inputs, purpose="skill_effectiveness")
+                        elif profile_id == "pester-cli-pilot-retained-v26":
+                            actual = evidence.custom_input_identities(ROOT, current["skill_id"], purpose="cli_pilot")
+                        else:
+                            actual = evidence.custom_input_identities(ROOT, current["skill_id"], purpose=purpose_id)
                         self.assertEqual(actual, {key: current[key] for key in actual})
 
     @unittest.skipUnless(owning_runtime(), "pinned SkillEvaluator and Harbor required for native staging")

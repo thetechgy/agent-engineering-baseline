@@ -497,7 +497,7 @@ def stopped_campaign_card(card, records, live):
 
 def decision_section(manifest, result, records, receipts, replays, population, qualifications, observations, live):
     evidence.closed(manifest, ('schema_version', 'receipts', 'decisions')
-                    + (('historical_reports',) if 'historical_reports' in manifest else ()))
+                    + tuple(key for key in ('historical_reports', 'inputs') if key in manifest))
     require(type(manifest['schema_version']) is int and manifest['schema_version'] == 1, 'Decision schema')
     cards = manifest['decisions']
     require(type(cards) is list and 0 < len(cards) <= 16, 'Decision count')
@@ -651,8 +651,16 @@ def add_decisions(page, section, result, records, summaries, live):
     return replace_once(page, OVERVIEW_START, section + OVERVIEW_START)
 
 
+def manifest_inputs(manifest, base):
+    members = manifest.get('inputs')
+    require(type(members) is list and 0 < len(members) <= analysis.MAX_INPUTS, 'Decision input count')
+    for member in members:
+        evidence.relative(member)
+    require(len(set(members)) == len(members), 'Duplicate decision input')
+    return [base / member for member in members]
+
+
 def generate(inputs, saved_analysis, decisions_path, output=None, *, replay_paths=()):
-    captured = analysis.capture_inputs(inputs)
     directories = {}; states = {}; members = {}
     budget = evidence.ReadBudget()
 
@@ -661,9 +669,14 @@ def generate(inputs, saved_analysis, decisions_path, output=None, *, replay_path
         return evidence.read_bytes(path, limit=limit, budget=budget, directory_identities=directories,
                                    directory_states=states, file_states=members)
 
-    result = evidence.parse_json(read(saved_analysis, analysis.JSON_LIMIT), limit=analysis.JSON_LIMIT)
     manifest = evidence.parse_json(read(decisions_path, SUPPLEMENT_LIMIT), limit=SUPPLEMENT_LIMIT)
     evidence.reports.public_strings(manifest)
+    declared = manifest_inputs(manifest, decisions_path.parent) if 'inputs' in manifest or not inputs else None
+    captured = analysis.capture_inputs(inputs or declared)
+    if saved_analysis is None:
+        result = analysis.build_analysis(captured)
+    else:
+        result = evidence.parse_json(read(saved_analysis, analysis.JSON_LIMIT), limit=analysis.JSON_LIMIT)
     registrations = manifest['receipts']
     require(type(registrations) is list and len(registrations) <= 8, 'Decision receipt count')
     receipts = {}
@@ -725,16 +738,19 @@ def generate(inputs, saved_analysis, decisions_path, output=None, *, replay_path
         manifest, result, captured.records, receipts, replays, population, qualifications, observations, live)
     page = add_decisions(page, section, result, captured.records, summaries, live)
     require(len(page) <= report.HTML_LIMIT, 'HTML report size exceeded')
-    return evidence.write_outputs({}, output, input_paths=(*captured.roots, saved_analysis.parent, decisions_path.parent,
-                                                          *(path.parent for path in replay_paths)),
+    input_paths = (*captured.roots, decisions_path.parent, *(path.parent for path in replay_paths))
+    if saved_analysis is not None:
+        input_paths += (saved_analysis.parent,)
+    return evidence.write_outputs({}, output, input_paths=input_paths,
                                   input_guards=(*captured.guards, guard, lambda: analysis.check_capture(captured)),
                                   rendered={'report.html': page})
 
 
 def main(argv=None):
     parser = report.PrivateParser(description=__doc__)
-    parser.add_argument('--input', type=Path, action='append', required=True, help='Validated public bundle, repeatable')
-    parser.add_argument('--analysis', type=Path, required=True, help='Saved analysis.json for exactly these bundles')
+    parser.add_argument('--input', type=Path, action='append',
+                        help='Override the manifest inputs with validated public bundles, repeatable')
+    parser.add_argument('--analysis', type=Path, help='Use saved analysis.json for exactly these bundles')
     parser.add_argument('--decisions', type=Path, required=True, help='Reviewer decisions and source bindings')
     parser.add_argument('--replay', type=Path, action='append', default=[], help='Replacement diagnostic receipt, repeatable')
     parser.add_argument('--output', type=Path, help='New private directory outside checkout and inputs')

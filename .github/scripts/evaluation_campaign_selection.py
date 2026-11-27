@@ -6,6 +6,7 @@ import sys
 
 from evaluation_campaign_core import require
 from evaluation_runtime import ROOT
+from evaluation_registration import LEGACY_SELECTIONS, task_families
 import skill_reports as reports
 
 REGISTRY = '.github/evals/campaigns/selections.json'
@@ -18,9 +19,11 @@ def registry_path(identity):
     if identity in ('case-observation-1710', 'case-observation-1720'):
         version = identity.rsplit('-', 1)[1]
         return ROOT / f'.github/evals/campaigns/observation-{version}-selections.json'
-    if identity in ('podman-storage-v1-1710-sol62', 'podman-storage-current-v1-1720-sol62',
-                    'podman-storage-controls-v1-1720-sol62'):
-        return ROOT / '.github/evals/podman/storage/selections.json'
+    for family in task_families(ROOT).values():
+        if identity in family.definition_ids:
+            require(not any(identity in reports.read_json(ROOT / member)['campaigns']
+                            for member in (*LEGACY_SELECTIONS, REGISTRY)), 'Duplicate campaign selection owner')
+            return family.registry
     if identity.endswith('-1710-sol62'):
         return ROOT / '.github/evals/campaigns/selections-1710-sol62.json'
     if identity.endswith('-sol62'):

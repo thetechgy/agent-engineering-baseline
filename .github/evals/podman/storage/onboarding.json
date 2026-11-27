@@ -1,0 +1,10 @@
+{
+  "adapter": "podman-storage",
+  "class": "PodmanStorage",
+  "dataset": "eval.json",
+  "source_fixtures": [
+    "evals.json",
+    "files/vendor-compose.yaml",
+    "files/vendor-web/Containerfile"
+  ]
+}

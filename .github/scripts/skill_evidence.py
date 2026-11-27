@@ -3691,6 +3691,18 @@ RELEASE_121_SOURCE_SUCCESSORS = '.github/evals/source-v49.json'
 GH_SKILL_SOURCE_SUCCESSORS = '.github/evals/source-v50.json'
 NATIVE_1720_SOURCE_SUCCESSORS = '.github/evals/source-v51.json'
 PODMAN_COMPARISON_SOURCE_SUCCESSORS = '.github/evals/source-v52.json'
+
+
+def source_successor_paths(workspace):
+    from evaluation_registration import current_source
+    return (
+        MODEL_SUCCESSORS, SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS,
+        MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS,
+        PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS, DIRECT_TOOL_SOURCE_SUCCESSORS,
+        NATIVE_RETIREMENT_SOURCE_SUCCESSORS, RELEASE_121_SOURCE_SUCCESSORS, GH_SKILL_SOURCE_SUCCESSORS,
+        NATIVE_1720_SOURCE_SUCCESSORS, PODMAN_COMPARISON_SOURCE_SUCCESSORS,
+        *(f'.github/evals/source-v{version}.json' for version in range(53, current_source(workspace) + 1)),
+    )
 CUSTOM_OUTCOMES = ('passed', 'failed', 'invalid', 'unsupported', 'timeout',
                    'infrastructure_error', 'interrupted', 'unknown')
 CUSTOM_MEASURED = ('passed', 'failed')
@@ -3796,6 +3808,35 @@ def validate_custom_metrics(metrics):
         enum(definition['role'], ('diagnostic', 'mandatory_with_skill_gate'))
 
 
+def extend_qualification_profiles(workspace, source_version, version, registry):
+    """Admit new, task-owned control profiles without modifying frozen rows."""
+    from evaluation_evidence import registered_family
+
+    metrics, profiles = registry['metrics'], registry['profiles']
+    new_metrics, new_profiles = version['new_metrics'], version['new_profiles']
+    require(type(new_metrics) is dict and type(new_profiles) is dict and new_profiles
+            and not (metrics.keys() & new_metrics.keys()) and not (profiles.keys() & new_profiles.keys()),
+            'Duplicate or invalid qualification registration')
+    for identity, profile in new_profiles.items():
+        require(type(profile) is dict and identity == profile.get('id')
+                and profile.get('grading') == 'custom_only', 'Invalid task qualification profile')
+        family = registered_family(profile, workspace)
+        require(family is not None and profile.get('skill_id') == family.skill,
+                'Unregistered qualification profile owner')
+        campaign = profile['campaign']
+        enum(campaign.get('mode'), ('oracle', 'probe'))
+        definition = read_json(workspace / campaign['definition'])
+        require(campaign.get('dataset') is not None and 'protocol' not in definition
+                and not campaign.get('scheduler') and identity == f"campaign-{definition['id']}-lifecycle-v1-{source_version}-{campaign['mode']}",
+                'Unregistered qualification profile purpose')
+        for key in ('runtime_digest', 'grader_digest', 'fixture_digest'):
+            sha(profile[key])
+        custom_authored_digest(workspace, family.skill, profile)
+    validate_custom_metrics({**metrics, **new_metrics})
+    metrics.update(new_metrics)
+    profiles.update(new_profiles)
+
+
 def custom_registry(workspace=ROOT):
     """Apply reviewed source-only successors to the immutable grading records."""
     registry = frozen_registry(workspace)
@@ -3815,10 +3856,19 @@ def custom_registry(workspace=ROOT):
         if 'adapter_sha256' in result.get('campaign', {}):
             result['campaign'] = dict(result['campaign'], adapter_sha256=version['replay_adapter'])
         profiles[successor] = result
-    for version_path in (MODEL_SUCCESSORS, SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS, DIRECT_TOOL_SOURCE_SUCCESSORS, NATIVE_RETIREMENT_SOURCE_SUCCESSORS, RELEASE_121_SOURCE_SUCCESSORS, GH_SKILL_SOURCE_SUCCESSORS, NATIVE_1720_SOURCE_SUCCESSORS, PODMAN_COMPARISON_SOURCE_SUCCESSORS):
+    for version_path in source_successor_paths(workspace):
         version = parse_json(read_bytes(workspace / version_path))
+        source_version = Path(version_path).stem
+        source_only = int(source_version.removeprefix('source-v')) > 52
+        if source_only:
+            extra = ('new_metrics', 'new_profiles') if 'new_profiles' in version else ()
+            closed(version, ('replay_adapter', 'profiles', *extra))
+            if extra:
+                extend_qualification_profiles(workspace, source_version, version, registry)
         sha(version['replay_adapter'])
         for successor, update in version['profiles'].items():
+            if source_only:
+                closed(update, ('parent', 'runtime_digest'))
             parent = profiles[update['parent']]
             sha(update['runtime_digest'])
             result = dict(parent, id=successor, runtime_digest=update['runtime_digest'])
@@ -3929,7 +3979,8 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
-        profile_id = 'pester-effectiveness-v55'
+        from evaluation_registration import registration
+        profile_id = registration(workspace)['current_effectiveness']
     if profile_id is None and name == 'powershell-pester-6' and purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         profile_id = 'pester-cli-pilot-retained-v26'
     if profile_id is None and name == 'powershell-pester-6':
@@ -4248,7 +4299,9 @@ def custom_authored_digest(workspace, name, profile):
         return digest_bytes(read_bytes(workspace / '.github/evals' / name / 'evals/evals.json'))
     closed(campaign_dataset, ('path', 'digest'))
     member = campaign_dataset['path']
-    require(name == 'podman' and member == '.github/evals/podman/storage/eval.json',
+    from evaluation_evidence import registered_family
+    family = registered_family(profile, workspace)
+    require(family is not None and name == family.skill and member == family.dataset,
             'Unregistered campaign dataset path')
     digest = digest_bytes(read_bytes(workspace / member))
     require(digest == campaign_dataset['digest'] == profile['dataset_digest'], 'Authored dataset drift')
@@ -4339,6 +4392,11 @@ def restore_historical_gh_file_order(prepared, snapshot):
         row['contract']['allowed_reads'] = recorded
 
 
+def digest_before_onboarding(script):
+    from evaluation_evidence import RETAINED_SOURCE_INPUTS
+    return read_json(ROOT / RETAINED_SOURCE_INPUTS)['campaign/.github/scripts/' + script]
+
+
 def retained_capture_inputs(name, purpose):
     # Authenticate prior helper bytes by the capture's exact retained contract.
     if name == 'gh':
@@ -4371,6 +4429,10 @@ def retained_capture_inputs(name, purpose):
         common = {**pilot, 'producer/scripts/evaluator_profiles.py':
                   'sha256:400a1a22e473463aee061134d6e906c6e45a136b9aff8d297445882526a38a5b'}
         return (
+            ('pester-effectiveness-v55', {
+                'pilot/.github/scripts/skill_evidence.py': digest_before_onboarding('skill_evidence.py'),
+                'pilot/.github/scripts/skill_reports.py': digest_before_onboarding('skill_reports.py'),
+            }),
             ('pester-effectiveness-v54', {**agent, 'producer/scripts/evaluator_profiles.py':
              'sha256:a3a579f7f6c59ffd255ed214041c604684fbb3c526df04927e22418d52776c7d', 'pilot/.github/scripts/skill_evidence.py':
              'sha256:3c873f898a019ba2243e5c496a0a34bae28df972f29da1490f109ab9ac595ba8',
@@ -4393,26 +4455,37 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
         (('producer',) if profiles.candidate_revision(capture.get('evaluator_revision')) else ()) +
         (('retrospective',) if replay_purpose(capture.get('purpose')) else ()) +
         (('scheduler_digest',) if 'scheduler_digest' in capture else ()))
-    local_podman = name == 'podman' and campaign_purpose(capture.get('purpose'))
-    if captured_state is not None:
-        directories, states, members, budget = captured_state
-        for source_root in (workspace / '.github/evals' / name, workspace / '.apm/skills' / name
-                            if name == 'powershell-pester-6' or local_podman else workspace / '.agents/skills' / name):
-            for member in safe_tree(source_root, directory_identities=directories, directory_states=states, file_states=members):
-                read_bytes(member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
-        for registry_member in (CUSTOM_REGISTRY, SOURCE_SUCCESSORS, MODEL_SUCCESSORS,
-                                SCORED_SUCCESSORS, PODMAN_SOURCE_SUCCESSORS, PROBE_SOURCE_SUCCESSORS, MOUNT_SOURCE_SUCCESSORS, CAMPAIGN_SOURCE_SUCCESSORS, RETIREMENT_SOURCE_SUCCESSORS, PUBLICATION_SOURCE_SUCCESSORS, DIAGNOSTIC_SOURCE_SUCCESSORS, DIRECT_TOOL_SOURCE_SUCCESSORS, NATIVE_RETIREMENT_SOURCE_SUCCESSORS, RELEASE_121_SOURCE_SUCCESSORS, GH_SKILL_SOURCE_SUCCESSORS, NATIVE_1720_SOURCE_SUCCESSORS, PODMAN_COMPARISON_SOURCE_SUCCESSORS):
-            read_bytes(workspace / registry_member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
-        if local_podman:
-            for member in ('.apm/skills/podman/evals/evals.json', '.apm/skills/podman/evals/files/vendor-compose.yaml',
-                           '.apm/skills/podman/evals/files/vendor-web/Containerfile'):
-                read_bytes(workspace / member, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
-        else:
-            helper = 'pester_evaluations.py' if name == 'powershell-pester-6' else 'gh_evaluations.py'
-            read_bytes(workspace / '.github/scripts' / helper, budget=budget, directory_identities=directories, directory_states=states, file_states=members)
     purpose = capture['purpose']
     require(type(purpose) is str, 'Invalid custom capture purpose')
+    from evaluation_registration import REGISTRATION
+    from evaluation_evidence import RETAINED_SOURCE_INPUTS, registered_family
+    if captured_state is not None:
+        directories, states, members, budget = captured_state
+
+        def track(member):
+            read_bytes(workspace / member, budget=budget, directory_identities=directories,
+                       directory_states=states, file_states=members)
+
+        def track_tree(root):
+            for member in safe_tree(root, directory_identities=directories, directory_states=states, file_states=members):
+                track(member)
+
+        track(REGISTRATION)
+        track_tree(workspace / '.github/evals' / name)
+        for registry_member in (RETAINED_SOURCE_INPUTS, CUSTOM_REGISTRY, SOURCE_SUCCESSORS,
+                                *source_successor_paths(workspace)):
+            track(registry_member)
     profile, definitions, contract = custom_contract(name, workspace, purpose=purpose)
+    family = registered_family(profile, workspace)
+    local_source = name == 'powershell-pester-6' or family is not None
+    if captured_state is not None:
+        track_tree(workspace / ('.apm/skills' if local_source else '.agents/skills') / name)
+        if family is not None:
+            for member in family.source_fixtures:
+                track(member)
+        else:
+            helper = 'pester_evaluations.py' if name == 'powershell-pester-6' else 'gh_evaluations.py'
+            track('.github/scripts/' + helper)
     approved_inputs = custom_source_manifest(workspace, name, purpose=purpose)
     if capture['contract_digest'] != contract:
         for retained_id, digests in retained_capture_inputs(name, purpose):
@@ -4490,15 +4563,15 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
             and capture['evaluator_revision'] == profiles.HISTORICAL_REVISION):
         restore_historical_gh_file_order(prepared, read_prepared_snapshot())
     require(capture['prepared_dataset_digest'] == identity(prepared), 'Prepared dataset identity mismatch')
-    source_root = workspace / ('.apm/skills' if name == 'powershell-pester-6' or local_podman else '.agents/skills') / name
+    source_root = workspace / ('.apm/skills' if local_source else '.agents/skills') / name
     if 'skill_source' in profile:
         from evaluation_evidence import selected_source
         source_root = selected_source(workspace, profile)
         require(capture['source']['source_path'] == source_root.relative_to(workspace).as_posix(), 'Campaign source path drift')
-    if local_podman:
+    if family is not None:
         configured = next(row['source'] for row in inventory(workspace)['skills']
                           if row['source']['skill_id'] == name)
-        require(capture['source'] == configured, 'Podman source identity drift')
+        require(capture['source'] == configured, 'Campaign local source identity drift')
     retained_gh = name == 'gh' and 'upstream_revision' not in profile
     if retained_gh:
         # Reviewed deployed bytes from the historical gh fixture checkout.
@@ -4506,7 +4579,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
     else:
         source_digest = skill_content(source_root)['digest']
     require(capture['source']['skill_id'] == name
-            and capture['source']['owner'] == ('local' if name == 'powershell-pester-6' or local_podman else 'upstream')
+            and capture['source']['owner'] == ('local' if local_source else 'upstream')
             and (name != 'gh' or capture['source']['repository'] == 'cli/cli'
                  and capture['source']['revision'] == profile.get('upstream_revision', reports.RETAINED_GH_REVISION)
                  and capture['source']['source_path'] == 'skills/gh')
@@ -4673,6 +4746,8 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
     profile, definitions = validate_custom_capture(capture, name, workspace,
         captured_state=(directories, states, members, budget),
         read_prepared_snapshot=lambda: read(run / 'dataset_snapshot.json'))
+    from evaluation_evidence import registered_family
+    family = registered_family(profile, workspace)
     scheduler = None
     if 'scheduler_digest' in capture:
         import campaign_scheduler_evidence as scheduler_evidence
@@ -4905,7 +4980,7 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
                         'Custom-only trial contains standard judge metrics')
             if matched is not None and matched[1].get('score') is not None:
                 require(matched[1]['score'] == raw.get('overall'), 'Custom native attempt score mismatch')
-            detail = (reward or {}).get('details' if profile_family(profile) in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-retained-v3', 'pester-cli-pilot-retained-v4', 'pester-cli-pilot-retained-v5', 'pester-cli-pilot-retained-v6', 'pester-cli-pilot-v1', 'pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6', 'gh-native-oracle-v1', 'podman-storage-v1') else 'custom_details', {}).get('outcome', {})
+            detail = (reward or {}).get('details' if profile_family(profile) in ('pester-pilot-v3', 'pester-cli-pilot-external-v2', 'pester-cli-pilot-external-v3', 'pester-cli-pilot-external-v4', 'pester-cli-pilot-retained-v2', 'pester-cli-pilot-retained-v3', 'pester-cli-pilot-retained-v4', 'pester-cli-pilot-retained-v5', 'pester-cli-pilot-retained-v6', 'pester-cli-pilot-v1', 'pester-effectiveness-v1', 'pester-effectiveness-v2', 'pester-effectiveness-v3', 'pester-effectiveness-v4', 'pester-effectiveness-v5', 'pester-effectiveness-v6', 'gh-native-oracle-v1') or family is not None else 'custom_details', {}).get('outcome', {})
             outcome = detail.get('classification', 'unknown') if profile['grading'] == 'custom_only' else (
                 'failed' if native_trial_failed(trial, reward) else 'passed' if (reward or {}).get('custom_metrics', {}).get('gh_gate') == 1 else 'failed')
             if profile['grading'] == 'default_plus_custom' and native_trial_failed(trial, reward): outcome = 'unknown'

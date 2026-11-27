@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "current_source": 53,
+  "current_effectiveness": "pester-effectiveness-v56",
+  "families": [
+    ".github/evals/podman/storage/onboarding.json"
+  ]
+}
