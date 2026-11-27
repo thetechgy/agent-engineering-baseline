@@ -19,9 +19,14 @@ TRANSFER_INPUTS = [TRANSFER / 'current', TRANSFER / 'candidate']
 DEVELOPMENT_INPUTS = [DEVELOPMENT / 'data' / name for name in
                       ('historical-development-current', 'pester-return-development-candidate-v1')]
 STAGE_ONE_INPUTS = [DEVELOPMENT / name / 'data' for name in ('stage-1-sol62', 'stage-1-1710-sol62')]
-ALL_INPUTS = TRANSFER_INPUTS + DEVELOPMENT_INPUTS + STAGE_ONE_INPUTS
+PODMAN_INPUT = DOCS / 'podman-storage-comparison/data'
+ALL_INPUTS = TRANSFER_INPUTS + DEVELOPMENT_INPUTS + STAGE_ONE_INPUTS + [PODMAN_INPUT]
 analysis = decisions.analysis
 evidence = decisions.evidence
+
+
+def decision_for(manifest, skill, case):
+    return next(card for card in manifest['decisions'] if (card['skill'], card['case']) == (skill, case))
 
 
 class DecisionReportTests(unittest.TestCase):
@@ -31,6 +36,8 @@ class DecisionReportTests(unittest.TestCase):
         self.root = Path(temporary.name)
 
     def run_report(self, inputs, manifest=MANIFEST, *, replay=None, name='html', expected_exit=0):
+        if PODMAN_INPUT not in inputs:
+            inputs = [*inputs, PODMAN_INPUT]
         captured = analysis.capture_inputs(inputs)
         saved = self.root / 'analysis' / 'analysis.json'
         saved.parent.mkdir(exist_ok=True)
@@ -76,7 +83,7 @@ class DecisionReportTests(unittest.TestCase):
         self.assertLess(pester.index('<caption>Development'), pester.index('<caption>Transfer'))
         self.assertLess(pester.index('<caption>Transfer'), pester.index('All 12 transfer submissions'))
         self.assertEqual(opening.count('<h3>powershell-pester-6</h3>'), 1)
-        self.assertEqual(page.count('Live Codex execution with custom grading.'), 6)
+        self.assertEqual(page.count('Live Codex execution with custom grading.'), 7)
         self.assertNotIn('No agent or model judge was run', page)
         self.assertNotIn('Decision pending complete evidence', pester)
         self.run_report(inputs, name='html-repeat')
@@ -121,6 +128,24 @@ class DecisionReportTests(unittest.TestCase):
             else:
                 self.assertIsNotNone(decisions.GITHUB_EVIDENCE.fullmatch(link))
 
+    def test_stopped_comparison_reports_the_stop_without_a_paired_verdict(self):
+        page = self.run_report(ALL_INPUTS)
+        opening = page[:page.index(decisions.OVERVIEW_START.decode())]
+        card = opening.split('<article class="decision-card stopped-card"><h3>podman</h3>', 1)[1].split('</article>', 1)[0]
+        self.assertIn('Inconclusive. The authorized comparison stopped.', card)
+        self.assertIn('GPT-6.2 Sol at High · Codex CLI 0.172.0', card)
+        self.assertIn('The mount verifier passed both submissions.', card)
+        self.assertIn('Four slots stayed unlaunched.', card)
+        self.assertIn('Partial grades and scheduler witness', card)
+        self.assertNotIn('<table', card)
+        self.assertLess(opening.index('Inconclusive.'), opening.index('<h3>powershell-pester-6</h3>'))
+
+        path, manifest = self.copy_manifest()
+        decision_for(manifest, 'podman', 'podman-002')['stopped']['reason'] = 'cleanup_failure'
+        path.write_bytes(evidence.encoded(manifest))
+        with self.assertRaisesRegex(ValueError, 'Stopped campaign reason mismatch'):
+            decisions.generate(ALL_INPUTS, self.root / 'analysis/analysis.json', path)
+
     def copy_manifest(self):
         staged = self.root / 'decisions'
         staged.mkdir()
@@ -146,7 +171,7 @@ class DecisionReportTests(unittest.TestCase):
         receipt = path.parent / registration['receipt']['member']
         historical = path.parent / registration['analysis']
         # These approved transfer notes exercise the optional cited text slots.
-        pester = manifest['decisions'][0]
+        pester = decision_for(manifest, 'powershell-pester-6', 'pester-transfer-batch-v1')
         for key in ('next', 'reconsider'):
             pester[key] = {'text': pester['decision'], 'source': pester['attribution']}
         path.write_bytes(evidence.encoded(manifest))
@@ -187,7 +212,7 @@ class DecisionReportTests(unittest.TestCase):
                 self.assertNotIn('<strong>What would change it</strong> · Keep current guidance.', pester_card)
                 self.assertIn('Synthetic qualification records also appear below.', page)
                 self.assertEqual(page.count('No agent or model judge was run'), 2)
-                self.assertEqual(page.count('Live Codex execution with custom grading.'), 4)
+                self.assertEqual(page.count('Live Codex execution with custom grading.'), 5)
 
     def historical_registration(self):
         registration, = evidence.read_json(MANIFEST)['historical_reports']
@@ -280,7 +305,7 @@ class DecisionReportTests(unittest.TestCase):
         witness.update(mode='experiment-probe', inference=False, dispatch=None)
         record_path.write_bytes(evidence.encoded(record))
         sid = evidence.identity(record)
-        manifest['decisions'][0]['rows'][0]['source'] = sid
+        decision_for(manifest, 'powershell-pester-6', 'pester-transfer-batch-v1')['rows'][0]['source'] = sid
         path.write_bytes(evidence.encoded(manifest))
         page = self.run_report([fixture, TRANSFER / 'candidate', *DEVELOPMENT_INPUTS, *STAGE_ONE_INPUTS], path)
         result = evidence.read_json(self.root / 'analysis/analysis.json')
@@ -288,14 +313,14 @@ class DecisionReportTests(unittest.TestCase):
         self.assertTrue(run['custom']['complete_paired_population'])
         opening = page.split(decisions.OVERVIEW_START.decode(), 1)[0]
         self.assertIn('>Current</a></th><td>Unknown</td><td>Unknown</td>', opening)
-        self.assertEqual(page.count('Live Codex execution with custom grading.'), 5)
+        self.assertEqual(page.count('Live Codex execution with custom grading.'), 6)
         self.assertIn('Synthetic qualification records also appear below.', page)
         detail = page.split(f'<article class="run" id="{decisions.report.anchor("record", sid)}">', 1)[1]
         self.assertIn('No agent or model judge was run', detail.split('</article>', 1)[0])
 
     def test_missing_observation_workspace_withholds_the_zero_change_decision(self):
         path, manifest = self.copy_manifest()
-        workspace = manifest['decisions'][2]['observation']['workspace']['member']
+        workspace = decision_for(manifest, 'podman', '4')['observation']['workspace']['member']
         (path.parent / workspace).unlink()
         page = self.run_report(ALL_INPUTS, manifest=path)
         opening = page.split(decisions.OVERVIEW_START.decode(), 1)[0]
@@ -307,7 +332,7 @@ class DecisionReportTests(unittest.TestCase):
         self.assertNotIn('zero changed paths', opening)
 
     def test_alternative_replay_outcomes_update_the_same_cli(self):
-        spec = evidence.read_json(MANIFEST)['decisions'][0]['replay']
+        spec = decision_for(evidence.read_json(MANIFEST), 'powershell-pester-6', 'pester-transfer-batch-v1')['replay']
         receipt = evidence.read_json(DOCS / spec['member'])
         for row in receipt['observations']:
             variant = row['variation']
@@ -348,7 +373,7 @@ class DecisionReportTests(unittest.TestCase):
         self.assertIn('0 accepted · 0 rejected · 12 unmeasured', failed)
 
     def test_replay_observations_require_matching_native_results(self):
-        spec = evidence.read_json(MANIFEST)['decisions'][0]['replay']
+        spec = decision_for(evidence.read_json(MANIFEST), 'powershell-pester-6', 'pester-transfer-batch-v1')['replay']
         replay = self.root / 'replays' / 'alternative.json'
         replay.parent.mkdir()
         inputs = [TRANSFER / 'current', TRANSFER / 'candidate']
@@ -390,7 +415,7 @@ class DecisionReportTests(unittest.TestCase):
                 self.assertIn(f'&quot;outcome&quot;: &quot;{row["outcome"]}&quot;', disclosure)
 
     def test_replay_controls_require_native_evidence_despite_passing_labels(self):
-        spec = evidence.read_json(MANIFEST)['decisions'][0]['replay']
+        spec = decision_for(evidence.read_json(MANIFEST), 'powershell-pester-6', 'pester-transfer-batch-v1')['replay']
         replay = self.root / 'replays' / 'alternative.json'
         replay.parent.mkdir()
         inputs = [TRANSFER / 'current', TRANSFER / 'candidate']
@@ -415,7 +440,7 @@ class DecisionReportTests(unittest.TestCase):
                 self.assertIn('Exact replay receipt', page)
 
     def test_replay_observations_require_retained_submission_identity(self):
-        spec = evidence.read_json(MANIFEST)['decisions'][0]['replay']
+        spec = decision_for(evidence.read_json(MANIFEST), 'powershell-pester-6', 'pester-transfer-batch-v1')['replay']
         replay = self.root / 'replays' / 'alternative.json'
         replay.parent.mkdir()
         inputs = [TRANSFER / 'current', TRANSFER / 'candidate']
@@ -449,7 +474,7 @@ class DecisionReportTests(unittest.TestCase):
 
     def test_replay_publication_digest_must_match_the_retained_bytes(self):
         manifest = evidence.read_json(MANIFEST)
-        spec = manifest['decisions'][0]['replay']
+        spec = decision_for(manifest, 'powershell-pester-6', 'pester-transfer-batch-v1')['replay']
         receipt = evidence.read_json(DOCS / spec['member'])
         replay = self.root / 'replays' / 'alternate.json'
         replay.parent.mkdir()
@@ -473,7 +498,7 @@ class DecisionReportTests(unittest.TestCase):
 
     def test_coverage_closure_requires_the_native_control_and_complete_population(self):
         manifest = evidence.read_json(MANIFEST)
-        card = manifest['decisions'][0]
+        card = decision_for(manifest, 'powershell-pester-6', 'pester-transfer-batch-v1')
         staged = self.root / 'decision-inputs'
         qualification = card['qualification']['member']
         for member in (manifest['receipts'][0]['member'], card['replay']['member'], qualification):
@@ -543,8 +568,9 @@ class DecisionReportTests(unittest.TestCase):
         record_path.write_bytes(evidence.encoded(record))
 
         manifest = evidence.read_json(MANIFEST)
-        manifest['decisions'][0].pop('development')
-        manifest['decisions'][0]['rows'][0]['source'] = evidence.identity(record)
+        pester = decision_for(manifest, 'powershell-pester-6', 'pester-transfer-batch-v1')
+        pester.pop('development')
+        pester['rows'][0]['source'] = evidence.identity(record)
         binding = manifest['receipts'][0]
         receipt = evidence.read_json(DOCS / binding['member'])
         receipt['verification']['rows'][1].pop('grading_present')
@@ -552,9 +578,9 @@ class DecisionReportTests(unittest.TestCase):
         receipt_path.parent.mkdir(parents=True)
         receipt_path.write_bytes(evidence.encoded(receipt))
         binding['sha256'] = evidence.digest_bytes(receipt_path.read_bytes())
-        for row in manifest['decisions'][1]['rows']:
+        for row in decision_for(manifest, 'gh', 'gh-014')['rows']:
             row['source'] = binding['sha256']
-        observation = manifest['decisions'][2]['observation']
+        observation = decision_for(manifest, 'podman', '4')['observation']
         for role in ('receipt', 'workspace'):
             member = observation[role]['member']
             destination = staged / member

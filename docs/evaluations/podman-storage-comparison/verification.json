@@ -1,0 +1,172 @@
+{
+  "run": 46029485365,
+  "run_attempt": 1,
+  "workflow_conclusion": "failure",
+  "source": "d31f7dc1b80810e7e0a8027e684105df3c0c84e7",
+  "campaign": "podman-storage-current-v1-1720-sol62",
+  "preparation_artifact": 15211257981,
+  "live_artifact": 15213549620,
+  "artifact_digest": "sha256:fae7f2c7c72e123c3beec41a7a864cd73bc58845f5cbbd0fe6f9cd8d6be0ff30",
+  "ledger_state": "stopped",
+  "primary_stop": "security_or_identity_drift",
+  "report_failure": null,
+  "cleanup_complete": true,
+  "authorized_slots": 6,
+  "launched": 2,
+  "unlaunched_positions": [
+    3,
+    4,
+    5,
+    6
+  ],
+  "entries": [
+    {
+      "position": 1,
+      "case": "podman-002",
+      "trial": 1,
+      "variant": "current",
+      "state": "completed",
+      "cleanup": true,
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reason": "persistent_mount_covers_data_directory"
+      },
+      "native_exception": null,
+      "estimated_usd": 0.074095,
+      "usage": {
+        "n_input_tokens": 120587,
+        "n_cache_tokens": 100330,
+        "n_cache_write_input_tokens": 20236,
+        "n_output_tokens": 1343
+      },
+      "elapsed_seconds": 126.714,
+      "submission": {
+        "sha256": "d2b219dbd04ec0e18da2f1e12b92c99ab2fd0b14db23ff34e1ea603205a28831",
+        "bytes": 132,
+        "file": "postgres.container"
+      },
+      "full_skill_read": true,
+      "verifier_grade_verified": true
+    },
+    {
+      "position": 2,
+      "case": "podman-002",
+      "trial": 1,
+      "variant": "absent",
+      "state": "failed",
+      "cleanup": true,
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reason": "persistent_mount_covers_data_directory"
+      },
+      "native_exception": null,
+      "estimated_usd": 0.0620964,
+      "usage": {
+        "n_input_tokens": 94404,
+        "n_cache_tokens": 81034,
+        "n_cache_write_input_tokens": 13346,
+        "n_output_tokens": 2058
+      },
+      "elapsed_seconds": 118.287,
+      "submission": null,
+      "full_skill_read": null,
+      "verifier_grade_verified": true
+    },
+    {
+      "position": 3,
+      "case": "podman-002",
+      "trial": 2,
+      "variant": "absent",
+      "state": "unlaunched",
+      "cleanup": null,
+      "outcome": null,
+      "native_exception": null,
+      "estimated_usd": null,
+      "usage": null,
+      "elapsed_seconds": null,
+      "submission": null,
+      "full_skill_read": null,
+      "verifier_grade_verified": false
+    },
+    {
+      "position": 4,
+      "case": "podman-002",
+      "trial": 2,
+      "variant": "current",
+      "state": "unlaunched",
+      "cleanup": null,
+      "outcome": null,
+      "native_exception": null,
+      "estimated_usd": null,
+      "usage": null,
+      "elapsed_seconds": null,
+      "submission": null,
+      "full_skill_read": null,
+      "verifier_grade_verified": false
+    },
+    {
+      "position": 5,
+      "case": "podman-002",
+      "trial": 3,
+      "variant": "current",
+      "state": "unlaunched",
+      "cleanup": null,
+      "outcome": null,
+      "native_exception": null,
+      "estimated_usd": null,
+      "usage": null,
+      "elapsed_seconds": null,
+      "submission": null,
+      "full_skill_read": null,
+      "verifier_grade_verified": false
+    },
+    {
+      "position": 6,
+      "case": "podman-002",
+      "trial": 3,
+      "variant": "absent",
+      "state": "unlaunched",
+      "cleanup": null,
+      "outcome": null,
+      "native_exception": null,
+      "estimated_usd": null,
+      "usage": null,
+      "elapsed_seconds": null,
+      "submission": null,
+      "full_skill_read": null,
+      "verifier_grade_verified": false
+    }
+  ],
+  "arms": {
+    "current": {
+      "scheduled": 3,
+      "passed": 1,
+      "known_estimated_usd": 0.074095,
+      "verifier_grades": 1
+    },
+    "absent": {
+      "scheduled": 3,
+      "passed": 1,
+      "known_estimated_usd": 0.0620964,
+      "verifier_grades": 1
+    }
+  },
+  "usage_complete": true,
+  "known_estimated_usd": 0.1361914,
+  "campaign_estimated_usd": 0.1361914,
+  "native_projection_reproduced": true,
+  "report_reproduced": true,
+  "report_sha256": "49ecb5867bea6f7433c6ceaa171fcae6da929688b5e14add648ab585c25c29f7",
+  "submission_verification": {
+    "slot_1": "byte_identical",
+    "slot_2": {
+      "status": "byte_identity_unverified",
+      "produced_receipt_bytes": 187,
+      "retained_bytes": 173,
+      "redaction_marker_present_in_retained_copy": true,
+      "offline_native_check": "Retained submission differs from native produced artifact"
+    }
+  }
+}

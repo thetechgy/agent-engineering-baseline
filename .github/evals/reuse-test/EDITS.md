@@ -121,3 +121,22 @@ earlier selection. These counts cover preparation through the paid gate.
 | **Total** | **19** | **646** | **60** |
 
 Runner-coupled changes account for 43 of 706 changed lines.
+
+## Item 9 stopped comparison and report
+
+The first live dispatch stopped after two verifier grades when slot 2 failed
+its native observation. This reporting change adds the stop card and the
+byte-preserved partial bundle. The results did not require runner or grader
+changes. The table counts additional edits to shared files since the execution
+revision `d31f7dc`.
+
+| Shared file | Added | Removed | Class | Why it changed | Could be data |
+| --- | ---: | ---: | --- | --- | --- |
+| `.github/evals/REPORT-EVIDENCE.md` | 9 | 4 | Report | Include the retained input in the report command and explain the stopped result. | The input list could be part of the manifest. |
+| `.github/scripts/skill_report_decisions.py` | 28 | 1 | Report | Show inconclusive live evidence only when the admitted witness records the stated stop. | The finding notes and citations are data. The stop check remains executable. |
+| `.github/tests/test_skill_report_decisions.py` | 43 | 17 | Tests | Cover the stopped card and reject a mismatched stop reason. Include its retained input in the renderer tests. | Test fixture inputs and evidence identities could be registered. |
+| `docs/evaluations/report-decisions.json` | 28 | 0 | Report | Cite the stopped record, runtime and earlier case 2 evidence. | Already data. |
+| **Total** | **108** | **22** | | | |
+
+The report phase changed four shared files and zero runner-coupled lines.
+Totals exclude the task-specific receipt and bundle and this edit log.

@@ -1,0 +1,662 @@
+{
+  "arms": [
+    {
+      "condition": {
+        "build_digest": "sha256:9b800ad113e629a3f6eb3371f695a4d954d4f25db7da7eeb1312df637d3bdf02",
+        "competing_skills": [],
+        "execution": {
+          "authorization_policy": null,
+          "base_image_mode": "recorded_staging",
+          "environment": "docker",
+          "fixture_boundary": "separate-verifier-v1",
+          "task_source": "native_harbor"
+        },
+        "fixture_digest": "sha256:46a6e66f807c59947e8d9cc5d728236e6cd97197bda3121ac80e3518a75b557b",
+        "id": "sha256:e0dc5f81ebb86acbfd63c88cb73d2c56861b03df2f6ae19f76b968aa7533893a",
+        "instruction_digest": "sha256:c4aaf7a3ebe648f75962351c681b607335ae08e3205ae722e892391922da72dc",
+        "provenance": "runtime_recorded",
+        "target_present": true,
+        "workspace_mode": "isolated"
+      },
+      "coverage": {
+        "case_details": "complete",
+        "expected_attempts": 3,
+        "expected_cases": 1,
+        "recorded_attempts": 1,
+        "scored_attempts": 1,
+        "unscored_attempts": 0
+      },
+      "execution_error_count": 2,
+      "execution_status": "failed",
+      "name": "with_skill",
+      "rubric": {
+        "passed_cases": null,
+        "threshold": null,
+        "total_cases": null
+      }
+    },
+    {
+      "condition": {
+        "build_digest": "sha256:9b800ad113e629a3f6eb3371f695a4d954d4f25db7da7eeb1312df637d3bdf02",
+        "competing_skills": [],
+        "execution": {
+          "authorization_policy": null,
+          "base_image_mode": "recorded_staging",
+          "environment": "docker",
+          "fixture_boundary": "separate-verifier-v1",
+          "task_source": "native_harbor"
+        },
+        "fixture_digest": "sha256:46a6e66f807c59947e8d9cc5d728236e6cd97197bda3121ac80e3518a75b557b",
+        "id": "sha256:0be2bb30c506c7101d8ba735c0e6aa20ddbcf1c00b8add53a83746029e2f88e1",
+        "instruction_digest": "sha256:c4aaf7a3ebe648f75962351c681b607335ae08e3205ae722e892391922da72dc",
+        "provenance": "runtime_recorded",
+        "target_present": false,
+        "workspace_mode": "isolated"
+      },
+      "coverage": {
+        "case_details": "complete",
+        "expected_attempts": 3,
+        "expected_cases": 1,
+        "recorded_attempts": 1,
+        "scored_attempts": 1,
+        "unscored_attempts": 0
+      },
+      "execution_error_count": 2,
+      "execution_status": "failed",
+      "name": "without_skill",
+      "rubric": {
+        "passed_cases": null,
+        "threshold": null,
+        "total_cases": null
+      }
+    }
+  ],
+  "availability": {
+    "provenance": "runtime_recorded",
+    "reasons": [
+      "coverage_missing",
+      "execution_incomplete"
+    ],
+    "status": "incomplete"
+  },
+  "custom": {
+    "agent": "codex",
+    "agent_version": "0.172.0",
+    "assurance": {
+      "execution_authentication": "not_established",
+      "native_consistency": "producer_reported_at_admission",
+      "producer_authentication": "not_established"
+    },
+    "capture_digest": "sha256:6d4f6397de4ef1341b8523e979e7de9d0632ddbbad629c9bcab998544fa04f07",
+    "capture_reference": "sha256:bd0a18bd187caea48dc1556663d634b1aa302046bcbf97b089abbddcf8329872",
+    "cases": [
+      {
+        "case_id": "podman-002",
+        "denominators": {},
+        "metrics": [
+          "podman_postgres_storage"
+        ],
+        "source_case_id": "podman-002",
+        "title": "PostgreSQL 18 persistent storage"
+      }
+    ],
+    "contract_digest": "sha256:ce7125361dee181ba3971f9afd455ae1797507c80fdf341ce5c2e090fd8b32ba",
+    "definitions": [
+      {
+        "aggregation": "mean_of_applicable_trial_values",
+        "basis": "binary",
+        "competency": "postgres_storage_coverage",
+        "definition": "The effective PostgreSQL data directory in the submitted Quadlet is covered by the intended writable persistent storage.",
+        "id": "podman.postgres-storage.v1",
+        "native_name": "podman_postgres_storage",
+        "role": "diagnostic",
+        "title": "PostgreSQL persistent mount coverage",
+        "unit": "binary_score"
+      }
+    ],
+    "fixture_digest": "sha256:46a6e66f807c59947e8d9cc5d728236e6cd97197bda3121ac80e3518a75b557b",
+    "grader_digest": "sha256:0267d4b92e6df8ea2466fc8cd764591231bfd2c8ed6d39ce3c4aefbc6ef25145",
+    "native_metric_set": "custom-only",
+    "profile_id": "campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live",
+    "purpose": "campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live",
+    "runtime": {
+      "agent": "codex",
+      "cli": "0.172.0",
+      "model": "gpt-6.2-sol",
+      "profile": ".github/evals/campaigns/codex-1720-scored.json",
+      "provider": "openai",
+      "reasoning_effort": "high",
+      "variants": [
+        {
+          "arm": "with_skill",
+          "id": "current"
+        },
+        {
+          "arm": "without_skill",
+          "id": "absent"
+        }
+      ]
+    },
+    "runtime_digest": "sha256:9b800ad113e629a3f6eb3371f695a4d954d4f25db7da7eeb1312df637d3bdf02",
+    "scheduler": {
+      "reference": "sha256:1abac6fd816cac7f8be4c43cf2eb946d0105c515fe503ca33f493586aee07a79",
+      "witness": {
+        "campaign": "podman-storage-current-v1-1720-sol62",
+        "definition_digest": "sha256:0ab8616feeae7527de46db7550ff223e8c7ca705d013d9602479adf64ae53ed8",
+        "dispatch": {
+          "allocation": "campaign-d31f7dc1b80810e7e0a8027e684105df3c0c84e7-podman-storage-current-v1-1720-sol62-prep15211257981-usd8-e840758e3d1eb845f28441c2",
+          "artifact": "15211257981",
+          "artifact_digest": "sha256:19ae143caac00fb49f5172d08563844b3045e0b149b4c120a6740a67061083cb",
+          "definition": ".github/evals/podman/storage/comparison.json",
+          "definition_digest": "sha256:0ab8616feeae7527de46db7550ff223e8c7ca705d013d9602479adf64ae53ed8",
+          "dispatch": "e840758e3d1eb845f28441c2",
+          "first_dispatch": true,
+          "preparation_location": "preparation/evidence",
+          "producer_run": 46021963119,
+          "protocol_digest": "sha256:d70f309ff07b9cfc2604595159e7f7cd5bf9ba446703c8795797bcdbdbc73b84",
+          "revision": "d31f7dc1b80810e7e0a8027e684105df3c0c84e7",
+          "run_id": "46029485365",
+          "selection_digest": "sha256:c4b618bd40996dda37c1ee7b8b2a6bb3ec9494a7cbf5e081ba8845e7a8b077b9",
+          "source_check": "github-api-producer-and-digest"
+        },
+        "entries": [
+          {
+            "arm": "with_skill",
+            "case": "podman-002",
+            "classification": "passed",
+            "config_digest": "sha256:9f4b0e8bd1e1ffeda57a1dcbbbf1d0d15a1d075d1c02384236743efe1344e0f6",
+            "execution_outcome": null,
+            "grading_present": true,
+            "native_exception": null,
+            "position": 1,
+            "returncode": 0,
+            "state": "completed",
+            "task_checksum": "02361d2be760d0bb8e078e0deac393b1a889f5f0af2eac0da4af750b953c2bd5",
+            "trial": 1,
+            "variant": "current"
+          },
+          {
+            "arm": "without_skill",
+            "case": "podman-002",
+            "classification": "passed",
+            "config_digest": "sha256:f864e3c9903198c87b9bb8b17d19f00aaf395273ee58f804bebe4f0bc343b037",
+            "execution_outcome": null,
+            "grading_present": true,
+            "native_exception": null,
+            "position": 2,
+            "returncode": 0,
+            "state": "failed",
+            "task_checksum": "1f9f7c786593e1e73138bccc295dcb002e57a0d30faa00c06d711755511d31b9",
+            "trial": 1,
+            "variant": "absent"
+          },
+          {
+            "arm": "without_skill",
+            "case": "podman-002",
+            "classification": null,
+            "config_digest": null,
+            "execution_outcome": null,
+            "grading_present": null,
+            "native_exception": null,
+            "position": 3,
+            "returncode": null,
+            "state": "unlaunched",
+            "task_checksum": null,
+            "trial": 2,
+            "variant": "absent"
+          },
+          {
+            "arm": "with_skill",
+            "case": "podman-002",
+            "classification": null,
+            "config_digest": null,
+            "execution_outcome": null,
+            "grading_present": null,
+            "native_exception": null,
+            "position": 4,
+            "returncode": null,
+            "state": "unlaunched",
+            "task_checksum": null,
+            "trial": 2,
+            "variant": "current"
+          },
+          {
+            "arm": "with_skill",
+            "case": "podman-002",
+            "classification": null,
+            "config_digest": null,
+            "execution_outcome": null,
+            "grading_present": null,
+            "native_exception": null,
+            "position": 5,
+            "returncode": null,
+            "state": "unlaunched",
+            "task_checksum": null,
+            "trial": 3,
+            "variant": "current"
+          },
+          {
+            "arm": "without_skill",
+            "case": "podman-002",
+            "classification": null,
+            "config_digest": null,
+            "execution_outcome": null,
+            "grading_present": null,
+            "native_exception": null,
+            "position": 6,
+            "returncode": null,
+            "state": "unlaunched",
+            "task_checksum": null,
+            "trial": 3,
+            "variant": "absent"
+          }
+        ],
+        "inference": true,
+        "mode": "live",
+        "revision": "d31f7dc1b80810e7e0a8027e684105df3c0c84e7",
+        "schema": 1,
+        "staged_identity": "sha256:11ba62f8432758cfb969404769f126212365d87d14d537f5e7427fa64a437857",
+        "state": "stopped",
+        "stop_reason": "security_or_identity_drift"
+      }
+    }
+  },
+  "dataset": {
+    "authored_digest": "sha256:5c879e935189d74739fd0e6ff71f0fa09479d8f86b3765d02b1f8d2afba25e75",
+    "authored_provenance": "runtime_recorded",
+    "case_cohort_digest": "sha256:cf450f2597965a7da290b39c8847a3a4299379ad73d5396d6c19f63a379029a2",
+    "case_ids": [
+      "podman-002"
+    ],
+    "owner": "overlay",
+    "staged_algorithm": "sha256-staged-task-inputs-v1",
+    "staged_digest": "sha256:d734897d60f8af8f4456b6b707b722da6c43520724f6bf2c63dc0678e7261189",
+    "staged_provenance": "runtime_recorded"
+  },
+  "findings": [],
+  "kind": "behavioral",
+  "metrics": [],
+  "observations": [
+    {
+      "arm": "with_skill",
+      "attempt": 1,
+      "case_id": "podman-002",
+      "custom": {
+        "measurements": [
+          {
+            "applicability": "applicable",
+            "denominator": 1,
+            "metric_id": "podman.postgres-storage.v1",
+            "numerator": 1,
+            "reason": null,
+            "references": [
+              "sha256:1fcb0344964316bad9b48c519d3b3421cd217ef2b29cb5254a3ec450b3370e0d",
+              "sha256:cae8da1ba4e7506a292a2c400ad4e4059e39c3d300ea9cf81b48e2c80a24c11b",
+              "sha256:bd0a18bd187caea48dc1556663d634b1aa302046bcbf97b089abbddcf8329872",
+              "sha256:8c7877e9cf95e9f9e991f282585995e9fd6baa404821cb6fe86b7b8ebe2382aa"
+            ],
+            "status": "measured",
+            "value": 1.0
+          }
+        ],
+        "outcome": "passed",
+        "references": [
+          "sha256:1fcb0344964316bad9b48c519d3b3421cd217ef2b29cb5254a3ec450b3370e0d",
+          "sha256:cae8da1ba4e7506a292a2c400ad4e4059e39c3d300ea9cf81b48e2c80a24c11b",
+          "sha256:bd0a18bd187caea48dc1556663d634b1aa302046bcbf97b089abbddcf8329872",
+          "sha256:8c7877e9cf95e9f9e991f282585995e9fd6baa404821cb6fe86b7b8ebe2382aa"
+        ],
+        "usage": {
+          "agent_execution_seconds": 32.373921,
+          "n_cache_tokens": 100330,
+          "n_input_tokens": 120587,
+          "n_output_tokens": 1343,
+          "verifier_seconds": 14.848292
+        }
+      },
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:fca04627333e0d3ce4ecccf12996221338d19135332bbdbfb6d9e356c48277c7",
+      "raw_deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "raw_scores": {
+        "accuracy": null,
+        "behavior_check": null,
+        "custom": null,
+        "goal_accuracy": null,
+        "overall": 1.0,
+        "security": null,
+        "skill_efficiency": null,
+        "skill_execution": null
+      },
+      "references": [
+        "sha256:1fcb0344964316bad9b48c519d3b3421cd217ef2b29cb5254a3ec450b3370e0d",
+        "sha256:cae8da1ba4e7506a292a2c400ad4e4059e39c3d300ea9cf81b48e2c80a24c11b",
+        "sha256:bd0a18bd187caea48dc1556663d634b1aa302046bcbf97b089abbddcf8329872",
+        "sha256:8c7877e9cf95e9f9e991f282585995e9fd6baa404821cb6fe86b7b8ebe2382aa"
+      ],
+      "rubric_pass": null,
+      "score": null,
+      "scores": {
+        "accuracy": null,
+        "behavior_check": null,
+        "custom": null,
+        "goal_accuracy": null,
+        "overall": null,
+        "security": null,
+        "skill_efficiency": null,
+        "skill_execution": null
+      }
+    },
+    {
+      "arm": "without_skill",
+      "attempt": 1,
+      "case_id": "podman-002",
+      "custom": {
+        "measurements": [
+          {
+            "applicability": "applicable",
+            "denominator": 1,
+            "metric_id": "podman.postgres-storage.v1",
+            "numerator": 1,
+            "reason": null,
+            "references": [
+              "sha256:2384dad81f354d50957fdd6a7c02e18cc97014fcbfe88ea15973e3ba6a34032b",
+              "sha256:e85c7f8bccc38e06c9e0bffdfe15218d3fa4cb25a3e18f50ad3c850600879ba1",
+              "sha256:bd0a18bd187caea48dc1556663d634b1aa302046bcbf97b089abbddcf8329872",
+              "sha256:069459a311fea733a08cb415767e7c63199786f78de1e38215e0af8a1666aaf3"
+            ],
+            "status": "measured",
+            "value": 1.0
+          }
+        ],
+        "outcome": "passed",
+        "references": [
+          "sha256:2384dad81f354d50957fdd6a7c02e18cc97014fcbfe88ea15973e3ba6a34032b",
+          "sha256:e85c7f8bccc38e06c9e0bffdfe15218d3fa4cb25a3e18f50ad3c850600879ba1",
+          "sha256:bd0a18bd187caea48dc1556663d634b1aa302046bcbf97b089abbddcf8329872",
+          "sha256:069459a311fea733a08cb415767e7c63199786f78de1e38215e0af8a1666aaf3"
+        ],
+        "usage": {
+          "agent_execution_seconds": 36.890003,
+          "n_cache_tokens": 81034,
+          "n_input_tokens": 94404,
+          "n_output_tokens": 2058,
+          "verifier_seconds": 14.850134
+        }
+      },
+      "deterministic_gate": null,
+      "deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "id": "sha256:72c4c5a9ae41a7eecb56a6e0746a18336d17ef6e01b35761e77db6107d1eca82",
+      "raw_deterministic_scores": {
+        "activation": null,
+        "authorization": null,
+        "commands": null,
+        "efficiency": null,
+        "evidence": null,
+        "gate": null,
+        "recovery": null,
+        "task": null
+      },
+      "raw_scores": {
+        "accuracy": null,
+        "behavior_check": null,
+        "custom": null,
+        "goal_accuracy": null,
+        "overall": 1.0,
+        "security": null,
+        "skill_efficiency": null,
+        "skill_execution": null
+      },
+      "references": [
+        "sha256:2384dad81f354d50957fdd6a7c02e18cc97014fcbfe88ea15973e3ba6a34032b",
+        "sha256:e85c7f8bccc38e06c9e0bffdfe15218d3fa4cb25a3e18f50ad3c850600879ba1",
+        "sha256:bd0a18bd187caea48dc1556663d634b1aa302046bcbf97b089abbddcf8329872",
+        "sha256:069459a311fea733a08cb415767e7c63199786f78de1e38215e0af8a1666aaf3"
+      ],
+      "rubric_pass": null,
+      "score": null,
+      "scores": {
+        "accuracy": null,
+        "behavior_check": null,
+        "custom": null,
+        "goal_accuracy": null,
+        "overall": null,
+        "security": null,
+        "skill_efficiency": null,
+        "skill_execution": null
+      }
+    }
+  ],
+  "policy": {
+    "attempts": {
+      "maximum": 3,
+      "mode": "unknown",
+      "pass_threshold": null,
+      "stop_on_pass": false
+    },
+    "fields": {
+      "authorization_policy": null,
+      "baseline": true,
+      "codex": null,
+      "competing_revision": null,
+      "concurrency": 1,
+      "deterministic_gate": null,
+      "docker_compose": null,
+      "environment": "docker",
+      "evaluator_revision": "f7fcd35d79d0506fadbd79f2b3ff384c98bd10f3",
+      "fixture_boundary": null,
+      "grading": "custom_only",
+      "harbor": "0.25.0",
+      "model": "gpt-6.2-sol",
+      "provider": "openai",
+      "python": "3.14.10",
+      "standard_attempts": null,
+      "stop_on_pass": false,
+      "task_build": null,
+      "task_source": "native_harbor",
+      "timeout_multiplier": 1.0,
+      "upstream_revision": null,
+      "workspace_mode": "isolated"
+    },
+    "id": "sha256:26e4ff8fdd110696220893ef3775248779b21842a5203dab7a2ce2594b9479f1",
+    "judge": {
+      "enabled": false,
+      "model": null,
+      "provider": null
+    },
+    "metric_set": "custom-only",
+    "patch_digest": "sha256:1f5fcd2c77ab49e9703385dba4aad8be7d5d85d70c4ab23ef341b842c9113bea",
+    "producer_profile": "skillevaluator-1.2.1-benchmark-launcher-1720-v1",
+    "provenance": "runtime_recorded",
+    "published_id": null,
+    "scoring_policy": "custom-overall-v1"
+  },
+  "references": [
+    {
+      "artifact_digest": null,
+      "artifact_id": "campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live",
+      "availability": "available",
+      "digest": "sha256:17bc52a6f2d5f8dda41268b254028ef664d0ccc3e46ac9e19452bdd5d2e250e3",
+      "id": "sha256:069459a311fea733a08cb415767e7c63199786f78de1e38215e0af8a1666aaf3",
+      "locator": [],
+      "member": "results/podman/campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live/codex/without-skill/trials/campaign-podman-002-attempt1__slot2/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live",
+      "availability": "available",
+      "digest": "sha256:dadcf65107ed9096e30f133c7240543f825df2232c18acb868b164303e4a0253",
+      "id": "sha256:1abac6fd816cac7f8be4c43cf2eb946d0105c515fe503ca33f493586aee07a79",
+      "locator": [],
+      "member": "campaign-scheduler.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live",
+      "availability": "available",
+      "digest": "sha256:dadf54572cc02c7712cda355858a1948da9b85acf41281885bc330174932c227",
+      "id": "sha256:1fcb0344964316bad9b48c519d3b3421cd217ef2b29cb5254a3ec450b3370e0d",
+      "locator": [],
+      "member": "results/podman/campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live/codex/with-skill/trials/campaign-podman-002-attempt1__slot1/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live",
+      "availability": "available",
+      "digest": "sha256:83d1f9a10fcbc266112eb7873f561b7b44ba91e0567a00b5d0fb13d88d73398c",
+      "id": "sha256:2384dad81f354d50957fdd6a7c02e18cc97014fcbfe88ea15973e3ba6a34032b",
+      "locator": [],
+      "member": "results/podman/campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live/codex/without-skill/trials/campaign-podman-002-attempt1__slot2/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live",
+      "availability": "available",
+      "digest": "sha256:d0e87097064d66dbc9258c9e8653f830352f89b0e18036e8f31d2df0c15a436c",
+      "id": "sha256:8c7877e9cf95e9f9e991f282585995e9fd6baa404821cb6fe86b7b8ebe2382aa",
+      "locator": [],
+      "member": "results/podman/campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live/codex/with-skill/trials/campaign-podman-002-attempt1__slot1/reward.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live",
+      "availability": "available",
+      "digest": "sha256:618ec75e5eef12d87851c415e4d504659ad68e92f11f5042ff4118366c4475db",
+      "id": "sha256:9a7365d4e00afacd7bc94ddc456c89bc1c5f46ff53ec4014fe9c946b0beb6892",
+      "locator": [],
+      "member": "results/podman/campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live/run_config.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live",
+      "availability": "available",
+      "digest": "sha256:6d4f6397de4ef1341b8523e979e7de9d0632ddbbad629c9bcab998544fa04f07",
+      "id": "sha256:bd0a18bd187caea48dc1556663d634b1aa302046bcbf97b089abbddcf8329872",
+      "locator": [],
+      "member": "custom-metric-capture.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live",
+      "availability": "available",
+      "digest": "sha256:dfbdef15ace46cacf12638e603bf3be85d95585d8762a9d6d4d8da442e3f1b85",
+      "id": "sha256:bd7383e12554064bd185e847d9249a7f19664cf0740c85fe61f109e428d934b1",
+      "locator": [],
+      "member": "results/podman/campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live/result.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live",
+      "availability": "available",
+      "digest": "sha256:2a00372944bc04614fd835155b1fa5ada6e3f008da380af17ece70c9aaa76359",
+      "id": "sha256:cae8da1ba4e7506a292a2c400ad4e4059e39c3d300ea9cf81b48e2c80a24c11b",
+      "locator": [],
+      "member": "results/podman/campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live/codex/with-skill/summary.json",
+      "provenance": "runtime_recorded"
+    },
+    {
+      "artifact_digest": null,
+      "artifact_id": "campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live",
+      "availability": "available",
+      "digest": "sha256:2e036ca1fd27e06d3207443d55ab697c48ebb1da657a403c4a4913b3cf4626f6",
+      "id": "sha256:e85c7f8bccc38e06c9e0bffdfe15218d3fa4cb25a3e18f50ad3c850600879ba1",
+      "locator": [],
+      "member": "results/podman/campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live/codex/without-skill/summary.json",
+      "provenance": "runtime_recorded"
+    }
+  ],
+  "run_id": "campaign-podman-storage-current-v1-1720-sol62-lifecycle-v1-source-v52-live",
+  "scans": [],
+  "schema_version": 2,
+  "source": {
+    "content": {
+      "algorithm": "sha256-relative-file-manifest-v1",
+      "digest": "sha256:506e78b501906831944d7c6559091c898de9476d42347c56381c950d0099d07d",
+      "manifest": [
+        {
+          "digest": "sha256:96088308ed8df85d9f369263de4ec02fefdb7f59fbccc2b4629991be7266e581",
+          "member": "EVALS.md"
+        },
+        {
+          "digest": "sha256:93f772d47f661cc721a211257f4a2aecabcc53ed77f0d4b16b754944128586c9",
+          "member": "MAINTENANCE.md"
+        },
+        {
+          "digest": "sha256:625107071889166612f64ac52920be2b9455f671e4ce1f805835f7fee14ef274",
+          "member": "SKILL.md"
+        },
+        {
+          "digest": "sha256:fce55e0ec0a56608d714f273afdbdc44017d0a4ebed73b61291cd0fdebbf434a",
+          "member": "references/compose-migration.md"
+        },
+        {
+          "digest": "sha256:adb6f7a2a07f2067036354cb57bb69e694d423f20bd578e09db6a5a799859168",
+          "member": "references/fedora-hosts.md"
+        },
+        {
+          "digest": "sha256:55a300354c77b6e59b5876b1b3a6b7e00f9525a21c9160fa5b3200a3a8128f23",
+          "member": "references/quadlet-systemd.md"
+        },
+        {
+          "digest": "sha256:6a8d789b72d821e3fed320ca84325086d5a42ced25912a4b52ea760a306111ff",
+          "member": "references/reverse-proxy.md"
+        },
+        {
+          "digest": "sha256:a5fc3f33815caa196d5f8d6cb090136bcccc88fb95dedb921c99bd0b3cf6b524",
+          "member": "references/rootless-networking.md"
+        },
+        {
+          "digest": "sha256:37e1fae3de6f4b7ae1ea3ccc2b0b84d7fd854ea2730a51f0e3b3b1bc9b2e1068",
+          "member": "references/security-storage-secrets.md"
+        },
+        {
+          "digest": "sha256:465321094bc936d8a9e187bd3b4daa1ab271b93242a2c07fe88c58db6bd4bdd5",
+          "member": "references/validation.md"
+        }
+      ],
+      "provenance": "configured",
+      "scope": "pinned-agent-visible"
+    },
+    "lineage": null,
+    "owner": "local",
+    "repository": "thetechgy/agent-engineering-baseline",
+    "revision": "d31f7dc1b80810e7e0a8027e684105df3c0c84e7",
+    "skill_id": "podman",
+    "source_path": ".apm/skills/podman"
+  }
+}

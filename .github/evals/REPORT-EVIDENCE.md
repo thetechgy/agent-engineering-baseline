@@ -1399,9 +1399,8 @@ produces zero. Contextual links identify the skill and case where applicable.
 Use the same saved-analysis and consolidated renderer with the report-only
 decision entry point. The checked-in reviewer input selects four development
 and two transfer Pester pairs, their diagnostic replay, the completed permission
-pilot and the human-reviewed Podman case 4 observation. The opening gives the finding,
-the action and the evidence that would change it. Follow the receipt and run
-links for evidence, provenance and logs.
+pilot, the stopped Podman case 2 comparison and the human-reviewed Podman case 4
+observation. Follow the receipt and run links for evidence, provenance and logs.
 
 With the data-only reporting interpreter configured above, choose a new
 persistent output directory outside the checkout.
@@ -1417,6 +1416,7 @@ inputs=(
   --input "$development/data/pester-return-development-candidate-v1"
   --input "$development/stage-1-sol62/data"
   --input "$development/stage-1-1710-sol62/data"
+  --input docs/evaluations/podman-storage-comparison/data
 )
 
 "$SKILL_DATA_PYTHON" -B "$public_scripts/skill_analysis.py" \
@@ -1454,7 +1454,12 @@ render inputs above and to the decision tests, and update the expected counts.
 The historical permission bundle uses the campaign registry from its execution
 revision. The report reads the verified receipt for that pair.
 
-The Podman entry binds the [sanitized observation receipt](../../docs/evaluations/podman-case-observation/case-4/receipt.json)
+The Podman case 2 card binds the stopped result to the exact public record
+and its live scheduler witness. The card reports the stop and links to the
+partial verifier grades. The [execution receipt](../../docs/evaluations/podman-storage-comparison/EXECUTION.md)
+records the scope of the result and the estimated model usage.
+
+The Podman case 4 entry binds the [sanitized observation receipt](../../docs/evaluations/podman-case-observation/case-4/receipt.json)
 and its [operator workspace comparison](../../docs/evaluations/podman-case-observation/case-4/workspace-observation.json)
 by digest. These files reproduce the entry offline after the Actions artifact
 expires. If the comparison is missing, the decision remains pending and the
