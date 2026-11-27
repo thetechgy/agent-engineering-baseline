@@ -20,11 +20,14 @@ class StaticQualityRoutingTests(unittest.TestCase):
     def test_active_scanner_runtime_matches_the_reviewed_semgrep_lock(self):
         import static_evaluator as owner
 
-        lock = ROOT / '.github/requirements/semgrep.txt'
-        self.assertEqual(owner.SEMGREP_LOCK, evidence.digest_bytes(lock.read_bytes()))
-        self.assertEqual(evidence.SCANNER_RUNTIME_STATIC_CANDIDATE['semgrep_lock'], owner.SEMGREP_LOCK)
-        self.assertEqual(evidence.SCANNER_RUNTIME_NEXT['semgrep_lock'], owner.SEMGREP_LOCK)
-        self.assertNotEqual(evidence.SCANNER_2136_INITIAL_NEXT['semgrep_lock'], owner.SEMGREP_LOCK)
+        runtime = owner.current_scanner_runtime(evidence.SCANNER_RUNTIME_STATIC_CANDIDATE)
+        for key, name in (('semgrep_lock', 'requirements/semgrep.txt'),
+                          ('skillspector_lock', 'locks/skillspector.lock')):
+            lock = ROOT / '.github' / name
+            self.assertEqual(runtime[key], evidence.digest_bytes(lock.read_bytes()))
+        if ISOLATED_SCRIPTS:
+            self.assertEqual(evidence.SCANNER_RUNTIME_STATIC_CANDIDATE, runtime)
+            self.assertIn(evidence.SCANNER_2136_STATIC, evidence.STATIC_SCANNER_RUNTIMES)
 
     def test_static_consumer_and_retained_native_boundary_have_explicit_separate_owners(self):
         jobs = yaml.safe_load((ROOT / '.github/workflows/validate.yml').read_text())['jobs']

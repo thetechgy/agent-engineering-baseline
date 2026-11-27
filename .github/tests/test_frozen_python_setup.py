@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 class FrozenPythonSetup(unittest.TestCase):
     def test_failed_or_changed_catalog_never_reaches_interpreter_installation(self):
         script = ROOT / '.github/scripts/setup-skillevaluator.sh'
-        version = re.search(r"^test .*uv --version.* = '([^']+)'$", script.read_text(), re.M)[1]
+        version = re.search(r"test .*uv_version.* = '([^']+)'", script.read_text(), re.M)[1]
         for mode in ('changed', 'unavailable'):
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)

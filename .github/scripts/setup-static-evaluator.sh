@@ -22,7 +22,7 @@ case "$(realpath -m "$tools")/" in
   "$(realpath "$GITHUB_WORKSPACE")/"*|"$root/"*) echo 'Tools must be outside the checkout.' >&2; exit 1 ;;
 esac
 mkdir -m 700 "$tools"
-test "$(uv --version | awk '{print $2}')" = '0.13.9'
+test "$(uv --version | awk '{print $2}')" = '0.13.10'
 export UV_CACHE_DIR="$tools/uv-cache"
 export UV_PYTHON_INSTALL_DIR="$tools/python"
 export XDG_CACHE_HOME="$tools/cache"

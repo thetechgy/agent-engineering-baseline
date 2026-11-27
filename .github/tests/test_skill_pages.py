@@ -562,7 +562,7 @@ import os, pathlib, shlex, shutil, sys
 name = pathlib.Path(sys.argv[0]).name
 args = sys.argv[1:]
 if name == 'uv' and args == ['--version']:
-    print('uv 0.13.9')
+    print('uv 0.13.10')
 elif name == 'uv' and args[:2] == ['sync', '--project']:
     assert args[3:] == ['--python', os.environ['RELEASE_PYTHON'], '--managed-python', '--frozen', '--no-dev']
     bin_dir = pathlib.Path(args[2]) / '.venv/bin'
