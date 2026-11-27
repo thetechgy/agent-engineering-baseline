@@ -190,7 +190,7 @@ def synthetic_gh_native(root, *, unscoreable=False, candidate_metrics=None):
     from skillevaluator.tier3.dataset_utils import load_dataset_entries
     from evaluator_profiles import owning_candidate, candidate_versions
     profile = owning_candidate()
-    candidate_policy = {**reports.benchmark_policy('gh'), 'evaluator_revision': profile['revision'],
+    candidate_policy = {**reports.benchmark_policy('gh', gh_revision=gh.UPSTREAM), 'evaluator_revision': profile['revision'],
                         'harbor': profile['harbor'], 'python': profile['python']}
     from gh_candidate import stage as candidate_stage
     bundle = candidate_stage(ROOT, root / 'bundle/gh')
@@ -454,6 +454,25 @@ class CustomMetricTests(unittest.TestCase):
                 else: m['denominator'] = 0
                 with self.assertRaises(ValueError): evidence.validate_public(data)
 
+    @unittest.skipUnless(os.environ.get('CANDIDATE_EVIDENCE_CHILD') == '1', 'requires the pinned candidate owner')
+    def test_standard_gh_admission_binds_the_refreshed_skill_revision(self):
+        from gh_evaluations import UPSTREAM
+
+        native, _ = synthetic_gh_native(self.root)
+        data = evidence.project(evidence.normalize_behavioral(native, 'gh'))
+        evidence.validate_public(data)
+        self.assertEqual(data['source']['revision'], UPSTREAM)
+        self.assertEqual(data['policy']['fields']['upstream_revision'], UPSTREAM)
+        self.assertEqual(data['custom']['profile_id'], evidence.custom_registry()['active_profiles']['gh'])
+        self.assertEqual(len(data['observations']), 48)
+
+        provenance = native / 'provenance.json'
+        recorded = reports.read_json(provenance)
+        recorded['policy']['upstream_revision'] = reports.RETAINED_GH_REVISION
+        reports.write_json(provenance, recorded)
+        with self.assertRaisesRegex(ValueError, 'Captured source origin contradiction'):
+            evidence.normalize_behavioral(native, 'gh')
+
     def test_gh_default_plus_custom_native_admission_preserves_routing_and_gate_semantics(self):
         native, run = historical_gh_native(self.root)
         data = evidence.normalize_behavioral(native, 'gh')
@@ -489,6 +508,24 @@ class CustomMetricTests(unittest.TestCase):
             payload = evidence.read_json(path); payload['custom_metrics']['gh_authorization'] = 0; payload['custom_metrics']['gh_gate'] = 0; write(path, payload)
             import gh_evaluations as gh
             gh.deterministic_gate(run, sorted(public['dataset']['case_ids']), 1)
+
+    def test_gh_retained_source_successor_requires_its_own_helper_digest(self):
+        native, run = historical_gh_native(self.root)
+        capture = evidence.read_json(native / evidence.CUSTOM_CAPTURE)
+        _, _, previous = evidence.custom_contract('gh', ROOT, profile_id='gh-deterministic-gate-v10')
+        capture['contract_digest'] = previous
+        helper = next(member for member in capture['inputs'] if member['member'] == 'producer/gh_evaluations.py')
+        original = helper['digest']
+        helper['digest'] = 'sha256:cfc192e54d1397a3ffb15760194b33cae19343bacead1c17d4ee3dc8de21c632'
+        def snapshot():
+            return evidence.read_json(run / 'dataset_snapshot.json')
+
+        profile, _ = evidence.validate_custom_capture(capture, 'gh', ROOT, read_prepared_snapshot=snapshot)
+        self.assertEqual(profile['id'], 'gh-deterministic-gate-v10')
+
+        helper['digest'] = original
+        with self.assertRaisesRegex(ValueError, 'Approved custom input drift'):
+            evidence.validate_custom_capture(capture, 'gh', ROOT, read_prepared_snapshot=snapshot)
 
     def test_incomplete_gh_native_admission_preserves_unavailable_gates_and_exact_error_ledgers(self):
         from skillevaluator.tier3.harbor import report_data as native_reports

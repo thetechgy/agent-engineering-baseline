@@ -81,7 +81,7 @@ class GhOfflineTests(unittest.TestCase):
         lock = root / "apm.lock.yaml"
         data = yaml.safe_load(lock.read_text())
         owners = {entry["name"]: entry for entry in data["dependencies"]}
-        policy = reports.benchmark_policy("gh")
+        policy = reports.benchmark_policy("gh", gh_revision=gh.UPSTREAM)
         self.assertEqual(owners["gh"]["resolved_commit"], policy["upstream_revision"])
         self.assertEqual(owners[gh.COMPETING]["resolved_commit"], policy["competing_revision"])
         manifest = yaml.safe_load((gh.ROOT / "apm.yml").read_text())

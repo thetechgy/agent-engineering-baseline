@@ -47,8 +47,7 @@ diff --git a/.github/scripts/skill_reports.py b/.github/scripts/skill_reports.py
 index b9843d5..7690fba 100644
 --- a/.github/scripts/skill_reports.py
 +++ b/.github/scripts/skill_reports.py
-@@ -203,12 +203,15 @@ def benchmark_policy(name):
-             "competing_revision": "1683f50e94c9fd489191f73d7c8f7e2bd871bd0c"} if name == "gh" else POLICY
+@@ -204,11 +204,14 @@
 
 
 +RELEASED_STATIC_VERSIONS = ('0.9.0', '1.0.1')

@@ -5154,19 +5154,20 @@ class EvidenceTests(unittest.TestCase):
                     self.mutate(root, '/provenance.json', lambda d: d.update(skill='gh'))
                 provenance_path = root / 'provenance.json'; original = evidence.read_json(provenance_path)
                 baseline = evidence.normalize_behavioral(root, name)
-                approved = evidence.reports.benchmark_policy('gh')[field]
-                for revision in ('f' * 40, approved):
+                approved = (evidence.reports.RETAINED_GH_REVISION, gh.UPSTREAM) if field == 'upstream_revision' else (
+                    evidence.reports.benchmark_policy('gh')[field],)
+                for revision in ('f' * 40, *approved):
                     with self.subTest(revision=revision):
                         provenance = copy.deepcopy(original); provenance['policy'][field] = revision
                         write(provenance_path, provenance)
-                        if name == 'gh' and revision == approved:
+                        if name == 'gh' and revision in approved:
                             data = evidence.normalize_behavioral(root, name)
                             if field == 'upstream_revision':
                                 self.assertEqual(data['source']['owner'], 'upstream')
                                 self.assertEqual(data['source']['repository'], 'cli/cli')
-                                self.assertEqual(data['source']['revision'], gh.UPSTREAM)
+                                self.assertEqual(data['source']['revision'], revision)
                             else:
-                                self.assertEqual(data['arms'][0]['condition']['competing_skills'][0]['revision'], approved)
+                                self.assertEqual(data['arms'][0]['condition']['competing_skills'][0]['revision'], revision)
                             evidence.project(dict(data), behavioral_bundle=root)
                         else:
                             output = self.root / 'upstream-rejected'

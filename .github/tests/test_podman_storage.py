@@ -97,26 +97,28 @@ class PodmanStorageContract(unittest.TestCase):
 
     def test_successors_preserve_historical_grading_and_bind_current_sources(self):
         registry = evidence.custom_registry()
-        active_purposes = {"pester-effectiveness-v52": "skill_effectiveness",
-                           "gh-deterministic-gate-v10": "benchmark",
-                           "gh-native-oracle-v6": "oracle_qualification"}
+        active_purposes = {"pester-effectiveness-v53": "skill_effectiveness",
+                           "gh-deterministic-gate-v11": "benchmark",
+                           "gh-native-oracle-v7": "oracle_qualification"}
         for member in (evidence.CAMPAIGN_SOURCE_SUCCESSORS, evidence.RETIREMENT_SOURCE_SUCCESSORS,
                        evidence.PUBLICATION_SOURCE_SUCCESSORS, evidence.DIAGNOSTIC_SOURCE_SUCCESSORS,
                        evidence.DIRECT_TOOL_SOURCE_SUCCESSORS, evidence.NATIVE_RETIREMENT_SOURCE_SUCCESSORS,
-                       evidence.RELEASE_121_SOURCE_SUCCESSORS):
+                       evidence.RELEASE_121_SOURCE_SUCCESSORS, evidence.GH_SKILL_SOURCE_SUCCESSORS):
             version_data = reports.read_json(ROOT / member)
             for profile_id, binding in version_data["profiles"].items():
                 with self.subTest(profile=profile_id):
                     current = registry["profiles"][profile_id]
                     parent = registry["profiles"][binding["parent"]]
                     fields = {"runtime_digest": binding["runtime_digest"]}
+                    if "upstream_revision" in binding:
+                        fields["upstream_revision"] = binding["upstream_revision"]
                     if "grader_digest" in binding:
                         self.assertEqual(member, evidence.CAMPAIGN_SOURCE_SUCCESSORS)
                         self.assertEqual(current["skill_id"], "podman")
                         self.assertNotEqual(binding["grader_digest"], parent["grader_digest"])
                         fields["grader_digest"] = binding["grader_digest"]
                     self.assertEqual(current, dict(parent, id=profile_id, **fields))
-                    if member == evidence.RELEASE_121_SOURCE_SUCCESSORS or profile_id in active_purposes:
+                    if member == evidence.GH_SKILL_SOURCE_SUCCESSORS or profile_id in active_purposes:
                         purpose_id = active_purposes.get(profile_id, profile_id)
                         selected, _, _ = evidence.custom_contract(current["skill_id"], ROOT, purpose=purpose_id)
                         self.assertEqual(selected["id"], profile_id)
