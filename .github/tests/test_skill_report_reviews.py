@@ -162,7 +162,7 @@ target = Path(sys.argv[3])
                 release_review = evidence.read_json(save)
                 self.assertEqual(emitted['implementation_digest'], release_review['provenance']['implementation_digest'])
                 self.assertEqual(release_review['provenance']['versions']['skillevaluator'],
-                                 '1.2.1' if profile == ACTIVE_PROFILE else '1.0.1')
+                                 '1.2.1' if profile in (snapshot.V121_PROFILE, ACTIVE_PROFILE) else '1.0.1')
                 self.assertEqual(subprocess.run([*command, 'validate', *args, '--review', str(save)],
                     env=env, capture_output=True, timeout=45).returncode, 0)
                 if key == 'current-v5' and profile == ACTIVE_PROFILE:
