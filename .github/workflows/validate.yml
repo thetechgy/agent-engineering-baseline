@@ -178,6 +178,8 @@ jobs:
         run: bash .github/scripts/setup-static-evaluator.sh review-contracts
       - name: Install retained private-review validators
         run: bash .github/scripts/setup-static-evaluator.sh review-retained-101
+      - name: Install retained SkillEvaluator 1.2.1 private-review validator
+        run: bash .github/scripts/setup-static-evaluator.sh review-retained-121
 
       - name: Install the pinned released owner for native gh contracts
         run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-candidate

@@ -7,7 +7,7 @@ root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 kind=${1:-quality-static}
 case "$kind" in
   quality-next) exec bash "$root/.github/scripts/setup-skillevaluator.sh" quality-next ;;
-  quality-static|quality-retained-101|scanner-contracts|data-host|native-startup|native-benchmark-candidate|native-benchmark-candidate-101|native-benchmark-101|native-benchmark-121|review-candidate|review-contracts|review-retained-101) ;;
+  quality-static|quality-retained-101|scanner-contracts|data-host|native-startup|native-benchmark-candidate|native-benchmark-candidate-101|native-benchmark-101|native-benchmark-121|review-candidate|review-contracts|review-retained-101|review-retained-121) ;;
   *) exit 2 ;;
 esac
 : "${RUNNER_TEMP:?}" "${GITHUB_WORKSPACE:?}" "${GITHUB_ENV:?}"
@@ -38,9 +38,11 @@ print(pins["evaluator_revision"], pins["lock_sha256"], pins["python"], pins["ski
 read -r revision lock python_version release_version <<< "$pins"
 if [[ "$kind" == review-* ]]; then
   pins=$(PYTHONPATH="$root/.github/scripts" python3 -B -c '
+import sys
 import private_review_runtime as owner
-print(owner.PYTHON, owner.LOCK)
-')
+retained = sys.argv[1].startswith("review-retained-")
+print(owner.PYTHON, owner.RETAINED_LOCK if retained else owner.LOCK)
+' "$kind")
   read -r python_version overlay_digest <<< "$pins"
 fi
 evaluator="$tools/evaluator"
@@ -56,7 +58,13 @@ uv sync --project "$evaluator" --python "$python_version" --managed-python --fro
 python="$evaluator/.venv/bin/python"
 uv pip check --python "$python"
 if [[ "$kind" == review-* ]]; then
-  overlay="$root/.github/requirements/review-101.txt"
+  overlay="$root/.github/requirements/review-121-v2.txt"
+  profile=active
+  case "$kind" in
+    review-retained-101|review-retained-121) overlay="$root/.github/requirements/review-101.txt" ;;
+  esac
+  if [ "$kind" = review-retained-101 ]; then profile=review-101; fi
+  if [ "$kind" = review-retained-121 ]; then profile=review-121-v1; fi
   printf '%s  %s\n' "$overlay_digest" "$overlay" | sha256sum --check --strict
   uv pip install --python "$python" --no-deps --only-binary :all: --require-hashes --requirement "$overlay"
   if [ "$kind" = review-contracts ]; then
@@ -66,12 +74,15 @@ if [[ "$kind" == review-* ]]; then
   fi
   uv pip check --python "$python"
   review_export=SKILL_REVIEW_CANDIDATE_PYTHON
-  if [ "$kind" = review-retained-101 ]; then review_export=SKILL_REVIEW_RETAINED_PYTHON; fi
+  case "$kind" in
+    review-retained-101) review_export=SKILL_REVIEW_RETAINED_PYTHON ;;
+    review-retained-121) review_export=SKILL_REVIEW_RETAINED_121_PYTHON ;;
+  esac
   PYTHONPATH="$root/.github/scripts" "$python" -B -c '
 import sys
 import private_review_runtime
-private_review_runtime.validate_install(retained=sys.argv[1] == "review-retained-101")
-' "$kind"
+private_review_runtime.validate_install(sys.argv[1])
+' "$profile"
   printf '%s=%s\n' "$review_export" "$python" >> "$GITHUB_ENV"
   exit 0
 fi

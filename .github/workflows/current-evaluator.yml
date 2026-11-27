@@ -68,6 +68,8 @@ jobs:
         run: bash .github/scripts/setup-static-evaluator.sh review-contracts
       - name: Install retained private-review validators
         run: bash .github/scripts/setup-static-evaluator.sh review-retained-101
+      - name: Install retained SkillEvaluator 1.2.1 private-review validator
+        run: bash .github/scripts/setup-static-evaluator.sh review-retained-121
       - name: Acquire the pinned historical gh fixture source
         run: bash .github/scripts/setup-historical-gh-fixture.sh
       - name: Verify historical report and custom semantics

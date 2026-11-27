@@ -1594,10 +1594,12 @@ not establish that it passed.
 
 Use the private-review interpreter before adding
 `--analyst-review /tmp/private-attachments/podman.json` to the report command.
-Repeat for another selected record. Use `"profile": "review-121-v1"` and
+Repeat for another selected record. Use `"profile": "review-121-v2"` and
 `"tooling": null` for new reviews. This profile selects the fixed 1.2.1
-producer and validator source. To load earlier attachments, also install
-`setup-static-evaluator.sh review-retained-101` and load the exported
+producer and validator source. For a `review-121-v1` attachment, install
+`setup-static-evaluator.sh review-retained-121` and load
+`SKILL_REVIEW_RETAINED_121_PYTHON`. For the earlier profiles, install
+`setup-static-evaluator.sh review-retained-101` and load
 `SKILL_REVIEW_RETAINED_PYTHON`. Each retained validator replays its original
 source and runtime. Each record can have
 **one analyst report** and up to eight separately supplied independent assessments of that
@@ -1834,7 +1836,9 @@ artifacts are unchanged. To use the 1.2.1 review profile, run
 `setup-static-evaluator.sh review-candidate` with the reviewed uv version
 and an external tool directory. The setup exports
 `SKILL_REVIEW_CANDIDATE_PYTHON` via `GITHUB_ENV`. It pins Python 3.13.18,
-OpenAI 2.54.0, Pydantic 2.14.3, and certifi 2026.10.23. The CLI verifies
+OpenAI 3.60.0, Pydantic 2.14.4, and certifi 2026.10.23. The SDK receives
+its supported explicit HTTPX client with the pinned CA bundle and environment
+proxies and redirects disabled. The CLI verifies
 the installation and uses the same fixed source snapshot to prepare,
 generate, and validate. New results retain `not_quality_qualified`.
 [Snapshot provenance](retained/README.md)

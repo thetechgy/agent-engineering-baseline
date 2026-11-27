@@ -1691,6 +1691,9 @@ def failure_diagnostic(error, stage, metadata, started):
 
 async def invoke(context, config, authorized, *, http_client=None, diagnostic=None):
     """One count and one generation; a hard asyncio deadline spans both requests."""
+    import ssl
+
+    import certifi
     import httpx
 
     diagnostic = DiagnosticState() if diagnostic is None else diagnostic
@@ -1731,7 +1734,8 @@ async def invoke(context, config, authorized, *, http_client=None, diagnostic=No
                 max_retries=0,
                 timeout=config.deadline_seconds,
                 http_client=http_client
-                or httpx.AsyncClient(trust_env=False, follow_redirects=False, timeout=config.deadline_seconds),
+                or httpx.AsyncClient(verify=ssl.create_default_context(cafile=certifi.where()),
+                                     trust_env=False, follow_redirects=False, timeout=config.deadline_seconds),
             ) as client:
                 diagnostic.stage = "token_count"
                 metadata["count_requests"] = 1

@@ -92,6 +92,7 @@ class AttachmentTests(unittest.TestCase):
         for profile, member in ((snapshot.PROFILE, 'SNAPSHOT'), (snapshot.V2_PROFILE, 'V2_OVERLAY'),
                                 (snapshot.V3_PROFILE, 'V3_OVERLAY'), (snapshot.V4_PROFILE, 'V4_OVERLAY'),
                                 (snapshot.V5_PROFILE, 'V5_OVERLAY'),
+                                (snapshot.V121_PROFILE, 'V121_OVERLAY'),
                                 (snapshot.ACTIVE_PROFILE, 'ACTIVE_OVERLAY')):
             with self.subTest(profile=profile):
                 changed = self.root / 'changed.zip'
@@ -109,7 +110,8 @@ class AttachmentTests(unittest.TestCase):
         from private_review_snapshot import ACTIVE_PROFILE, PROFILE, V2_PROFILE, V3_PROFILE, V4_PROFILE, unpack
 
         cases = (('current-v5', False, ACTIVE_PROFILE), ('gh-89f46f0', False, ACTIVE_PROFILE),
-                 (None, True, ACTIVE_PROFILE), ('current-v5', False, snapshot.V5_PROFILE),
+                 (None, True, ACTIVE_PROFILE), ('current-v5', False, snapshot.V121_PROFILE),
+                 ('current-v5', False, snapshot.V5_PROFILE),
                  ('current-v5', False, PROFILE), ('current-v5', False, V2_PROFILE),
                  ('current-v5', False, V3_PROFILE), ('current-v5', False, V4_PROFILE),
                  ('gh-89f46f0', False, V4_PROFILE), (None, True, V4_PROFILE))

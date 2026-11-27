@@ -252,8 +252,8 @@ class FreshnessTests(unittest.TestCase):
 
     def test_review_lock_overlay_disagreement_remains_visible(self):
         root = self.scratch()
-        overlay = root / '.github/requirements/review-101.txt'
-        overlay.write_text(overlay.read_text().replace('openai==2.54.0 ', 'openai==2.54.1 '))
+        overlay = root / '.github/requirements/review-121-v2.txt'
+        overlay.write_text(overlay.read_text().replace('openai==3.60.0 ', 'openai==3.59.0 '))
         _, rows, _ = fresh.inventory(root)
         sdk = next(row for row in rows if row['id'] == 'openai')
         self.assertIn('contradictory_pins', sdk['errors'])

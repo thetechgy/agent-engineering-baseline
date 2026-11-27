@@ -360,13 +360,13 @@
           "field": "version"
         },
         {
-          "path": ".github/requirements/review-101.txt",
+          "path": ".github/requirements/review-121-v2.txt",
           "pattern": "^openai==(?P<version>[0-9.]+) --hash=sha256:[0-9a-f]{64}$",
           "count": 1
         }
       ],
       "owner": "Maintainer review",
-      "hold": "The private review overlay pins OpenAI 2.54.0 with its matching Pydantic, HTTPX and trust-store dependencies. Historical attachment profiles retain their recorded SDK and original validation rules.",
+      "hold": "The current private review overlay pins OpenAI 3.60.0 with its required HTTPX2 stack and injects the SDK-supported explicit HTTPX client. Historical validators keep their original environment.",
       "group": "review-runtime compatibility group",
       "tag_prefix": "v",
       "validation": "Qualify the review lock overlay, current API/schema and redaction contracts, exact historical validators through their retained runtime, and a new reviewed attachment profile. Evaluator/Harbor/Codex upgrades are separate qualifications.",
@@ -387,13 +387,13 @@
           "field": "version"
         },
         {
-          "path": ".github/requirements/review-101.txt",
+          "path": ".github/requirements/review-121-v2.txt",
           "pattern": "^pydantic==(?P<version>[0-9.]+) --hash=sha256:[0-9a-f]{64}$",
           "count": 1
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Active reviews use stable Pydantic 2.14.3 in the reviewed overlay. Frozen current-v3/v4 attachments retain 2.14.2 and older profiles retain 2.13.4; those historical validators are intentionally not upgraded.",
+      "hold": "Active reviews use Pydantic 2.14.4. The review-121-v1 and review-101 profiles retain their original attachment validation environments.",
       "group": "review-runtime compatibility group",
       "tag_prefix": "v",
       "validation": "Qualify the review lock overlay, current API/schema and redaction contracts, exact historical validators through their retained runtime, and a new reviewed attachment profile. Evaluator/Harbor/Codex upgrades are separate qualifications.",

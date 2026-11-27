@@ -1146,7 +1146,7 @@ class ReviewTests(unittest.TestCase):
                 review.main(["validate", *self.args, "--review", str(old_path)])
 
     def test_pin_and_strict_schema(self):
-        self.assertEqual(review.versions()["openai"], "2.54.0")
+        self.assertEqual(review.versions()["openai"], "3.60.0")
         schema = review.schema()
         for row in [schema, *schema["$defs"].values()]:
             if row.get("type") == "object":
@@ -2882,14 +2882,19 @@ class ReviewTests(unittest.TestCase):
             original._transport = httpx.MockTransport(handle)
             return AsyncOpenAI(**kwargs)
 
+        import ssl
+        import certifi
+
         with (
+            patch("ssl.create_default_context", wraps=ssl.create_default_context) as make_tls,
             patch.dict(
-                os.environ, {"OPENAI_BASE_URL": "https://invalid.example/v1", "HTTPS_PROXY": "https://invalid.example"}
+                os.environ, {"SSL_CERT_FILE": "/invalid-ca.pem", "OPENAI_BASE_URL": "https://invalid.example/v1", "HTTPS_PROXY": "https://invalid.example"}
             ),
             patch("openai.AsyncOpenAI", side_effect=client),
         ):
             with self.assertRaises(ValueError):
                 asyncio.run(review.invoke(context, CONFIG, True))
+        make_tls.assert_called_once_with(cafile=certifi.where())
         self.assertEqual(observed["base_url"], review.ENDPOINT)
         self.assertEqual(observed["max_retries"], 0)
         self.assertEqual(len(calls), 1)

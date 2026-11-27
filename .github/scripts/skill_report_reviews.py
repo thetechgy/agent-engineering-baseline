@@ -121,10 +121,10 @@ sys.dont_write_bytecode = True
 
 RUNNER = AUDIT_GUARD + r'''
 try:
-    scripts, pins, original, trusted, retained = sys.argv[1:]
+    scripts, pins, original, trusted, profile = sys.argv[1:]
     sys.path.insert(0, trusted)
     import private_review_runtime
-    private_review_runtime.validate_install(retained=retained == 'true')
+    private_review_runtime.validate_install(profile)
     sys.path.pop(0)
     for module in ('private_review_runtime', 'static_evaluator'):
         del sys.modules[module]
@@ -309,7 +309,9 @@ def assessment(spec, parent, capture, report, review):
 def validator_python(profile):
     if profile == snapshot.ACTIVE_PROFILE:
         return sys.executable
-    retained = os.environ.get("SKILL_REVIEW_RETAINED_PYTHON")
+    key = ("SKILL_REVIEW_RETAINED_121_PYTHON" if profile == snapshot.V121_PROFILE
+           else "SKILL_REVIEW_RETAINED_PYTHON")
+    retained = os.environ.get(key)
     require(retained and Path(retained).is_absolute(), "Pinned retained private-review interpreter required")
     return retained
 
@@ -331,11 +333,11 @@ def run_validator(request, modules, capture, roots, registry, profile, assets=No
                 evidence.write_outputs({}, temporary / '.github' / 'evals', input_paths=roots,
                                        input_guards=guards, rendered={'custom-metrics.json': registry, **(assets or {})})
         try:
-            retained = profile != snapshot.ACTIVE_PROFILE
-            pins = private_review_runtime.validator_pins(retained=retained)
+            runtime = 'active' if profile == snapshot.ACTIVE_PROFILE else profile
+            pins = private_review_runtime.validator_pins(runtime)
             response = subprocess.run([validator_python(profile), '-I', '-B', '-c', RUNNER, str(scripts),
                                        evidence.encoded(pins).decode(), original, str(Path(__file__).resolve().parent),
-                                       'true' if retained else 'false'],
+                                       runtime],
                 input=evidence.encoded(request), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                 cwd=temporary, env={'PATH': os.defpath, 'PYTHONDONTWRITEBYTECODE': '1', 'GIT_NO_LAZY_FETCH': '1'},
                 timeout=120, check=False)

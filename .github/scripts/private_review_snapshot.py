@@ -34,14 +34,17 @@ V5_PROFILE = "review-101-v5"
 V5_REVISION = "f2d5d766ce5149dcc80dc851e64895c442d4e912"
 V5_OVERLAY = evidence.ROOT / ".github/evals/retained/private-review-101-v5-overlay.zip"
 V5_DIGEST = "sha256:21ac911579c5f4ccfb3d11f3db1bf2b1e5fc748a44e5f64650d1fa06659e206a"
-ACTIVE_PROFILE = "review-121-v1"
-ACTIVE_OVERLAY = evidence.ROOT / ".github/evals/retained/private-review-121-v1-overlay.zip"
-ACTIVE_MANIFEST = evidence.ROOT / ".github/evals/retained/private-review-121-v1.json"
-RELEASE_PROFILES = (PROFILE, V2_PROFILE, V3_PROFILE, V4_PROFILE, V5_PROFILE, ACTIVE_PROFILE)
+V121_PROFILE = "review-121-v1"
+V121_OVERLAY = evidence.ROOT / ".github/evals/retained/private-review-121-v1-overlay.zip"
+V121_MANIFEST = evidence.ROOT / ".github/evals/retained/private-review-121-v1.json"
+ACTIVE_PROFILE = "review-121-v2"
+ACTIVE_OVERLAY = evidence.ROOT / ".github/evals/retained/private-review-121-v2-overlay.zip"
+ACTIVE_MANIFEST = evidence.ROOT / ".github/evals/retained/private-review-121-v2.json"
+RELEASE_PROFILES = (PROFILE, V2_PROFILE, V3_PROFILE, V4_PROFILE, V5_PROFILE, V121_PROFILE, ACTIVE_PROFILE)
 
 
-def active_manifest():
-    manifest = evidence.parse_json(evidence.read_bytes(ACTIVE_MANIFEST, limit=4096))
+def read_manifest(path):
+    manifest = evidence.parse_json(evidence.read_bytes(path, limit=4096))
     evidence.closed(manifest, ("revision", "digest", "members"))
     evidence.revision(manifest["revision"])
     evidence.sha(manifest["digest"])
@@ -53,8 +56,9 @@ def active_manifest():
 def identity(profile):
     """Return the fixed producer source and execution identity for a release profile."""
     evidence.require(profile in RELEASE_PROFILES, "Unsupported validator profile")
-    if profile == ACTIVE_PROFILE:
-        return active_manifest()["revision"], "skillevaluator-1.2.1-private-review-frozen-v1"
+    if profile in (V121_PROFILE, ACTIVE_PROFILE):
+        manifest = read_manifest(ACTIVE_MANIFEST if profile == ACTIVE_PROFILE else V121_MANIFEST)
+        return manifest["revision"], "skillevaluator-1.2.1-private-review-frozen-" + profile.rsplit("-", 1)[1]
     sources = {
         PROFILE: REVISION, V2_PROFILE: V2_REVISION, V3_PROFILE: V3_REVISION,
         V4_PROFILE: V4_REVISION, V5_PROFILE: V5_REVISION,
@@ -88,8 +92,11 @@ def unpack(destination, profile=PROFILE):
                 (V4_OVERLAY, V4_DIGEST, 12), (V5_OVERLAY, V5_DIGEST, 8))
     for source, digest, count in overlays[:RELEASE_PROFILES.index(profile)]:
         contents.update(snapshot_members(source, digest, count))
+    if profile in (V121_PROFILE, ACTIVE_PROFILE):
+        manifest = read_manifest(V121_MANIFEST)
+        contents.update(snapshot_members(V121_OVERLAY, manifest["digest"], manifest["members"]))
     if profile == ACTIVE_PROFILE:
-        manifest = active_manifest()
+        manifest = read_manifest(ACTIVE_MANIFEST)
         contents.update(snapshot_members(ACTIVE_OVERLAY, manifest["digest"], manifest["members"]))
     for member, raw in contents.items():
         target = destination / member
