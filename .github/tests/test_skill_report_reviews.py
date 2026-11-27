@@ -64,6 +64,33 @@ class AttachmentTests(unittest.TestCase):
     def load(self):
         return attachments.load([self.path], self.captured)
 
+    def test_active_validator_admits_current_static_scanner_provenance(self):
+        import private_review_snapshot as snapshot
+        import static_evaluator as static
+        from test_skill_analysis import static_control
+
+        record = static_control(states={'SECURITY': 'incomplete'})
+        record['scanner_runtime'] = static.current_scanner_runtime(evidence.SCANNER_RUNTIME_STATIC_CANDIDATE)
+        record['policy'] = evidence.make_policy(
+            {key: static.VERSIONS[key] for key in ('evaluator_revision', 'harbor', 'python')},
+            judge={'model': None, 'provider': None, 'enabled': False},
+            provenance='runtime_recorded', published=static.VERSIONS['producer_profile'])
+        scripts = snapshot.unpack(self.root / 'frozen', snapshot.ACTIVE_PROFILE)
+        child = """
+import json
+import sys
+
+sys.path.insert(0, sys.argv[1])
+import skill_evidence as evidence
+
+record = json.load(sys.stdin)
+evidence.validate_public(record)
+assert record['availability']['status'] == 'incomplete'
+"""
+        command = [attachments.validator_python(snapshot.ACTIVE_PROFILE), '-I', '-B', '-c', child, str(scripts)]
+        result = subprocess.run(command, input=evidence.encoded(record), capture_output=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+
     def test_current_and_historical_production_validators(self):
         # A separate fixture root per profile keeps originals and guards unchanged.
         for profile in attachments.PROFILES:

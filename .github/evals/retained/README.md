@@ -69,6 +69,8 @@ The v5 producer and validator use the released benchmark reader and source-v48
 registry. Profiles v1 through v4 keep their original snapshot chains.
 
 `private-review-121-v2-overlay.zip` adds the SDK 3 review producer and runtime
-modules from `f6e5462a8fc3` to the `review-121-v1` snapshot.
-`private-review-121-v2.json` records the source revision, archive digest, and
-member count. The operator and attachment verifier use the same overlaid bytes.
+modules and the reviewed static-report reader to the `review-121-v1` snapshot.
+The reader accepts the Semgrep 1.187.0 and SkillSpector 2.13.7 reports on main
+and preserves recorded scan incompleteness. `private-review-121-v2.json`
+records the source revision, archive digest, member count, and reporting patch
+digest. The operator and attachment verifier use the same overlaid bytes.

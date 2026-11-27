@@ -45,7 +45,12 @@ RELEASE_PROFILES = (PROFILE, V2_PROFILE, V3_PROFILE, V4_PROFILE, V5_PROFILE, V12
 
 def read_manifest(path):
     manifest = evidence.parse_json(evidence.read_bytes(path, limit=4096))
-    evidence.closed(manifest, ("revision", "digest", "members"))
+    fields = ("revision", "digest", "members")
+    if path == ACTIVE_MANIFEST:
+        fields += ("reporting_patch_sha256",)
+    evidence.closed(manifest, fields)
+    if path == ACTIVE_MANIFEST:
+        evidence.sha(manifest["reporting_patch_sha256"])
     evidence.revision(manifest["revision"])
     evidence.sha(manifest["digest"])
     evidence.require(type(manifest["members"]) is int and 0 < manifest["members"] <= 100,
