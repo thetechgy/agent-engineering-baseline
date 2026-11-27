@@ -4370,7 +4370,8 @@ def retained_capture_inputs(name, purpose):
         return (
             ('pester-effectiveness-v54', {**agent, 'producer/scripts/evaluator_profiles.py':
              'sha256:a3a579f7f6c59ffd255ed214041c604684fbb3c526df04927e22418d52776c7d', 'pilot/.github/scripts/skill_evidence.py':
-             'sha256:3c873f898a019ba2243e5c496a0a34bae28df972f29da1490f109ab9ac595ba8'}),
+             'sha256:3c873f898a019ba2243e5c496a0a34bae28df972f29da1490f109ab9ac595ba8',
+             'pilot/.github/scripts/skill_reports.py': 'sha256:1ed86b12af864fc39892b911050791e59ed1e9805bb5e27a2d5b522b4276528c'}),
             ('pester-effectiveness-v53', {**common, **agent,
              'pilot/.github/scripts/skill_evidence.py': 'sha256:356d7698675e4b697196bf3eeba86f5adfd3bfd744f4bc6c7df9eef628835643',
              'pilot/.github/scripts/skill_reports.py': 'sha256:877b4f7c953b5ee2bad587829e010a89420a5251918243629fd2e7d4480fb569'}),

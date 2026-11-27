@@ -226,6 +226,13 @@ class PodmanStorageContract(unittest.TestCase):
                 execution_policy={"environment": "docker", "concurrency": 1, "timeout_multiplier": 1.0,
                                   "stop_on_pass": False})
             evidence.validate_custom_capture(capture, "podman", ROOT)
+
+            raw, staged = root / "raw", root / "publication"
+            reports.write_json(raw / evidence.CUSTOM_CAPTURE, capture)
+            reports.write_json(raw / "versions.json", {"access_token": "fixture-auth-value"})
+            reports.benchmark_artifacts(ROOT, raw, "podman", staged)
+            self.assertEqual(reports.read_json(staged / evidence.CUSTOM_CAPTURE), capture)
+            self.assertEqual(reports.read_json(staged / "versions.json"), {"access_token": "<redacted>"})
             for key in ("owner", "content", "authored_digest"):
                 with self.subTest(key=key):
                     forged = copy.deepcopy(capture)
