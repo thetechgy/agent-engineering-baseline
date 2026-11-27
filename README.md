@@ -574,7 +574,7 @@ use reviewed hashed locks in [.github/requirements](.github/requirements). See t
 [scanner modernization evidence](.github/evals/SCANNER-MODERNIZATION-95.md) for adopted updates,
 holds and validation limits. CI rejects unverified Python
 installers and records tool versions and dependency inventories. The requirements locks use
-uv 0.13.9. Semgrep installation requires wheels; regenerate its lock for Python
+uv 0.13.10. Semgrep installation requires wheels; regenerate its lock for Python
 3.13 and the Linux x86_64 / glibc 2.34 wheel floor:
 
 ```bash
@@ -598,9 +598,8 @@ separate evidence; a PyPI patch can precede a public GitHub tag. See the
 [Semgrep 1.182.1 assessment](.github/evals/SEMGREP-1.182.1.md) for artifact
 verification, scanner comparisons, and residual MCP dependency risk.
 
-Current evaluation setup pins uv 0.13.9; the immutable return-contract workflow
-retains reviewed uv 0.13.7. Both frozen recipes retain their verified interpreter
-download identities. Native benchmarks, private reviews and scanner environments use
+Maintained evaluation setup pins uv 0.13.10. Evidence-bound workflows retain
+uv 0.13.7 or 0.13.9 and their reviewed interpreter download identities. Native benchmarks, private reviews and scanner environments use
 managed Python 3.13. Static quality and public data use Python 3.14.10. Native
 receipts record the resolved patch version for replay.
 

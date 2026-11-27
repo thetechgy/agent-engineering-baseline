@@ -14,13 +14,12 @@ case "$(realpath -m "$tool_root")/" in
 esac
 mkdir -p "$tool_root/bin" "$tool_root/dependencies"
 chmod 700 "$tool_root"
-# The immutable return-contract workflow retains its original reviewed uv.
-# Both supported compilers consume the same verified frozen Python catalog.
-if [ "$kind" = candidate-current ] && [ "$(uv --version | awk '{print $2}')" = '0.13.7' ]; then
-  :
-else
-test "$(uv --version | awk '{print $2}')" = '0.13.9'
-fi
+# Retained CLI qualification and return-contract workflows keep their reviewed compilers.
+uv_version="$(uv --version | awk '{print $2}')"
+case "$kind:$uv_version" in
+  candidate-current:0.13.7|candidate-current:0.13.9|candidate-next:0.13.9|candidate-accounting:0.13.9) ;;
+  *) test "$uv_version" = '0.13.10' ;;
+esac
 export UV_CACHE_DIR="$tool_root/uv-cache"
 export UV_PYTHON_INSTALL_DIR="$tool_root/python"
 export XDG_CACHE_HOME="$tool_root/cache"
