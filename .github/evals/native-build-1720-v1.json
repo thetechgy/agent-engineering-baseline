@@ -1,0 +1,17 @@
+{
+  "build": {
+    "base_image": "python:3.12-slim-trixie@sha256:4a68d3169325c47e1bafbb86425220f03fbdff6f079a419e8d39407183288217",
+    "apt_snapshot": "20261126T000000Z",
+    "apt_packages": {
+      "git": "1:2.47.3-0+deb13u1",
+      "jq": "1.7.1-6+deb13u4",
+      "nodejs": "20.19.2+dfsg-1+deb13u3",
+      "npm": "9.2.0~ds1-3",
+      "ca-certificates": "20250419+deb13u1"
+    }
+  },
+  "powershell": {
+    "version": "7.7.0",
+    "archive_sha256": "c89d9c682d2c403dfe726f3df948e359675235a5bd6fab535776de69729ca0cb"
+  }
+}

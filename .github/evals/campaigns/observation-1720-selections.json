@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "campaigns": {
+    "case-observation-1720": {
+      "definition": ".github/evals/campaigns/case-observation-1720.json",
+      "controls": [],
+      "producers": [
+        {
+          "workflow": ".github/workflows/evaluation-campaign.yml",
+          "artifact": "reusable-evaluation",
+          "location": "preparation/evidence"
+        }
+      ]
+    }
+  }
+}

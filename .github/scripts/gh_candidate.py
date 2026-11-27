@@ -3,8 +3,8 @@
 import gh_evaluations as gh
 
 
-def stage(workspace, destination, selected=None, *, fixture=False):
-    bundle = gh.stage(workspace, destination, selected)
+def stage(workspace, destination, selected=None, *, fixture=False, build=None):
+    bundle = gh.stage(workspace, destination, selected, build=build)
     for task in (bundle / "evals/harbor").iterdir():
         if not task.is_dir():
             continue

@@ -232,6 +232,43 @@ class NativeStagingTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'Unscoreable or unclassified'):
                     reports.benchmark_report(ROOT, root, pilot.NAME, 'confirmation', root / 'metrics')
 
+    def test_released_diagnostic_publication_binds_the_observed_codex_version(self):
+        from importlib.metadata import PackageNotFoundError, version
+
+        import benchmark_native as native
+        import skill_evidence as evidence
+        from test_custom_metrics import synthetic_native
+
+        try:
+            installed_backend = version('aeb-gh-fixture')
+        except PackageNotFoundError:
+            installed_backend = None
+        if installed_backend != native.native_versions()['backend_version']:
+            self.skipTest('requires the current released native owner')
+        revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'GITHUB_SHA': revision}):
+            root = Path(directory)
+            prepared = root / 'prepared'
+            native.prepare(ROOT, prepared, pilot.NAME, 'confirmation', revision)
+            _, run = synthetic_native(root / 'fixture', complete=True, prepared=prepared, revision=revision)
+            native.diagnostic_report(ROOT, prepared, pilot.NAME, 'confirmation', revision)
+            reports.benchmark_artifacts(ROOT, prepared, pilot.NAME, root / 'retained')
+            reports.public_benchmark(ROOT, root / 'retained', pilot.NAME, 'confirmation', root / 'public')
+            path, = (root / 'public' / 'skills' / pilot.NAME / 'behavioral').glob('*/public-report.json')
+            public = reports.read_json(path)
+            self.assertEqual(public['availability']['status'], 'complete')
+            self.assertEqual(public['custom']['agent_version'], '0.172.0')
+            self.assertEqual(public['custom']['runtime']['powershell'], '7.7.0')
+            public['custom']['agent_version'] = '0.171.0'
+            with self.assertRaisesRegex(ValueError, 'Agent version drift'):
+                evidence.validate_public(public)
+            trial_path = run / 'codex/with-skill/trials/pester-001__attempt1/result.json'
+            trial = reports.read_json(trial_path)
+            trial['agent_info']['version'] = '0.171.0'
+            reports.write_json(trial_path, trial)
+            with self.assertRaisesRegex(ValueError, 'Agent version drift'):
+                native.diagnostic_report(ROOT, prepared, pilot.NAME, 'confirmation', revision)
+
     def test_strict_validation_and_paired_projection(self):
         from click.testing import CliRunner
         from skillevaluator.cli import cli

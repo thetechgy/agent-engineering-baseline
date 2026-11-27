@@ -291,10 +291,12 @@ class OrchestrationTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'Missing runtime input'):
                     orchestration.benchmark_runtime_inputs({key: value for key, value in files.items() if key != member})
         files.pop(orchestration.NATIVE_BENCHMARK_POLICY)
+        files.pop(orchestration.PREVIOUS_NATIVE_BENCHMARK_POLICY, None)
         self.assertEqual(orchestration.benchmark_runtime_inputs(files), orchestration.subset(files, orchestration.RUNTIME_FILES))
 
     def test_candidate_fingerprint_binds_release_and_dataset_without_rewriting_historical_fingerprint(self):
         (self.workspace / orchestration.NATIVE_BENCHMARK_POLICY).unlink()
+        (self.workspace / orchestration.PREVIOUS_NATIVE_BENCHMARK_POLICY).unlink()
         self.api.main = commit(self.workspace, 'Select the pre-adoption benchmark runtime')
         before = orchestration.snapshots(self.workspace, self.api.main)[1]
         fingerprint = orchestration.candidate_podman_fingerprint(self.workspace, self.api.main)

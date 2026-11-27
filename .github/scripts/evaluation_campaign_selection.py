@@ -15,8 +15,9 @@ def registry_path(identity):
     # Historical dispatch receipts bind every byte of the scored registry.
     if identity == 'case-observation':
         return ROOT / '.github/evals/campaigns/observation-selections.json'
-    if identity == 'case-observation-1710':
-        return ROOT / '.github/evals/campaigns/observation-1710-selections.json'
+    if identity in ('case-observation-1710', 'case-observation-1720'):
+        version = identity.rsplit('-', 1)[1]
+        return ROOT / f'.github/evals/campaigns/observation-{version}-selections.json'
     if identity == 'podman-storage-v1-1710-sol62':
         return ROOT / '.github/evals/podman/storage/selections.json'
     if identity.endswith('-1710-sol62'):
@@ -34,7 +35,7 @@ def selection(identity):
 
 def selected_task(identity):
     from evaluation_tasks import load
-    identity = {"case-observation": "case-observation-1710",
+    identity = {"case-observation": "case-observation-1720",
                 "case-observation-1691": "case-observation"}.get(identity, identity)
     row = selection(identity)
     task = load(ROOT / row['definition'])

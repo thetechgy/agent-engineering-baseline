@@ -156,7 +156,10 @@ class FreshnessTests(unittest.TestCase):
                      ".github/evals/codex-execution-1710.json", ".github/evals/evaluator-1.2.1-benchmark-candidate-v1.json",
                      ".github/evals/benchmark-native-121-v1.json",
                      ".github/evals/campaigns/case-observation-1710.json",
-                     ".github/evals/campaigns/codex-1710-observation.json"):
+                     ".github/evals/campaigns/codex-1710-observation.json",
+                     ".github/evals/codex-execution-1720.json",
+                     ".github/evals/campaigns/case-observation-1720.json",
+                     ".github/evals/campaigns/codex-1720-observation.json"):
             target = root / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, target)
@@ -171,7 +174,7 @@ class FreshnessTests(unittest.TestCase):
         self.assertEqual(mechanisms["dependabot_routine_ecosystems"], ["github-actions", "pip"])
         self.assertIn("not proof", mechanisms["dependabot_python_security_updates"])
         self.assertEqual(self.find({"dependencies": rows}, "harbor")["pin"]["version"], "0.25.0")
-        self.assertEqual(self.find({"dependencies": rows}, "codex")["pin"]["version"], "0.171.0")
+        self.assertEqual(self.find({"dependencies": rows}, "codex")["pin"]["version"], "0.172.0")
         for id in ("harbor", "openai", "pydantic"):
             row = next(r for r in rows if r["id"] == id)
             self.assertEqual(row["policy"]["group"],
@@ -205,10 +208,14 @@ class FreshnessTests(unittest.TestCase):
             for source in group["sources"]:
                 lines = (root / source["path"]).read_text().splitlines()
                 self.assertIn("uses: astral-sh/setup-uv@" + revision, lines[source["line"] - 1])
-            member = root / group["sources"][0]["path"]
+            target = group["sources"][0]
+            member = root / target["path"]
             original = member.read_text()
+            lines = original.splitlines(keepends=True)
+            index = target["line"] - 1
+            lines[index] = lines[index].replace("@" + revision, "@" + "0" * 40, 1)
             with self.subTest(group=group["id"]):
-                member.write_text(original.replace("@" + revision, "@" + "0" * 40, 1))
+                member.write_text("".join(lines))
                 _, changed, _ = fresh.inventory(root)
                 self.assertEqual({row["id"]: row["errors"] for row in changed if row["errors"]},
                                  {group["id"]: ["contradictory_action_pins"]})
@@ -226,7 +233,7 @@ class FreshnessTests(unittest.TestCase):
         self.assertEqual(candidate['dependencies']['harbor'], '0.24.0')
         observation = json.loads(by_id['observation-environment']['pin']['value'])
         self.assertEqual((observation['cli'], observation['model'], observation['reasoning_effort']),
-                         ('0.171.0', 'gpt-6.2-sol', 'high'))
+                         ('0.172.0', 'gpt-6.2-sol', 'high'))
         scanner = json.loads(by_id['scanner-environment']['pin']['value'])
         self.assertEqual(scanner['openai'], '3.56.0')
         self.assertIn('not production adoption', by_id['candidate-environment']['label'])

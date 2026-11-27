@@ -72,19 +72,13 @@
       "repo": "openai/codex",
       "sources": [
         {
-          "path": ".github/scripts/skill_reports.py",
-          "symbol": "POLICY",
-          "key": "codex",
-          "field": "version"
-        },
-        {
-          "path": ".github/evals/codex-execution-1710.json",
+          "path": ".github/evals/codex-execution-1720.json",
           "pattern": "^  \"cli\": \"(?P<version>[^\"\\n]+)\",$",
           "count": 1
         }
       ],
       "owner": "Maintainer review",
-      "hold": "Active production benchmarks and trusted gh setup use 0.171.0. Single-case observation uses its separate 0.171.0 / gpt-6.2-sol / high profile with 0.169.1 available for rollback. The frozen opt-in CLI pilot/campaign uses 0.167.0. PR #109 remains an unmerged investigation, not the adoption path. A production CLI refresh needs a new runtime identity and non-forwarding/native adapter qualification; preserve frozen campaign selectors.",
+      "hold": "Active production benchmarks and single-case observation use the reviewed 0.172.0 executable. Earlier benchmarks, observation, and explicit campaign profiles retain their recorded versions. The frozen opt-in CLI pilot/campaign uses 0.167.0. PR #109 remains an unmerged investigation, not the adoption path. A production CLI refresh needs a new runtime identity and non-forwarding/native adapter qualification; preserve frozen campaign selectors.",
       "group": "evaluation-runtime compatibility group",
       "tag_prefix": "rust-v",
       "validation": "Qualify the evaluation runtime as a group: frozen locks, compatibility patch, CLI/preflight, graders, scoring, evidence/schema consumers, redaction, and historical comparison policy. Preserve historical tooling and use a new policy identity when inputs change. No independent SDK upgrade.",

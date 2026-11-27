@@ -3131,3 +3131,15 @@ revision permits proposing its exact protocol/revision/artifact/one-dispatch non
 for a new decision. The [single operator command](pester-effectiveness.md#qualified-execution-path-credential-free-implementation-follow-up)
 remains unapproved. Paid execution is unrun; account access and provider billing
 remain unverified.
+
+### Native runtime refresh
+
+New released benchmark preparations use Codex 0.172.0, the reviewed Python
+3.12 slim-trixie image, and the signed Debian snapshot dated November 26.
+The Pester benchmark uses PowerShell 7.7.0 with Pester 6.2.0. Earlier
+PowerShell 7.6.9 replay inputs keep their original versions and digests.
+The default observer uses the separately pinned Codex 0.172.0 profile.
+
+The new native producer has its own policy and score series. Orchestration
+fingerprints the launch profile, so an older benchmark receipt cannot
+qualify a new dispatch. Provider smoke needs separate authorization.

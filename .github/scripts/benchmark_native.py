@@ -19,26 +19,34 @@ import evaluator_profiles as profiles
 import gh_candidate
 import gh_evaluations as gh
 import pester_evaluations as pester
-from skill_reports import (MODES, POLICY, benchmark_options, benchmark_policy, local_skill, read_json,
+from skill_reports import (MODES, POLICY, RETAINED_GH_REVISION, benchmark_options, benchmark_policy, local_skill, read_json,
                            recover_benchmark, require, write_json)
 
 
 ROOT = Path(__file__).resolve().parents[2]
 RETAINED_NATIVE_PRODUCER = "skillevaluator-1.0.1-benchmark-native-v2"
-NATIVE_PRODUCER = "skillevaluator-1.2.1-benchmark-native-v1"
-NATIVE_SOURCE_DIGEST = "sha256:e302395bf4615c57bfeb936e6c097e6b2a22ec80b2179e3351e7b1d361231613"
-NATIVE_PATCH_DIGEST = "dc5674786ce86cfeca6ba90bcdeec6cd4f9e6b3fc7d60301b1bfb9a8a61f18d6"
+PREVIOUS_NATIVE_PRODUCER = "skillevaluator-1.2.1-benchmark-native-v1"
+NATIVE_PRODUCER = "skillevaluator-1.2.1-benchmark-native-v2"
+NATIVE_BUILD = ROOT / ".github/evals/native-build-1720-v1.json"
+PREVIOUS_SOURCE_DIGEST = "sha256:e302395bf4615c57bfeb936e6c097e6b2a22ec80b2179e3351e7b1d361231613"
+PREVIOUS_PATCH_DIGEST = "dc5674786ce86cfeca6ba90bcdeec6cd4f9e6b3fc7d60301b1bfb9a8a61f18d6"
 NATIVE_OWNERS = {
     RETAINED_NATIVE_PRODUCER: {
         "backends": (profiles.RELEASE_BENCHMARK, profiles.RETAINED_RELEASE_BENCHMARK),
         "source_tree_digest": "sha256:78dfd05becd4b4e94882aa0305fc58d28a6ef40c10813b384335fd6a7f0be1ef",
         "patch_sha256": "30a03343d670e2b83aeb5519f009549c6528b3cb8235cffc4522aab64b872f57",
     },
-    NATIVE_PRODUCER: {
+    PREVIOUS_NATIVE_PRODUCER: {
         "backends": (profiles.CURRENT_RELEASE,),
-        "source_tree_digest": NATIVE_SOURCE_DIGEST,
-        "patch_sha256": NATIVE_PATCH_DIGEST,
+        "source_tree_digest": PREVIOUS_SOURCE_DIGEST,
+        "patch_sha256": PREVIOUS_PATCH_DIGEST,
     },
+}
+NATIVE_PATCH_DIGEST = profiles.NATIVE_1720['patch_sha256']
+NATIVE_OWNERS[NATIVE_PRODUCER] = {
+    'backends': (profiles.NATIVE_1720,),
+    'source_tree_digest': profiles.NATIVE_1720['source_tree_digest'],
+    'patch_sha256': NATIVE_PATCH_DIGEST,
 }
 BACKENDS = {"podman": "aeb-benchmark-docker", "gh": "aeb-gh-fixture"}
 DIAGNOSTIC_BACKEND = BACKENDS["podman"]
@@ -55,9 +63,10 @@ NPM_CODEX_VENDOR = "/opt/reviewed/node_modules/@openai/codex-linux-x64/vendor/x8
 LOOPBACK_VERIFIER = "services:\n  main:\n    network_mode: none\n"
 
 
-def stage_gh(workspace, destination, selected=None, *, fixture=False):
+def stage_gh(workspace, destination, selected=None, *, fixture=False, current=False):
     """Project the prospective task from the retained gh case definition."""
-    bundle = gh_candidate.stage(workspace, destination, selected, fixture=fixture)
+    build = read_json(NATIVE_BUILD)['build'] if current else None
+    bundle = gh_candidate.stage(workspace, destination, selected, fixture=fixture, build=build)
     grader = bundle / "evals/grader.py"
     source = grader.read_text()
     export = 'metrics = {"gh_" + key: float(value) for key, value in scores.items()}'
@@ -200,19 +209,27 @@ def gh_finalizer(manifest, emitted):
     require(actual == approved["tasks"], "Released gh task staging differs from the prepared approval")
 
 
-def native_owner(revision, patch):
+def native_owner(revision, patch, *, producer=None, suite=None, mode=None, series=None, gh_revision=None):
     """Match a recorded policy to the only release that published it."""
-    return next((name for name, pins in NATIVE_OWNERS.items()
-                 if pins["backends"][0]["revision"] == revision and patch == "sha256:" + pins["patch_sha256"]), None)
+    matches = (name for name, pins in NATIVE_OWNERS.items()
+               if pins["backends"][0]["revision"] == revision and patch == "sha256:" + pins["patch_sha256"])
+    if producer is not None:
+        return next((name for name in matches if name == producer), None)
+    if series is not None:
+        return next((name for name in matches
+                     if score_series(suite, mode, owner=name, gh_revision=gh_revision) == series), None)
+    return next(matches, None)
 
 
 def native_profile(*, backend=None, owner=NATIVE_PRODUCER):
     if backend is None:
         backend = NATIVE_OWNERS[owner]["backends"][0]
     else:
-        owner = next((name for name, pins in NATIVE_OWNERS.items()
-                      if any(backend is entry for entry in pins["backends"])), None)
-        require(owner is not None, "Unsupported native benchmark backend")
+        if not any(backend is entry for entry in NATIVE_OWNERS[owner]["backends"]):
+            require(owner == NATIVE_PRODUCER, "Unsupported native benchmark backend")
+            owner = next((name for name, pins in NATIVE_OWNERS.items()
+                          if any(backend is entry for entry in pins["backends"])), None)
+            require(owner is not None, "Unsupported native benchmark backend")
     pins = NATIVE_OWNERS[owner]
     return {**backend, "id": owner, "source_tree_digest": pins["source_tree_digest"],
             "patch_sha256": pins["patch_sha256"]}
@@ -221,13 +238,15 @@ def native_profile(*, backend=None, owner=NATIVE_PRODUCER):
 def native_versions(*, backend=None, owner=NATIVE_PRODUCER):
     if backend is None:
         backend = NATIVE_OWNERS[owner]["backends"][0]
-    profile = native_profile(backend=backend)
+    profile = native_profile(backend=backend, owner=owner)
     return {**profiles.candidate_versions(backend), "patch_sha256": profile["patch_sha256"],
             "source_tree_digest": profile["source_tree_digest"], "producer_profile": profile["id"]}
 
 
 def adoption_policy():
     return {"schema_version": 1, "runtime": native_versions(), "backends": EXECUTION_BACKENDS,
+            "launch": {"codex_profile": CODEX_PROFILE.relative_to(ROOT).as_posix(),
+                       "build_profile": NATIVE_BUILD.relative_to(ROOT).as_posix()},
             "model": POLICY["model"], "agent_reasoning_effort": "high", "judge_reasoning_effort": None}
 
 
@@ -247,7 +266,7 @@ def validate_runtime():
 
 
 def dataset_profile(name):
-    return {"gh": GH_DATASET_PROFILE, pester.NAME: "pester-pilot-v3", "podman": "podman-authored"}[name]
+    return {"gh": GH_DATASET_PROFILE, pester.NAME: "pester-pilot-v4", "podman": "podman-authored"}[name]
 
 
 def dataset_sha256(skill):
@@ -281,9 +300,9 @@ def prepare(workspace, root, name, mode, revision, *, gh_cases=None):
     versions = validate_runtime()
     root.mkdir(mode=0o700, parents=True, exist_ok=False)
     if name == "gh":
-        skill = stage_gh(workspace, root / "bundle/gh", gh_cases)
+        skill = stage_gh(workspace, root / "bundle/gh", gh_cases, current=True)
     elif name == pester.NAME:
-        skill = pester.stage(workspace, root / "bundle" / name)
+        skill = pester.stage(workspace, root / "bundle" / name, launch=read_json(NATIVE_BUILD))
     else:
         skill = local_skill(workspace, name, dataset=True)
     validation = [sys.executable, "-B", "-c", "from skillevaluator.cli import cli; cli()",
@@ -458,7 +477,7 @@ def validate_trial_population(run, agent, name, cases, attempts, agent_selector)
                         and result["exception_info"] is None and result["finished_at"] is not None
                         and result["config"]["agent"]["name"] == agent_selector
                         and result["agent_info"]["name"] == "codex"
-                        and result["agent_info"]["version"] == POLICY["codex"]
+                        and result["agent_info"]["version"] == released_policy(name)["codex"]
                         and result["config"]["environment"]["import_path"] == ENVIRONMENTS[name]
                         and result["config"]["timeout_multiplier"] == POLICY["timeout_multiplier"]
                         and reward["entry_id"] == case and reward["has_skill"] is present
@@ -627,9 +646,14 @@ def released_policy(name, *, owner=NATIVE_PRODUCER, gh_revision=None):
     profile = NATIVE_OWNERS[owner]["backends"][0]
     options = benchmark_options(name)
     if gh_revision is None:
-        gh_revision = gh.UPSTREAM
-    return {**benchmark_policy(name, gh_revision=gh_revision),
-            "grading": options["grading_mode"], "workspace_mode": options["workspace_mode"],
+        gh_revision = gh.UPSTREAM if owner == NATIVE_PRODUCER else RETAINED_GH_REVISION
+    policy = benchmark_policy(name, gh_revision=gh_revision)
+    if owner == NATIVE_PRODUCER:
+        policy = {**policy, "codex": read_json(CODEX_PROFILE)["cli"]}
+        if name == "gh":
+            require(gh_revision == gh.UPSTREAM, "Unreviewed upstream attribution for current release")
+            policy["task_build"] = read_json(NATIVE_BUILD)["build"]
+    return {**policy, "grading": options["grading_mode"], "workspace_mode": options["workspace_mode"],
             "evaluator_revision": profile["revision"], "harbor": profile["harbor"],
             "python": profile["python"], "environment": BACKENDS[name],
             "producer_profile": owner, "scoring_policy": profile["scoring"],

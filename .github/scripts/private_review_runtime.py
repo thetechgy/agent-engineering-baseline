@@ -11,6 +11,7 @@ OPENAI_VERSION = '3.60.0'
 PYDANTIC_VERSION = '2.14.4'
 PINS = {'openai': OPENAI_VERSION, 'pydantic': PYDANTIC_VERSION, 'skillevaluator': static_evaluator.VERSION}
 RETAINED_121 = 'review-121-v1'
+SDK3_PROFILES = ('active', 'review-121-v2')
 RETAINED_OVERLAY = {'openai': '2.54.0', 'pydantic': '2.14.3', 'certifi': '2026.10.23',
                     'pydantic-core': '2.50.4', 'typing-inspection': '0.4.5', 'httpx': '0.28.1'}
 OVERLAY = {**RETAINED_OVERLAY, **PINS, 'pydantic-core': '2.50.5',
@@ -18,11 +19,11 @@ OVERLAY = {**RETAINED_OVERLAY, **PINS, 'pydantic-core': '2.50.5',
 
 
 def owner(profile):
-    return static_evaluator.VERSIONS if profile in ('active', RETAINED_121) else static_evaluator.RETAINED
+    return static_evaluator.VERSIONS if profile in (*SDK3_PROFILES, RETAINED_121) else static_evaluator.RETAINED
 
 
 def validator_pins(profile='active'):
-    pins = OVERLAY if profile == 'active' else RETAINED_OVERLAY
+    pins = OVERLAY if profile in SDK3_PROFILES else RETAINED_OVERLAY
     return {**pins, 'skillevaluator': owner(profile)['skillevaluator']}
 
 

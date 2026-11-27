@@ -74,3 +74,9 @@ The reader accepts the Semgrep 1.187.0 and SkillSpector 2.13.7 reports on main
 and preserves recorded scan incompleteness. `private-review-121-v2.json`
 records the source revision, archive digest, member count, and reporting patch
 digest. The operator and attachment verifier use the same overlaid bytes.
+
+`private-review-121-v3-overlay.zip` adds the native benchmark evidence readers
+and registries to the SDK 3 snapshot. It applies the released static-reporting
+patch so the same validator can read the upgraded scanner evidence.
+`private-review-121-v3.json` records the source revision, patch digest, and archive
+digest. The `review-121-v2` profile retains its original overlay and SDK 3 lock.

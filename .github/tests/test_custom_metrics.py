@@ -53,24 +53,53 @@ def review_context(public, analysis_file, name, record_id):
         return evidence.read_json(output / 'review-context.json')
 
 
-def synthetic_native(root, *, complete=False, candidate=False):
+def synthetic_native(root, *, complete=False, prepared=None, revision=None):
     from skillevaluator.tier3.harbor.adapter import stage_native_harbor_tasks
     from harbor.models.task.task import Task
-    bundle = pester.stage(ROOT, root / 'bundle' / NAME)
+    purpose = 'benchmark'
+    environment = 'docker'
+    runtime = {'codex': reports.POLICY['codex'], 'powershell': '7.6.9'}
+    versions = None
+    agent = {'name': 'codex'}
+    launch_profile = None
+    if prepared is None:
+        bundle = pester.stage(ROOT, root / 'bundle' / NAME)
+    else:
+        import benchmark_native
+
+        bundle = prepared / 'bundle' / NAME
+        purpose = 'benchmark-1720'
+        environment = benchmark_native.DIAGNOSTIC_BACKEND
+        versions = benchmark_native.native_versions()
+        runtime = {'codex': '0.172.0', 'powershell': '7.7.0'}
+        agent = {'import_path': benchmark_native.CODEX_AGENT}
+        launch_profile = reports.read_json(benchmark_native.CODEX_PROFILE)
     task_rows = []
     with patch.dict('os.environ', {'SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE': str(root / 'key')}):
         for present in (True, False):
             tasks = stage_native_harbor_tasks(bundle, root / 'tasks' / str(present), with_skill=present, grading_mode='custom_only')
-            rows = evidence.capture_custom_tasks(ROOT, NAME, tasks, 'with_skill' if present else 'without_skill')
+            if launch_profile is not None:
+                for task in tasks:
+                    benchmark_native.configure_pester_task(task, launch_profile)
+            rows = evidence.capture_custom_tasks(ROOT, NAME, tasks, 'with_skill' if present else 'without_skill',
+                                                 purpose=purpose)
             for task, row in zip(sorted(tasks), rows):
                 assert Task(task).checksum == row['task_checksum'], 'Captured checksum must match pinned Harbor'
             task_rows.extend(rows)
-    capture = evidence.custom_capture(ROOT, NAME, bundle, task_rows, purpose='benchmark', attempts=3, agent='codex',
-        execution_policy={'environment': 'docker', 'concurrency': 2, 'timeout_multiplier': 2.0, 'stop_on_pass': False})
-    native = root / 'native'; run = native / 'results' / NAME / 'synthetic-control'
+    capture = evidence.custom_capture(ROOT, NAME, bundle, task_rows, purpose=purpose, attempts=3, agent='codex',
+        producer_versions=versions, execution_policy={'environment': environment, 'concurrency': 2,
+                                                     'timeout_multiplier': 2.0, 'stop_on_pass': False})
+    native = prepared if prepared is not None else root / 'native'
+    run_name = 'synthetic-control' if prepared is None else '20261127_000000'
+    run = native / 'results' / NAME / run_name
     write(native / evidence.CUSTOM_CAPTURE, capture)
     config = {'grading': {'mode': 'custom_only'}, 'judge': {'enabled': False},
               'harbor': {'n_attempts': 3, 'stop_on_pass': False}, 'synthetic_control': True}
+    if prepared is not None:
+        config.update(provider={'name': 'openai', 'model': reports.POLICY['model']},
+                      evaluated_source={'commit': revision}, task_source='native_harbor',
+                      skill_workspace={'mode': 'isolated'})
+        config['harbor'].update(environment={'value': environment}, n_concurrent=2, timeout_multiplier=2.0)
     write(run / 'run_config.json', config)
     conditions = {}
     for arm in ('with_skill', 'without_skill'):
@@ -103,7 +132,7 @@ def synthetic_native(root, *, complete=False, candidate=False):
                         metrics = {'pester_reference_pass': 1.0, 'pester_mutation_detection': score, 'pester_test_quality': score}
                         details.update(reference_pass=1, mutants_detected=int(score) * denominator,
                                        mutants_executed=denominator, tests_executed=3,
-                                       pester_version='6.2.0', powershell_version='7.6.9')
+                                       pester_version='6.2.0', powershell_version=runtime['powershell'])
                 numeric = {'overall': float(outcome == 'passed'), **metrics}
                 reward = {**numeric, 'entry_id': case, 'trial_id': trial_name, 'has_skill': arm == 'with_skill',
                           'evaluation_status': 'complete' if measured else 'failed', 'details': {'outcome': details}}
@@ -111,9 +140,9 @@ def synthetic_native(root, *, complete=False, candidate=False):
                 if not measured: failures.append({'trial': trial_name, 'reason': 'Synthetic unscoreable carrier'})
                 write(trial / 'reward.json', reward)
                 write(trial / 'result.json', {'id': 'id-' + trial_name, 'trial_name': trial_name, 'task_name': case,
-                    'task_checksum': task['task_checksum'], 'config': {'task': {'path': '/tasks/' + case}, 'agent': {'name': 'codex'}, 'timeout_multiplier': 2.0,
+                    'task_checksum': task['task_checksum'], 'config': {'task': {'path': '/tasks/' + case}, 'agent': agent, 'timeout_multiplier': 2.0,
                                'environment': {'import_path': 'skillevaluator.tier3.harbor.secure_docker_environment:SkillEvaluatorSecureDockerEnvironment'}},
-                    'agent_info': {'name': 'codex', 'version': reports.POLICY['codex']}, 'verifier_result': {'rewards': numeric},
+                    'agent_info': {'name': 'codex', 'version': runtime['codex']}, 'verifier_result': {'rewards': numeric},
                     'exception_info': None, 'started_at': '2026-10-26T00:00:00Z', 'finished_at': '2026-10-26T00:00:02Z',
                     'verifier': {'started_at': '2026-10-26T00:00:01Z', 'finished_at': '2026-10-26T00:00:02Z'},
                     'agent_result': {'n_input_tokens': None, 'n_cache_tokens': None, 'n_output_tokens': None}})
@@ -123,8 +152,15 @@ def synthetic_native(root, *, complete=False, candidate=False):
         scores = {key: round(sum(v[key] for v in values if key in v) / sum(key in v for v in values), 4)
                   for key in {key for v in values for key in v}} if complete else {}
         write(side / 'summary.json', {**condition, 'num_trials': count, 'custom_scores': scores, 'pass_at_k': {}, 'trial_failures': failures})
-    write(run / 'result.json', {'skill_name': NAME, 'report_status': 'complete' if complete else 'incomplete',
-                               'run_config': config, 'metric_set': 'custom-only', 'agents': {'codex': {'conditions': conditions}}, 'synthetic_control': True})
+    result = {'skill_name': NAME, 'report_status': 'complete' if complete else 'incomplete',
+              'run_config': config, 'metric_set': 'custom-only',
+              'agents': {'codex': {'conditions': conditions}}, 'synthetic_control': True}
+    if prepared is not None:
+        result['run_id'] = run.name
+        result['execution_status'] = 'succeeded' if complete else 'failed'
+        result['agents']['codex']['model'] = reports.POLICY['model']
+        result['dataset_summary'] = {'total_tasks': len(capture['case_ids'])}
+    write(run / 'result.json', result)
     return native, run
 
 
@@ -753,7 +789,7 @@ class CustomMetricTests(unittest.TestCase):
         native, run, value = self.normalize(True)
         public = evidence.project(value)
         registry = evidence.custom_registry()
-        old_id = registry['active_profiles'][NAME]
+        old_id = evidence.custom_contract(NAME, purpose='benchmark')[0]['id']
         registry['profiles']['pester-future-control-v2'] = copy.deepcopy(registry['profiles'][old_id])
         registry['profiles']['pester-future-control-v2']['id'] = 'pester-future-control-v2'
         registry['active_profiles'][NAME] = 'pester-future-control-v2'

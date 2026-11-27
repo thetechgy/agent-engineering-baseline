@@ -1,0 +1,28 @@
+{
+  "id": "case-observation-1720",
+  "definition": ".github/evals/campaigns/case-observation-1720.json",
+  "version": 1,
+  "attempt_slots": 1,
+  "trials_per_arm": 1,
+  "automatic_retries": 0,
+  "replacements": 0,
+  "concurrency": 1,
+  "budget": {
+    "planning_allocation_usd": 3,
+    "stop_estimate_usd": 3,
+    "prices_per_million": {
+      "input": 2,
+      "cached_input": 0.1,
+      "output": 10,
+      "cache_write_30m": 2.5
+    },
+    "billing_limit_enforced": false
+  },
+  "agent_seconds": 600,
+  "protected_environment": "skill-benchmark",
+  "authorized_live_attempts": 0,
+  "grading": {
+    "mode": "human-review",
+    "judge": false
+  }
+}

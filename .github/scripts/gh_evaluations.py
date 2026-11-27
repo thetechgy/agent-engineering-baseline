@@ -181,7 +181,7 @@ def enriched(entry, workspace=ROOT):
     return entry
 
 
-def stage(workspace, destination, selected=None):
+def stage(workspace, destination, selected=None, *, build=None):
     source = verify_skill(workspace)
     competing = verify_competing(workspace)
     entries = dataset(workspace, selected)
@@ -229,16 +229,18 @@ def stage(workspace, destination, selected=None):
     )
     grader = (workspace / OVERLAY / "evals/grader.py").read_text()
     (destination / "evals/grader.py").write_text(fixture + "\n" + grader)
-    native_tasks(destination, entries, workspace)
+    native_tasks(destination, entries, workspace, build=build)
     return destination
 
 
-def native_tasks(destination, entries, workspace):
+def native_tasks(destination, entries, workspace, *, build=None):
     """Supported BYOT source, leaving skill discovery and grading to the pinned adapter."""
+    build = reports.GH_TASK_BUILD if build is None else build
     packages = shlex.join([
-        f"{package}={version}" for package, version in reports.GH_TASK_BUILD["apt_packages"].items()
+        f"{package}={version}" for package, version in build["apt_packages"].items()
     ])
-    sources = shlex.join(APT_SOURCES)
+    sources = shlex.join([source.replace(reports.GH_TASK_BUILD['apt_snapshot'], build['apt_snapshot'])
+                          for source in APT_SOURCES])
     # Bound transient snapshot failures without changing source or package verification.
     acquire = "-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
     for original in entries:
@@ -253,7 +255,7 @@ def native_tasks(destination, entries, workspace):
         (env / "input").mkdir()
         (env / "input/README.txt").write_text("Public gh fixture transport. Use gh to obtain observations.\n")
         (env / "Dockerfile").write_text(
-            f"FROM {reports.GH_TASK_BUILD['base_image']}\n"
+            f"FROM {build['base_image']}\n"
             "RUN rm -f /etc/apt/sources.list.d/* && rm -rf /var/lib/apt/lists/* "
             f"&& printf '%s\\n' {sources} > /etc/apt/sources.list "
             f"&& apt-get update --error-on=any {acquire} "

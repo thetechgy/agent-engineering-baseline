@@ -9,7 +9,7 @@ import tomllib
 from skill_reports import POLICY, benchmark_options, read_json, require
 
 CODEX_ROOT = "/opt/reviewed/codex"
-CODEX_PROFILE = Path(__file__).resolve().parents[1] / "evals/codex-execution-1710.json"
+CODEX_PROFILE = Path(__file__).resolve().parents[1] / "evals/codex-execution-1720.json"
 SMOKE_CASE = "1"
 
 
@@ -56,7 +56,7 @@ def stage_task(skill: Path, work: Path, *, case: str, with_skill: bool) -> Path:
     return task
 
 def codex_members(profile):
-    require(profile["cli"] == POLICY["codex"], "Unexpected benchmark Codex pin")
+    require(profile["cli"] in (POLICY["codex"], "0.172.0"), "Unexpected benchmark Codex pin")
     return {"bin/codex": profile["cli_executable_sha256"], **profile["helper_sha256"]}
 
 
@@ -119,7 +119,7 @@ def scope(workspace: Path, revision: str, *, released=False):
         "arms": ["with_skill", "without_skill"],
         "planned_trials": 2,
         "attempts_per_arm": 1,
-        "agent": {"cli": POLICY["codex"], "model": POLICY["model"], "reasoning_effort": "high",
+        "agent": {"cli": read_json(CODEX_PROFILE)["cli"], "model": POLICY["model"], "reasoning_effort": "high",
                   "tool_surface": CURRENT_RELEASE["codex_tool_surface"]},
         "verifier": {"model": POLICY["model"], "reasoning_effort": None},
         "history_eligible": False,

@@ -307,7 +307,7 @@ def assessment(spec, parent, capture, report, review):
 
 
 def validator_python(profile):
-    if profile == snapshot.ACTIVE_PROFILE:
+    if profile in (snapshot.V121_V2_PROFILE, snapshot.ACTIVE_PROFILE):
         return sys.executable
     key = ("SKILL_REVIEW_RETAINED_121_PYTHON" if profile == snapshot.V121_PROFILE
            else "SKILL_REVIEW_RETAINED_PYTHON")

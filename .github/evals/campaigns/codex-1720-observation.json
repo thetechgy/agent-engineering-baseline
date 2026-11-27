@@ -1,0 +1,11 @@
+{
+  "id": "codex-1720-observation-v1",
+  "adapter": "codex",
+  "frozen_profile": ".github/evals/codex-execution-1720.json",
+  "frozen_profile_sha256": "f8730fb461e82375ab3766544564cccf028c75577ce50862682bf1fd2fe8c360",
+  "capabilities": [
+    "non-forwarding-cli-probe",
+    "exact-authorized-live"
+  ],
+  "inference_enabled": false
+}

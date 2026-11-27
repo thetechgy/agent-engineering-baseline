@@ -35,8 +35,8 @@ def dataset(workspace):
     return data['evals']
 
 
-def dockerfile(*, verifier=False):
-    build = reports.GH_TASK_BUILD
+def dockerfile(*, verifier=False, build=None):
+    build = reports.GH_TASK_BUILD if build is None else build
     packages = {**build['apt_packages'], **EXTRA_PACKAGES}
     sources = [f'deb [check-valid-until=no signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] '
                f'https://snapshot.debian.org/archive/{archive}/{build["apt_snapshot"]}/ {suite} main'
@@ -65,7 +65,17 @@ def dockerfile(*, verifier=False):
     return '\n'.join(lines) + '\n'
 
 
-def stage(workspace, destination):
+def current_runtime(member, raw, runtime):
+    """Keep the original installer and graders for historical replay."""
+    text = raw.decode()
+    if member == 'install-runtime.py':
+        old = '1da6d6d6035d651f20e70ddee7c4c15ac6ab8b9fb40ee92240d91263f28a884b'
+        reports.require(text.count(old) == 1, 'Unreviewed PowerShell installer digest')
+        text = text.replace(old, runtime['archive_sha256'])
+    return text.replace('7.6.9', runtime['version']).encode()
+
+
+def stage(workspace, destination, *, launch=None):
     source = reports.local_skill(workspace, NAME)
     before = manifest(source)
     reports.require(before == manifest(workspace / '.agents/skills' / NAME), 'Deployed local skill drift')
@@ -117,8 +127,17 @@ def stage(workspace, destination):
         for directory in ('reference', 'mutants'):
             if (case / directory).exists():
                 shutil.copytree(case / directory, tests / 'case' / directory)
-        (env / 'Dockerfile').write_text(dockerfile())
-        (tests / 'Dockerfile').write_text(dockerfile(verifier=True))
+        if launch is not None:
+            runtime = launch['powershell']
+            for context in (env, tests):
+                installer = context / 'build/install-runtime.py'
+                installer.write_bytes(current_runtime(installer.name, installer.read_bytes(), runtime))
+            for member in (tests / 'Runner.ps1', tests / 'verifier/grader.py', env / 'input/README.md'):
+                if member.is_file():
+                    member.write_bytes(current_runtime(member.name, member.read_bytes(), runtime))
+        build = launch['build'] if launch is not None else None
+        (env / 'Dockerfile').write_text(dockerfile(build=build))
+        (tests / 'Dockerfile').write_text(dockerfile(verifier=True, build=build))
         (task / 'instruction.md').write_text(entry['prompt'] + '\n')
         (task / 'task.toml').write_text(
             'schema_version = "1.3"\nartifacts = [' + json.dumps('/workspace/output/' + output) + ']\n'
