@@ -67,3 +67,8 @@ from `f2d5d766ce5149dcc80dc851e64895c442d4e912` to `review-101-v5`. Its
 SHA-256 is `21ac911579c5f4ccfb3d11f3db1bf2b1e5fc748a44e5f64650d1fa06659e206a`.
 The v5 producer and validator use the released benchmark reader and source-v48
 registry. Profiles v1 through v4 keep their original snapshot chains.
+
+`private-review-121-v2-overlay.zip` adds the SDK 3 review producer and runtime
+modules from `f6e5462a8fc3` to the `review-121-v1` snapshot.
+`private-review-121-v2.json` records the source revision, archive digest, and
+member count. The operator and attachment verifier use the same overlaid bytes.
