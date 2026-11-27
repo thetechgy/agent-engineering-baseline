@@ -676,7 +676,8 @@ def validate_released_metrics(data, workspace, name, revision, *, mode, historic
             "Released history revision differs")
     policy = data['policy']
     require(type(policy) is dict and type(data['patch_sha256']) is str, "Invalid released history producer")
-    owner = native_owner(policy.get('evaluator_revision'), 'sha256:' + data['patch_sha256'])
+    owner = native_owner(policy.get('evaluator_revision'), 'sha256:' + data['patch_sha256'],
+                         producer=policy.get('producer_profile'))
     gh_revision = policy.get("upstream_revision") if historical else None
     require(owner is not None and (historical or owner == NATIVE_PRODUCER)
             and policy == released_policy(name, owner=owner, gh_revision=gh_revision),
@@ -728,16 +729,19 @@ def capture_benchmark_custom(workspace, root, name):
         return
     tasks = run / '_harbor-tasks/codex'
     if not tasks.exists(): return
+    from benchmark_native import NATIVE_PRODUCER
+    purpose = ('benchmark-1720' if name == 'powershell-pester-6' and producer is not None
+               and producer.get('producer_profile') == NATIVE_PRODUCER else 'benchmark')
     rows = []
     for arm, directory in (('with_skill', 'with'), ('without_skill', 'without')):
         task_root = evidence.safe_path(tasks / directory, directory=True)
         candidates = [path for path in task_root.iterdir() if path.is_dir()]
-        rows.extend(evidence.capture_custom_tasks(workspace, name, candidates, arm))
+        rows.extend(evidence.capture_custom_tasks(workspace, name, candidates, arm, purpose=purpose))
     config = read_json(config_path)
     prepared_ids = {row['id'] for row in read_json(benchmark_skill(workspace, name, root) / 'evals/evals.json')['evals']}
-    if prepared_ids != set(evidence.custom_contract(name, workspace)[0]['cases']): return
+    if prepared_ids != set(evidence.custom_contract(name, workspace, purpose=purpose)[0]['cases']): return
     capture = evidence.custom_capture(workspace, name, benchmark_skill(workspace, name, root), rows,
-        purpose='benchmark', attempts=config['harbor']['n_attempts'], agent='codex', producer_versions=producer,
+        purpose=purpose, attempts=config['harbor']['n_attempts'], agent='codex', producer_versions=producer,
         execution_policy={'environment': config['harbor']['environment']['value'],
             'concurrency': config['harbor']['n_concurrent'], 'timeout_multiplier': config['harbor']['timeout_multiplier'],
             'stop_on_pass': config['harbor']['stop_on_pass']},

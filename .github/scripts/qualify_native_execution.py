@@ -34,6 +34,8 @@ SENTINEL = "native-launcher-test-not-a-provider-credential"
 
 
 class FixtureInput:
+    profile_path = native.CODEX_PROFILE
+
     async def install(self, environment):
         fixture_home = Path(os.environ["NATIVE_LAUNCHER_FIXTURE_HOME"])
         job = self.logs_dir.parent.parent.name
@@ -162,7 +164,7 @@ def controls(root, name):
 
 def inspect_trial(result_path, *, preflight, suite):
     result = read_json(result_path)
-    require(result["exception_info"] is None and result["agent_info"]["version"] == POLICY["codex"],
+    require(result["exception_info"] is None and result["agent_info"]["version"] == read_json(native.CODEX_PROFILE)["cli"],
             "Fixture trial or installed Codex failed")
     trial = result_path.parent
     resource = read_json(trial / "fixture-container.json")

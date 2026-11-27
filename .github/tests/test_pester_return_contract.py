@@ -61,7 +61,8 @@ class ReturnContract(unittest.TestCase):
                         "if definition.get('type') == 'case-observation':\n"
                         "        from case_observation import CaseObservation\n"
                         "        require(path in (ROOT / '.github/evals/campaigns/case-observation.json',\n"
-                        "                         ROOT / '.github/evals/campaigns/case-observation-1710.json'),\n"
+                        "                         ROOT / '.github/evals/campaigns/case-observation-1710.json',\n"
+                        "                         ROOT / '.github/evals/campaigns/case-observation-1720.json'),\n"
                         "                'Unregistered observation')\n"
                         "        return CaseObservation(definition, path.relative_to(ROOT).as_posix())",
                     "definition.get('type') == 'judge-only'":

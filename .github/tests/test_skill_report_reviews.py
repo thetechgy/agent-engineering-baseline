@@ -64,7 +64,7 @@ class AttachmentTests(unittest.TestCase):
     def load(self):
         return attachments.load([self.path], self.captured)
 
-    def test_active_validator_admits_current_static_scanner_provenance(self):
+    def test_sdk3_validators_admit_current_static_scanner_provenance(self):
         import private_review_snapshot as snapshot
         import static_evaluator as static
         from test_skill_analysis import static_control
@@ -75,7 +75,6 @@ class AttachmentTests(unittest.TestCase):
             {key: static.VERSIONS[key] for key in ('evaluator_revision', 'harbor', 'python')},
             judge={'model': None, 'provider': None, 'enabled': False},
             provenance='runtime_recorded', published=static.VERSIONS['producer_profile'])
-        scripts = snapshot.unpack(self.root / 'frozen', snapshot.ACTIVE_PROFILE)
         child = """
 import json
 import sys
@@ -87,9 +86,12 @@ record = json.load(sys.stdin)
 evidence.validate_public(record)
 assert record['availability']['status'] == 'incomplete'
 """
-        command = [attachments.validator_python(snapshot.ACTIVE_PROFILE), '-I', '-B', '-c', child, str(scripts)]
-        result = subprocess.run(command, input=evidence.encoded(record), capture_output=True, timeout=60)
-        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        for profile in (snapshot.V121_V2_PROFILE, snapshot.ACTIVE_PROFILE):
+            with self.subTest(profile=profile):
+                scripts = snapshot.unpack(self.root / profile, profile)
+                command = [attachments.validator_python(profile), '-I', '-B', '-c', child, str(scripts)]
+                result = subprocess.run(command, input=evidence.encoded(record), capture_output=True, timeout=60)
+                self.assertEqual(result.returncode, 0, result.stderr.decode())
 
     def test_current_and_historical_production_validators(self):
         # A separate fixture root per profile keeps originals and guards unchanged.
@@ -120,6 +122,7 @@ assert record['availability']['status'] == 'incomplete'
                                 (snapshot.V3_PROFILE, 'V3_OVERLAY'), (snapshot.V4_PROFILE, 'V4_OVERLAY'),
                                 (snapshot.V5_PROFILE, 'V5_OVERLAY'),
                                 (snapshot.V121_PROFILE, 'V121_OVERLAY'),
+                                (snapshot.V121_V2_PROFILE, 'V121_V2_OVERLAY'),
                                 (snapshot.ACTIVE_PROFILE, 'ACTIVE_OVERLAY')):
             with self.subTest(profile=profile):
                 changed = self.root / 'changed.zip'
@@ -138,6 +141,7 @@ assert record['availability']['status'] == 'incomplete'
 
         cases = (('current-v5', False, ACTIVE_PROFILE), ('gh-89f46f0', False, ACTIVE_PROFILE),
                  (None, True, ACTIVE_PROFILE), ('current-v5', False, snapshot.V121_PROFILE),
+                 (None, True, snapshot.V121_V2_PROFILE),
                  ('current-v5', False, snapshot.V5_PROFILE),
                  ('current-v5', False, PROFILE), ('current-v5', False, V2_PROFILE),
                  ('current-v5', False, V3_PROFILE), ('current-v5', False, V4_PROFILE),
@@ -189,7 +193,8 @@ target = Path(sys.argv[3])
                 release_review = evidence.read_json(save)
                 self.assertEqual(emitted['implementation_digest'], release_review['provenance']['implementation_digest'])
                 self.assertEqual(release_review['provenance']['versions']['skillevaluator'],
-                                 '1.2.1' if profile in (snapshot.V121_PROFILE, ACTIVE_PROFILE) else '1.0.1')
+                                 '1.2.1' if profile in (snapshot.V121_PROFILE, snapshot.V121_V2_PROFILE,
+                                                        ACTIVE_PROFILE) else '1.0.1')
                 self.assertEqual(subprocess.run([*command, 'validate', *args, '--review', str(save)],
                     env=env, capture_output=True, timeout=45).returncode, 0)
                 if key == 'current-v5' and profile == ACTIVE_PROFILE:

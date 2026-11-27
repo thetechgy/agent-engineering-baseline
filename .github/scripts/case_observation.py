@@ -75,6 +75,7 @@ class CaseObservation(Task):
         from codex_pilot_descriptors import retain_descriptors
         import evaluation_codex as codex
         from gh_evaluations import APT_SOURCES
+        from evaluation_runtime import CODEX_OBSERVATION_1720_PROFILE
         from harbor.models.task.task import Task as NativeTask
         from skillevaluator.tier3.harbor.adapter import (
             _entry_file_refs, _resolve_entry_file_ref, generate_harbor_tasks, private_evaluator_skill_snapshot,
@@ -84,6 +85,11 @@ class CaseObservation(Task):
         # them into a generated task and lose their broker, inputs or tools.
         core.require(self.source == ROOT / ".apm/skills" / skill and not (self.source / "evals/harbor").exists(),
                      "Native overlay requires its registered task environment")
+        build = reports.GH_TASK_BUILD
+        if runtime["id"] == CODEX_OBSERVATION_1720_PROFILE:
+            from benchmark_native import NATIVE_BUILD
+
+            build = reports.read_json(NATIVE_BUILD)["build"]
         with private_evaluator_skill_snapshot(self.source, task_source="evals_json") as snapshot:
             dataset = snapshot / "evals/evals.json"
             value = reports.read_json(dataset)
@@ -91,7 +97,7 @@ class CaseObservation(Task):
                          "Selected case changed during preparation")
             reports.write_json(dataset, {**value, "evals": [self.entry]})
             paths = generate_harbor_tasks(deployed, root / "generated", with_skill=True,
-                        evaluator_skill_path=snapshot, base_image=reports.GH_TASK_BUILD["base_image"],
+                        evaluator_skill_path=snapshot, base_image=build["base_image"],
                         agent_workdir="/workspace", task_resources={"cpus": runtime["cpus"], "memory_mb": runtime["memory_mb"]})
         core.require(len(paths) == 1 and paths[0].name == case, "Selected native population changed")
         native = paths[0]
@@ -100,7 +106,8 @@ class CaseObservation(Task):
         projected = native / "environment/skills" / skill
         core.require(codex.manifest(projected) == codex.manifest(deployed), "Staged skill differs from APM")
         dockerfile = native / "environment/Dockerfile"
-        sources = " ".join(shlex.quote(s) for s in APT_SOURCES)
+        sources = shlex.join([source.replace(reports.GH_TASK_BUILD['apt_snapshot'], build['apt_snapshot'])
+                              for source in APT_SOURCES])
         with dockerfile.open("a") as stream:
             stream.write("RUN rm -f /etc/apt/sources.list.d/* && printf '%s\\n' " + sources +
                          " > /etc/apt/sources.list\nRUN useradd --create-home --uid 1000 agent && "

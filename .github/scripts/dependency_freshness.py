@@ -332,7 +332,7 @@ def inventory(root):
          "This opt-in preparation is credential-free and independent of production benchmarks. "
          "No paid allocation is opened; standard model judging, Pester clarification and skill adoption remain deferred."),
         ("observation-environment", "Active single-case observation",
-         ".github/evals/codex-execution-1710.json",
+         ".github/evals/codex-execution-1720.json",
          "Current case-observation CLI, model and reasoning effort. "
          "Changing this profile requires a new identity and credential-free observer qualification."),
         ("pilot-environment", "Frozen CLI pilot and campaign selectors",
@@ -351,8 +351,8 @@ def inventory(root):
             source = read(root, path)
             sources = [{"path": path, "line": 1}]
             if id == "observation-environment":
-                definition = ".github/evals/campaigns/case-observation-1710.json"
-                selector = ".github/evals/campaigns/codex-1710-observation.json"
+                definition = ".github/evals/campaigns/case-observation-1720.json"
+                selector = ".github/evals/campaigns/codex-1720-observation.json"
                 require(json.loads(read(root, definition))["runtime_profile"] == selector, "observation_selector_changed")
                 binding = json.loads(read(root, selector))
                 require(binding["frozen_profile"] == path and binding["frozen_profile_sha256"] ==

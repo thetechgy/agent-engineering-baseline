@@ -1594,9 +1594,10 @@ not establish that it passed.
 
 Use the private-review interpreter before adding
 `--analyst-review /tmp/private-attachments/podman.json` to the report command.
-Repeat for another selected record. Use `"profile": "review-121-v2"` and
-`"tooling": null` for new reviews. This profile selects the fixed 1.2.1
-producer and validator source. For a `review-121-v1` attachment, install
+Repeat for another selected record. Use `"profile": "review-121-v3"` and
+`"tooling": null` for new reviews. The profile pins the 1.2.1 review producer
+and validator. For an attachment produced by `review-121-v2`, use that profile
+with the same SDK 3 environment. For a `review-121-v1` attachment, install
 `setup-static-evaluator.sh review-retained-121` and load
 `SKILL_REVIEW_RETAINED_121_PYTHON`. For the earlier profiles, install
 `setup-static-evaluator.sh review-retained-101` and load

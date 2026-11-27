@@ -1,0 +1,16 @@
+{
+  "id": "case-observation-1720",
+  "type": "case-observation",
+  "runtime_profile": ".github/evals/campaigns/codex-1720-observation.json",
+  "variants": [
+    {
+      "id": "current",
+      "present": true
+    }
+  ],
+  "trials": 1,
+  "attempt_limit": 1,
+  "stop_estimate_usd": 3,
+  "authorized_live_attempts": 0,
+  "protocol": ".github/evals/campaigns/case-observation-1720-protocol.json"
+}

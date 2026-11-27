@@ -341,8 +341,9 @@ class ReportTests(unittest.TestCase):
         old = reports.RETAINED_GH_REVISION
         current = {**self.metrics(), "skill": "gh", "policy": native.released_policy("gh"),
                    "patch_sha256": native.NATIVE_PATCH_DIGEST, "series": native.score_series("gh", "standard")}
-        retained_owner = native.NATIVE_PRODUCER
+        retained_owner = native.PREVIOUS_NATIVE_PRODUCER
         retained = {**current, "policy": native.released_policy("gh", owner=retained_owner, gh_revision=old),
+                    "patch_sha256": native.native_versions(owner=retained_owner)["patch_sha256"],
                     "series": native.score_series("gh", "standard", owner=retained_owner, gh_revision=old)}
         self.assertEqual(current["policy"]["upstream_revision"], UPSTREAM)
         self.assertNotEqual(current["series"], retained["series"])
@@ -353,6 +354,10 @@ class ReportTests(unittest.TestCase):
         contradictory = {**retained, "series": current["series"]}
         with self.assertRaisesRegex(ValueError, "history series differs"):
             reports.validate_released_metrics(contradictory, REPO, "gh", SHA, mode="standard", historical=True)
+        refreshed = {**retained, "policy": native.released_policy("gh", owner=retained_owner, gh_revision=UPSTREAM),
+                     "series": native.score_series("gh", "standard", owner=retained_owner, gh_revision=UPSTREAM)}
+        reports.validate_released_metrics(refreshed, REPO, "gh", SHA, mode="standard", historical=True)
+        self.assertNotEqual(refreshed["series"], retained["series"])
 
     def test_released_runtime_receipt_cannot_alias_the_compatibility_owner(self):
         import benchmark_native as native

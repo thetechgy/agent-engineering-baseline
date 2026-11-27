@@ -38,7 +38,8 @@ class CaseObservationTests(unittest.TestCase):
         from evaluation_campaign_selection import selected_task, binding
         from evaluation_runtime import ROOT, read_profile
         with patch.dict(os.environ, OBSERVATION_SKILL="podman", OBSERVATION_CASE="4"):
-            for identity, version in (("case-observation", "0.171.0"), ("case-observation-1691", "0.169.1")):
+            for identity, version in (("case-observation", "0.172.0"), ("case-observation-1710", "0.171.0"),
+                                      ("case-observation-1691", "0.169.1")):
                 task = selected_task(identity)
                 runtime = read_profile(ROOT / task.definition["runtime_profile"])["resolved"]
                 self.assertEqual((runtime["cli"], runtime["model"], runtime["reasoning_effort"]),

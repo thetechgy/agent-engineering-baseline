@@ -6,6 +6,7 @@ umask 077
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 kind=${1:-quality-static}
 case "$kind" in
+  native-benchmark-121-retained) ;;
   quality-next) exec bash "$root/.github/scripts/setup-skillevaluator.sh" quality-next ;;
   quality-static|quality-retained-101|scanner-contracts|data-host|native-startup|native-benchmark-candidate|native-benchmark-candidate-101|native-benchmark-101|native-benchmark-121|review-candidate|review-contracts|review-retained-101|review-retained-121) ;;
   *) exit 2 ;;
@@ -107,6 +108,11 @@ owner.validate_install(owner=owner.RETAINED if sys.argv[1] == "1.0.1" else owner
     wheel_kind=--benchmark-candidate
     wheel_digest=0899cdc4c270d5fe817b256c099457551f6b273b65aaf5418da99ae5ff60052b
     apply_evaluator_patch benchmark-request 029ac12e32476d83b5a8555291b7c094be7df3262cd862396ddff1b453ec1821
+  elif [ "$kind" = native-benchmark-121 ]; then
+    wheel_version=1.5.0
+    wheel_kind=--benchmark-1720
+    wheel_digest=c882d524f3cdfd9257de0a94921f7044282f574f192655069a3a9c558712c2c0
+    apply_evaluator_patch benchmark-request-1720 c52cc0c36e4383435cb0f8a6456675d3095081f65a73b4f19fc0a016b73e2136
   else
     wheel_version=1.4.0
     wheel_kind=--benchmark-current
@@ -119,11 +125,15 @@ owner.validate_install(owner=owner.RETAINED if sys.argv[1] == "1.0.1" else owner
       apply_evaluator_patch benchmark-recovery 44a766ab7cb7bcf38bc0769fc8f87fc6edf20997363ec0341d252edc93dca0b5
       apply_evaluator_patch benchmark-evidence 45923e37bf4dd71b0c1b3c38390dd6c32c8f2ea234f9634cb04fbb0f48232c75
       python_export=SKILL_NATIVE_BENCHMARK_RETAINED_PYTHON ;;
-    native-benchmark-121)
+    native-benchmark-121|native-benchmark-121-retained)
       apply_evaluator_patch benchmark-staging e763a97c0ed3b48f014aa30f0e39181f89b0151324a739a738eecc4fec435c3e
       apply_evaluator_patch benchmark-recovery 3360099d6c936ba5e67fdb485fc53210db7c8477152099daf41e3c86fee78bb6
       apply_evaluator_patch benchmark-evidence c3003dc7f50d93b8a786c0c1e11b325e6e518b06d6a6e4a823472a198be788fa
-      python_export=SKILL_NATIVE_BENCHMARK_PYTHON ;;
+      if [ "$kind" = native-benchmark-121 ]; then
+        python_export=SKILL_NATIVE_BENCHMARK_PYTHON
+      else
+        python_export=SKILL_NATIVE_BENCHMARK_RETAINED_121_PYTHON
+      fi ;;
   esac
   "$python" -IB "$root/.github/evaluator-backends/build_wheel.py" "$tools/backend-wheel" "$wheel_kind"
   printf '%s  %s\n' "$wheel_digest" "$tools/backend-wheel/aeb_gh_fixture-$wheel_version-py3-none-any.whl" | sha256sum --check --strict
@@ -139,6 +149,8 @@ require_runtime()
 kind, version = sys.argv[1:]
 if kind == "native-benchmark-121":
     native.validate_runtime()
+elif kind == "native-benchmark-121-retained":
+    profiles.validate_install(native.native_profile(owner=native.PREVIOUS_NATIVE_PRODUCER))
 elif kind == "native-benchmark-101":
     profiles.validate_install(native.native_profile(owner=native.RETAINED_NATIVE_PRODUCER))
 else:

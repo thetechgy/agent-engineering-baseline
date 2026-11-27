@@ -291,10 +291,12 @@ class OrchestrationTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'Missing runtime input'):
                     orchestration.benchmark_runtime_inputs({key: value for key, value in files.items() if key != member})
         files.pop(orchestration.NATIVE_BENCHMARK_POLICY)
+        files.pop(orchestration.PREVIOUS_NATIVE_BENCHMARK_POLICY, None)
         self.assertEqual(orchestration.benchmark_runtime_inputs(files), orchestration.subset(files, orchestration.RUNTIME_FILES))
 
     def test_candidate_fingerprint_binds_release_and_dataset_without_rewriting_historical_fingerprint(self):
         (self.workspace / orchestration.NATIVE_BENCHMARK_POLICY).unlink()
+        (self.workspace / orchestration.PREVIOUS_NATIVE_BENCHMARK_POLICY).unlink()
         self.api.main = commit(self.workspace, 'Select the pre-adoption benchmark runtime')
         before = orchestration.snapshots(self.workspace, self.api.main)[1]
         fingerprint = orchestration.candidate_podman_fingerprint(self.workspace, self.api.main)
@@ -318,13 +320,17 @@ class OrchestrationTests(unittest.TestCase):
     def test_compatibility_scope_requires_exact_initial_dispatch_and_preapproval(self):
         import benchmark_smoke as smoke
         from benchmark_native import native_versions
+        from benchmark_podman import scope
 
         revision = self.api.main
+        retained = scope(self.workspace, revision)
+        self.assertEqual(retained['agent']['cli'], '0.171.0')
         env = dict(os.environ, GITHUB_SHA=revision, GITHUB_EVENT_NAME='workflow_dispatch',
                    GITHUB_REF='refs/heads/' + smoke.BRANCH)
         inputs = {'mode': smoke.MODE, 'skill': 'podman', 'expected_revision': revision}
         record = smoke.reviewed_scope(self.workspace, env, inputs)
         self.assertEqual(record['runtime'], native_versions())
+        self.assertEqual(record['scope']['agent']['cli'], '0.172.0')
         self.assertEqual(record['scope']['fingerprint'],
                          orchestration.candidate_podman_fingerprint(self.workspace, revision, released=True))
         self.assertEqual(record['scope']['case'], '1')

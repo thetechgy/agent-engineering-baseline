@@ -10,25 +10,30 @@ import sys
 import zipfile
 
 
-def package_files(*, candidate_next=False, release_startup=False, benchmark_candidate=False, benchmark_current=False):
+def package_files(*, candidate_next=False, release_startup=False, benchmark_candidate=False, benchmark_current=False, benchmark_1720=False):
     root = Path(__file__).resolve().parent
     files = {p.name: p.read_bytes() for p in sorted((root / "aeb_gh_fixture").glob("*.py"))}
-    benchmark = benchmark_candidate or benchmark_current
+    benchmark = benchmark_candidate or benchmark_current or benchmark_1720
     if candidate_next or release_startup or benchmark:
         backend = files["backend.py"].decode()
         start = backend.index("def require_runtime():")
         end = backend.index("\n\nclass TrustedGhEnvironment", start)
         owner = "candidate-101" if release_startup or benchmark else "candidate-090"
         predicate = (root / owner / "require_runtime.py").read_text()
-        if benchmark_current:
+        if benchmark_current or benchmark_1720:
             assert predicate.count('("1.0.1", "0.25.0")') == 1
             predicate = predicate.replace('("1.0.1", "0.25.0")', '("1.2.1", "0.25.0")')
         files["backend.py"] = (backend[:start] + predicate + backend[end:]).encode()
         assert files["__init__.py"].count(b'VERSION = "1.0.0"') == 1
-        version = backend_version(candidate_next, release_startup, benchmark_candidate, benchmark_current).encode()
+        version = backend_version(candidate_next, release_startup, benchmark_candidate, benchmark_current, benchmark_1720).encode()
         files["__init__.py"] = files["__init__.py"].replace(b'VERSION = "1.0.0"', b'VERSION = "' + version + b'"')
     if benchmark:
-        files["benchmark_codex.py"] = (root / "candidate-101/benchmark_codex.py").read_bytes()
+        codex = (root / "candidate-101/benchmark_codex.py").read_bytes()
+        if benchmark_1720:
+            previous = b'CODEX_VERSION = "0.171.0"'
+            assert codex.count(previous) == 1
+            codex = codex.replace(previous, b'CODEX_VERSION = "0.172.0"')
+        files["benchmark_codex.py"] = codex
         catalog = root / "candidate-101/codex-catalog"
         for name in ("models.json", "LICENSE", "NOTICE"):
             files["codex-catalog/" + name] = (catalog / name).read_bytes()
@@ -39,7 +44,9 @@ def package_files(*, candidate_next=False, release_startup=False, benchmark_cand
     return files
 
 
-def backend_version(candidate_next, release_startup, benchmark_candidate, benchmark_current):
+def backend_version(candidate_next, release_startup, benchmark_candidate, benchmark_current, benchmark_1720=False):
+    if benchmark_1720:
+        return "1.5.0"
     if benchmark_current:
         return "1.4.0"
     if benchmark_candidate:
@@ -49,20 +56,20 @@ def backend_version(candidate_next, release_startup, benchmark_candidate, benchm
     return "1.1.0" if candidate_next else "1.0.0"
 
 
-def build(destination, *, candidate_next=False, release_startup=False, benchmark_candidate=False, benchmark_current=False):
-    if sum((candidate_next, release_startup, benchmark_candidate, benchmark_current)) > 1:
+def build(destination, *, candidate_next=False, release_startup=False, benchmark_candidate=False, benchmark_current=False, benchmark_1720=False):
+    if sum((candidate_next, release_startup, benchmark_candidate, benchmark_current, benchmark_1720)) > 1:
         raise ValueError("Select one backend runtime")
-    version = backend_version(candidate_next, release_startup, benchmark_candidate, benchmark_current)
+    version = backend_version(candidate_next, release_startup, benchmark_candidate, benchmark_current, benchmark_1720)
     metadata = f"aeb_gh_fixture-{version}.dist-info"
     files = package_files(candidate_next=candidate_next, release_startup=release_startup,
-                          benchmark_candidate=benchmark_candidate, benchmark_current=benchmark_current)
+                          benchmark_candidate=benchmark_candidate, benchmark_current=benchmark_current, benchmark_1720=benchmark_1720)
     contents = {"aeb_gh_fixture/" + name: raw for name, raw in files.items()}
     contents.update({
         metadata + "/METADATA": (f"Metadata-Version: 2.1\nName: aeb-gh-fixture\nVersion: {version}\nRequires-Python: >=3.13,<3.15\n").encode(),
         metadata + "/WHEEL": b"Wheel-Version: 1.0\nGenerator: aeb-stdlib-1\nRoot-Is-Purelib: true\nTag: py3-none-any\n",
         metadata + "/entry_points.txt": b"[skillevaluator.env_modes]\naeb-gh-fixture = aeb_gh_fixture:backend_spec\n",
     })
-    if benchmark_candidate or benchmark_current:
+    if benchmark_candidate or benchmark_current or benchmark_1720:
         contents[metadata + "/entry_points.txt"] += b"aeb-benchmark-docker = aeb_gh_fixture.benchmark_codex:backend_spec\n"
     record = io.StringIO(newline="")
     writer = csv.writer(record, lineterminator="\n")
@@ -83,10 +90,11 @@ def build(destination, *, candidate_next=False, release_startup=False, benchmark
 
 
 if __name__ == "__main__":
-    variants = ('--candidate-next', '--release-startup', '--benchmark-candidate', '--benchmark-current')
+    variants = ('--candidate-next', '--release-startup', '--benchmark-candidate', '--benchmark-current', '--benchmark-1720')
     if len(sys.argv) not in (2, 3) or len(sys.argv) == 3 and sys.argv[2] not in variants:
-        raise SystemExit('usage: build_wheel.py DESTINATION [--candidate-next|--release-startup|--benchmark-candidate|--benchmark-current]')
+        raise SystemExit('usage: build_wheel.py DESTINATION [--candidate-next|--release-startup|--benchmark-candidate|--benchmark-current|--benchmark-1720]')
     print(build(Path(sys.argv[1]), candidate_next='--candidate-next' in sys.argv[2:],
                 release_startup='--release-startup' in sys.argv[2:],
                 benchmark_candidate='--benchmark-candidate' in sys.argv[2:],
-                benchmark_current='--benchmark-current' in sys.argv[2:]))
+                benchmark_current='--benchmark-current' in sys.argv[2:],
+                benchmark_1720='--benchmark-1720' in sys.argv[2:]))

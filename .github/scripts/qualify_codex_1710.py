@@ -126,7 +126,8 @@ def run_exec(binary, root, runtime, output, scenario):
             require((workspace / 'edits.txt').read_text() == 'fixture edit\n', 'Native edit bytes differ')
             # Exercise the existing exec-JSON reader under its observation
             # grammar while preserving the actual released agent version.
-            adapter = SimpleNamespace(profile=dict(runtime, id='codex-1691-observation-v1'),
+            identity = (runtime['id'] if runtime['cli'] == '0.172.0' else 'codex-1691-observation-v1')
+            adapter = SimpleNamespace(profile=dict(runtime, id=identity),
                                       task=SimpleNamespace(diagnostic_observation=True),
                                       model_name=runtime['model'])
             adapter._convert_event_to_step = Codex._convert_event_to_step.__get__(adapter)
@@ -223,11 +224,12 @@ def working_directory(binary, root, runtime, output):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('output', type=Path)
+    parser.add_argument('--runtime', choices=('1710', '1720'), default='1710')
     args = parser.parse_args()
     no_credentials()
     output = args.output.resolve()
     output.mkdir()
-    runtime = read_json(PROFILE)
+    runtime = read_json(PROFILE.with_name(f'codex-execution-{args.runtime}.json'))
     binary = acquire(runtime, output)
     for name, probe in (
         ('exec', lambda root, log: run_exec(binary, root, runtime, log, 'priced-success')),

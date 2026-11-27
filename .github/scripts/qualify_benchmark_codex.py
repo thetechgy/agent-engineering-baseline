@@ -90,6 +90,7 @@ class OfflineCodex(BenchmarkCodex):
     """Replace Internet installation only. Harbor owns execution and log conversion."""
 
     identity_stage = "verify_agent_identity_and_broker"
+    profile_path = PROFILE
 
     @staticmethod
     def record_startup(stage):
@@ -102,7 +103,7 @@ class OfflineCodex(BenchmarkCodex):
                 "Agent identity, CLI or broker isolation drift")
 
     async def verify_package(self, environment):
-        profile = read_json(PROFILE)
+        profile = read_json(self.profile_path)
         expected = {"bin/codex": profile["cli_executable_sha256"], **profile["helper_sha256"]}
         require(self._version == profile["cli"], "Generated dispatch version drift")
         # npm omits the standalone archive's optional exec-server. Exercise the
@@ -158,7 +159,7 @@ class OfflinePodmanCodex(OfflineCodex):
     async def verify_package(self, environment):
         from benchmark_podman import CODEX_ROOT, codex_members
 
-        profile = read_json(PROFILE)
+        profile = read_json(self.profile_path)
         require(self._version == profile["cli"], "Generated dispatch version drift")
         for name, expected in codex_members(profile).items():
             checked = await self.exec_as_root(environment, shlex.join(["sha256sum", f"{CODEX_ROOT}/{name}"]))
