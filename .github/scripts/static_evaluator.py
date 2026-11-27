@@ -28,6 +28,17 @@ SOURCE_PINS = {
 }
 
 
+def current_scanner_runtime(previous):
+    """Bind active scanner versions independently of the evaluator owner."""
+    return {
+        **previous,
+        'versions': {**previous['versions'], 'semgrep': '1.187.0', 'skillspector': '2.13.7'},
+        'semgrep_lock': 'sha256:401d18c1cc679c04f48b85af731ba0f241f3a998f6bbec2b64214f5dec2d0cb2',
+        'skillspector_lock': 'sha256:dce3490ca4850bfc44169abd5a5b93d3ee0d62e3bc9b95eb7d8fab9da25f7f80',
+        'skillspector_revision': 'c323ad4c43e3c8f2de051572cc25b2711d11e648',
+    }
+
+
 def validate_install(*, python=VERSIONS['python'], scanner_contracts=False, owner=VERSIONS):
     """Authenticate the installed release, interpreter and lock."""
     import skillevaluator
