@@ -599,7 +599,7 @@ separate evidence; a PyPI patch can precede a public GitHub tag. See the
 verification, scanner comparisons, and residual MCP dependency risk.
 
 Maintained evaluation setup pins uv 0.13.10. Evidence-bound workflows retain
-uv 0.13.7 or 0.13.9 and their reviewed interpreter download identities. Native benchmarks, private reviews and scanner environments use
+uv 0.13.7, 0.13.8, or 0.13.9 and their reviewed interpreter download identities. Native benchmarks, private reviews and scanner environments use
 managed Python 3.13. Static quality and public data use Python 3.14.10. Native
 receipts record the resolved patch version for replay.
 

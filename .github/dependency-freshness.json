@@ -104,11 +104,6 @@
           "count": 1
         },
         {
-          "path": ".github/workflows/cli-observation-comparison.yml",
-          "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
-          "count": 1
-        },
-        {
           "path": ".github/workflows/current-evaluator.yml",
           "pattern": "uses: astral-sh/setup-uv@[^\\n]+\\n(?:[^\\n]*\\n){0,5}?\\s+version: \\'(?P<version>[^\\']+)\\'",
           "count": 6
@@ -153,7 +148,7 @@
       "hold": null,
       "group": null,
       "tag_prefix": "",
-      "validation": "Qualify current frozen/hash-lock installs and compiler behavior. Evidence-bound workflows retain uv 0.13.7 or 0.13.9. Their invocation pins remain in the workflow sources.",
+      "validation": "Qualify current frozen/hash-lock installs and compiler behavior. Evidence-bound workflows retain uv 0.13.7, 0.13.8, or 0.13.9. Their invocation pins remain in the workflow sources.",
       "package": {
         "ecosystem": "pip",
         "name": "uv"
