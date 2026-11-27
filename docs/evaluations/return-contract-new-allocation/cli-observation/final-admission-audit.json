@@ -1,0 +1,568 @@
+{
+  "original_evaluator": {
+    "profile_id": "campaign-pester-return-transfer-current-v3-lifecycle-v1-live",
+    "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+    "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
+    "runtime_digest": "sha256:5ec147b71196900261735aee2d7d8c70221ec1ab01345ea7c9ce2a69fe45e903"
+  },
+  "source": "33d953536e95bc81178e726fb3fed95a80566c7d",
+  "workflow_run": 42937278031,
+  "workflow_attempt": 1,
+  "workflow_conclusion": "success",
+  "artifact": 13821197697,
+  "artifact_digest": "sha256:13cc6c04d7065cf636fbde7936e089945f4834bde666b9ecbd4c2f9aefac0f8e",
+  "unchanged_submission": {
+    "bytes": 1536,
+    "sha256": "c985298ef4fbe7a02ca8d1645fc0a07a3ed478084aafbf0489e6537748ffc0bf"
+  },
+  "original_result_preserved": true,
+  "inference": false,
+  "qualified": true,
+  "records": [
+    {
+      "definition": "pester-admission-controls-v2",
+      "mode": "oracle",
+      "trials": 44,
+      "outcomes": [
+        {
+          "classification": "passed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 5,
+          "mutants_executed": 5,
+          "tests_executed": 5,
+          "variant_detections": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "variant_failure_kinds": [
+            "assertion",
+            "assertion",
+            "assertion",
+            "assertion",
+            "assertion"
+          ],
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        {
+          "classification": "passed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 5,
+          "mutants_executed": 5,
+          "tests_executed": 5,
+          "variant_detections": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "variant_failure_kinds": [
+            "assertion",
+            "assertion",
+            "assertion",
+            "assertion",
+            "assertion"
+          ],
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        {
+          "classification": "passed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 5,
+          "mutants_executed": 5,
+          "tests_executed": 1,
+          "variant_detections": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "variant_failure_kinds": [
+            "assertion",
+            "assertion",
+            "assertion",
+            "assertion",
+            "assertion"
+          ],
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        {
+          "classification": "passed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 5,
+          "mutants_executed": 5,
+          "tests_executed": 1,
+          "variant_detections": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "variant_failure_kinds": [
+            "assertion",
+            "assertion",
+            "assertion",
+            "assertion",
+            "assertion"
+          ],
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        {
+          "classification": "failed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 4,
+          "mutants_executed": 5,
+          "tests_executed": 5,
+          "variant_detections": [
+            0,
+            1,
+            1,
+            1,
+            1
+          ],
+          "variant_failure_kinds": [
+            null,
+            "assertion",
+            "assertion",
+            "assertion",
+            "assertion"
+          ],
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        {
+          "classification": "failed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 4,
+          "mutants_executed": 5,
+          "tests_executed": 5,
+          "variant_detections": [
+            0,
+            1,
+            1,
+            1,
+            1
+          ],
+          "variant_failure_kinds": [
+            null,
+            "assertion",
+            "assertion",
+            "assertion",
+            "assertion"
+          ],
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        {
+          "classification": "failed",
+          "code": "evaluated",
+          "reference_pass": 0,
+          "mutants_detected": 0,
+          "mutants_executed": 5,
+          "tests_executed": 5,
+          "variant_detections": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "variant_failure_kinds": [
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        {
+          "classification": "failed",
+          "code": "evaluated",
+          "reference_pass": 0,
+          "mutants_detected": 0,
+          "mutants_executed": 5,
+          "tests_executed": 5,
+          "variant_detections": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "variant_failure_kinds": [
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        {
+          "classification": "invalid",
+          "code": "nonexecuting"
+        },
+        {
+          "classification": "invalid",
+          "code": "nonexecuting"
+        },
+        {
+          "classification": "passed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 5,
+          "mutants_executed": 5,
+          "tests_executed": 8,
+          "variant_detections": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "variant_failure_kinds": [
+            "assertion",
+            "assertion",
+            "assertion",
+            "assertion",
+            "assertion"
+          ],
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        {
+          "classification": "passed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 5,
+          "mutants_executed": 5,
+          "tests_executed": 8,
+          "variant_detections": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "variant_failure_kinds": [
+            "assertion",
+            "assertion",
+            "assertion",
+            "assertion",
+            "assertion"
+          ],
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "ast_kind"
+        },
+        {
+          "classification": "unsupported",
+          "code": "ast_kind"
+        },
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "ast_kind"
+        },
+        {
+          "classification": "unsupported",
+          "code": "ast_kind"
+        },
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "variable_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "variable_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "command_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "command_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "ast_kind"
+        },
+        {
+          "classification": "unsupported",
+          "code": "ast_kind"
+        },
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        },
+        {
+          "classification": "failed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 0,
+          "mutants_executed": 5,
+          "tests_executed": 1,
+          "variant_detections": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "variant_failure_kinds": [
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        {
+          "classification": "failed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 0,
+          "mutants_executed": 5,
+          "tests_executed": 1,
+          "variant_detections": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "variant_failure_kinds": [
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        {
+          "classification": "failed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 0,
+          "mutants_executed": 5,
+          "tests_executed": 1,
+          "variant_detections": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "variant_failure_kinds": [
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        {
+          "classification": "failed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 0,
+          "mutants_executed": 5,
+          "tests_executed": 1,
+          "variant_detections": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "variant_failure_kinds": [
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        },
+        {
+          "classification": "invalid",
+          "code": "parse"
+        },
+        {
+          "classification": "invalid",
+          "code": "parse"
+        }
+      ],
+      "cleanup_complete": true,
+      "machine_report_reproduced": true,
+      "html_report_reproduced": true,
+      "profile": "campaign-pester-admission-controls-v2-lifecycle-v1-source-v4-oracle",
+      "grader_digest": "sha256:2036c1cbf604c1c6ae7372b32505b8da541a4830d1161ccfddd1f82df2616ad4",
+      "fixture_digest": "sha256:7fd910d264f98c74de1c108d604c1150c0c194630cbd1a5f8603ad3757dbfed7",
+      "runtime_digest": "sha256:c1094a44753d8403219c8cce0153e6b42f4eea5c6d884cf365096fafb80f242c",
+      "html_sha256": "da71823231fe4d624973067dec25c95fadfbeacc53fa91e093e2772e0713b100"
+    },
+    {
+      "definition": "pester-transfer-original-v1",
+      "mode": "oracle",
+      "trials": 2,
+      "outcomes": [
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        },
+        {
+          "classification": "unsupported",
+          "code": "expression_policy"
+        }
+      ],
+      "cleanup_complete": true,
+      "machine_report_reproduced": true,
+      "html_report_reproduced": true,
+      "profile": "campaign-pester-transfer-original-v1-lifecycle-v1-source-v4-oracle",
+      "grader_digest": "sha256:5d865ffd05a0c028cd03294e2b8ebfb77ac89ab4f935788d30e7e31deb884a5d",
+      "fixture_digest": "sha256:6774ef2dfc06458a957404d12d4a4d111972998bba344fef94a7d057613cc577",
+      "runtime_digest": "sha256:e7a71ee6bff7f10d866895f5d694979591cbfd37e914d1a2d6b3af66b4913007",
+      "html_sha256": "d324902d08ad524d49fb2ba0038cb7fe69ded599aa7165453b1c459fbf37cb2b"
+    },
+    {
+      "definition": "pester-transfer-retrospective-v1",
+      "mode": "replay",
+      "trials": 1,
+      "outcomes": [
+        {
+          "classification": "passed",
+          "code": "evaluated",
+          "reference_pass": 1,
+          "mutants_detected": 5,
+          "mutants_executed": 5,
+          "tests_executed": 5,
+          "variant_detections": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "variant_failure_kinds": [
+            "assertion",
+            "assertion",
+            "assertion",
+            "assertion",
+            "assertion"
+          ],
+          "pester_version": "6.2.0",
+          "powershell_version": "7.6.9"
+        }
+      ],
+      "cleanup_complete": true,
+      "machine_report_reproduced": true,
+      "html_report_reproduced": true,
+      "profile": "campaign-pester-transfer-retrospective-v1-lifecycle-v1-source-v4-replay",
+      "grader_digest": "sha256:2036c1cbf604c1c6ae7372b32505b8da541a4830d1161ccfddd1f82df2616ad4",
+      "fixture_digest": "sha256:7fd910d264f98c74de1c108d604c1150c0c194630cbd1a5f8603ad3757dbfed7",
+      "runtime_digest": "sha256:ae15962aeab4ac46efd0e4f03037adfb755e0850eb8e6913ae6b1523b5b5eba8",
+      "html_sha256": "574e8e9f9d62cb78c4867266b64022549635ce37a8843c9f9b6baac25b50e2a5"
+    }
+  ],
+  "mutant_order": [
+    "enabled-integer",
+    "enabled-zero",
+    "quantity-above",
+    "quantity-below",
+    "quantity-offset"
+  ],
+  "limitations": [
+    "output-informed retrospective grade; not a new experiment",
+    "one current arm only; no transfer benefit or candidate regression/adoption inference",
+    "original unsupported outcome remains unmeasured; all development outcomes unchanged"
+  ]
+}

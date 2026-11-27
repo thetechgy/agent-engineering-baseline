@@ -1,0 +1,126 @@
+{
+  "source": "33d953536e95bc81178e726fb3fed95a80566c7d",
+  "run": 42937279877,
+  "artifact": 13819291610,
+  "archive_digest": "sha256:7580523269910b204c3e308945d244f7ff6dc67134ed6602df87da5b512b71b6",
+  "controls": [
+    {
+      "control": "identity",
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 4,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      }
+    },
+    {
+      "control": "typed-classic",
+      "outcome": {
+        "classification": "passed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 5,
+        "mutants_executed": 5,
+        "tests_executed": 1,
+        "variant_detections": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      }
+    },
+    {
+      "control": "value-only",
+      "outcome": {
+        "classification": "failed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 4,
+        "mutants_executed": 5,
+        "tests_executed": 4,
+        "variant_detections": [
+          1,
+          1,
+          0,
+          1,
+          1
+        ],
+        "variant_failure_kinds": [
+          "assertion",
+          "assertion",
+          null,
+          "assertion",
+          "assertion"
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      }
+    },
+    {
+      "control": "type-only",
+      "outcome": {
+        "classification": "failed",
+        "code": "evaluated",
+        "reference_pass": 1,
+        "mutants_detected": 1,
+        "mutants_executed": 5,
+        "tests_executed": 4,
+        "variant_detections": [
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        "variant_failure_kinds": [
+          null,
+          null,
+          "assertion",
+          null,
+          null
+        ],
+        "pester_version": "6.2.0",
+        "powershell_version": "7.6.9"
+      }
+    },
+    {
+      "control": "broken-discovery",
+      "outcome": {
+        "classification": "invalid",
+        "code": "nonexecuting"
+      }
+    }
+  ],
+  "frozen_runtime_verified": true,
+  "latest_stable_checks_separate": true,
+  "checkout_integrity_passed": true
+}

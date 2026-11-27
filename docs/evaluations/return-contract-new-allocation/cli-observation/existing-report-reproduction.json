@@ -1,0 +1,22 @@
+{
+  "original-four": {
+    "machine_reproduced": true,
+    "html_reproduced": true,
+    "html_sha256": "af83335d938115ab287abb54d65da41cb9fad015e386255743b77bb10fbf35b2",
+    "total_records": 6,
+    "record_kinds": {
+      "behavioral": 4,
+      "inventory": 2
+    }
+  },
+  "admission-five": {
+    "machine_reproduced": true,
+    "html_reproduced": true,
+    "html_sha256": "a694626c12edaf9cd908d9a6a88e4c9499e9bd77afbb5c20b6d95f6532ee89c0",
+    "total_records": 8,
+    "record_kinds": {
+      "behavioral": 5,
+      "inventory": 3
+    }
+  }
+}

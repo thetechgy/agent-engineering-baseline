@@ -1,0 +1,17 @@
+{
+  "source": "33d953536e95bc81178e726fb3fed95a80566c7d",
+  "reviewed_profiles_preserved": 162,
+  "source_successors_with_identical_grader_fixture_and_semantics": 29,
+  "active_profiles_and_metrics_unchanged": true,
+  "protected_skills_tasks_runtime_pins_unchanged": [
+    ".apm/skills",
+    ".agents/skills",
+    ".github/locks",
+    ".github/evals/codex-pilot.json",
+    ".github/evals/pester-return-contract/candidate",
+    ".github/evals/pester-return-contract/transfer",
+    ".github/evals/powershell-pester-6"
+  ],
+  "production_agent_seconds": 600,
+  "paid_allocations_closed": true
+}

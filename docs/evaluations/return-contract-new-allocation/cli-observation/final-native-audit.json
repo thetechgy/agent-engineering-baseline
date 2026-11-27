@@ -1,0 +1,33 @@
+{
+  "source": "33d953536e95bc81178e726fb3fed95a80566c7d",
+  "run": 42937270892,
+  "attempt": 1,
+  "artifact": 13819268862,
+  "archive_digest": "sha256:00c567bbf6fa02d9e6d93f4697d085fa5e93234994a0e950094ef6f6f3b26817",
+  "inference": false,
+  "controls": [
+    {
+      "name": "final",
+      "actual_cli_child_observations": 2,
+      "correct_container_attribution": true,
+      "cleanup_complete": true,
+      "machine_reproduced": true,
+      "html_reproduced": true,
+      "html_sha256": "e75ad5e1bdf0d3a5abb9a83026d7d89c213fcf0e07c6864902acdea07ef13246"
+    },
+    {
+      "name": "final-missing-child",
+      "unknown_attempts": 2,
+      "primary_commands_failed": 2,
+      "secondary_native_shutdown_failures": 2,
+      "secondary_collection_failure": false,
+      "no_readiness": true,
+      "no_quality_values": true,
+      "control_is_not_historical_dns_reproduction": true,
+      "cleanup_complete": true,
+      "machine_reproduced": true,
+      "html_reproduced": true,
+      "html_sha256": "9ab188f2a2bfb141430d52c56666ee87ab4433d51f1aab82b0cd39f3b4ca454e"
+    }
+  ]
+}
