@@ -1470,6 +1470,7 @@ def validate_policy(value, *, custom_only=False, static=False):
             'Unsupported candidate producer identity')
     closed(value, ('id', 'published_id', 'provenance', 'patch_digest', 'fields', 'metric_set', 'judge', 'attempts') + (('producer_profile', 'scoring_policy') if candidate else ()))
     if candidate:
+        require(candidate is not profiles.NATIVE_1720 or custom_only, 'Scored launcher requires custom-only grading')
         require(value['judge']['enabled'] is False, 'Offline candidate judging must remain unavailable')
         require(value['producer_profile'] == candidate['id'] and value['scoring_policy'] == ('custom-overall-v1' if custom_only else candidate['scoring']), 'Unsupported candidate scoring profile')
         require(value['fields']['harbor'] == candidate['harbor'] and value['fields']['python'] == candidate['python'], 'Contradictory candidate policy')
@@ -1538,6 +1539,8 @@ def make_policy(fields=None, patch=None, metric_set=None, judge=None, attempts=N
     revision = value['fields']['evaluator_revision']
     diagnostic = native_diagnostic_profile(revision, patch, producer) if metric_set == 'custom-only' else None
     candidate = diagnostic or profiles.candidate_revision(revision, patch=patch)
+    if candidate is profiles.NATIVE_1720 and metric_set != 'custom-only':
+        candidate = None  # The same build also owns the released standard benchmark.
     if published not in static_evaluator.STATIC_PRODUCERS and candidate:
         value.update(producer_profile=candidate['id'], scoring_policy='custom-overall-v1' if metric_set == 'custom-only' else candidate['scoring'])
     return {**value, 'id': identity(value) if provenance != 'unknown' else None,

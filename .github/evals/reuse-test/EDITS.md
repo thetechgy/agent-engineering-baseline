@@ -105,19 +105,19 @@ earlier selection. These counts cover preparation through the paid gate.
 | `.github/scripts/evaluation_tasks.py` | 9 | 2 | Runner-coupled | Admit the exact comparison and control paths. | The adapter and allowed paths could be data. |
 | `.github/scripts/evaluator_profiles.py` | 2 | 2 | Evidence and registry | Resolve the latest installed evaluator build by its exact pins. | Already backed by pinned profile data. |
 | `.github/scripts/setup-campaign-authentication.sh` | 7 | 2 | Workflow and orchestration | Use the repository’s current native evaluator setup for the selected owner. | The setup profile could be registered data. |
-| `.github/scripts/skill_evidence.py` | 35 | 17 | Evidence and registry | Bind the new scored profiles and use the selected evaluator in native and public admission. Preserve retained Pester inputs. | Profile and retained input identities could be data. |
+| `.github/scripts/skill_evidence.py` | 38 | 17 | Evidence and registry | Bind the new scored profiles and use the selected evaluator in native and public admission. Preserve retained Pester inputs. | Profile and retained input identities could be data. |
 | `.github/tests/test_judge_calibration.py` | 1 | 1 | Tests | Check the historical scoring profiles against their current source successors. | The successor could be resolved from registration. |
 | `.github/tests/test_pester_return_contract.py` | 11 | 3 | Tests | Project out only the reviewed Podman registration before checking the frozen Pester hash. | Reviewable registration data could avoid this source projection. |
 | `.github/tests/test_podman_storage.py` | 79 | 9 | Tests | Check matching, grading, latest-runtime staging, and source and rule bindings. | The verdict fixtures are data. Admission checks stay executable. |
-| `.github/workflows/evaluation-campaign.yml` | 14 | 12 | Workflow and orchestration | Offer the scored Podman selection through the existing preparation and gate and install its required uv version. | The workflow choices could be derived from registration. |
+| `.github/workflows/evaluation-campaign.yml` | 8 | 6 | Workflow and orchestration | Offer the scored Podman selection through the existing preparation and gate and install its required uv version. | The workflow choices could be derived from registration. |
 
 | Class | Files | Added | Removed |
 | --- | ---: | ---: | ---: |
-| Evidence and registry | 7 | 501 | 22 |
+| Evidence and registry | 7 | 504 | 22 |
 | Runner-coupled | 6 | 30 | 13 |
 | Report | 1 | 6 | 4 |
-| Workflow and orchestration | 2 | 21 | 14 |
+| Workflow and orchestration | 2 | 15 | 8 |
 | Tests | 3 | 91 | 13 |
-| **Total** | **19** | **649** | **66** |
+| **Total** | **19** | **646** | **60** |
 
-Runner-coupled changes account for 43 of 715 changed lines.
+Runner-coupled changes account for 43 of 706 changed lines.
