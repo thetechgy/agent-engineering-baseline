@@ -2,6 +2,7 @@
 """Isolated static quality setup and authored-input evidence for CI."""
 
 import argparse
+import importlib.metadata
 import os
 from pathlib import Path
 import shutil
@@ -17,9 +18,12 @@ HISTORY_PATCH = ROOT / '.github/scripts/static-quality-history.patch'
 
 
 def write_versions(tools):
-    runtime = dict(evidence.SCANNER_RUNTIME_CURRENT_UNPATCHED,
-                   evaluator_revision=static_evaluator.REVISION, semgrep_lock=static_evaluator.SEMGREP_LOCK)
-    versions = dict(static_evaluator.VERSIONS, scanners=runtime['versions'],
+    installed = importlib.metadata.version('skillevaluator')
+    owner, runtime = {
+        static_evaluator.VERSION: (static_evaluator.VERSIONS, evidence.SCANNER_RUNTIME_STATIC_CANDIDATE),
+        '1.0.1': (static_evaluator.RETAINED, evidence.SCANNER_RUNTIME_RETAINED_STATIC),
+    }[installed]
+    versions = dict(owner, scanners=runtime['versions'],
                     skillspector_revision=runtime['skillspector_revision'], scanner_runtime=runtime)
     static_evaluator.validate_owner(versions)
     for package, owner in (('semgrep', 'semgrep'), ('skillspector', 'skillspector'),

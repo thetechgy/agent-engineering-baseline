@@ -126,7 +126,7 @@ def run(output, tools, repository=evidence.ROOT, *, redact=False):
                 assert not raw['incomplete_scans'], 'Bad scanner control coverage was incomplete'
             else:
                 assert 'skillspector' in security['incomplete_scans'] and 'skillspector' in raw['incomplete_scans'], raw
-                if versions['skillevaluator'] in ('0.9.0', '1.0.1'):
+                if versions['skillevaluator'] in ('0.9.0', *evidence.static_evaluator.SOURCE_PINS):
                     # A confirmed finding outranks incompleteness in this release.
                     # Validate both axes with the released rehydrator.
                     reports.released_static_results(raw)
@@ -205,7 +205,7 @@ def run(output, tools, repository=evidence.ROOT, *, redact=False):
                     raise AssertionError('Unknown scanner provenance accepted')
     (output / 'report.html').write_text(report)
     write(output / 'controls.json', {'synthetic': True, 'versions': versions, 'outcomes': outcomes})
-    if versions['skillevaluator'] != '1.0.1':
+    if versions['skillevaluator'] == '0.9.0':
         from qualify_scanner_caveats import qualify
         qualify(output / 'repository-caveats', tools, repository)
     if redact:
@@ -229,7 +229,7 @@ def next_tools(tools, destination):
     profile = profiles.NEXT
     profiles.runtime(profiles.candidate_versions(profile), owning=True)
     versions = evidence.read_json(tools / 'versions.json')
-    scanner_runtime = dict(evidence.SCANNER_RUNTIME_NEXT, evaluator_revision=static_evaluator.REVISION)
+    scanner_runtime = evidence.SCANNER_RUNTIME_STATIC_CANDIDATE
     expected = dict(static_evaluator.VERSIONS, scanner_runtime=scanner_runtime,
                     scanners=scanner_runtime['versions'], skillspector_revision=scanner_runtime['skillspector_revision'])
     evidence.require(versions == expected, 'Use scanner tools from the pinned released static setup')

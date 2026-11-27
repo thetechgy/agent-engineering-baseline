@@ -650,9 +650,9 @@ def validate_history_metric_rows(rows):
                 and (-1 if name == "Skill Lift" else 0) <= value <= 1, "Invalid numeric metric")
 
 
-def validate_released_metrics(data, workspace, name, revision, *, mode):
+def validate_released_metrics(data, workspace, name, revision, *, mode, historical=False):
     """Validate the released score projection on the lean publication host."""
-    from benchmark_native import NATIVE_PATCH_DIGEST, released_policy, score_series
+    from benchmark_native import NATIVE_PRODUCER, native_owner, released_policy, score_series
 
     required = {"schema_version", "skill", "mode", "revision", "series", "policy", "patch_sha256",
                 "dataset_digest", "metrics"}
@@ -663,9 +663,12 @@ def validate_released_metrics(data, workspace, name, revision, *, mode):
     benchmark_skill(workspace, name)
     require(bool(re.fullmatch(r"[0-9a-f]{40}", revision)) and data["revision"] == revision,
             "Released history revision differs")
-    require(data["policy"] == released_policy(name) and data["patch_sha256"] == NATIVE_PATCH_DIGEST,
-            "Released history producer or policy differs")
-    require(data["series"] == score_series(name, mode), "Released history series differs")
+    policy = data['policy']
+    require(type(policy) is dict and type(data['patch_sha256']) is str, "Invalid released history producer")
+    owner = native_owner(policy.get('evaluator_revision'), 'sha256:' + data['patch_sha256'])
+    require(owner is not None and (historical or owner == NATIVE_PRODUCER)
+            and policy == released_policy(name, owner=owner), "Released history producer or policy differs")
+    require(data["series"] == score_series(name, mode, owner=owner), "Released history series differs")
     require(isinstance(data["dataset_digest"], str) and re.fullmatch(r"sha256:[0-9a-f]{64}", data["dataset_digest"]),
             "Invalid released history dataset digest")
     validate_history_metric_rows(data["metrics"])

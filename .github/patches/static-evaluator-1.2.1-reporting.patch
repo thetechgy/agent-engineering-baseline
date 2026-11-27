@@ -1,0 +1,78 @@
+diff --git a/.github/scripts/skill_evidence.py b/.github/scripts/skill_evidence.py
+index aa3465b..0aee22e 100644
+--- a/.github/scripts/skill_evidence.py
++++ b/.github/scripts/skill_evidence.py
+@@ -2994,11 +3034,11 @@ def normalize_static(root, name, workspace=ROOT):
+     require(type(native['incomplete_scans']) is list and len(native['incomplete_scans']) <= 100, 'Scanner limit')
+     for scanner in native['incomplete_scans']:
+         token(scanner)
+-    released = native.get('version') == '0.9.0'
++    released = native.get('version') in reports.RELEASED_STATIC_VERSIONS
+     if released:
+         require(root / 'versions.json' in scanned_entries, 'Missing static producer provenance')
+         producer = read_json_and_digest(root / 'versions.json', budget=budget, directory_identities=directory_identities, directory_states=directory_states, file_states=file_states)[0]
+-        require(validate_runtime_versions(producer) is profiles.NEXT, 'Static producer version mismatch')
++        require(validate_runtime_versions(producer).get('version') == native['version'], 'Static producer version mismatch')
+         from skillevaluator.reporting.base import passes_required_gate
+         released_gates = [passes_required_gate(result) for result in reports.released_static_results(native)]
+     else:
+@@ -3143,8 +3183,9 @@ def normalize_static(root, name, workspace=ROOT):
+         if released:
+             data['policy'] = make_policy(
+                 {key: versions[key] for key in ('evaluator_revision', 'harbor', 'python')},
+-                patch='sha256:' + producer['patch_sha256'],
+-                judge={'model': None, 'provider': None, 'enabled': False}, provenance='runtime_recorded')
++                patch='sha256:' + producer['patch_sha256'] if 'patch_sha256' in producer else None,
++                judge={'model': None, 'provider': None, 'enabled': False}, provenance='runtime_recorded',
++                published=producer.get('producer_profile'))
+         else:
+             data['policy'] = make_policy({'evaluator_revision': versions.get('evaluator_revision')}, provenance='runtime_recorded')
+         data['references'].append(reference_from_digest(root, root / 'versions.json', 'skill-quality', versions_digest))
+diff --git a/.github/scripts/skill_report.py b/.github/scripts/skill_report.py
+index c840619..635f214 100644
+--- a/.github/scripts/skill_report.py
++++ b/.github/scripts/skill_report.py
+@@ -704,6 +704,10 @@ def static_result(run, records):
+     parts = [f'<article class="run" id="{anchor("record", rid)}"><h3>Static checks</h3><p>Evidence ' +
+         text(run['availability']['status']) + '. Static checks are not behavioral performance.</p>' + disclosure('Exact record identity', rid),
+         '<p>Limitations: ' + limitations(run['availability']) + '</p>']
++    policy = records[rid]['policy']
++    producer = policy.get('producer_profile') or policy.get('published_id')
++    if producer:
++        parts.append('<p>Producer: ' + code(producer) + '.</p>')
+     runtime = run.get('scanner_runtime')
+     if runtime:
+         parts.append('<p>Recorded scanner versions: ' + safe(', '.join(
+diff --git a/.github/scripts/skill_reports.py b/.github/scripts/skill_reports.py
+index b9843d5..7690fba 100644
+--- a/.github/scripts/skill_reports.py
++++ b/.github/scripts/skill_reports.py
+@@ -203,12 +203,15 @@ def benchmark_policy(name):
+             "competing_revision": "1683f50e94c9fd489191f73d7c8f7e2bd871bd0c"} if name == "gh" else POLICY
+
+
++RELEASED_STATIC_VERSIONS = ('0.9.0', '1.0.1', '1.2.1')
++
++
+ def released_static_results(payload):
+-    """Validate the released 0.9 static contract in its exact owning runtime."""
++    """Validate a released static contract in its exact owning runtime."""
+     import importlib.metadata
+-    require(payload.get('version') == '0.9.0'
+-            and importlib.metadata.version('skillevaluator') == '0.9.0',
+-            'Static report requires its 0.9.0 owning runtime')
++    require(payload.get('version') in RELEASED_STATIC_VERSIONS
++            and importlib.metadata.version('skillevaluator') == payload['version'],
++            'Static report requires its owning runtime')
+     from skillevaluator.reporting.retained import retained_results
+     return retained_results(payload, allowed_tiers={1})
+
+@@ -250,7 +253,7 @@ def catalog_report(workspace, root):
+             require(isinstance(report["incomplete_scans"], list), "Missing evidence status")
+             require(all(isinstance(name, str) and name for name in report["incomplete_scans"]),
+                     "Invalid incomplete scanner names")
+-            if report.get("version") == "0.9.0":
++            if report.get("version") in RELEASED_STATIC_VERSIONS:
+                 released_static_results(report)
+             else:
+                 expected_status = "incomplete" if report["incomplete_scans"] else (

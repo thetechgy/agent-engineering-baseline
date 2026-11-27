@@ -67,11 +67,15 @@ jobs:
       - name: Install pinned released benchmark runtime for regression checks
         if: github.ref != 'refs/heads/main'
         working-directory: trusted
-        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-101
+        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-121
       - name: Install the pinned private-review test environment
         if: github.ref != 'refs/heads/main'
         working-directory: trusted
         run: bash .github/scripts/setup-static-evaluator.sh review-contracts
+      - name: Install retained private-review validators
+        if: github.ref != 'refs/heads/main'
+        working-directory: trusted
+        run: bash .github/scripts/setup-static-evaluator.sh review-retained-101
       - name: Validate reviewed feature revision without inference
         if: github.ref != 'refs/heads/main'
         timeout-minutes: 25
@@ -87,6 +91,10 @@ jobs:
         if: github.ref != 'refs/heads/main'
         working-directory: trusted
         run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-candidate
+      - name: Acquire the pinned historical gh fixture source
+        if: github.ref != 'refs/heads/main'
+        working-directory: trusted
+        run: bash .github/scripts/setup-historical-gh-fixture.sh
       - name: Verify captured custom report fixtures using their released owner
         if: github.ref != 'refs/heads/main'
         working-directory: trusted
@@ -186,7 +194,7 @@ jobs:
 
       - name: Install the pinned released benchmark runtime
         timeout-minutes: 15
-        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-101
+        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-121
 
       - name: Read canonical history after approval
         timeout-minutes: 1
@@ -273,6 +281,10 @@ jobs:
         run: |
           "$SKILL_NATIVE_BENCHMARK_PYTHON" .github/scripts/skill_reports.py artifacts \
             "$RUNNER_TEMP/skill-benchmark" "$BENCHMARK_SKILL" "$RUNNER_TEMP/skill-benchmark-artifact"
+          advisory="$RUNNER_TEMP/skill-metrics/advisory-statistics.json"
+          if [ -f "$advisory" ]; then
+            cp -- "$advisory" "$RUNNER_TEMP/skill-benchmark-artifact/advisory-statistics.json"
+          fi
 
       - name: Verify evaluator left the checkout unchanged
         id: checkout-integrity

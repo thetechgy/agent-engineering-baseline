@@ -15,6 +15,7 @@ import sys
 import tomllib
 
 from benchmark_podman import CODEX_PROFILE, codex_members, configure_agent, configure_openai_task
+import evaluator_profiles as profiles
 import gh_candidate
 import gh_evaluations as gh
 import pester_evaluations as pester
@@ -23,9 +24,22 @@ from skill_reports import (MODES, POLICY, benchmark_options, benchmark_policy, l
 
 
 ROOT = Path(__file__).resolve().parents[2]
-NATIVE_PRODUCER = "skillevaluator-1.0.1-benchmark-native-v2"
-NATIVE_SOURCE_DIGEST = "sha256:78dfd05becd4b4e94882aa0305fc58d28a6ef40c10813b384335fd6a7f0be1ef"
-NATIVE_PATCH_DIGEST = "30a03343d670e2b83aeb5519f009549c6528b3cb8235cffc4522aab64b872f57"
+RETAINED_NATIVE_PRODUCER = "skillevaluator-1.0.1-benchmark-native-v2"
+NATIVE_PRODUCER = "skillevaluator-1.2.1-benchmark-native-v1"
+NATIVE_SOURCE_DIGEST = "sha256:e302395bf4615c57bfeb936e6c097e6b2a22ec80b2179e3351e7b1d361231613"
+NATIVE_PATCH_DIGEST = "dc5674786ce86cfeca6ba90bcdeec6cd4f9e6b3fc7d60301b1bfb9a8a61f18d6"
+NATIVE_OWNERS = {
+    RETAINED_NATIVE_PRODUCER: {
+        "backends": (profiles.RELEASE_BENCHMARK, profiles.RETAINED_RELEASE_BENCHMARK),
+        "source_tree_digest": "sha256:78dfd05becd4b4e94882aa0305fc58d28a6ef40c10813b384335fd6a7f0be1ef",
+        "patch_sha256": "30a03343d670e2b83aeb5519f009549c6528b3cb8235cffc4522aab64b872f57",
+    },
+    NATIVE_PRODUCER: {
+        "backends": (profiles.CURRENT_RELEASE,),
+        "source_tree_digest": NATIVE_SOURCE_DIGEST,
+        "patch_sha256": NATIVE_PATCH_DIGEST,
+    },
+}
 BACKENDS = {"podman": "aeb-benchmark-docker", "gh": "aeb-gh-fixture"}
 DIAGNOSTIC_BACKEND = BACKENDS["podman"]
 EXECUTION_BACKENDS = {**BACKENDS, pester.NAME: DIAGNOSTIC_BACKEND}
@@ -186,19 +200,30 @@ def gh_finalizer(manifest, emitted):
     require(actual == approved["tasks"], "Released gh task staging differs from the prepared approval")
 
 
-def native_profile(*, backend=None):
-    from evaluator_profiles import RELEASE_BENCHMARK
-
-    return {**(RELEASE_BENCHMARK if backend is None else backend), "id": NATIVE_PRODUCER,
-            "source_tree_digest": NATIVE_SOURCE_DIGEST,
-            "patch_sha256": NATIVE_PATCH_DIGEST}
+def native_owner(revision, patch):
+    """Match a recorded policy to the only release that published it."""
+    return next((name for name, pins in NATIVE_OWNERS.items()
+                 if pins["backends"][0]["revision"] == revision and patch == "sha256:" + pins["patch_sha256"]), None)
 
 
-def native_versions(*, backend=None):
-    from evaluator_profiles import RELEASE_BENCHMARK, candidate_versions
+def native_profile(*, backend=None, owner=NATIVE_PRODUCER):
+    if backend is None:
+        backend = NATIVE_OWNERS[owner]["backends"][0]
+    else:
+        owner = next((name for name, pins in NATIVE_OWNERS.items()
+                      if any(backend is entry for entry in pins["backends"])), None)
+        require(owner is not None, "Unsupported native benchmark backend")
+    pins = NATIVE_OWNERS[owner]
+    return {**backend, "id": owner, "source_tree_digest": pins["source_tree_digest"],
+            "patch_sha256": pins["patch_sha256"]}
 
-    return {**candidate_versions(RELEASE_BENCHMARK if backend is None else backend), "patch_sha256": NATIVE_PATCH_DIGEST,
-            "source_tree_digest": NATIVE_SOURCE_DIGEST, "producer_profile": NATIVE_PRODUCER}
+
+def native_versions(*, backend=None, owner=NATIVE_PRODUCER):
+    if backend is None:
+        backend = NATIVE_OWNERS[owner]["backends"][0]
+    profile = native_profile(backend=backend)
+    return {**profiles.candidate_versions(backend), "patch_sha256": profile["patch_sha256"],
+            "source_tree_digest": profile["source_tree_digest"], "producer_profile": profile["id"]}
 
 
 def adoption_policy():
@@ -444,7 +469,7 @@ def validate_trial_population(run, agent, name, cases, attempts, agent_selector)
                 number(score)
                 require(score == row["score"] == result["verifier_result"]["rewards"]["overall"],
                         "Released trial score differs from its verifier or rollup")
-                rewards[arm].append(reward)
+                rewards[arm].append({**reward, "_attempt_ordinal": ordinal, "_trial_name": trial})
         require({member.name for member in trials.iterdir()} == expected, "Unexpected released trial member")
     return rewards
 
@@ -483,7 +508,8 @@ def validate_released_aggregates(agent, rewards, cases):
     require(agent["lift"] == lift, "Released lift differs from its paired rewards")
 
 
-def validate_collected_pair(result, run, root, name, mode, revision, cases, *, agent_selector=CODEX_AGENT):
+def validate_collected_pair(result, run, root, name, mode, revision, cases, *, agent_selector=CODEX_AGENT,
+                            statistics=None):
     """Require the selected native report and complete released trial population."""
     from skillevaluator import __version__
     from skillevaluator.evaluation import EvaluationService
@@ -536,33 +562,83 @@ def validate_collected_pair(result, run, root, name, mode, revision, cases, *, a
     validate_released_aggregates(agent, rewards, cases)
     if name == "gh":
         gh.deterministic_gate(run, cases, MODES[mode], authorization_metric=GH_ACCESS_METRIC)
+    if statistics is not None:
+        advisory = advisory_statistics(agent, rewards, cases, MODES[mode])
+        if advisory:
+            statistics.update(advisory, not_applicable_metrics=agent["not_applicable_metrics"])
     return metric_rows(agent)
 
 
-def released_policy(name):
-    from evaluator_profiles import RELEASE_BENCHMARK
+def advisory_statistics(agent, rewards, cases, attempts):
+    """Recompute upstream report statistics from the already admitted reward population."""
+    from skillevaluator.tier3.harbor.collector import _pass_summary
+    from skillevaluator.tier3.harbor.run_statistics import ArmInput, agent_statistics
 
-    require(name in BACKENDS, "Unsupported released score policy")
+    if not agent.get("lift_uncertainty") or "reliability" not in agent:
+        return {}
+    try:
+        arms = {
+            name: ArmInput(rows, "succeeded", _pass_summary(
+                rows, n_attempts=attempts, pass_threshold=0.5, expected_cases=len(cases), expected_case_ids=cases))
+            for name, rows in rewards.items()
+        }
+        expected = agent_statistics(arms, expected_case_ids=cases, stop_on_pass=False, lift_eligible=True)
+        if any(expected[field] != agent[field] for field in ("lift_uncertainty", "reliability")):
+            return {}
+        interval = expected["lift_uncertainty"]["effectiveness"]
+        if interval is not None and (interval["partial"] or interval["n_cases"] != len(cases)):
+            expected["lift_uncertainty"]["effectiveness"] = None
+        return expected
+    except (ArithmeticError, KeyError, TypeError, ValueError):
+        return {}
+
+
+def statistics_summary(statistics):
+    if not statistics:
+        return []
+    lines = []
+    interval = statistics["lift_uncertainty"]["effectiveness"]
+    if interval and interval["ci_low"] is not None and interval["ci_high"] is not None:
+        lines += [f"Case-weighted lift {interval['estimate']:+.4f}, 95% interval "
+                  f"[{interval['ci_low']:+.4f}, {interval['ci_high']:+.4f}]. "
+                  f"{interval['n_cases']} paired cases, {interval['precision'].replace('_', ' ')} precision."]
+        if interval["ci_low"] <= 0 <= interval["ci_high"]:
+            lines.append("The interval includes zero.")
+    for name, row in statistics["reliability"].items():
+        if row["k"] > 1 and row["pass_at_k"] is not None and row["pass_hat_k"] is not None:
+            omitted = ", ".join(statistics["not_applicable_metrics"][name]) or "none"
+            lines.append(f"{name.replace('_', ' ')} ({row['n_cases']} cases). "
+                         f"Pass@{row['k']} {row['pass_at_k']:.1%}, pass^{row['k']} {row['pass_hat_k']:.1%}. "
+                         f"Metrics outside this arm’s rubric: {omitted}.")
+    if not lines:
+        return []
+    return ["", "### Advisory benchmark statistics", "", *lines]
+
+
+def released_policy(name, *, owner=NATIVE_PRODUCER):
+    require(name in BACKENDS and owner in NATIVE_OWNERS, "Unsupported released score policy")
+    if owner == RETAINED_NATIVE_PRODUCER:
+        return read_json(ROOT / ".github/evals/benchmark-native-101-policies.json")[name]
+    profile = NATIVE_OWNERS[owner]["backends"][0]
     options = benchmark_options(name)
     return {**benchmark_policy(name), "grading": options["grading_mode"], "workspace_mode": options["workspace_mode"],
-            "evaluator_revision": RELEASE_BENCHMARK["revision"], "harbor": RELEASE_BENCHMARK["harbor"],
-            "python": RELEASE_BENCHMARK["python"], "environment": BACKENDS[name],
-            "producer_profile": NATIVE_PRODUCER, "scoring_policy": RELEASE_BENCHMARK["scoring"],
-            "judge_contract": "skill-evaluator-judges-v2", "lock_sha256": RELEASE_BENCHMARK["lock_sha256"],
+            "evaluator_revision": profile["revision"], "harbor": profile["harbor"],
+            "python": profile["python"], "environment": BACKENDS[name],
+            "producer_profile": owner, "scoring_policy": profile["scoring"],
+            "judge_contract": "skill-evaluator-judges-v2", "lock_sha256": profile["lock_sha256"],
             "task_source": "native_harbor" if name == "gh" else "evals_json",
             "dataset_profile": GH_DATASET_PROFILE if name == "gh" else "podman-authored"}
 
 
-def score_series(name, mode):
+def score_series(name, mode, *, owner=NATIVE_PRODUCER):
     require(mode in MODES, "Unsupported released score mode")
-    from evaluator_profiles import RELEASE_BENCHMARK
-
-    identity = [released_policy(name), NATIVE_PATCH_DIGEST, RELEASE_BENCHMARK["codex_tool_surface"], mode]
+    pins = NATIVE_OWNERS[owner]
+    identity = [released_policy(name, owner=owner), pins["patch_sha256"], pins["backends"][0]["codex_tool_surface"], mode]
     material = json.dumps(identity, sort_keys=True).encode()
     return hashlib.sha256(material).hexdigest()[:16]
 
 
-def score_record(workspace, root, name, mode, revision, *, selected=None):
+def score_record(workspace, root, name, mode, revision, *, selected=None, statistics=None):
     """Project complete released scores into their own versioned record."""
     from skillevaluator.tier3.dataset_utils import load_dataset_entries
 
@@ -579,7 +655,7 @@ def score_record(workspace, root, name, mode, revision, *, selected=None):
                 "Released score report requires the full authored gh cohort")
     run = select_run(root, name, selected)
     result = read_json(run / "result.json")
-    metrics = validate_collected_pair(result, run, root, name, mode, revision, cases)
+    metrics = validate_collected_pair(result, run, root, name, mode, revision, cases, statistics=statistics)
     return {"schema_version": 1, "skill": name, "mode": mode, "revision": revision,
             "series": score_series(name, mode), "policy": released_policy(name), "patch_sha256": NATIVE_PATCH_DIGEST,
             "dataset_digest": result["dataset_digest"], "metrics": metrics}
@@ -650,16 +726,22 @@ def main():
         from skill_reports import summary, usage_summary
 
         run = select_run(args.root, args.skill, None)
-        record = score_record(ROOT, args.root, args.skill, args.mode, args.revision, selected=run.name)
+        statistics = {}
+        record = score_record(ROOT, args.root, args.skill, args.mode, args.revision, selected=run.name,
+                              statistics=statistics)
         if args.skill == "gh":
             gate = gh.deterministic_gate(run, [entry["id"] for entry in gh.dataset(ROOT)], MODES[args.mode],
                                          authorization_metric=GH_ACCESS_METRIC)
             write_json(args.root / "deterministic.json", {"trials": gate})
-        write_outputs({"released-scores.json": record}, args.destination, workspace=ROOT, input_path=args.root)
+        publications = {"released-scores.json": record}
+        advisory = statistics_summary(statistics)
+        if advisory:
+            publications["advisory-statistics.json"] = statistics
+        write_outputs(publications, args.destination, workspace=ROOT, input_path=args.root)
         lines = [f"## {args.skill} {args.mode} benchmark", "", "| Metric | Score |", "| --- | --- |"]
         lines.extend(f"| {row['name']} | {row['value']:.4f} |" for row in record["metrics"])
         lines.extend(["", f"Dataset `{record['dataset_digest']}`", f"Source `{args.revision}`"])
-        summary(lines + usage_summary(run))
+        summary(lines + advisory + usage_summary(run))
         return 0
     require(args.command == "execute", "Unknown released benchmark command")
     from skillevaluator.evaluation import EvaluationService

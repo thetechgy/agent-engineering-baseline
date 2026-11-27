@@ -278,9 +278,9 @@ class OrchestrationTests(unittest.TestCase):
         for member in ('.github/scripts/benchmark_native.py', '.github/scripts/skill_reports.py',
                        '.github/evaluator-backends/candidate-101/benchmark_codex.py',
                        '.github/evaluator-backends/candidate-101/codex-catalog/models.json',
-                       '.github/patches/skillevaluator-v1.0.1-benchmark-staging.patch',
-                       '.github/patches/skillevaluator-v1.0.1-benchmark-recovery.patch',
-                       '.github/patches/skillevaluator-v1.0.1-benchmark-evidence.patch'):
+                       '.github/patches/skillevaluator-v1.2.1-benchmark-staging.patch',
+                       '.github/patches/skillevaluator-v1.2.1-benchmark-recovery.patch',
+                       '.github/patches/skillevaluator-v1.2.1-benchmark-evidence.patch'):
             with self.subTest(member=member):
                 self.assertNotEqual(orchestration.identity(pinned), orchestration.identity(
                     orchestration.benchmark_runtime_inputs({**files, member: ('100644', 'blob', 'b' * 40)})))
@@ -829,7 +829,7 @@ class WorkflowAndUsageTests(unittest.TestCase):
         self.assertEqual(benchmark['concurrency'], {'group': 'benchmark-skills', 'queue': 'max', 'cancel-in-progress': False})
         self.assertIn("needs.evaluate.outputs.execution_success == 'true'", benchmark['jobs']['publish-history']['if'])
         self.assertEqual(set(benchmark['jobs']), {'context', 'evaluate', 'publish-history'})
-        self.assertEqual(sum(step.get('run', '').endswith(' native-benchmark-101') for step in steps), 1)
+        self.assertEqual(sum(step.get('run', '').endswith(' native-benchmark-121') for step in steps), 1)
         self.assertNotIn('OPENAI_API_KEY', steps[guard]['env'])
         self.assertIn('"$SKILL_NATIVE_BENCHMARK_PYTHON"', steps[guard + 1]['run'])
         publisher = yaml.safe_load((ROOT / '.github/workflows/publish-skill-report.yml').read_text())
@@ -838,16 +838,16 @@ class WorkflowAndUsageTests(unittest.TestCase):
     def test_released_launcher_qualification_is_isolated_from_protected_execution(self):
         workflow = yaml.safe_load((ROOT / '.github/workflows/current-evaluator.yml').read_text())
         jobs = workflow['jobs']
-        harness = jobs['benchmark-101-launcher']
+        harness = jobs['benchmark-121-launcher']
         self.assertNotIn('environment', harness)
         self.assertNotIn('secrets.', json.dumps(harness))
         self.assertEqual(workflow['permissions'], {'contents': 'read'})
         self.assertEqual(harness['strategy']['matrix']['include'], [
             {'suite': 'podman', 'mode': 'standard'}, {'suite': 'gh', 'mode': 'confirmation'}])
-        for name in ('cohorts', 'native-gh', 'report', 'startup', 'benchmark-101'):
-            self.assertIn('!inputs.benchmark-101-launcher', jobs[name]['if'])
+        for name in ('cohorts', 'native-gh', 'report', 'startup', 'benchmark-121'):
+            self.assertIn('!inputs.benchmark-121-launcher', jobs[name]['if'])
         steps = [step.get('run', '') for step in harness['steps']]
-        setup = steps.index('bash .github/scripts/setup-static-evaluator.sh native-benchmark-101')
+        setup = steps.index('bash .github/scripts/setup-static-evaluator.sh native-benchmark-121')
         qualify = next(index for index, step in enumerate(steps) if 'qualify_native_benchmark.py' in step)
         self.assertLess(setup, qualify)
         self.assertIn('"$SKILL_NATIVE_BENCHMARK_PYTHON"', steps[qualify])
@@ -902,7 +902,7 @@ class WorkflowAndUsageTests(unittest.TestCase):
         self.assertEqual(scanner['env'], {'SKILL_EVALUATION_KIND': 'scanner-contracts',
                                           'SKILLEVALUATOR_REQUIRE_SEMGREP': '1'})
         self.assertNotIn('secrets.', json.dumps([scanner_setup, scanner]))
-        for command, setup_kind in ((expected[0], 'native-benchmark-101'), (expected[2], 'native-benchmark-candidate')):
+        for command, setup_kind in ((expected[0], 'native-benchmark-121'), (expected[2], 'native-benchmark-candidate')):
             for steps in (context['steps'], validate_steps):
                 setup = next(step for step in steps if step.get('run', '').endswith(' ' + setup_kind))
                 test = next(step for step in steps if command in step.get('run', ''))

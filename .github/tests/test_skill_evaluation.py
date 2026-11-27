@@ -317,14 +317,35 @@ class ReportTests(unittest.TestCase):
         result = reports.read_json(directory / "benchmark.json")
         self.assertEqual([row["value"] for row in result], [row["value"] for row in candidate["metrics"]])
 
+    def test_retained_release_is_readable_but_cannot_enter_new_publication(self):
+        import benchmark_native as native
+
+        owner = native.RETAINED_NATIVE_PRODUCER
+        recorded = {**self.metrics(), "policy": native.released_policy("podman", owner=owner),
+                    "patch_sha256": native.native_versions(owner=owner)["patch_sha256"],
+                    "series": native.score_series("podman", "standard", owner=owner)}
+        reports.validate_released_metrics(recorded, self.workspace, "podman", SHA, mode="standard", historical=True)
+        self.assertNotEqual(recorded["series"], native.score_series("podman", "standard"))
+        directory = self.root / "metrics"
+        reports.write_json(directory / "released-scores.json", recorded)
+        with patch.dict(os.environ, {"GITHUB_EVENT_NAME": "workflow_dispatch", "GITHUB_REF": "refs/heads/main",
+                                    "BENCHMARK_MODE": "standard"}):
+            with self.assertRaisesRegex(ValueError, "history producer or policy differs"):
+                reports.publish_metrics(self.workspace, directory, "podman", released=True)
+        self.assertFalse((directory / "benchmark.json").exists())
+
     def test_released_runtime_receipt_cannot_alias_the_compatibility_owner(self):
         import benchmark_native as native
         import evaluator_profiles as profiles
 
-        candidate = profiles.candidate_versions(profiles.RELEASE_BENCHMARK)
+        candidate = profiles.candidate_versions(profiles.CURRENT_RELEASE)
         receipt = native.native_versions()
         self.assertEqual(profiles.runtime(receipt), native.native_profile())
-        self.assertIs(profiles.runtime(candidate), profiles.RELEASE_BENCHMARK)
+        self.assertIs(profiles.runtime(candidate), profiles.CURRENT_RELEASE)
+        retained = native.native_versions(owner=native.RETAINED_NATIVE_PRODUCER)
+        self.assertEqual(profiles.runtime(retained), native.native_profile(owner=native.RETAINED_NATIVE_PRODUCER))
+        with self.assertRaises(ValueError):
+            profiles.runtime({**retained, "producer_profile": native.NATIVE_PRODUCER})
         prior = profiles.RETAINED_RELEASE_BENCHMARK
         prior_receipt = native.native_versions(backend=prior)
         self.assertIs(profiles.runtime(profiles.candidate_versions(prior)), prior)
@@ -359,6 +380,37 @@ class ReportTests(unittest.TestCase):
                                 {**result, "producer_profile": "skillevaluator-1.0.1-benchmark-candidate-v2"}):
                     with self.subTest(suite=suite, mode=mode), self.assertRaises(ValueError):
                         evidence.validate_policy(altered)
+
+    def test_advisory_statistics_compare_verified_rewards_to_reported_values(self):
+        from skillevaluator.tier3.harbor.collector import _pass_summary
+        from skillevaluator.tier3.harbor.run_statistics import ArmInput, agent_statistics
+
+        import benchmark_native as native
+
+        cases = ["case-one", "case-two"]
+        rewards = {
+            arm: [{"entry_id": case, "_attempt_ordinal": attempt,
+                   "_trial_name": f"{case}__attempt{attempt:03d}", "has_skill": present,
+                   "score_policy": "skill-evaluator-dimension-mean-v1",
+                   "metric_set": "skill-evaluator-default-v2",
+                   "accuracy": float(present or attempt == 1),
+                   "goal_accuracy": float(present or attempt == 1),
+                   "behavior_check": 1.0, "security": 1.0,
+                   "skill_execution": 1.0, "skill_efficiency": 1.0}
+                  for case in cases for attempt in (1, 2, 3)]
+            for arm, present in native.GH_ARMS.items()
+        }
+        arms = {arm: ArmInput(rows, "succeeded", _pass_summary(
+            rows, n_attempts=3, pass_threshold=0.5, expected_cases=2, expected_case_ids=cases))
+            for arm, rows in rewards.items()}
+        recorded = agent_statistics(arms, expected_case_ids=cases, stop_on_pass=False, lift_eligible=True)
+        selected = native.advisory_statistics(recorded, rewards, cases, 3)
+        self.assertEqual(selected, recorded)
+        self.assertEqual(selected["lift_uncertainty"]["effectiveness"]["n_cases"], 2)
+        self.assertEqual(selected["reliability"]["with_skill"]["pass_hat_k"], 1.0)
+        altered = {**recorded, "lift_uncertainty": {"effectiveness": {"n_cases": 99}}}
+        self.assertEqual(native.advisory_statistics(altered, rewards, cases, 3), {})
+        self.assertEqual(native.advisory_statistics({}, rewards, cases, 3), {})
 
     def test_released_gh_access_metric_is_bound_to_its_producer(self):
         import skill_evidence as evidence
@@ -813,7 +865,7 @@ class UpstreamTests(unittest.TestCase):
     def test_pinned_evaluator_patch_only_pins_codex_for_docker_runs(self):
         from skillevaluator.tier3.harbor import runner
 
-        if importlib.metadata.version('skillevaluator') == '1.0.1':
+        if importlib.metadata.version('skillevaluator') == '1.2.1':
             import benchmark_native
 
             benchmark_native.validate_runtime()
@@ -1146,12 +1198,12 @@ class WorkflowTests(unittest.TestCase):
                         temporary = checkout / "tools" if inside else root / layout / "tools"
                         env = {"PATH": os.defpath, "RUNNER_TEMP": str(temporary),
                                "GITHUB_WORKSPACE": str(workspace), "GITHUB_ENV": str(root / "environment")}
-                        result = subprocess.run(["bash", str(script), "native-benchmark-101"], cwd=root, env=env,
+                        result = subprocess.run(["bash", str(script), "native-benchmark-121"], cwd=root, env=env,
                                                 text=True, capture_output=True, timeout=10)
                         if inside:
                             self.assertNotEqual(result.returncode, 0)
                             self.assertIn("Tools must be outside the checkout.", result.stderr)
-                            self.assertFalse((temporary / "skill-native-benchmark-101").exists())
+                            self.assertFalse((temporary / "skill-native-benchmark-121").exists())
                         else:
                             self.assertEqual(result.returncode, 0, result.stderr)
                             self.assertEqual(result.stdout.strip(), str(checkout.resolve()))
@@ -1173,7 +1225,8 @@ class WorkflowTests(unittest.TestCase):
         setup = (REPO / ".github/scripts/setup-static-evaluator.sh").read_text()
         self.assertLess(setup.index("umask 077"), setup.index('mkdir -m 700 "$tools"'))
         self.assertIn('python_export=SKILL_NATIVE_BENCHMARK_PYTHON', setup)
-        self.assertIn('benchmark_native.py" verify-runtime', setup)
+        verification = 'if kind == "native-benchmark-121":\n    native.validate_runtime()'
+        self.assertLess(setup.index(verification), setup.index('>> "$GITHUB_ENV"', setup.index(verification)))
 
     def test_setup_provenance_records_the_pinned_benchmark_runtime(self):
         from benchmark_native import adoption_policy, validate_adoption
@@ -1218,7 +1271,7 @@ class WorkflowTests(unittest.TestCase):
                              for step in jobs["evaluate"]["steps"]))
         compose_index = jobs["evaluate"]["steps"].index(compose)
         evaluator_index = next(index for index, step in enumerate(jobs["evaluate"]["steps"])
-                               if "setup-static-evaluator.sh native-benchmark-101" in step.get("run", ""))
+                               if "setup-static-evaluator.sh native-benchmark-121" in step.get("run", ""))
         self.assertLess(compose_index, evaluator_index)
         verification = jobs["evaluate"]["steps"][compose_index + 1]
         self.assertEqual(verification["name"], "Verify pinned Docker Compose")
@@ -1253,7 +1306,7 @@ class WorkflowTests(unittest.TestCase):
         preflight = next(index for index, step in enumerate(quality["steps"])
                          if "skill_reports.py preflight" in step.get("run", ""))
         setup = next(index for index, step in enumerate(quality["steps"])
-                     if "setup-skillevaluator.sh" in step.get("run", ""))
+                     if step.get("run") == "bash .github/scripts/setup-static-evaluator.sh quality-static")
         self.assertLess(preflight, setup)
         self.assertNotIn("deploy-pages", jobs)
         self.assertEqual(jobs["publish-history"]["concurrency"], {"group": "skill-report-publication", "queue": "max", "cancel-in-progress": False})

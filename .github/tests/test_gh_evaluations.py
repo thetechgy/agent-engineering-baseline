@@ -507,12 +507,12 @@ class GhNativeTests(unittest.TestCase):
     def setUpClass(cls):
         from importlib.metadata import version
         from benchmark_native import validate_runtime
-        from evaluator_profiles import RELEASE_BENCHMARK, candidate_versions, runtime
+        from evaluator_profiles import CURRENT_RELEASE, candidate_versions, runtime
 
-        if version("skillevaluator") != RELEASE_BENCHMARK["version"]:
+        if version("skillevaluator") != CURRENT_RELEASE["version"]:
             raise unittest.SkipTest("requires the released native gh owner")
         try:
-            runtime(candidate_versions(RELEASE_BENCHMARK), owning=True)
+            runtime(candidate_versions(CURRENT_RELEASE), owning=True)
         except ValueError:
             validate_runtime()
 

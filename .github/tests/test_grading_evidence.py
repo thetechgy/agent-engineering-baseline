@@ -249,7 +249,7 @@ class InstalledPatchTests(unittest.TestCase):
     def test_production_patch_against_exact_pinned_source(self):
         from importlib.metadata import version
 
-        if version('skillevaluator') == '1.0.1':
+        if version('skillevaluator') == '1.2.1':
             import benchmark_native
 
             benchmark_native.validate_runtime()

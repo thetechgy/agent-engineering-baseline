@@ -18,6 +18,7 @@ evidence.require(all(key in versions for key in ('python', 'skillevaluator', 'ha
 evidence.validate_runtime_versions(versions)
 active_scanners = {
     '0.9.0': evidence.SCANNER_RUNTIME_NEXT,
+    '1.0.1': evidence.SCANNER_RUNTIME_RETAINED_STATIC,
     evidence.static_evaluator.VERSION: evidence.SCANNER_RUNTIME_STATIC_CANDIDATE,
 }
 evidence.require(versions['scanner_runtime'] == active_scanners.get(versions['skillevaluator']),

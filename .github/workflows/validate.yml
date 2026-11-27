@@ -63,7 +63,7 @@ jobs:
         with:
           version: '0.13.9'
           enable-cache: false
-      - name: Install the pinned 1.0.1 package preparation owner
+      - name: Install the pinned 1.2.1 package preparation owner
         timeout-minutes: 15
         run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-candidate
       - name: Verify release-owned image preparation contracts
@@ -98,7 +98,7 @@ jobs:
         run: '"$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/qualify_benchmark_codex.py "$RUNNER_TEMP/benchmark-codex"'
       - name: Install pinned released native benchmark launcher
         timeout-minutes: 15
-        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-101
+        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-121
       - name: Verify released Pester benchmark and its diagnostic handoff
         timeout-minutes: 28
         run: |
@@ -157,7 +157,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0 # Recover the frozen gh fixture authored revision.
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Require an initially clean checkout
@@ -172,10 +172,12 @@ jobs:
           enable-cache: false
 
       - name: Install the pinned released benchmark runtime for regression checks
-        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-101
+        run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-121
 
       - name: Install the pinned private-review test environment
         run: bash .github/scripts/setup-static-evaluator.sh review-contracts
+      - name: Install retained private-review validators
+        run: bash .github/scripts/setup-static-evaluator.sh review-retained-101
 
       - name: Install the pinned released owner for native gh contracts
         run: bash .github/scripts/setup-static-evaluator.sh native-benchmark-candidate
@@ -187,6 +189,8 @@ jobs:
           shellcheck .github/scripts/setup-skillevaluator.sh .github/scripts/setup-skill-scanners.sh .github/scripts/setup-static-evaluator.sh .github/scripts/collect-static-quality.sh .github/scripts/setup-compose.sh
           "$SKILL_NATIVE_BENCHMARK_PYTHON" -B .github/scripts/test_evaluation_contracts.py released-contracts
 
+      - name: Acquire the pinned historical gh fixture source
+        run: bash .github/scripts/setup-historical-gh-fixture.sh
       - name: Verify captured fixture contracts with the pinned compatibility owner
         run: |
           "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py fixture-contracts
@@ -432,14 +436,16 @@ jobs:
           export RUNNER_TEMP="$RUNNER_TEMP/static-comparison"
           mkdir "$RUNNER_TEMP"
           export GITHUB_ENV="$RUNNER_TEMP/owners.env" GITHUB_PATH="$RUNNER_TEMP/owners.path"
+          candidate_python="$SKILL_QUALITY_PYTHON"
+          candidate_tools="$SKILL_QUALITY_TOOLS"
+          bash .github/scripts/setup-static-evaluator.sh quality-retained-101
           set -a
-          bash .github/scripts/setup-skillevaluator.sh quality-next
           source "$GITHUB_ENV"
-          bash .github/scripts/setup-skillevaluator.sh quality-candidate
-          source "$GITHUB_ENV"
+          SKILL_STATIC_BASELINE_PYTHON="$SKILL_QUALITY_PYTHON"
+          SKILL_STATIC_BASELINE_TOOLS="$SKILL_QUALITY_TOOLS"
+          SKILL_QUALITY_PYTHON="$candidate_python"
+          SKILL_QUALITY_TOOLS="$candidate_tools"
           set +a
-          export SKILLEVALUATOR_RESULTS_DIR="$RUNNER_TEMP/skill-quality/results"
-          bash "$STATIC_QUALITY_SCRIPTS/collect-static-quality.sh"
           "$SKILL_QUALITY_PYTHON" -B .github/scripts/qualify_static_evaluator.py --output "$output"
           git diff --exit-code
           test -z "$(git status --porcelain=v1 --untracked-files=all --ignored)"

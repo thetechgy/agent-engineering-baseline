@@ -123,7 +123,7 @@ class JudgeContracts(unittest.TestCase):
             old = value['profiles'][key.replace('-source-v25-', '-source-v24-')]
             self.assertEqual({k:v for k,v in row.items() if k not in ('id', 'runtime_digest')},
                              {k:v for k,v in old.items() if k not in ('id', 'runtime_digest')})
-            active = key.replace('-source-v25-', '-source-v48-')
+            active = key.replace('-source-v25-', '-source-v49-')
             successor = current['profiles'][active]
             self.assertEqual(successor['runtime_digest'],
                              evidence.identity(source_manifest(ROOT, successor['skill_id'], active)))

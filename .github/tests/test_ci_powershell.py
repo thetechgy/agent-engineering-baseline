@@ -195,22 +195,23 @@ class CIPowerShellTests(unittest.TestCase):
         import yaml
         workflow = yaml.safe_load((ROOT / '.github/workflows/current-evaluator.yml').read_text())
         inputs = workflow.get('on', workflow.get(True))['workflow_dispatch']['inputs']
-        self.assertFalse(inputs['benchmark-101-fixtures']['default'])
-        self.assertFalse(inputs['benchmark-101-codex']['default'])
-        self.assertFalse(inputs['benchmark-101-podman']['default'])
-        self.assertFalse(inputs['benchmark-101-launcher']['default'])
+        self.assertFalse(inputs['benchmark-121-fixtures']['default'])
+        self.assertFalse(inputs['benchmark-121-codex']['default'])
+        self.assertFalse(inputs['benchmark-121-podman']['default'])
+        self.assertFalse(inputs['benchmark-121-launcher']['default'])
+        self.assertEqual(inputs['startup-owner']['options'], ['0.9.0', '1.2.1'])
         jobs = workflow['jobs']
-        candidate = jobs['benchmark-101']
+        candidate = jobs['benchmark-121']
         self.assertEqual(candidate['if'], "github.event_name == 'workflow_dispatch'"
-                         " && !inputs.benchmark-101-launcher"
-                         " && (inputs.benchmark-101-fixtures || inputs.benchmark-101-codex || inputs.benchmark-101-podman)")
+                         " && !inputs.benchmark-121-launcher"
+                         " && (inputs.benchmark-121-fixtures || inputs.benchmark-121-codex || inputs.benchmark-121-podman)")
         for key in ('cohorts', 'native-gh', 'report', 'startup'):
-            self.assertIn('!inputs.benchmark-101-fixtures', jobs[key]['if'])
-            self.assertIn('!inputs.benchmark-101-codex', jobs[key]['if'])
-            self.assertIn('!inputs.benchmark-101-podman', jobs[key]['if'])
-            self.assertIn('!inputs.benchmark-101-launcher', jobs[key]['if'])
+            self.assertIn('!inputs.benchmark-121-fixtures', jobs[key]['if'])
+            self.assertIn('!inputs.benchmark-121-codex', jobs[key]['if'])
+            self.assertIn('!inputs.benchmark-121-podman', jobs[key]['if'])
+            self.assertIn('!inputs.benchmark-121-launcher', jobs[key]['if'])
         self.assertEqual(candidate['strategy']['matrix']['suite'],
-                         '''${{ fromJSON(inputs.benchmark-101-podman && '["podman"]' || inputs.benchmark-101-codex && '["codex"]' || '["gh", "pester"]') }}''')
+                         '''${{ fromJSON(inputs.benchmark-121-podman && '["podman"]' || inputs.benchmark-121-codex && '["codex"]' || '["gh", "pester"]') }}''')
         self.assertEqual(workflow['permissions'], {'contents': 'read'})
         self.assertNotIn('environment', candidate)
         self.assertNotIn('secrets.', yaml.safe_dump(candidate))
@@ -220,13 +221,31 @@ class CIPowerShellTests(unittest.TestCase):
         deterministic = next(step for step in steps if '--native "$FIXTURE_SUITE"' in step.get('run', ''))
         codex = next(step for step in steps if 'qualify_benchmark_codex.py' in step.get('run', ''))
         self.assertEqual(deterministic['if'], "matrix.suite == 'gh' || matrix.suite == 'pester'")
+        self.assertIn('benchmark-121-gh-reporting.patch', deterministic['run'])
         self.assertEqual(codex['if'], "matrix.suite == 'codex'")
         podman = next(step for step in steps if 'qualify_benchmark_podman.py' in step.get('run', ''))
         publications = next(step for step in steps if 'qualify_benchmark_publication_101.py' in step.get('run', ''))
         self.assertEqual(podman['if'], "matrix.suite == 'podman'")
         self.assertEqual(publications['if'], "${{ !cancelled() && matrix.suite == 'podman' }}")
         self.assertIn('git archive "$GITHUB_SHA"', publications['run'])
-        self.assertIn('benchmark-101-publication.patch', publications['run'])
+        self.assertIn('benchmark-121-publication.patch', publications['run'])
+
+    def test_historical_gh_checkout_is_prepared_before_replay(self):
+        import yaml
+
+        for workflow, job, replay in (
+                ('validate.yml', 'ci-contracts', 'fixture-contracts'),
+                ('benchmark-skills.yml', 'context', 'fixture-contracts'),
+                ('current-evaluator.yml', 'cohorts', 'test_custom_metrics.py')):
+            with self.subTest(workflow=workflow):
+                steps = yaml.safe_load((ROOT / '.github/workflows' / workflow).read_text())['jobs'][job]['steps']
+                acquisition = next(step for step in steps if step.get('run') ==
+                                   'bash .github/scripts/setup-historical-gh-fixture.sh')
+                test = next(step for step in steps if replay in step.get('run', ''))
+                self.assertLess(steps.index(acquisition), steps.index(test))
+                for key in ('if', 'working-directory'):
+                    self.assertEqual(acquisition.get(key), test.get(key))
+                self.assertNotIn('secrets.', yaml.safe_dump(acquisition))
 
     def test_selected_jobs_feed_an_always_running_gate_without_privileged_calls(self):
         import yaml

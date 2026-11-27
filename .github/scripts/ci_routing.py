@@ -16,7 +16,7 @@ JOBS = {'contracts': 'ci-contracts', 'quality': 'skill-quality',
 FLAGS = tuple(JOBS)
 STATIC_QUALIFICATION = {
     '.github/scripts/qualify_static_evaluator.py',
-    '.github/patches/static-evaluator-1.0.1-reporting.patch',
+    '.github/patches/static-evaluator-1.2.1-reporting.patch',
     '.github/scripts/static_evaluator.py',
 }
 ROOT = Path(__file__).resolve().parents[2]

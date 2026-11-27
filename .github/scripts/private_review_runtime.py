@@ -13,9 +13,16 @@ OVERLAY = {**PINS, 'certifi': '2026.10.23', 'pydantic-core': '2.50.4',
            'typing-inspection': '0.4.5', 'httpx': '0.28.1'}
 
 
-def validate_install():
-    static_evaluator.validate_install(python=PYTHON)
-    if {name: importlib.metadata.version(name) for name in OVERLAY} != OVERLAY:
+def validator_pins(*, retained=False):
+    owner = static_evaluator.RETAINED if retained else static_evaluator.VERSIONS
+    return {**OVERLAY, 'skillevaluator': owner['skillevaluator']}
+
+
+def validate_install(*, retained=False):
+    owner = static_evaluator.RETAINED if retained else static_evaluator.VERSIONS
+    static_evaluator.validate_install(python=PYTHON, owner=owner)
+    expected = validator_pins(retained=retained)
+    if {name: importlib.metadata.version(name) for name in expected} != expected:
         raise ValueError('Unexpected private review dependency overlay')
     try:
         importlib.metadata.version('harbor')

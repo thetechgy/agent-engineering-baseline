@@ -1,9 +1,10 @@
-"""Credential-free request and scoring controls for the native 1.0.1 candidate."""
+"""Credential-free request and scoring controls for the current native release candidate."""
 
 import argparse
 from contextlib import contextmanager
 import json
 import os
+import subprocess
 from pathlib import Path
 import sys
 from unittest.mock import patch
@@ -15,7 +16,7 @@ import static_evaluator
 from skill_reports import POLICY, require
 
 ROOT = Path(__file__).resolve().parents[2]
-RELEASE_CANDIDATE = profiles.RELEASE_BENCHMARK
+RELEASE_CANDIDATE = profiles.CURRENT_RELEASE
 PRODUCER_PROFILE = RELEASE_CANDIDATE['id']
 
 
@@ -164,14 +165,34 @@ def custom_sdk_requests(settings):
     return {'http_requests': len(requests), 'schema_fallback': True}
 
 
-def score_comparison():
+def score_comparison(baseline_python):
     from skillevaluator.tier3.harbor import metrics
 
-    retained = scoring.retained_probe()
+    from benchmark_native import RETAINED_NATIVE_PRODUCER, native_versions
+
+    baseline = subprocess.run([str(baseline_python), "-I", "-B", "-c", """
+import json, sys
+sys.path.insert(0, sys.argv[1])
+import benchmark_native as native
+import evaluator_profiles as profiles
+from evaluator_scoring_compatibility import vectors
+from skillevaluator.tier3.harbor import metrics
+
+profiles.validate_install(native.native_profile(owner=native.RETAINED_NATIVE_PRODUCER))
+print(json.dumps({
+    "versions": native.native_versions(owner=native.RETAINED_NATIVE_PRODUCER),
+    "policy": metrics.DEFAULT_SCORE_POLICY, "definition": metrics.score_definition(),
+    "scores": [round(metrics.overall_score(row), 4) for row in vectors()],
+}, allow_nan=False))
+""", str(ROOT / ".github/scripts")], check=True, capture_output=True, timeout=60)
+    retained = json.loads(baseline.stdout)
     vectors = scoring.vectors()
     candidate = [round(metrics.overall_score(row), 4) for row in vectors]
-    differences = [index for index, (old, new) in enumerate(zip(retained['scores'], candidate)) if old != new]
-    require(len(differences) == 56, 'Unexpected standard score difference')
+    require(retained["versions"] == native_versions(owner=RETAINED_NATIVE_PRODUCER)
+            and len(retained["scores"]) == len(vectors), "Unexpected score comparison baseline")
+    differences = [index for index, (old, new) in enumerate(zip(retained["scores"], candidate)) if old != new]
+    require(not differences and retained["definition"] == metrics.score_definition()
+            and retained["policy"] == metrics.DEFAULT_SCORE_POLICY, "Released score comparison changed")
     return {'retained': retained, 'candidate': {'producer': PRODUCER_PROFILE,
             'policy': metrics.DEFAULT_SCORE_POLICY, 'definition': metrics.score_definition(), 'scores': candidate},
             'vectors': len(vectors), 'changed_vectors': differences}
@@ -180,6 +201,7 @@ def score_comparison():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('output', type=Path)
+    parser.add_argument('--baseline-python', type=Path)
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument('--native', choices=('gh', 'pester'), help='Run the existing deterministic Docker fixture suite')
     mode.add_argument('--prepare-pester', action='store_true', help='Prepare pinned Pester image packages without running a trial')
@@ -202,11 +224,14 @@ def main():
             from pester_container_validation import main as qualify
             qualify(candidate='release', artifact=output)
             return
+    require(args.baseline_python is not None and args.baseline_python.is_absolute(),
+            'Supply the pinned 1.0.1 comparison interpreter')
+    scored = score_comparison(args.baseline_python)
     sys.addaudithook(restrict_network)
     result = {'schema': 1, 'versions': versions, 'source_tree_digest': RELEASE_CANDIDATE['source_tree_digest'],
               'release_lock_sha256': static_evaluator.LOCK, 'producer_profile': PRODUCER_PROFILE,
               'inference': False, 'history_eligible': False, 'agent_dispatch': agent_dispatch(output.parent),
-              'verifier': verifier_requests(), 'scoring': score_comparison()}
+              'verifier': verifier_requests(), 'scoring': scored}
     with output.open('x') as stream:
         json.dump(result, stream, sort_keys=True, indent=2, allow_nan=False)
         stream.write('\n')

@@ -3,7 +3,7 @@
 `skill_evidence.py` inventories sources, reads selected pinned SkillEvaluator
 reports, and builds a separately validated public projection. It never invokes
 evaluations, graders, scanners, artifact scripts, recovery, or network retrieval.
-Use the pinned SkillEvaluator 1.0.1 data host for the retained static and
+Use the pinned SkillEvaluator 1.2.1 data host for the retained static and
 default behavioral inputs below. The reader verifies the original snapshot
 format, producer, metric means and rounding. It preserves the recorded
 scores and references. For an exact rerun of the original scorer, use the
@@ -230,7 +230,7 @@ Run these examples from the checkout. Load `SKILL_QUALITY_PYTHON` from
 `setup-static-evaluator.sh quality-static` for native quality artifacts.
 Load `SKILL_DATA_PYTHON` from `setup-static-evaluator.sh data-host` for the
 retained Podman sample. Load `SKILL_NATIVE_BENCHMARK_PYTHON` from
-`setup-static-evaluator.sh native-benchmark-101` for a complete released
+`setup-static-evaluator.sh native-benchmark-121` for a complete released
 benchmark and use its producing source revision.
 
 ```bash
@@ -1523,18 +1523,20 @@ It tests historical values, independent validation, all-skill coverage, stable
 rendering, support links, escaping, restrictive CSP hashes, semantic landmarks,
 table headers/captions, theme contrast, corrupted input, private permissions,
 input replacement and output confinement. Run the offline contracts in their
-pinned environments.
+pinned environments. The fixture setup fetches the original authored Git
+commit if it is missing from a fresh checkout.
 
 ```bash
 SKILL_EVALUATION_KIND=benchmark "$SKILL_NATIVE_BENCHMARK_PYTHON" -B \
   .github/scripts/test_evaluation_contracts.py released-contracts
+bash .github/scripts/setup-historical-gh-fixture.sh
 "$SKILL_NATIVE_BENCHMARK_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py fixture-contracts
 "$SKILL_DATA_PYTHON" -B .github/scripts/test_evaluation_contracts.py presentation
 "$SKILL_REVIEW_CANDIDATE_PYTHON" -B .github/scripts/test_evaluation_contracts.py private-review
 pwsh -NoLogo -NoProfile -File ./scripts/Invoke-Validation.ps1
 ```
 
-Use the scanner steps in Validate for the separate 1.0.1 scanner-contract
+Use the scanner steps in Validate for the separate 1.2.1 scanner-contract
 owner. That environment pins the caveat validation patch and the same external
 scanner executables. The published static suite uses the release owner.
 
@@ -1592,13 +1594,12 @@ not establish that it passed.
 
 Use the private-review interpreter before adding
 `--analyst-review /tmp/private-attachments/podman.json` to the report command.
-Repeat for another selected record. The 1.0.1 interpreter validates historical
-attachments against their recorded profiles and original source bytes, and
-identifies the offline validator separately. For new 1.0.1 reviews use
-`"profile": "review-101-v5"` and `"tooling": null`. That profile selects the
-repository's fixed producer and validator source snapshot. Existing
-`review-101-v1` through `review-101-v4` attachments retain their original
-snapshots. Each record can have
+Repeat for another selected record. Use `"profile": "review-121-v1"` and
+`"tooling": null` for new reviews. This profile selects the fixed 1.2.1
+producer and validator source. To load earlier attachments, also install
+`setup-static-evaluator.sh review-retained-101` and load the exported
+`SKILL_REVIEW_RETAINED_PYTHON`. Each retained validator replays its original
+source and runtime. Each record can have
 **one analyst report** and up to eight separately supplied independent assessments of that
 exact report. No-attachment generation keeps the existing public-evidence
 dependencies (including Pydantic), without importing the analyst modules or
@@ -1695,7 +1696,7 @@ judgment, substitute current source bytes, or override provenance, availability,
 or expiry checks. If the exact original tooling or evidence is unavailable,
 retain that limitation rather than treating the refreshed profile as compatible.
 
-The pinned 1.0.1 private review environment launches a child with
+The pinned private-review environment launches a child with
 `-I -B`, a neutral working directory, and a minimal environment.
 It loads the exact hash-verified historical modules and any required registry
 and supporting files. The attachment descriptor selects a known profile.
@@ -1829,7 +1830,7 @@ Issue #60 adds `.github/scripts/skill_review.py`. This is a Linux-first, private
 judgment tool over supplied evidence, with no retrieval, shell tools, grading,
 source edits, uploads, repository actions, or automatic publication. Existing
 public schema v1, analysis schema v1, measurements, scoring, workflows and APM
-artifacts are unchanged. To use the 1.0.1 review profile, run
+artifacts are unchanged. To use the 1.2.1 review profile, run
 `setup-static-evaluator.sh review-candidate` with the reviewed uv version
 and an external tool directory. The setup exports
 `SKILL_REVIEW_CANDIDATE_PYTHON` via `GITHUB_ENV`. It pins Python 3.13.18,

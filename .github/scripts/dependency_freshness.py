@@ -311,7 +311,7 @@ def inventory(root):
     # are source identities, not a second release/advisory polling mechanism.
     for id, label, path, note in (
         ("production-environment", "Active released native benchmark environment",
-         ".github/evals/evaluator-1.0.1-benchmark-candidate-v3.json",
+         ".github/evals/evaluator-1.2.1-benchmark-candidate-v1.json",
          "The combined request, staging and recovery patches also have reviewed digests. "
          "Private review and public data retain separate role owners."),
         ("candidate-environment", "Opt-in evaluator (not production adoption)",

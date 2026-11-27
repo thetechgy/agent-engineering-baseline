@@ -1,5 +1,35 @@
 # Evaluation checkpoint
 
+## SkillEvaluator 1.2.1 promotion
+
+The candidate uses NVIDIA revision
+`f7fcd35d79d0506fadbd79f2b3ff384c98bd10f3` and its frozen lock.
+Native execution carries forward the pinned Codex adapter, staged task and
+verifier isolation, request policy, and incomplete-run recovery. Static
+collection adopts the 1.2.1 scanner contract and the same external scanner
+pins. Public data and private review keep separate installations. The new
+score series and attachment identity preserve the original 1.0.1 records.
+
+Paired lift intervals and multi-attempt reliability are advisory. The job
+summary derives them from the admitted rewards, and the redacted native
+artifact retains the verified statistics. The estimate is case-weighted.
+Pass@k counts any passing attempt. Pass^k requires every attempt to pass
+under that arm's applicable rubric.
+
+Credential-free qualification compares the patched 1.0.1 and 1.2.1 releases.
+The matched static catalog produced the same scores, scanner coverage and
+severity counts for all six skills. Four skills still report incomplete
+SkillSpector coverage.
+[NVIDIA release](https://github.com/NVIDIA/SkillEvaluator/releases/tag/v1.2.1).
+
+The protected compatibility run on `933b4ef` completed one synthetic
+baseline file-edit trial through the direct Codex tool route. The accuracy,
+behavior, and goal judges each returned `1.0`. Trial and runner teardown
+both completed. The receipt records runtime compatibility for this scope
+and stays outside canonical score history.
+[Protected run](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45916464100) ·
+[Bounded receipt](https://github.com/thetechgy/agent-engineering-baseline/actions/runs/45916464100/artifacts/15164160590)
+
 ## SkillEvaluator 0.3.0 retirement
 
 PR #185 switches the maintained native benchmark to SkillEvaluator 1.0.1,

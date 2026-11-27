@@ -66,7 +66,8 @@ class EvidenceTests(unittest.TestCase):
         shutil.copyfile(REPO / '.github/evals/evaluator-candidate.json', config)
         for name in ('evaluator-0.9.json', 'evaluator-0.9-offline-v2.json',
                      'evaluator-0.9-accounting-v1.json', 'benchmark-090-accounting-v1.json',
-                     'evaluator-1.0.1-benchmark-candidate-v2.json', 'evaluator-1.0.1-benchmark-candidate-v3.json'):
+                     'evaluator-1.0.1-benchmark-candidate-v2.json', 'evaluator-1.0.1-benchmark-candidate-v3.json',
+                     'evaluator-1.2.1-benchmark-candidate-v1.json'):
             shutil.copyfile(REPO / '.github/evals' / name, config.with_name(name))
 
     def native(self):
@@ -793,6 +794,25 @@ class EvidenceTests(unittest.TestCase):
                         self.assertEqual(row['behavioral_status'], 'configured' if formats else 'not_configured')
                         if formats:
                             self.assertEqual(row['suite']['owner'], 'local' if owner == 'local' else 'overlay')
+
+    def test_released_strict_dataset_checks_captured_authored_field_types(self):
+        import static_evaluator
+
+        if evidence.installed_version('skillevaluator') != static_evaluator.VERSION:
+            self.skipTest('Requires the active released dataset contract')
+        skill = self.local(self.root, 'alpha')
+        self.dataset(skill, 'alpha')
+        path = skill / 'evals/evals.json'
+        authored = evidence.read_json(path)
+        self.assertEqual(evidence.strict_dataset(path, 'alpha')['status'], 'configured')
+        for field, value in (('expected_skill', False), ('expected_skill', ' '),
+                             ('assertions', 'one string'), ('expected_behavior', [2])):
+            with self.subTest(field=field, value=value):
+                data = copy.deepcopy(authored)
+                data['evals'][0][field] = value
+                write(path, data)
+                with self.assertRaisesRegex(ValueError, 'Strict dataset contract failed'):
+                    evidence.strict_dataset(path, 'alpha')
 
     def test_partial_clones_never_fetch_missing_objects(self):
         def git(root, *args):

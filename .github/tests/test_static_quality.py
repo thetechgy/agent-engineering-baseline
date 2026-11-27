@@ -36,9 +36,9 @@ class StaticQualityRoutingTests(unittest.TestCase):
         self.assertNotIn('if', setup)
         comparison = next(step for step in quality['steps'] if 'qualify_static_evaluator.py' in step.get('run', ''))
         self.assertEqual(comparison['if'], "needs.plan.outputs.static_candidate == 'true'")
-        for selector in ('quality-next', 'quality-candidate'):
-            self.assertIn('setup-skillevaluator.sh ' + selector, comparison['run'])
-            self.assertEqual(body.count('setup-skillevaluator.sh ' + selector), 1)
+        baseline = 'setup-static-evaluator.sh quality-retained-101'
+        self.assertIn(baseline, comparison['run'])
+        self.assertEqual(body.count(baseline), 1)
         self.assertNotIn('SKILL_EVALUATOR_PYTHON', body)
         self.assertNotIn('gh_container_validation', body)
         for step in quality['steps']:
@@ -102,24 +102,30 @@ class StaticQualityRoutingTests(unittest.TestCase):
         from test_skill_analysis import static_control
         from test_skill_pages import prov
 
-        record = static_control()
-        record['policy'] = evidence.make_policy(
-            {key: owner.VERSIONS[key] for key in ('evaluator_revision', 'harbor', 'python')},
-            judge={'model': None, 'provider': None, 'enabled': False},
-            provenance='runtime_recorded', published=owner.PRODUCER)
         at = '2026-11-20T00:00:00Z'
-        for runtime in (evidence.SCANNER_2136_INITIAL_STATIC, evidence.SCANNER_RUNTIME_STATIC_CANDIDATE):
+        runtimes = (evidence.SCANNER_2136_INITIAL_STATIC, evidence.SCANNER_RUNTIME_STATIC_CANDIDATE)
+        for runtime in runtimes:
             with self.subTest(lock=runtime['semgrep_lock']):
+                pins = owner.STATIC_OWNERS[runtime['evaluator_revision']]
+                record = static_control()
+                record['policy'] = evidence.make_policy(
+                    {key: pins[key] for key in ('evaluator_revision', 'harbor', 'python')},
+                    judge={'model': None, 'provider': None, 'enabled': False},
+                    provenance='runtime_recorded', published=pins['producer_profile'])
+                record['scanner_runtime'] = runtime
                 versions = dict(owner.VERSIONS, scanner_runtime=runtime, scanners=runtime['versions'],
                                 skillspector_revision=runtime['skillspector_revision'])
-                self.assertEqual(evidence.validate_runtime_versions(versions)['version'], owner.VERSION)
-                record['scanner_runtime'] = runtime
+                if pins is owner.VERSIONS:
+                    self.assertEqual(evidence.validate_runtime_versions(versions)['version'], owner.VERSION)
+                else:
+                    with self.assertRaisesRegex(ValueError, 'Missing static candidate scanner provenance'):
+                        evidence.validate_runtime_versions(versions)
                 snapshot = history.empty(at)
                 observation = history.observation(record, 'quality', prov(record['source']['revision']), at)
                 history.add(snapshot, observation)
                 retained = history.retain(snapshot, at)['observations']
                 self.assertEqual(len(retained), 1)
-                self.assertEqual(retained[0]['record']['policy']['published_id'], owner.PRODUCER)
+                self.assertEqual(retained[0]['record']['policy']['published_id'], pins['producer_profile'])
                 self.assertEqual(retained[0]['record_id'], evidence.identity(record))
                 observation['record']['kind'] = 'behavioral'
                 with self.assertRaisesRegex(ValueError, 'Static producer policy requires static evidence'):

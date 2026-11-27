@@ -708,10 +708,10 @@ not establish exact Windows 11 or Ubuntu 26.04 acceptance.
 ### Evaluate authored skills
 
 A skill can look useful without improving results. I use NVIDIA's
-[SkillEvaluator](https://github.com/NVIDIA/SkillEvaluator/releases/tag/v1.0.1)
+[SkillEvaluator](https://github.com/NVIDIA/SkillEvaluator/releases/tag/v1.2.1)
 to evaluate locally maintained skills in `.apm/skills/`. Static quality and public
-reporting use the released 1.0.1 runtime. Native benchmarks and private reviews
-use independently pinned 1.0.1 environments. Released native benchmarks have
+reporting use the released 1.2.1 runtime. Native benchmarks and private reviews
+use independently pinned 1.2.1 environments. Released native benchmarks have
 their own score series. Retained results preserve their original producers,
 scores, and validator identities. To reproduce the retired 0.3.0 environment,
 check out the reviewed pre-retirement revision documented in the evaluation plan.

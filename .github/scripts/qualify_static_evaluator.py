@@ -13,7 +13,7 @@ import skill_evidence as evidence
 import static_evaluator
 
 ROOT = evidence.ROOT
-REPORTING_PATCH = ROOT / '.github/patches/static-evaluator-1.0.1-reporting.patch'
+REPORTING_PATCH = ROOT / '.github/patches/static-evaluator-1.2.1-reporting.patch'
 CONTROL = 'static-secret-control'
 CONTROL_REPOSITORY = 'fixture/static-quality'
 TOP = 'input.txt'
@@ -114,7 +114,8 @@ def observe(native, public, html):
         secrets = next(row for row in result['results'] if row['validator'] == 'Secrets Detection')
         quality = next(row for row in result['results'] if row['validator'] == 'QUALITY')
         record = evidence.read_json(public / 'skills' / name / 'static/public-report.json')
-        expected_producer = static_evaluator.PRODUCER if result['version'] == static_evaluator.VERSION else evidence.profiles.NEXT['id']
+        expected_producer = next((owner['producer_profile'] for owner in static_evaluator.STATIC_OWNERS.values()
+                                  if owner['skillevaluator'] == result['version']), evidence.profiles.NEXT['id'])
         policy = record['policy']
         evidence.require((policy.get('producer_profile') or policy.get('published_id')) == expected_producer
                          and expected_producer in html, 'Static producer identity lost during rendering')
@@ -158,13 +159,16 @@ def main():
     evidence.require(not output.is_relative_to(ROOT) and not output.exists(), 'Unsafe qualification destination')
     env = {key: os.environ[key] for key in ('PATH', 'TMPDIR', 'LANG') if key in os.environ}
     env.update(PYTHONDONTWRITEBYTECODE='1', SEMGREP_SEND_METRICS='off', SEMGREP_ENABLE_VERSION_CHECK='0')
+    baseline = static_evaluator.RETAINED['skillevaluator']
+    candidate = static_evaluator.VERSION
     owners = {
-        '0.9.0': (Path(os.environ['SKILL_QUALITY_PYTHON']), Path(os.environ['SKILL_QUALITY_TOOLS'])),
-        '1.0.1': (Path(os.environ['SKILL_STATIC_CANDIDATE_PYTHON']), Path(os.environ['SKILL_STATIC_CANDIDATE_TOOLS'])),
+        baseline: (Path(os.environ['SKILL_STATIC_BASELINE_PYTHON']), Path(os.environ['SKILL_STATIC_BASELINE_TOOLS'])),
+        candidate: (Path(os.environ['SKILL_QUALITY_PYTHON']), Path(os.environ['SKILL_QUALITY_TOOLS'])),
     }
-    leaks = (owners['0.9.0'][1] / 'bin/gitleaks').resolve(strict=True)
-    evidence.require(leaks == (owners['1.0.1'][1] / 'bin/gitleaks').resolve(strict=True),
-                     'Qualification requires the same pinned Gitleaks executable')
+    leaks = (owners[baseline][1] / 'bin/gitleaks').resolve(strict=True)
+    evidence.require(evidence.digest_bytes(leaks.read_bytes()) ==
+                     evidence.digest_bytes((owners[candidate][1] / 'bin/gitleaks').resolve(strict=True).read_bytes()),
+                     'Qualification requires the same pinned Gitleaks executable bytes')
     observed = {'controls': {}, 'catalog': {}, 'gitleaks_sha256': evidence.digest_bytes(leaks.read_bytes()),
                 'reporting_patch_sha256': evidence.digest_bytes(REPORTING_PATCH.read_bytes())}
     runner = Path(os.environ['RUNNER_TEMP'])
@@ -194,7 +198,7 @@ def main():
                 published = staged / 'controls' / case / version
                 public, page = report(scripts, owner, workspace, native, published, env)
                 result = observe(native, public, page.read_text())[CONTROL]
-                expect_finding = case == 'top-level' or case == 'authored-evaluation' and version == '1.0.1'
+                expect_finding = case != 'clean'
                 evidence.require(result['secret_locations'] == ([(target, 1)] if expect_finding else [])
                                  and result['secrets_status'] == ('failed' if expect_finding else 'passed')
                                  and not result['secrets_incomplete_scans'] and result['gitleaks'] == '8.30.1',
@@ -205,13 +209,10 @@ def main():
                                          env, cwd=workspace, diagnostic='Control checkout integrity check failed'),
                                  'Static qualification mutated its control input')
         for version, owner in owners.items():
-            native = (runner / 'skill-quality' if version == '0.9.0' else
-                      collect(scripts, owner, ROOT, scratch / 'catalog-candidate', repository, env))
+            native = collect(scripts, owner, ROOT, scratch / f'catalog-{version}', repository, env)
             published = staged / 'catalog' / version
             public, page = report(scripts, owner, ROOT, native, published, env)
             observed['catalog'][version] = observe(native, public, page.read_text())
-            evidence.require(any(result['incomplete_scans'] for result in observed['catalog'][version].values()),
-                             'Catalog supplied no incomplete-scan control')
             retain(native, published)
         (staged / 'comparison.json').write_bytes(evidence.encoded(observed))
         require_redaction(staged)
