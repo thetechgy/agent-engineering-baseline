@@ -4315,7 +4315,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
     purpose = capture['purpose']
     profile, definitions, contract = custom_contract(name, workspace, purpose=purpose)
     approved_inputs = custom_source_manifest(workspace, name, purpose=purpose)
-    if name == 'gh' and capture['contract_digest'] != contract:
+    if name == 'gh' and capture['contract_digest'] != contract and purpose in ('benchmark', 'oracle_qualification'):
         # Retained capture contracts bind the reviewed helper at production.
         # Other members still match the current authored fixture inputs.
         retained = {
