@@ -1,15 +1,23 @@
 """Git-backed execution identity and compatibility controls."""
 import copy
+import os
 from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import evaluation_identity as bindings
 import skill_evidence as evidence
 
 
 class ExecutionBindingTests(unittest.TestCase):
+    def test_offline_git_does_not_inherit_provider_credentials(self):
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'fixture', 'GH_TOKEN': 'fixture'}):
+            env = evidence.offline_git_environment()
+        self.assertNotIn('OPENAI_API_KEY', env)
+        self.assertNotIn('GH_TOKEN', env)
+
     def git(self, workspace, *arguments):
         return subprocess.check_output(
             ['git', '-C', str(workspace), '-c', 'user.name=Fixture',

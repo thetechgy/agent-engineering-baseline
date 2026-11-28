@@ -721,7 +721,8 @@ def offline_git_environment():
                  'GIT_PREFIX', 'GIT_SHALLOW_FILE', 'GIT_COMMON_DIR', 'GIT_NAMESPACE',
                  'GIT_CEILING_DIRECTORIES', 'GIT_DISCOVERY_ACROSS_FILESYSTEM'}
     env = {key: value for key, value in os.environ.items()
-           if key not in selectors and not key.startswith(('GIT_CONFIG_KEY_', 'GIT_CONFIG_VALUE_', 'GIT_TRACE'))}
+           if key not in selectors and not key.startswith(('GIT_CONFIG_KEY_', 'GIT_CONFIG_VALUE_', 'GIT_TRACE'))
+           and not re.search('TOKEN|SECRET|API_KEY|PASSWORD', key)}
     # Trace2 can also inherit global/system targets. Explicitly disable all
     # targets rather than allowing an unset environment to fall back to them.
     env.update(GIT_NO_LAZY_FETCH='1', GIT_NO_REPLACE_OBJECTS='1', GIT_OPTIONAL_LOCKS='0',
