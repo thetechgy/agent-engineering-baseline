@@ -90,7 +90,7 @@ class StaticTemplates(unittest.TestCase):
         self.assertEqual(tasks[0], tasks[1])
 
     def test_historical_registry_is_byte_equivalent_after_projecting_successors(self):
-        registry = json.loads((ROOT / evidence.CUSTOM_REGISTRY).read_bytes())
+        registry = evidence.frozen_registry(ROOT)
         registry['profiles'].pop('gh-deterministic-gate-v6')
         registry['profiles'].pop('gh-native-oracle-v2')
         registry['active_profiles']['gh'] = 'gh-deterministic-gate-v5'

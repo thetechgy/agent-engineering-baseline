@@ -135,6 +135,8 @@ class PodmanStorageContract(unittest.TestCase):
             evidence.custom_authored_digest(ROOT, "podman", forged)
 
     def test_successors_preserve_historical_grading_and_bind_current_sources(self):
+        from evaluation_archive import read_json as read_archive
+
         registry = evidence.custom_registry()
         from evaluation_registration import current_source, registration as onboarding
 
@@ -150,7 +152,7 @@ class PodmanStorageContract(unittest.TestCase):
                        evidence.DIRECT_TOOL_SOURCE_SUCCESSORS, evidence.NATIVE_RETIREMENT_SOURCE_SUCCESSORS,
                        evidence.RELEASE_121_SOURCE_SUCCESSORS, evidence.GH_SKILL_SOURCE_SUCCESSORS, evidence.NATIVE_1720_SOURCE_SUCCESSORS,
                        evidence.PODMAN_COMPARISON_SOURCE_SUCCESSORS, current_campaign_sources):
-            version_data = reports.read_json(ROOT / member)
+            version_data = read_archive(ROOT, member)
             for profile_id, binding in version_data["profiles"].items():
                 with self.subTest(profile=profile_id):
                     current = registry["profiles"][profile_id]

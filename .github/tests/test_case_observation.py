@@ -13,6 +13,7 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 from case_observation import CONFIG, selected
 from case_workspace import MAX_FILE, compare
+from skill_evidence import ROOT, frozen_registry
 
 
 class CaseObservationTests(unittest.TestCase):
@@ -122,7 +123,7 @@ class CaseObservationTests(unittest.TestCase):
                 compare(workspace, baseline)
 
     def test_successors_change_only_producer_identity(self):
-        registry = json.loads((SCRIPTS.parent / "evals/custom-metrics.json").read_bytes())
+        registry = frozen_registry(ROOT)
         registry['profiles'].pop('gh-deterministic-gate-v6')
         registry['profiles'].pop('gh-native-oracle-v2')
         registry['active_profiles']['gh'] = 'gh-deterministic-gate-v5'

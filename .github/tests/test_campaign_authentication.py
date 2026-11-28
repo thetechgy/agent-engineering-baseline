@@ -17,6 +17,8 @@ import evaluation_campaign_protocol as protocol
 from evaluation_campaign_selection import selected_task
 import skill_reports as reports
 
+from skill_evidence import frozen_registry
+
 
 class AuthenticationContracts(unittest.TestCase):
     def test_real_cli_and_receipt_artifact_round_trip_under_each_owning_runtime(self):
@@ -51,7 +53,7 @@ class AuthenticationContracts(unittest.TestCase):
             with self.assertRaises(ValueError): qualification.validate({k:v for k,v in valid.items() if k != key}, task)
 
     def test_source_successors_preserve_complete_pre_repair_registry(self):
-        registry=json.loads((ROOT/'.github/evals/custom-metrics.json').read_text())
+        registry=frozen_registry(ROOT)
         registry['profiles'].pop('gh-deterministic-gate-v6')
         registry['profiles'].pop('gh-native-oracle-v2')
         registry['active_profiles']['gh'] = 'gh-deterministic-gate-v5'

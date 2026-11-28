@@ -3676,6 +3676,7 @@ def validate_public(data):
 # consistency is established here; public consumers validate reported claims.
 CUSTOM_CAPTURE = 'custom-metric-capture.json'
 CUSTOM_REGISTRY = '.github/evals/custom-metrics.json'
+ACTIVE_GRADING = '.github/evals/active-grading.json'
 SOURCE_SUCCESSORS = '.github/evals/source-v37.json'
 MODEL_SUCCESSORS = '.github/evals/source-v38.json'
 SCORED_SUCCESSORS = '.github/evals/source-v39.json'
@@ -3785,7 +3786,21 @@ def validate_custom_error_ledger(summary, condition, arm):
 
 
 def frozen_registry(workspace=ROOT):
-    registry = parse_json(read_bytes(workspace / CUSTOM_REGISTRY))
+    from evaluation_archive import read_member
+
+    return decode_registry(read_member(workspace, CUSTOM_REGISTRY))
+
+
+def active_registry(workspace=ROOT):
+    from evaluation_archive import configured
+
+    if configured(workspace):
+        return decode_registry(read_bytes(workspace / ACTIVE_GRADING))
+    return custom_registry(workspace)
+
+
+def decode_registry(raw):
+    registry = parse_json(raw)
     closed(registry, ('schema_version', 'metrics', 'profiles', 'active_profiles'))
     require(type(registry['schema_version']) is int and registry['schema_version'] == 1, 'Custom registry version')
     validate_custom_metrics(registry['metrics'])
@@ -3840,8 +3855,10 @@ def extend_qualification_profiles(workspace, source_version, version, registry):
 
 def custom_registry(workspace=ROOT):
     """Apply reviewed source-only successors to the immutable grading records."""
+    from evaluation_archive import read_json as read_archive
+
     registry = frozen_registry(workspace)
-    version = parse_json(read_bytes(workspace / SOURCE_SUCCESSORS))
+    version = read_archive(workspace, SOURCE_SUCCESSORS)
     closed(version, ('replay_adapter', 'runtime_digests'))
     sha(version['replay_adapter'])
     profiles = registry['profiles']
@@ -3858,7 +3875,7 @@ def custom_registry(workspace=ROOT):
             result['campaign'] = dict(result['campaign'], adapter_sha256=version['replay_adapter'])
         profiles[successor] = result
     for version_path in source_successor_paths(workspace):
-        version = parse_json(read_bytes(workspace / version_path))
+        version = read_archive(workspace, version_path)
         source_version = Path(version_path).stem
         source_only = int(source_version.removeprefix('source-v')) > 52
         if source_only:
@@ -3950,9 +3967,8 @@ def profile_family(profile):
 def validate_custom_purpose(value, workspace=ROOT):
     if campaign_purpose(value):
         from evaluation_identity import resolve_profile, reusable
-        registry = custom_registry(workspace)
-        profile = (resolve_profile(workspace, registry, value)[0] if reusable(value)
-                   else registry['profiles'].get(value, {}))
+        profile = (resolve_profile(workspace, active_registry(workspace), value)[0] if reusable(value)
+                   else custom_registry(workspace)['profiles'].get(value, {}))
         require('campaign' in profile, 'Unknown campaign purpose')
     else:
         enum(value, ('benchmark', 'benchmark-1720', 'oracle_qualification', 'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'))
@@ -3981,7 +3997,7 @@ def custom_defect_files(profile, workspace, case):
 def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     from evaluation_identity import grading_definition, resolve_profile, reusable
 
-    registry = custom_registry(workspace)
+    registry = active_registry(workspace)
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
     if profile_id is None and purpose in ('skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
@@ -4001,6 +4017,8 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
         registered, metrics = resolve_profile(workspace, registry, profile_id)
         definition = grading_definition(registered)
     else:
+        if profile_id not in registry['profiles']:
+            registry = custom_registry(workspace)
         require(profile_id in registry['profiles'], 'Unknown custom metric namespace or profile')
         registered, metrics = registry['profiles'][profile_id], registry['metrics']
         definition = registered
@@ -4420,8 +4438,9 @@ def restore_historical_gh_file_order(prepared, snapshot):
 
 
 def digest_before_onboarding(script):
+    from evaluation_archive import read_json as read_archive
     from evaluation_evidence import RETAINED_SOURCE_INPUTS
-    return read_json(ROOT / RETAINED_SOURCE_INPUTS)['campaign/.github/scripts/' + script]
+    return read_archive(ROOT, RETAINED_SOURCE_INPUTS)['campaign/.github/scripts/' + script]
 
 
 def retained_capture_inputs(name, purpose):
@@ -4494,6 +4513,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
     require((bound and profile_id is not None and type(capture['execution']) is dict
              and type(capture['execution'].get('version')) is int) or
             (not bound and not reusable(purpose)), 'Custom capture execution identity mismatch')
+    from evaluation_archive import INDEX, configured
     from evaluation_registration import REGISTRATION
     from evaluation_evidence import RETAINED_SOURCE_INPUTS, registered_family
     if captured_state is not None:
@@ -4510,12 +4530,17 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
         track(REGISTRATION)
         if bound:
             track(REGISTRY)
-        elif campaign_purpose(purpose) or purpose in EFFECTIVENESS_PURPOSES:
-            track(LEGACY_INPUTS)
         track_tree(workspace / '.github/evals' / name)
-        for registry_member in (RETAINED_SOURCE_INPUTS, CUSTOM_REGISTRY, SOURCE_SUCCESSORS,
-                                *source_successor_paths(workspace)):
-            track(registry_member)
+        if configured(workspace):
+            track(ACTIVE_GRADING)
+            if not bound:
+                track(INDEX)
+        else:
+            if campaign_purpose(purpose) or purpose in EFFECTIVENESS_PURPOSES:
+                track(LEGACY_INPUTS)
+            for registry_member in (RETAINED_SOURCE_INPUTS, CUSTOM_REGISTRY, SOURCE_SUCCESSORS,
+                                    *source_successor_paths(workspace)):
+                track(registry_member)
     profile, definitions, contract = custom_contract(name, workspace, purpose=purpose, profile_id=profile_id)
     if bound:
         binding = execution_binding(workspace, profile, purpose, contract)

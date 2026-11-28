@@ -26,22 +26,19 @@ def profile_for_capture(purpose):
 
 
 def resolve_profile(workspace, registry, profile_id):
-    """The frozen v53 profiles seed the new registry during migration."""
+    """Resolve active grading or a reviewed, task-owned qualification profile."""
     from evaluation_registration import registered_file, task_families
     from skill_evidence import closed, custom_authored_digest, read_json, sha, validate_custom_metrics
 
-    match = CAMPAIGN.fullmatch(profile_id)
-    if profile_id == EFFECTIVENESS:
-        legacy = 'pester-effectiveness-v56'
-    else:
-        require(match is not None, 'Unknown reusable grading profile')
-        legacy = f'{match[1]}-lifecycle-v1-source-v53-{match[2]}'
+    require(reusable(profile_id), 'Unknown reusable grading profile')
     metrics = registry['metrics']
-    if legacy in registry['profiles']:
-        profile = registry['profiles'][legacy]
-        require(match is None or profile.get('campaign', {}).get('mode') == match[2],
-                'Reusable grading profile mode mismatch')
-        return {**{key: value for key, value in profile.items() if key != 'runtime_digest'}, 'id': profile_id}, metrics
+    if profile_id in registry['profiles']:
+        profile = registry['profiles'][profile_id]
+        match = CAMPAIGN.fullmatch(profile_id)
+        require('runtime_digest' not in profile
+                and (match is None or profile.get('campaign', {}).get('mode') == match[2]),
+                'Reusable grading profile mode or runtime binding mismatch')
+        return profile, metrics
 
     resolved = []
     for family in task_families(workspace).values():
@@ -85,8 +82,11 @@ def grading_definition(profile):
 
 
 def legacy_inputs(workspace, values):
-    from skill_evidence import read_json, sha
-    pinned = read_json(workspace / LEGACY_INPUTS)
+    from evaluation_archive import archive_index, configured, read_json
+    from skill_evidence import sha
+
+    base = archive_index(workspace)['source_inputs'] if configured(workspace) else {}
+    pinned = {**base, **read_json(workspace, LEGACY_INPUTS)}
     for digest in pinned.values():
         sha(digest)
     return [dict(row, digest=pinned[row['member']]) if row['member'] in pinned else row for row in values]

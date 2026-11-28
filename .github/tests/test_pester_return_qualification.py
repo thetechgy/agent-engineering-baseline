@@ -5,6 +5,16 @@ import unittest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
+from skill_evidence import frozen_registry
+
+
+def frozen_return_workflow():
+    raw = (ROOT / '.github/workflows/pester-return-qualification.yml').read_bytes()
+    added = b'          fetch-depth: 0 # Retain the pinned registry archive Git objects.\n'
+    if raw.count(added) != 2:
+        raise AssertionError('Expected archive history in both return-contract checkouts')
+    return raw.replace(added, b'')
+
 
 class HostedReturnContract(unittest.TestCase):
     def test_workflow_covers_both_sources_and_cases_without_live_capability(self):
@@ -31,7 +41,7 @@ class HostedReturnContract(unittest.TestCase):
         frozen=json.loads((base/'freeze.json').read_text())
         previous=base/frozen['previous']['manifest']
         self.assertEqual(hashlib.sha256(previous.read_bytes()).hexdigest(),frozen['previous']['sha256'])
-        registry=json.loads((ROOT/'.github/evals/custom-metrics.json').read_text())
+        registry=frozen_registry(ROOT)
         for history in (base/'history').glob('*-profile-digests.json'):
             previous_profiles=json.loads(history.read_text())
             for key,digest in previous_profiles.items():

@@ -155,7 +155,7 @@ class TaskPermissionControls(unittest.TestCase):
         import skill_reports as reports
         new, _, _ = evidence.custom_contract('gh', purpose=purpose(self.owner, 'probe'))
         self.assertEqual(task_policy_fields(new), {'authorization_policy': self.owner.entry()['contract']['permission_policy']})
-        old = reports.read_json(ROOT / evidence.CUSTOM_REGISTRY)['profiles'][
+        old = evidence.frozen_registry(ROOT)['profiles'][
             'campaign-gh-task-permission-v2-lifecycle-v1-source-v18-probe']
         self.assertEqual(task_policy_fields(old), {})
         fields = {'environment':'aeb-gh-fixture','concurrency':1,'timeout_multiplier':1.0,
