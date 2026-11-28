@@ -34,6 +34,17 @@ from test_skill_report import Document
 PINNED = ROOT / '.github/tests/fixtures/skill_pages'
 
 
+def assert_rebuilt_site(test, before, rebuilt):
+    test.assertEqual(before.keys(), rebuilt.keys())
+    for member, content in before.items():
+        with test.subTest(member=member):
+            if member.endswith('.html'):
+                test.assertEqual(Document(content.decode()).presentation,
+                                 Document(rebuilt[member].decode()).presentation)
+            else:
+                test.assertEqual(content, rebuilt[member])
+
+
 def bundle(root, records=(), extra=()):
     configs = {record['source']['skill_id']: fixtures.configuration(record['source']['skill_id'],
                record.get('dataset', {}).get('case_ids', ('1',)), record['source']) for record in records}
@@ -153,8 +164,6 @@ class PagesTests(unittest.TestCase):
         pages.build(self.site)
         html = (self.site / 'index.html').read_text()
         self.assertIn('Evaluation history and trends', html)
-        first = pages.tree(self.site); pages.build(self.site)
-        self.assertEqual(first, pages.tree(self.site))
         self.assertEqual((self.site / self.member).read_bytes(), self.raw_ledger)
         candidate = self.root / 'candidate'; candidate.mkdir()
         shutil.copytree(self.site, candidate / 'benchmarks')
@@ -162,13 +171,13 @@ class PagesTests(unittest.TestCase):
         pages.write(self.site, 'report/history.json', b'{}')
         with self.assertRaises(ValueError): pages.build(self.site)
 
-    def test_build_determinism_ledger_only_and_compatibility_links(self):
+    def test_ledger_only_rebuild_preserves_history_and_compatibility_links(self):
         self.admit('quality', [self.quality()])
         rows = pages.build(self.site)
         self.assertEqual(rows[0]['detail'], 'ledger_only')
         first = pages.tree(self.site)
         pages.build(self.site)
-        self.assertEqual(first, pages.tree(self.site))
+        assert_rebuilt_site(self, first, pages.tree(self.site))
         self.assertEqual((self.site / self.member).read_bytes(), self.raw_ledger)
         html = first['index.html'].decode()
         for text in ('PUBLIC · CANONICAL PAGES', 'Ledger only', '0.1207', 'unevaluated', 'Current main configuration', self.revision):

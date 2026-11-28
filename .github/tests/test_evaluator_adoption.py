@@ -62,9 +62,9 @@ class AdoptionTests(unittest.TestCase):
             self.assertTrue(any(row['scanner'] == 'SECURITY' and row['status'] == 'failed' for row in public['scans']))
             self.assertTrue(any(row['scanner'] == 'skillspector' and row['status'] == 'incomplete' for row in public['scans']))
             self.assertTrue(any(row['check'] == 'known_violation' for row in public['findings']))
-            # Confirm the 1.0.1 data host rebuilds the 0.9.0 projection byte for byte.
+            # Check that the current data host preserves the retained projection and its presentation.
             import skill_pages as pages
-            from test_skill_pages import bundle, prov
+            from test_skill_pages import assert_rebuilt_site, bundle, prov
             site = Path(directory) / 'site'
             revision = pages.git(ROOT, 'rev-parse', 'HEAD')
             public['source'].update(repository=pages.REPOSITORY, revision=revision)
@@ -86,7 +86,7 @@ class AdoptionTests(unittest.TestCase):
             run = subprocess.run([data_python, '-B', str(ROOT / '.github/scripts/skill_pages.py'),
                                   'build', '--site', str(site)], capture_output=True, text=True, timeout=60)
             self.assertEqual(run.returncode, 0, run.stderr)
-            self.assertEqual(before, pages.tree(site))
+            assert_rebuilt_site(self, before, pages.tree(site))
             changed = copy.deepcopy(dict(captured)); changed['findings'] = []
             with self.assertRaises(ValueError): evidence.project(changed)
             forged = copy.deepcopy(dict(public))

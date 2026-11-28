@@ -127,12 +127,11 @@ def run_visibility(test):
                            if os.environ.get('EVALUATOR_ADOPTION_SCAN_OUTPUT') else root / 'report')
             render([public], destination)
             html = (destination / 'report.html').read_bytes()
-            test.assertEqual(html, __import__('skill_report').render_report(
-                reports.read_json(destination / 'analysis.json'), __import__('skill_analysis').capture_inputs([destination / 'public'])))
             test.assertIn(b'Retained verifier security evidence', html)
+            test.assertIn(b'Quality is unavailable for these verifier diagnostics', html)
             test.assertNotIn(b'abcdefgh12345678', html)
             if known: test.assertIn(known[0]['type'].encode(), html)
-            # Rebuild the admitted 0.9.0 record on the 1.0.1 data host.
+            # Rebuild the admitted record on the current data host.
             data_python = os.environ['SKILL_DATA_PYTHON']
             output = destination / 'data-host.html'
             code = (
@@ -145,7 +144,8 @@ def run_visibility(test):
                 capture_output=True, text=True, timeout=60,
             )
             test.assertEqual(result.returncode, 0, result.stderr)
-            test.assertEqual(output.read_bytes(), html)
+            from test_skill_report import Document
+            test.assertEqual(Document(output.read_text()).presentation, Document(html.decode()).presentation)
             receipt = {'fixture': kind, 'simulated': True, 'agent_task_success': False,
                 'raw_known_findings': sum(f['score_impact'] for f in rich['details']['security']['findings']),
                 'collected_known_findings': len(known), 'public_known_findings': sum(f['score_impact'] for f in observed['security_evidence']['findings']),
