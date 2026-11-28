@@ -140,3 +140,38 @@ revision `d31f7dc`.
 
 The report phase changed four shared files and zero runner-coupled lines.
 Totals exclude the task-specific receipt and bundle and this edit log.
+
+## Item 10 onboarding plan
+
+| Logged edit | Item 10 treatment |
+| --- | --- |
+| `evaluation_tasks.py`, `evaluation_campaign_selection.py`, `qualify_model_callers.py` | Resolve reviewed task-family registrations, exact definitions, and selector registry paths from data. Task adapters still own staging, grading, and containment expectations. |
+| `evaluation_campaign.py`, `source-v40.json` through `source-v43.json`, `source-v52.json`, `test_judge_calibration.py` | Select the active source version from reviewed data. Register source successors without changing earlier identities. Keep registry consolidation in item 12. |
+| `skill_evidence.py`, `skill_reports.py` | Bind the dataset, local skill capture, and typed redaction exception to reviewed campaign registration. Keep provenance, native outcome consistency, and digest validation in code. |
+| `codex_pilot_probe.py` | Keep the allowlist for the fixed in-container probe. Adding a new subject to that probe is a review of what runs inside the container. |
+| `evaluation-campaign.yml` | Keep the fixed dispatch choices, runtime setup and paid gates. Offering a new hosted selector requires an explicit workflow edit and review. |
+| `codex-1720-scored.json`, `codex-execution-1720-scored.json`, `codex_pilot_agent.py`, `evaluation_campaign_protocol.py`, `evaluation_codex.py`, `evaluation_evidence.py`, `evaluation_runtime.py`, `evaluator_profiles.py`, `setup-campaign-authentication.sh` | Reuse the existing runtime pins and owner for a new skill. A new native CLI or evaluator version still needs its own capability, wire, and setup qualification. Those item 9 edits were for a runtime upgrade. |
+| `skill_analysis.py`, `skill_report.py` | Keep legacy pilot rendering and scoring applicability with their existing evidence contracts. New campaign cards use the shared decision report. |
+| `REPORT-EVIDENCE.md`, `skill_report_decisions.py`, `test_skill_report_decisions.py`, `docs/evaluations/report-decisions.json` | Declare the report's retained inputs in its manifest. The stopped card uses the generic scheduler witness check. Preserve explicit input usage and existing replay assertions. |
+| `test_pester_return_contract.py`, `test_podman_storage.py` | Preserve the frozen hash and negative admission controls. Add a fixture family through the reviewed data path and exercise the shared loader without patching its source. |
+
+The fixture onboards through the root list in
+`campaign-onboarding.json` and a skill-owned `onboarding.json`, selection
+registry, definitions, adapter, and dataset. The root list is a reviewed
+data edit. Use a directory under `.github/evals/<skill>/`, register the exact
+definition and control paths in its existing selection format, and keep the
+adapter in that directory's `task.py`. Keep graders and control submissions
+outside the deployed skill.
+
+Register new oracle and probe metric profiles in the active source manifest's
+`new_metrics` and `new_profiles` maps. The owner, definition, mode, and
+dataset must match the registered family. Source-only successors carry a
+parent and a runtime digest. Compute the digest with
+`skill_evidence.custom_input_identities` for the new purpose. The v52 input
+digest map replays the affected prior campaign manifests without rewriting the
+earlier source versions or selection registries.
+
+The hosted workflow still requires an explicit choice and any phase routing
+it needs. Scored profile admission, native runtime changes, and a new
+containment probe subject still need corresponding code and qualification.
+The fixture does not enter those paths.

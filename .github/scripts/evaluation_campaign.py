@@ -24,8 +24,8 @@ import skill_reports as reports
 
 def purpose(task, mode):
     identity = {'boolean-contract-v1':'boolean-contract-v4', 'gh-read-v1':'gh-read-v4', 'boolean-effectiveness-v1':'boolean-effectiveness-v3', 'boolean-retained-v1':'boolean-retained-v2'}.get(task.definition['id'], task.definition['id'])
-    source_version = '-lifecycle-v1-source-v52-'
-    return 'campaign-' + identity + source_version + mode
+    from evaluation_registration import current_source
+    return f'campaign-{identity}-lifecycle-v1-source-v{current_source()}-{mode}'
 
 
 def revision():

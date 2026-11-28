@@ -16,13 +16,6 @@ import skill_reports as reports
 ROOT = Path(__file__).resolve().parents[2]
 
 
-PODMAN_DEFINITIONS = (
-    ROOT / '.github/evals/podman/storage/qualification.json',
-    ROOT / '.github/evals/podman/storage/comparison.json',
-    ROOT / '.github/evals/podman/storage/comparison-controls.json',
-)
-
-
 def load(path):
     definition = reports.read_json(path)
     if definition.get('type') == 'judge-only':
@@ -42,14 +35,16 @@ def load(path):
     if definition.get('adapter') == 'batch-summary-static-templates':
         from pester_static_templates_task import StaticTemplateBatchSummary
         adapters['batch-summary-static-templates'] = StaticTemplateBatchSummary
-    if definition.get('adapter') == 'podman-storage':
-        require(path in PODMAN_DEFINITIONS, 'Unregistered Podman definition')
-        adapters['podman-storage'] = runpy.run_path(str(path.with_name('task.py')))['PodmanStorage']
-    require(definition.get('adapter') in adapters, 'Unsupported task adapter')
+    from evaluation_registration import family_for_definition, registered_file
+    member = path.relative_to(ROOT).as_posix() if path.is_relative_to(ROOT) else None
+    family = family_for_definition(ROOT, member)
+    adapter = definition.get('adapter')
+    require(adapter in adapters if family is None else adapter == family.adapter and definition.get('skill') == family.skill,
+            'Unsupported task adapter')
     for key in ('id', 'skill', 'source_case'):
         require(__import__('re').fullmatch('[a-z0-9-]+', definition[key]), 'Invalid task identity')
     require(definition['authorized_live_attempts'] == 0, 'Campaign paid execution disabled')
-    require(path.resolve() == path and (path.is_relative_to(ROOT / '.github/evals/campaigns') or path in PODMAN_DEFINITIONS), 'Unregistered definition path')
+    require(path.resolve() == path and (path.is_relative_to(ROOT / '.github/evals/campaigns') or family is not None), 'Unregistered definition path')
     variants = definition['variants']
     require(type(variants) is list and len(variants) >= 2 and len({v['id'] for v in variants}) == len(variants)
             and all(__import__('re').fullmatch('[a-z0-9-]+', v['id']) and type(v['present']) is bool for v in variants), 'Invalid campaign variants')
@@ -59,7 +54,12 @@ def load(path):
         if key in definition:
             target = ROOT / definition[key]
             require(target.resolve() == target and target.is_relative_to(ROOT), 'Unsafe campaign input path')
-    return adapters[definition['adapter']](definition, path.relative_to(ROOT).as_posix())
+    if family is None:
+        return adapters[adapter](definition, member)
+    module = registered_file(ROOT, path.with_name('task.py'))
+    implementation = runpy.run_path(str(module))[family.class_name]
+    require(isinstance(implementation, type) and issubclass(implementation, Task), 'Invalid task adapter class')
+    return implementation(definition, member)
 
 
 class Task:

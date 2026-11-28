@@ -5,9 +5,18 @@ checks every native checksum, reward, metric, failure, coverage and reference.
 """
 import hashlib
 from pathlib import Path
+import re
 
 from evaluation_campaign_core import require
 from evaluation_tasks import ROOT, load
+from evaluation_registration import REGISTRATION, family_for_definition
+
+RETAINED_SOURCE_INPUTS = '.github/evals/campaign-source-v52-inputs.json'
+
+
+def registered_family(profile, workspace=ROOT):
+    definition = profile.get('campaign', {}).get('definition')
+    return family_for_definition(workspace, definition) if definition is not None else None
 import skill_reports as reports
 
 
@@ -26,6 +35,12 @@ def source_manifest(workspace, name, purpose):
     adapter = task(profile)
     # Preserve original overlay ownership; add the reviewed extension and candidate.
     values = adapter.source_inputs(workspace)
+    match = re.search(r'-source-v([0-9]+)-', purpose)
+    retained = match is None or int(match[1]) <= 52
+    family = registered_family(profile, workspace)
+    # Only the onboarding registration is new to the task-owned source directory.
+    if retained and family:
+        values = [row for row in values if row['member'] != 'task/' + family.member]
     files = ['.github/scripts/setup-campaign-authentication.sh', '.github/scripts/campaign_authentication_qualification.py', '.github/scripts/evaluation_campaign_selection.py', '.github/evals/campaigns/selections.json', '.github/scripts/evaluation_campaign.py', '.github/scripts/evaluation_campaign_core.py',
         '.github/scripts/evaluation_resources.py', '.github/scripts/evaluation_runtime.py', '.github/scripts/evaluation_tasks.py',
         '.github/scripts/evaluation_evidence.py', '.github/scripts/evaluation_launch_qualification.py', '.github/scripts/campaign_scheduler_evidence.py', '.github/scripts/evaluation_campaign_protocol.py', '.github/scripts/codex_pilot_dispatch.py', '.github/scripts/skill_evidence.py', '.github/scripts/unscored_security.py', '.github/scripts/skill_analysis.py',
@@ -33,9 +48,16 @@ def source_manifest(workspace, name, purpose):
         '.github/scripts/benchmark_evidence.py', '.github/scripts/evaluator_090.py',
         '.github/scripts/evaluator_profiles.py', '.github/evals/benchmark-090.json', adapter.member,
         adapter.definition['runtime_profile'], '.github/workflows/evaluation-campaign.yml']
-    if adapter.definition['id'].endswith('-sol62'):
+    if family:
+        files.append(family.registry.relative_to(workspace).as_posix())
+    elif adapter.definition['id'].endswith('-sol62'):
         from evaluation_campaign_selection import registry_path
         files.append(registry_path(adapter.definition['id']).relative_to(ROOT).as_posix())
+    if not retained:
+        files.extend((REGISTRATION, '.github/scripts/evaluation_registration.py'))
+        if family:
+            task_module = Path(family.member).with_name('task.py').as_posix()
+            files.extend((family.member, task_module))
     if adapter.definition['id'] == 'gh-codex-1691':
         files.extend(('.github/workflows/codex-1691-qualification.yml',
                       '.github/scripts/qualify_codex_1691.py', '.github/scripts/verify_codex_1691.py'))
@@ -47,6 +69,13 @@ def source_manifest(workspace, name, purpose):
     from evaluation_runtime import read_profile, source_inputs
     values.extend(source_inputs(read_profile(ROOT / adapter.definition['runtime_profile']), workspace))
     values.extend({'member': 'campaign/' + member, 'digest': e.digest_bytes(e.read_bytes(workspace / member))} for member in sorted(set(files)))
+    if retained:
+        # Rebuild the previously approved manifest using the exact pre-refactor
+        # shared bytes. The result must still match the pinned runtime digest.
+        original = e.read_json(workspace / RETAINED_SOURCE_INPUTS)
+        for digest in original.values():
+            e.sha(digest)
+        values = [dict(row, digest=original[row['member']]) if row['member'] in original else row for row in values]
     return values
 
 

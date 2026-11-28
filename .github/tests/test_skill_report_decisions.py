@@ -19,10 +19,11 @@ TRANSFER_INPUTS = [TRANSFER / 'current', TRANSFER / 'candidate']
 DEVELOPMENT_INPUTS = [DEVELOPMENT / 'data' / name for name in
                       ('historical-development-current', 'pester-return-development-candidate-v1')]
 STAGE_ONE_INPUTS = [DEVELOPMENT / name / 'data' for name in ('stage-1-sol62', 'stage-1-1710-sol62')]
-PODMAN_INPUT = DOCS / 'podman-storage-comparison/data'
-ALL_INPUTS = TRANSFER_INPUTS + DEVELOPMENT_INPUTS + STAGE_ONE_INPUTS + [PODMAN_INPUT]
 analysis = decisions.analysis
 evidence = decisions.evidence
+ALL_INPUTS = decisions.manifest_inputs(evidence.read_json(MANIFEST), DOCS)
+COMPANION_INPUTS = [path for path in ALL_INPUTS
+                    if path not in (*TRANSFER_INPUTS, *DEVELOPMENT_INPUTS, *STAGE_ONE_INPUTS)]
 
 
 def decision_for(manifest, skill, case):
@@ -36,8 +37,7 @@ class DecisionReportTests(unittest.TestCase):
         self.root = Path(temporary.name)
 
     def run_report(self, inputs, manifest=MANIFEST, *, replay=None, name='html', expected_exit=0):
-        if PODMAN_INPUT not in inputs:
-            inputs = [*inputs, PODMAN_INPUT]
+        inputs = [*inputs, *(path for path in COMPANION_INPUTS if path not in inputs)]
         captured = analysis.capture_inputs(inputs)
         saved = self.root / 'analysis' / 'analysis.json'
         saved.parent.mkdir(exist_ok=True)
@@ -127,6 +127,21 @@ class DecisionReportTests(unittest.TestCase):
                 self.assertIn(link[1:], document.ids)
             else:
                 self.assertIsNotNone(decisions.GITHUB_EVIDENCE.fullmatch(link))
+
+    def test_manifest_inputs_reproduce_the_explicit_report(self):
+        expected = self.run_report(ALL_INPUTS)
+        command = [sys.executable, '-B', str(ROOT / '.github/scripts/skill_report_decisions.py')]
+        destination = self.root / 'manifest-output'
+        result = subprocess.run([*command, '--decisions', str(MANIFEST), '--output', str(destination)],
+                                capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((destination / 'report.html').read_text(), expected)
+        manifest = evidence.read_json(MANIFEST)
+        manifest['inputs'] = ['../escaping']
+        invalid = self.root / 'invalid.json'
+        invalid.write_bytes(evidence.encoded(manifest))
+        with self.assertRaisesRegex(ValueError, 'Escaping relative member'):
+            decisions.generate(None, None, invalid)
 
     def test_stopped_comparison_reports_the_stop_without_a_paired_verdict(self):
         page = self.run_report(ALL_INPUTS)

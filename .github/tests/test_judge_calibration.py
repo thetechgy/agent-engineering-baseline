@@ -114,6 +114,7 @@ class JudgeContracts(unittest.TestCase):
         original = {**value, 'profiles': {k:v for k,v in value['profiles'].items() if '-source-v33-' not in k and '-source-v35-' not in k and '-source-v36-' not in k and '-source-v32-' not in k and '-source-v31-' not in k and '-source-v30-' not in k and '-source-v29-' not in k and '-source-v28-' not in k and '-source-v27-' not in k and '-source-v26-' not in k and k not in ('pester-effectiveness-v30', 'pester-cli-pilot-retained-v18', 'pester-effectiveness-v31', 'pester-cli-pilot-retained-v19', 'pester-effectiveness-v32', 'pester-effectiveness-v33', 'pester-effectiveness-v34', 'pester-effectiveness-v35', 'pester-effectiveness-v39', 'pester-effectiveness-v38', 'pester-effectiveness-v36', 'pester-cli-pilot-retained-v20') and '-source-v25-' not in k}}
         self.assertEqual(len(original['profiles']), 839)
         from evaluation_evidence import source_manifest
+        from evaluation_registration import current_source
         import skill_evidence as evidence
         additions = [k for k in value['profiles'] if '-source-v25-' in k]
         self.assertEqual(len(additions), 35)
@@ -123,7 +124,7 @@ class JudgeContracts(unittest.TestCase):
             old = value['profiles'][key.replace('-source-v25-', '-source-v24-')]
             self.assertEqual({k:v for k,v in row.items() if k not in ('id', 'runtime_digest')},
                              {k:v for k,v in old.items() if k not in ('id', 'runtime_digest')})
-            active = key.replace('-source-v25-', '-source-v52-')
+            active = key.replace('-source-v25-', f'-source-v{current_source(ROOT)}-')
             successor = current['profiles'][active]
             self.assertEqual(successor['runtime_digest'],
                              evidence.identity(source_manifest(ROOT, successor['skill_id'], active)))

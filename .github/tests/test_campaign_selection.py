@@ -24,6 +24,87 @@ CAMPAIGNS = [f'pester-return-{case}-{variant}-{version}'
 
 
 class SelectionContracts(unittest.TestCase):
+    def test_onboarded_fixture_loads_only_registered_definitions(self):
+        import evaluation_tasks
+        from evaluation_registration import LEGACY_SELECTIONS, REGISTRATION
+        from evaluation_evidence import registered_family
+        import skill_evidence as evidence
+
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            folder = workspace / '.github/evals/fixture-skill/example'
+            folder.mkdir(parents=True)
+            family = folder / 'onboarding.json'
+            reports.write_json(workspace / REGISTRATION, {
+                'version': 1, 'current_source': 53, 'current_effectiveness': 'pester-effectiveness-v56',
+                'families': [family.relative_to(workspace).as_posix()],
+            })
+            reports.write_json(family, {'adapter': 'fixture-adapter', 'class': 'Fixture',
+                                       'dataset': 'dataset.json', 'source_fixtures': []})
+            for member in (*LEGACY_SELECTIONS, selected.REGISTRY):
+                (workspace / member).parent.mkdir(parents=True, exist_ok=True)
+                reports.write_json(workspace / member, {'version': 1, 'campaigns': {}})
+            definition = {
+                'adapter': 'fixture-adapter', 'id': 'fixture-selection', 'skill': 'fixture-skill',
+                'source_case': 'fixture-1', 'authorized_live_attempts': 0, 'attempt_limit': 1,
+                'stop_estimate_usd': 1, 'variants': [
+                    {'id': 'current', 'present': True}, {'id': 'absent', 'present': False},
+                ],
+            }
+            definition_path = folder / 'definition.json'
+            member = definition_path.relative_to(workspace).as_posix()
+            reports.write_json(definition_path, definition)
+            reports.write_json(folder / 'unregistered.json', definition)
+            registry = folder / 'selections.json'
+            reports.write_json(registry, {'version': 1, 'campaigns': {
+                'fixture-selection': {'definition': member, 'controls': [member], 'producers': []},
+            }})
+            dataset = folder / 'dataset.json'
+            reports.write_json(dataset, {'evals': []})
+            digest = evidence.digest_bytes(dataset.read_bytes())
+            profile = {'campaign': {'definition': member, 'mode': 'oracle', 'dataset': {
+                'path': dataset.relative_to(workspace).as_posix(), 'digest': digest,
+            }}, 'dataset_digest': digest, 'grading': 'custom_only', 'skill_id': 'fixture-skill',
+                'id': 'campaign-fixture-selection-lifecycle-v1-source-v53-oracle',
+                'runtime_digest': digest, 'grader_digest': digest, 'fixture_digest': digest}
+            module = folder / 'task.py'
+            source = 'from evaluation_tasks import Task\nclass Fixture(Task):\n    pass\n'
+            module.write_text(source)
+            with patch.object(selected, 'ROOT', workspace), patch.object(evaluation_tasks, 'ROOT', workspace):
+                task = selected.selected_task('fixture-selection')
+                self.assertEqual(task.definition, definition)
+                self.assertEqual(selected.registry_path('fixture-selection'), registry)
+                self.assertEqual(selected.registration(task)['producers'], [])
+                self.assertEqual(registered_family(profile, workspace).skill, 'fixture-skill')
+                self.assertEqual(evidence.custom_authored_digest(workspace, 'fixture-skill', profile), digest)
+                with self.assertRaisesRegex(ValueError, 'Unregistered campaign dataset path'):
+                    evidence.custom_authored_digest(workspace, 'podman', profile)
+                existing = {'metrics': evidence.frozen_registry()['metrics'], 'profiles': {}}
+                addition = {'new_metrics': {}, 'new_profiles': {profile['id']: profile}}
+                evidence.extend_qualification_profiles(workspace, 'source-v53', addition, existing)
+                self.assertEqual(existing['profiles'][profile['id']], profile)
+                profile['campaign']['mode'] = 'live'
+                with self.assertRaises(ValueError):
+                    evidence.extend_qualification_profiles(workspace, 'source-v53', addition,
+                                                           {'metrics': existing['metrics'], 'profiles': {}})
+                with self.assertRaisesRegex(ValueError, 'Unregistered preparation producer'):
+                    selected.location(task, {'name': 'reusable-evaluation-1'}, {'run_attempt': 1})
+                # An unregistered definition or linked task module cannot execute.
+                module.write_text("raise AssertionError('unregistered code executed')\n")
+                with self.assertRaisesRegex(ValueError, 'Unsupported task adapter'):
+                    evaluation_tasks.load(folder / 'unregistered.json')
+                definition['skill'] = 'other-skill'
+                reports.write_json(definition_path, definition)
+                with self.assertRaisesRegex(ValueError, 'Unsupported task adapter'):
+                    selected.selected_task('fixture-selection')
+                definition['skill'] = 'fixture-skill'
+                reports.write_json(definition_path, definition)
+                outside = workspace / 'unreviewed.py'
+                module.rename(outside)
+                module.symlink_to(outside)
+                with self.assertRaisesRegex(ValueError, 'Unsafe campaign registration member'):
+                    selected.selected_task('fixture-selection')
+
     def metadata(self, task, producer_index=1):
         producer = selected.registration(task)['producers'][producer_index]
         repo = {'id': REPO_ID, 'full_name': protocol.REPO}

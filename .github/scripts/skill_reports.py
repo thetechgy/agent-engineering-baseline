@@ -812,11 +812,14 @@ def benchmark_artifacts(workspace, root, name, destination):
     )
     carrier = 'codex'
     campaign_profile = None
+    campaign_family = None
     if (root / 'custom-metric-capture.json').exists():
         import skill_evidence as evidence
         candidate_capture = read_json(root / 'custom-metric-capture.json')
         if evidence.campaign_purpose(candidate_capture.get('purpose')):
+            from evaluation_evidence import registered_family
             campaign_profile, _ = evidence.validate_custom_capture(candidate_capture, name, workspace)
+            campaign_family = registered_family(campaign_profile, workspace)
             carrier = evidence.custom_carrier(campaign_profile)
             evidence.token(carrier)
     registered_cases = set()
@@ -882,7 +885,7 @@ def benchmark_artifacts(workspace, root, name, destination):
             original = value
             value = redact_sensitive_data(value)
             capture = (relative.as_posix() == 'custom-metric-capture.json'
-                       and (released_diagnostic or (name == 'podman' and campaign_profile is not None)
+                       and (released_diagnostic or campaign_family is not None
                             or (name == 'gh'
                                 and original.get('producer', {}).get('skillevaluator') in ('0.8.0', '0.9.0')
                                 and (original.get('purpose') == 'oracle_qualification'
