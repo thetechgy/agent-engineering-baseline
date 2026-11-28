@@ -31,12 +31,14 @@ def producer(profile):
 
 def source_manifest(workspace, name, purpose):
     import skill_evidence as e
+    from evaluation_identity import REGISTRY as GRADING_REGISTRY, legacy_inputs, reusable
     profile, _, _ = e.custom_contract(name, workspace, purpose=purpose)
     adapter = task(profile)
     # Preserve original overlay ownership; add the reviewed extension and candidate.
     values = adapter.source_inputs(workspace)
     match = re.search(r'-source-v([0-9]+)-', purpose)
-    retained = match is None or int(match[1]) <= 52
+    bound = reusable(purpose)
+    retained = not bound and (match is None or int(match[1]) <= 52)
     family = registered_family(profile, workspace)
     # Only the onboarding registration is new to the task-owned source directory.
     if retained and family:
@@ -58,6 +60,12 @@ def source_manifest(workspace, name, purpose):
         if family:
             task_module = Path(family.member).with_name('task.py').as_posix()
             files.extend((family.member, task_module))
+    if bound:
+        files.extend((GRADING_REGISTRY, '.github/scripts/evaluation_identity.py'))
+        if family:
+            grading = Path(family.member).with_name('grading.json').as_posix()
+            if (workspace / grading).exists():
+                files.append(grading)
     if adapter.definition['id'] == 'gh-codex-1691':
         files.extend(('.github/workflows/codex-1691-qualification.yml',
                       '.github/scripts/qualify_codex_1691.py', '.github/scripts/verify_codex_1691.py'))
@@ -69,6 +77,8 @@ def source_manifest(workspace, name, purpose):
     from evaluation_runtime import read_profile, source_inputs
     values.extend(source_inputs(read_profile(ROOT / adapter.definition['runtime_profile']), workspace))
     values.extend({'member': 'campaign/' + member, 'digest': e.digest_bytes(e.read_bytes(workspace / member))} for member in sorted(set(files)))
+    if not bound:
+        values = legacy_inputs(workspace, values)
     if retained:
         # Rebuild the previously approved manifest using the exact pre-refactor
         # shared bytes. The result must still match the pinned runtime digest.

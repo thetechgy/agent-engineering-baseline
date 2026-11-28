@@ -81,12 +81,26 @@ def frozen(task):
         from judge_calibration_inputs import frozen as judge_frozen
         return judge_frozen(task)
     from evaluation_campaign import purpose
-    return {'revision': revision(), 'protocol': protocol(task), 'protocol_digest': digest(ROOT / task.definition['protocol']),
+    from evaluation_identity import execution_binding
+    source_revision = revision()
+    source_identities = {'live': {'case': task.entry, 'selector': task.selector}} if task.diagnostic_observation else {}
+    execution = {}
+    if not task.diagnostic_observation:
+        for mode in ('live', 'experiment-probe'):
+            selected_purpose = purpose(task, mode)
+            skill = task.definition['skill']
+            profile, _, contract = evidence.custom_contract(skill, purpose=selected_purpose)
+            source_identities[mode] = evidence.custom_input_identities(ROOT, skill, purpose=selected_purpose)
+            require(all(profile[key] == source_identities[mode][key] for key in ('grader_digest', 'fixture_digest')),
+                    'Unregistered campaign grader or fixture')
+            execution[mode] = execution_binding(ROOT, profile, selected_purpose, contract)
+            require(execution[mode]['revision'] == source_revision, 'Campaign execution source changed during preparation')
+    return {'revision': source_revision, 'protocol': protocol(task), 'protocol_digest': digest(ROOT / task.definition['protocol']),
             'definition': task.definition, 'runtime': read_profile(ROOT / task.definition['runtime_profile']),
             'evaluator': __import__('evaluation_runtime').evaluator(read_profile(ROOT / task.definition['runtime_profile'])), 'authorized_live_attempts': 0,
             'schedule': task.schedule() if task.diagnostic_observation else schedule(tuple(task.cases('live')), tuple(v['id'] for v in task.definition['variants']), task.definition['trials']),
-            'source_identities': {'live': {'case': task.entry, 'selector': task.selector}} if task.diagnostic_observation else {mode: evidence.custom_input_identities(ROOT, task.definition['skill'], purpose=purpose(task, mode))
-                                  for mode in ('live', 'experiment-probe')}}
+            'source_identities': source_identities,
+            **({'execution_bindings': execution} if execution else {})}
 
 
 def check(reference, staging, task, *, qualified=True):

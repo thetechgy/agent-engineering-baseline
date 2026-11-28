@@ -36,9 +36,12 @@ class ProtocolContracts(unittest.TestCase):
         self.assertFalse(proposal['runtime']['profile']['inference_enabled'])
         for mode in ('live','experiment-probe'):
             purpose=campaign.purpose(task,mode)
-            profile,_,_=evidence.custom_contract(task.definition['skill'],purpose=purpose)
+            profile, _, contract = evidence.custom_contract(task.definition['skill'], purpose=purpose)
             self.assertEqual(profile['campaign']['trials'],3)
-            self.assertTrue(all(profile[k]==v for k,v in proposal['source_identities'][mode].items()))
+            self.assertTrue(all(profile[key] == proposal['source_identities'][mode][key]
+                                for key in ('grader_digest', 'fixture_digest')))
+            self.assertEqual(proposal['execution_bindings'][mode]['grading'], contract)
+            self.assertEqual(proposal['execution_bindings'][mode]['revision'], proposal['revision'])
         with self.assertRaisesRegex(ValueError,'cannot authorize'):
             protocol.protocol(load(ROOT/'.github/evals/campaigns/boolean-contract.json'))
 
@@ -232,7 +235,8 @@ class ProtocolContracts(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'Conflicting public report claims'):
             analysis.check_records({evidence.identity(value):value for value in (left,right)})
         for mode in ('oracle','probe','live'):
-            self.assertEqual(campaign.collection_run_id(task,mode),campaign.purpose(task,mode))
+            self.assertEqual(campaign.collection_run_id(task, mode),
+                             f'{campaign.purpose(task, mode)}-{campaign.revision()[:12]}')
         with self.assertRaises(ValueError):campaign.collection_run_id(task,'experiment-probe')
 
     def test_report_admission_preserves_inference_and_population_boundaries(self):

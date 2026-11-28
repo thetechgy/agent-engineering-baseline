@@ -1,0 +1,7 @@
+{
+  "campaign/.github/scripts/evaluation_campaign.py": "sha256:48821d237330a4ffcfa1788ac8b4e484b56c4cbe2842a85c26dd2e5bd77191c2",
+  "campaign/.github/scripts/evaluation_campaign_protocol.py": "sha256:898032d26d5ce39cd2e2152ebb3a749cc861290f672e5ae0a6b65404577cd4d5",
+  "campaign/.github/scripts/evaluation_evidence.py": "sha256:98b7241a4b84bd3560ca5e385cd6a214adf370da55a5cc44a4fb2b7106a56a66",
+  "campaign/.github/scripts/skill_evidence.py": "sha256:d62d3428f618a53f27aca510199bb2e1fe2edd6546e25a9ac9737f2fed4f889f",
+  "pilot/.github/scripts/skill_evidence.py": "sha256:d62d3428f618a53f27aca510199bb2e1fe2edd6546e25a9ac9737f2fed4f889f"
+}

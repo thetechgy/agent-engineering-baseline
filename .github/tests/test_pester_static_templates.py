@@ -84,7 +84,8 @@ class StaticTemplates(unittest.TestCase):
             self.assertEqual(criteria['sha256'], hashlib.sha256((ROOT/criteria['path']).read_bytes()).hexdigest())
             for mode in ('live','experiment-probe'):
                 profile, _, _ = evidence.custom_contract(task.definition['skill'], purpose=purpose(task,mode))
-                self.assertTrue(all(profile[k] == v for k,v in proposal['source_identities'][mode].items()))
+                self.assertTrue(all(profile[key] == proposal['source_identities'][mode][key]
+                                    for key in ('grader_digest', 'fixture_digest')))
             tasks.append(after)
         self.assertEqual(tasks[0], tasks[1])
 

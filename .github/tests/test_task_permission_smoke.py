@@ -53,7 +53,8 @@ class PermissionSmoke(unittest.TestCase):
             self.assertEqual(profile['campaign']['mode'], mode)
             self.assertEqual(profile['campaign']['policy_fields'], owner.public_policy_fields())
             self.assertEqual(profile['campaign']['scheduler'], 'campaign-scheduler-v1')
-            self.assertTrue(all(profile[k] == v for k,v in frozen['source_identities'][mode].items()))
+            self.assertTrue(all(profile[key] == frozen['source_identities'][mode][key]
+                                for key in ('grader_digest', 'fixture_digest')))
         self.assertNotEqual(campaign.purpose(owner, 'experiment-probe'), campaign.purpose(original, 'probe'))
 
     @unittest.skipUnless(__import__('importlib.util', fromlist=['find_spec']).find_spec('skillevaluator'), 'Owning task runtime required')
