@@ -5,6 +5,7 @@ import unittest
 
 from codex_pilot_contract import ROOT, configuration
 from evaluation_campaign import purpose
+from evaluation_identity import execution_binding
 from evaluation_runtime import read_profile, evaluator
 from evaluation_tasks import load
 from qualify_codex_1691 import SELECTOR, check_pricing
@@ -43,9 +44,16 @@ class Codex1691Tests(unittest.TestCase):
         self.assertEqual(hashlib.sha256(json.dumps(original, sort_keys=True, separators=(',', ':')).encode()).hexdigest(),
                          '6528c9bf763bec8056c8cfd57273cab9a2caf875d52584852496e34725b3252e')
         task = load(ROOT / '.github/evals/campaigns/gh-codex-1691.json')
+        legacy = 'campaign-gh-codex-1691-lifecycle-v1-source-v53-probe'
+        manifest = skill_evidence.custom_source_manifest(ROOT, 'gh', purpose=legacy)
+        self.assertEqual(skill_evidence.identity(manifest),
+                         skill_evidence.custom_registry(ROOT)['profiles'][legacy]['runtime_digest'])
         identity = purpose(task, 'probe')
-        manifest = skill_evidence.custom_source_manifest(ROOT, 'gh', purpose=identity)
-        self.assertEqual(skill_evidence.identity(manifest), skill_evidence.custom_registry(ROOT)['profiles'][identity]['runtime_digest'])
+        profile, _, contract = skill_evidence.custom_contract('gh', purpose=identity)
+        binding = execution_binding(ROOT, profile, identity, contract)
+        self.assertEqual(binding['grading'], contract)
+        self.assertEqual(profile['runtime']['cli'], '0.169.1')
+        self.assertEqual(binding, execution_binding(ROOT, profile, identity, contract, recorded=binding))
 
     def test_pricing_applies_cache_reads_writes_and_only_available_context_evidence(self):
         prices = check_pricing(read_profile(SELECTOR)['resolved'])

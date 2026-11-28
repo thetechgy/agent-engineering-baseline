@@ -110,6 +110,30 @@ def source_registry(raw):
     return value
 
 
+def campaign_inputs(workspace, revision, campaign, budget):
+    """Bind the selection and frozen runtime files from the producer's tree."""
+    from evaluation_campaign_selection import registry_path
+    from skill_evidence import digest_bytes, historical_blob, parse_json, read_bytes
+
+    members = {}
+
+    def retain(member, *, frozen=True):
+        raw = historical_blob(workspace, f'{revision}:{member}', budget=budget)
+        require(raw is not None, 'Reviewed campaign input is unavailable')
+        if frozen:
+            require(raw == read_bytes(workspace / member), 'Frozen campaign input drift')
+        members[member] = digest_bytes(raw)
+        return raw
+
+    task = parse_json(retain(campaign['definition']))
+    runtime = parse_json(retain(task['runtime_profile']))
+    retain(runtime['frozen_profile'])
+    if 'protocol' in task:
+        retain(task['protocol'])
+    retain(registry_path(task['id']).relative_to(workspace).as_posix(), frozen=False)
+    return members
+
+
 def execution_binding(workspace, profile, purpose, contract, *, recorded=None):
     from skill_evidence import (ReadBudget, closed, digest_bytes, historical_blob, identity,
                                 offline_git, resolve_git_revision)
@@ -145,6 +169,7 @@ def execution_binding(workspace, profile, purpose, contract, *, recorded=None):
     policy = {key: value for key, value in profile.items() if key not in ('runtime_digest', 'campaign')}
     if campaign:
         policy['campaign'] = {key: value for key, value in campaign.items() if key != 'adapter_sha256'}
+        policy['inputs'] = campaign_inputs(workspace, revision, campaign, budget)
     expected = {'version': 1, 'revision': revision, 'tree': tree, 'profile': profile['id'], 'purpose': purpose,
                 'grading': contract, 'policy': identity(policy), 'replay_adapter': adapter}
     if recorded is not None:

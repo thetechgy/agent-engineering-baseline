@@ -4357,7 +4357,7 @@ def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, age
         require(sorted(row['case_id'] for row in rows) == ids, 'Incomplete staged custom arms')
     inv = inventory(workspace)
     src = next(row['source'] for row in inv['skills'] if row['source']['skill_id'] == name)
-    if 'skill_source' in profile:
+    if 'skill_source' in profile or (binding is not None and 'campaign' in profile and name != 'gh'):
         from evaluation_evidence import selected_identity
         src = selected_identity(workspace, profile, src)
     capture = {'schema_version': 2 if binding is not None else 1, 'skill': name, 'contract_digest': contract, 'purpose': purpose,
@@ -4611,7 +4611,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
         restore_historical_gh_file_order(prepared, read_prepared_snapshot())
     require(capture['prepared_dataset_digest'] == identity(prepared), 'Prepared dataset identity mismatch')
     source_root = workspace / ('.apm/skills' if local_source else '.agents/skills') / name
-    if 'skill_source' in profile:
+    if 'skill_source' in profile or (bound and 'campaign' in profile and name != 'gh'):
         from evaluation_evidence import selected_source
         source_root = selected_source(workspace, profile)
         require(capture['source']['source_path'] == source_root.relative_to(workspace).as_posix(), 'Campaign source path drift')

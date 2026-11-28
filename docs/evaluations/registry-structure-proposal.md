@@ -123,3 +123,22 @@ Remove only redundant working-tree registry history after those checks.
 Active definitions, retained evidence and reports, and independent runtime
 or authorization records remain available. If a reader still relies on a
 candidate deletion, keep that member until the reader has a verified route.
+
+## Implementation
+
+The first migration uses the frozen v53 rows to resolve stable campaign and
+Pester effectiveness grading definitions. New credential-free task families
+can register their own `grading.json` beside their onboarding and selections.
+The v53 profile IDs, parent chain and report inputs remain readable. A small
+compatibility file preserves source digests for the v53 readers of edited
+scripts.
+
+The execution binding identifies the committed tree, grading digest, mode and
+execution policy. Campaigns bind the exact definition, selection, runtime and
+protocol files from that tree. Native admission uses a clean checkout and the
+expected staged inputs. Offline public validation reads the local Git object
+store. It accepts the reviewed checkout, an ancestor with the new registry
+format, or a retained revision explicitly pinned in the committed registry.
+Supply the reviewed producer checkout when an older record needs frozen
+campaign files its current reader can no longer reproduce. The binding does
+not authenticate execution by itself.
