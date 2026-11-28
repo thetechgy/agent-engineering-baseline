@@ -20,9 +20,12 @@ BASE = ROOT / '.github/evals/pester-return-contract'
 
 class ReturnContract(unittest.TestCase):
     def test_snapshots_and_frozen_inputs(self):
+        from test_pester_return_qualification import frozen_return_workflow
+
         frozen = reports.read_json(BASE / 'freeze.json')
         for member, digest in frozen['files'].items():
-            raw = (ROOT / member).read_bytes()
+            raw = (frozen_return_workflow() if member == '.github/workflows/pester-return-qualification.yml'
+                   else (ROOT / member).read_bytes())
             if member == '.github/scripts/evaluation_tasks.py':
                 # Project out only additive metadata interfaces and registrations.
                 # Every other byte, including all frozen Pester task code, must

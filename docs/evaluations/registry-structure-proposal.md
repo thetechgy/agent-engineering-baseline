@@ -142,3 +142,29 @@ format, or a retained revision explicitly pinned in the committed registry.
 Supply the reviewed producer checkout when an older record needs frozen
 campaign files its current reader can no longer reproduce. The binding does
 not authenticate execution by itself.
+
+## Legacy registry archive
+
+Active grading lives in `.github/evals/active-grading.json`. The 20 legacy
+members are pinned by commit and SHA-256 in
+`.github/evals/legacy-registry-archive.json`. The tag
+`evaluation-registry-legacy-v53` identifies commit
+`f79ecc5b1e98e4575f434d8cb22ccd1cf67690ab`, which contains all the pinned
+bytes. The offline reader reads those Git blobs as data. It requires a
+local copy of the pinned Git objects and verifies every member it uses.
+Hosted consumers retain Git history through their existing pinned checkout
+action.
+
+For a shallow local checkout, fetch the reviewed archive before replay.
+
+```bash
+git fetch --no-tags origin tag evaluation-registry-legacy-v53
+git rev-parse 'evaluation-registry-legacy-v53^{commit}'
+```
+
+Compare the printed commit to the archive index. A retained public record
+from the pre-merge PR head may also need its producer Git objects. The
+grading registry records the approved revision for those records. They can
+be recovered separately with `git fetch --no-tags origin refs/pull/196/head`.
+Historical private review descriptors continue to use their own frozen
+tooling snapshots.

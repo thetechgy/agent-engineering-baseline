@@ -197,7 +197,7 @@ class CampaignContracts(unittest.TestCase):
         # Canonical registry snapshot from executed head 97124cf; works in shallow
         # CI checkouts and never follows a moving remote tracking reference.
         import hashlib
-        current=reports.read_json(ROOT/evidence.CUSTOM_REGISTRY)
+        current=evidence.frozen_registry(ROOT)
         current['profiles'].pop('gh-deterministic-gate-v6')
         current['profiles'].pop('gh-native-oracle-v2')
         current['active_profiles']['gh'] = 'gh-deterministic-gate-v5'

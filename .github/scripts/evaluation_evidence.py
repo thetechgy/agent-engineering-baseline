@@ -31,6 +31,7 @@ def producer(profile):
 
 def source_manifest(workspace, name, purpose):
     import skill_evidence as e
+    from evaluation_archive import read_json as read_archive
     from evaluation_identity import REGISTRY as GRADING_REGISTRY, legacy_inputs, reusable
     profile, _, _ = e.custom_contract(name, workspace, purpose=purpose)
     adapter = task(profile)
@@ -61,7 +62,7 @@ def source_manifest(workspace, name, purpose):
             task_module = Path(family.member).with_name('task.py').as_posix()
             files.extend((family.member, task_module))
     if bound:
-        files.extend((GRADING_REGISTRY, '.github/scripts/evaluation_identity.py'))
+        files.extend((GRADING_REGISTRY, e.ACTIVE_GRADING, '.github/scripts/evaluation_identity.py'))
         if family:
             grading = Path(family.member).with_name('grading.json').as_posix()
             if (workspace / grading).exists():
@@ -82,7 +83,7 @@ def source_manifest(workspace, name, purpose):
     if retained:
         # Rebuild the previously approved manifest using the exact pre-refactor
         # shared bytes. The result must still match the pinned runtime digest.
-        original = e.read_json(workspace / RETAINED_SOURCE_INPUTS)
+        original = read_archive(workspace, RETAINED_SOURCE_INPUTS)
         for digest in original.values():
             e.sha(digest)
         values = [dict(row, digest=original[row['member']]) if row['member'] in original else row for row in values]

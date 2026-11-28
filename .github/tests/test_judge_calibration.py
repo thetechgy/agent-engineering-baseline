@@ -107,7 +107,8 @@ class JudgeContracts(unittest.TestCase):
 
     def test_frozen_historical_profiles_are_preserved(self):
         import hashlib
-        value = reports.read_json(ROOT / '.github/evals/custom-metrics.json')
+        import skill_evidence as evidence
+        value = evidence.frozen_registry(ROOT)
         value['profiles'].pop('gh-deterministic-gate-v6')
         value['profiles'].pop('gh-native-oracle-v2')
         value['active_profiles']['gh'] = 'gh-deterministic-gate-v5'
@@ -115,7 +116,6 @@ class JudgeContracts(unittest.TestCase):
         self.assertEqual(len(original['profiles']), 839)
         from evaluation_evidence import source_manifest
         from evaluation_registration import current_source
-        import skill_evidence as evidence
         additions = [k for k in value['profiles'] if '-source-v25-' in k]
         self.assertEqual(len(additions), 35)
         current = evidence.custom_registry(ROOT)

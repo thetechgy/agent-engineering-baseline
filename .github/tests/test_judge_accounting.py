@@ -126,7 +126,7 @@ class AccountingTests(unittest.TestCase):
     def test_source_successors_preserve_all_803_historical_profiles(self):
         import hashlib
         import skill_evidence as evidence
-        registry=reports.read_json(ROOT/evidence.CUSTOM_REGISTRY)
+        registry=evidence.frozen_registry(ROOT)
         registry['profiles'].pop('gh-deterministic-gate-v6')
         registry['profiles'].pop('gh-native-oracle-v2')
         registry['active_profiles']['gh'] = 'gh-deterministic-gate-v5'

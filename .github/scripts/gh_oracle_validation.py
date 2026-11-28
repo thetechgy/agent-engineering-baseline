@@ -94,7 +94,7 @@ def qualify_outcomes(record, case_ids):
     """Assert the declared controls against admitted, normalized measurements."""
     evidence.validate_public(record)
     custom = record['custom']
-    profile = evidence.custom_registry()['profiles'][custom['profile_id']]
+    profile, _, _ = evidence.custom_contract('gh', profile_id=custom['profile_id'])
     if (evidence.profile_family(profile) != 'gh-native-oracle-v1'
             or custom['purpose'] != 'oracle_qualification' or custom['agent'] != 'oracle'):
         raise RuntimeError('Native gh qualification identity lost')

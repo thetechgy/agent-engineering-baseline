@@ -8,6 +8,8 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / '.github/scripts'))
 
+from skill_evidence import frozen_registry
+
 
 class DeadlineEvidence(unittest.TestCase):
     def test_partial_native_usage_cannot_become_complete_accounting(self):
@@ -37,7 +39,7 @@ class DeadlineEvidence(unittest.TestCase):
         self.assertNotEqual(failure_reason('CancelledError'), failure_reason('AgentTimeoutError'))
 
     def test_entire_starting_registry_is_preserved(self):
-        registry = json.loads((ROOT / '.github/evals/custom-metrics.json').read_text())
+        registry = frozen_registry(ROOT)
         registry['profiles'].pop('gh-deterministic-gate-v6')
         registry['profiles'].pop('gh-native-oracle-v2')
         registry['active_profiles']['gh'] = 'gh-deterministic-gate-v5'

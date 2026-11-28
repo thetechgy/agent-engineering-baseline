@@ -13,7 +13,7 @@ import skill_evidence as evidence
 
 class RoutingProfiles(unittest.TestCase):
     def test_append_only_source_profiles_change_only_id_and_runtime_digest(self):
-        registry = json.loads((ROOT / '.github/evals/custom-metrics.json').read_text())
+        registry = evidence.frozen_registry(ROOT)
         registry['profiles'].pop('gh-deterministic-gate-v6')
         registry['profiles'].pop('gh-native-oracle-v2')
         registry['active_profiles']['gh'] = 'gh-deterministic-gate-v5'
@@ -35,7 +35,7 @@ class RoutingProfiles(unittest.TestCase):
         self.assertEqual(digest, '85b150175df87e5cf58bfadafe7d4c19e010fb129fd42546d98c704fcf0d5d78')
 
     def test_failure_audit_successors_preserve_all_prior_profiles(self):
-        registry = json.loads((ROOT / '.github/evals/custom-metrics.json').read_text())
+        registry = evidence.frozen_registry(ROOT)
         registry['profiles'].pop('gh-deterministic-gate-v6')
         registry['profiles'].pop('gh-native-oracle-v2')
         registry['active_profiles']['gh'] = 'gh-deterministic-gate-v5'
@@ -56,7 +56,7 @@ class RoutingProfiles(unittest.TestCase):
         self.assertEqual(digest, '20c02e22482cbb6c0b047bc89d718e08a9a7b424b911a4e6a871395b247b027b')
 
     def test_verifier_observation_profiles_preserve_all_prior_profiles(self):
-        registry = json.loads((ROOT / '.github/evals/custom-metrics.json').read_text())
+        registry = evidence.frozen_registry(ROOT)
         registry['profiles'].pop('gh-deterministic-gate-v6')
         registry['profiles'].pop('gh-native-oracle-v2')
         registry['active_profiles']['gh'] = 'gh-deterministic-gate-v5'
@@ -77,7 +77,7 @@ class RoutingProfiles(unittest.TestCase):
         self.assertEqual(digest, '22244f4d7409497afac7605dde7be65cc472e3cc98be06e7849f3e02d8a9aa4c')
 
     def test_metadata_transport_profiles_preserve_all_prior_profiles(self):
-        registry = json.loads((ROOT / '.github/evals/custom-metrics.json').read_text())
+        registry = evidence.frozen_registry(ROOT)
         registry['profiles'].pop('gh-deterministic-gate-v6')
         registry['profiles'].pop('gh-native-oracle-v2')
         registry['active_profiles']['gh'] = 'gh-deterministic-gate-v5'
@@ -101,6 +101,8 @@ class RoutingProfiles(unittest.TestCase):
         self.assertEqual(digest, 'cc7a4f209714b15b2c2eda28c99e13bdceae793e379d8a3fbe297774856dcc45')
 
     def test_freeze_successor_changes_only_routing_and_preserves_original_bytes(self):
+        from test_pester_return_qualification import frozen_return_workflow
+
         base = ROOT / '.github/evals/pester-return-contract'
         active = json.loads((base / 'freeze.json').read_text())
         prior = (base / active['previous']['manifest']).read_bytes()
@@ -112,7 +114,7 @@ class RoutingProfiles(unittest.TestCase):
         workflow = '.github/workflows/pester-return-qualification.yml'
         self.assertEqual(old['files'][workflow], '2078943a7ee5330caab85187ec7b3bbcbfe92489cdf4dc046d302c1b1319b0b0')
         self.assertEqual(current['files'][workflow], '549a7e100d7a125f6a818d5828faf1979fce1f0f09f6971a86c08397e8200e4e')
-        self.assertEqual(active['files'][workflow], hashlib.sha256((ROOT / workflow).read_bytes()).hexdigest())
+        self.assertEqual(active['files'][workflow], hashlib.sha256(frozen_return_workflow()).hexdigest())
         for key in old:
             if key not in ('id', 'previous', 'revision_purpose', 'files'):
                 self.assertEqual(old[key], current[key], key)

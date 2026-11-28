@@ -100,12 +100,12 @@ NATIVE_RUNTIME_FILES = (
 )
 SUITE_FILES = {'podman': ('.apm/skills/podman/',),
                'gh': ('.github/evals/gh/evals/', '.github/scripts/gh_evaluations.py',
-                      '.github/evals/custom-metrics.json', '.github/scripts/skill_evidence.py'),
+                      '.github/evals/active-grading.json', '.github/scripts/skill_evidence.py'),
                'powershell-pester-6': ('.apm/skills/powershell-pester-6/',
                                       '.github/evals/powershell-pester-6/evals/',
                                       '.github/evals/powershell-pester-6/support/',
                                       '.github/scripts/pester_evaluations.py',
-                                      '.github/evals/custom-metrics.json', '.github/scripts/skill_evidence.py')}
+                                      '.github/evals/active-grading.json', '.github/scripts/skill_evidence.py')}
 TITLE = re.compile(r'Benchmark (podman|gh|powershell-pester-6) \((standard|confirmation)\)(?: \[([0-9a-f]{64})\])?')
 require = reports.require
 

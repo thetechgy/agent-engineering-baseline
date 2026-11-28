@@ -1,0 +1,32 @@
+{
+  "members": {
+    ".github/evals/campaign-source-v52-inputs.json": "sha256:50ca4ba8486a30b8a64f59d4c0dde998270a06e71d7d7f93c59976acd62f00e9",
+    ".github/evals/campaign-source-v53-inputs.json": "sha256:fb3e57d207b395d5b07269ce6fd57e37cd6b3861fac20a4d1e71eb48d936c058",
+    ".github/evals/custom-metrics.json": "sha256:e844752fa5224af5552c2d737bde90da1bd660bab3a38a0d31ce9ed8646fd72a",
+    ".github/evals/source-v37.json": "sha256:d23fa19047bd1a7bf3f1b2ebbca2970d9c4cc3a573bb1987cbfd8ac77b1805ea",
+    ".github/evals/source-v38.json": "sha256:d338f50fd7baf8f93c91536071d41d36b9a1b59b73ec7877c9518ca4f1fe8c16",
+    ".github/evals/source-v39.json": "sha256:4b8af6805ecf1da23d92cb437a12e505359e356c2070b40de484a2aa6985003d",
+    ".github/evals/source-v40.json": "sha256:f4cd722f1ce4674ea0a9e85fa8f742ca416ba6d24608121f989bc1dc923ac0f7",
+    ".github/evals/source-v41.json": "sha256:343d7c83ba0b04f130955833dbec7c5abb3078ecfcc7c197c490c0f85881969b",
+    ".github/evals/source-v42.json": "sha256:1a1f62e25b8270182b3e82013fae525b5ff859cf518247584d7b1dcaf974f772",
+    ".github/evals/source-v43.json": "sha256:183811d5d242befca4b1dab024787c1456d0d17c796e6ac46465d5a012faa3f2",
+    ".github/evals/source-v44.json": "sha256:4572e989f02e33871e4164aaba06f17015ddf48e1ab1f8439a486893dc50dc30",
+    ".github/evals/source-v45.json": "sha256:f53771ad9b24e20d007a08ed00921fd13ec0488d73950c9cc618c4a14d0e8cfc",
+    ".github/evals/source-v46.json": "sha256:45ce64a733473715227b7666cb0901d8096d44db3315c3b7d50fd3da928afc3a",
+    ".github/evals/source-v47.json": "sha256:d5bda46cbd33397922a2bbaebfa5e5cb30de6f1411abb17244153dfe434bb913",
+    ".github/evals/source-v48.json": "sha256:e851695b6b35eed6726dd7b00f83ca1f3a94c08137dbe49946f50beb9144a61c",
+    ".github/evals/source-v49.json": "sha256:0dc3fb61aa8ae40a2dfae1436c8ce618bdb31ba97a0fc57abe0273f5d9dd14a4",
+    ".github/evals/source-v50.json": "sha256:6bf16593147e9c7864e2d3d835ecbea0849d30488418a413bf62156c1cee2a01",
+    ".github/evals/source-v51.json": "sha256:b9580a2640b7be69a81bf23293c7d555ff4c0a580a010b9224327209a856298e",
+    ".github/evals/source-v52.json": "sha256:27184ab18e8a9d72fb8c665f6263771366d2119b72ea015eb08ce95e95974a40",
+    ".github/evals/source-v53.json": "sha256:004ece46f7bbf4c34ebbd117921cba5e86c9f1f769807fab77b4a4fd4d692a28"
+  },
+  "revision": "f79ecc5b1e98e4575f434d8cb22ccd1cf67690ab",
+  "source_inputs": {
+    "campaign/.github/workflows/codex-1691-qualification.yml": "sha256:a79afebbae8c1a286b8debcf68bd7337f2bf0bbf3d4848314b30fb087147b0c3",
+    "campaign/.github/workflows/evaluation-campaign.yml": "sha256:29964fe641ba0a114d3eadcc138e01c14949992f8831e007b4a19407825031ef",
+    "pilot/.github/workflows/codex-pilot.yml": "sha256:2a12c3ff380d608effc656c8b01177025bfc433c92c32a9174cddd6b4db4174a",
+    "task/.github/scripts/gh_oracle_validation.py": "sha256:8a9ec04bda7eeec4e7f1e3c2431d4b6059841876f4ac5cfc6933547156d115a8"
+  },
+  "version": 1
+}
