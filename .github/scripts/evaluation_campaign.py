@@ -24,8 +24,8 @@ import skill_reports as reports
 
 def purpose(task, mode):
     identity = {'boolean-contract-v1':'boolean-contract-v4', 'gh-read-v1':'gh-read-v4', 'boolean-effectiveness-v1':'boolean-effectiveness-v3', 'boolean-retained-v1':'boolean-retained-v2'}.get(task.definition['id'], task.definition['id'])
-    from evaluation_registration import current_source
-    return f'campaign-{identity}-lifecycle-v1-source-v{current_source()}-{mode}'
+    from evaluation_identity import campaign_profile
+    return campaign_profile(identity, mode)
 
 
 def revision():
@@ -92,7 +92,7 @@ def collection_run_id(task, mode, fixture=None):
         from evaluation_campaign_protocol import scenarios
         core.require(fixture in scenarios(task), 'Unknown rehearsal report identity')
         identity += '-' + fixture
-    return identity
+    return f'{identity}-{revision()[:12]}'
 
 
 def collect(root, task, mode, bundle, captured, rows, *, fixture=None):
@@ -121,10 +121,13 @@ def collect(root, task, mode, bundle, captured, rows, *, fixture=None):
         scheduler.validate(snapshot, task, staged=captured)
         reports.write_json(raw / scheduler.MEMBER, snapshot)
         scheduler_digest = evidence.digest_bytes(evidence.read_bytes(raw / scheduler.MEMBER))
-    reports.write_json(raw / evidence.CUSTOM_CAPTURE, evidence.custom_capture(ROOT, skill, bundle, captured,
+    ledger = reports.read_json(root / 'evidence/attempt-ledger.json')
+    capture = evidence.custom_capture(ROOT, skill, bundle, captured,
         purpose=purpose(task, mode), scheduler_digest=scheduler_digest, attempts=task.definition['trials'], agent=runtime['agent'] if mode in ('probe', 'experiment-probe', 'live') else 'oracle',
-        retrospective=reports.read_json(root/'evidence/attempt-ledger.json').get('retrospective'),
-        execution_policy={'environment': profile['campaign']['environment_mode'], 'concurrency': 1, 'timeout_multiplier': 1.0, 'stop_on_pass': False}, numeric_excerpts=numeric))
+        retrospective=ledger.get('retrospective'),
+        execution_policy={'environment': profile['campaign']['environment_mode'], 'concurrency': 1, 'timeout_multiplier': 1.0, 'stop_on_pass': False}, numeric_excerpts=numeric)
+    core.require(capture['execution']['revision'] == ledger['revision'], 'Campaign source changed during execution')
+    reports.write_json(raw / evidence.CUSTOM_CAPTURE, capture)
     artifact = root / 'evidence'
     reports.benchmark_artifacts(ROOT, raw, skill, artifact / 'native')
     reports.public_benchmark(ROOT, artifact / 'native', skill, 'confirmation', artifact / 'public')
@@ -226,7 +229,10 @@ def run(root, task, mode, *, reference=None, fixture=None):
                       preparation_digest=digest(reference / 'frozen-proposal.json'))
     if replaying:
         from codex_pilot_replay import retain_campaign_originals
-        replay_profile,_,_ = evidence.custom_contract(definition['skill'],purpose=purpose(task,mode))
+        from evaluation_identity import execution_binding
+        replay_purpose = purpose(task, mode)
+        replay_profile, _, contract = evidence.custom_contract(definition['skill'], purpose=replay_purpose)
+        evidence.bind_custom_profile(replay_profile, execution_binding(ROOT, replay_profile, replay_purpose, contract))
         ledger['retrospective'] = retain_campaign_originals(artifact,task,replay_profile)
     @preserve_interruption(task, ledger, 'ledger_retention_failure')
     def save():

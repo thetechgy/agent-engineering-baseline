@@ -721,10 +721,11 @@ def offline_git_environment():
                  'GIT_PREFIX', 'GIT_SHALLOW_FILE', 'GIT_COMMON_DIR', 'GIT_NAMESPACE',
                  'GIT_CEILING_DIRECTORIES', 'GIT_DISCOVERY_ACROSS_FILESYSTEM'}
     env = {key: value for key, value in os.environ.items()
-           if key not in selectors and not key.startswith(('GIT_CONFIG_KEY_', 'GIT_CONFIG_VALUE_', 'GIT_TRACE'))}
+           if key not in selectors and not key.startswith(('GIT_CONFIG_KEY_', 'GIT_CONFIG_VALUE_', 'GIT_TRACE'))
+           and not re.search('TOKEN|SECRET|API_KEY|PASSWORD', key)}
     # Trace2 can also inherit global/system targets. Explicitly disable all
     # targets rather than allowing an unset environment to fall back to them.
-    env.update(GIT_NO_LAZY_FETCH='1', GIT_NO_REPLACE_OBJECTS='1',
+    env.update(GIT_NO_LAZY_FETCH='1', GIT_NO_REPLACE_OBJECTS='1', GIT_OPTIONAL_LOCKS='0',
                GIT_TRACE='0', GIT_TRACE2='0', GIT_TRACE2_PERF='0', GIT_TRACE2_EVENT='0')
     return env
 
@@ -3946,9 +3947,12 @@ def profile_family(profile):
     return profile.get('semantics', profile['id'])
 
 
-def validate_custom_purpose(value):
+def validate_custom_purpose(value, workspace=ROOT):
     if campaign_purpose(value):
-        profile = custom_registry()['profiles'].get(value, {})
+        from evaluation_identity import resolve_profile, reusable
+        registry = custom_registry(workspace)
+        profile = (resolve_profile(workspace, registry, value)[0] if reusable(value)
+                   else registry['profiles'].get(value, {}))
         require('campaign' in profile, 'Unknown campaign purpose')
     else:
         enum(value, ('benchmark', 'benchmark-1720', 'oracle_qualification', 'cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'))
@@ -3975,6 +3979,8 @@ def custom_defect_files(profile, workspace, case):
 
 
 def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
+    from evaluation_identity import grading_definition, resolve_profile, reusable
+
     registry = custom_registry(workspace)
     if profile_id is None and campaign_purpose(purpose):
         profile_id = purpose
@@ -3991,21 +3997,26 @@ def custom_contract(name, workspace=ROOT, *, profile_id=None, purpose=None):
     if profile_id is None and name == 'gh' and purpose == 'oracle_qualification':
         profile_id = 'gh-native-oracle-v8'
     profile_id = registry['active_profiles'].get(name) if profile_id is None else profile_id
-    require(profile_id in registry['profiles'], 'Unknown custom metric namespace or profile')
-    registered = registry['profiles'][profile_id]
+    if reusable(profile_id):
+        registered, metrics = resolve_profile(workspace, registry, profile_id)
+        definition = grading_definition(registered)
+    else:
+        require(profile_id in registry['profiles'], 'Unknown custom metric namespace or profile')
+        registered, metrics = registry['profiles'][profile_id], registry['metrics']
+        definition = registered
     require(registered['id'] == profile_id and registered['skill_id'] == name, 'Custom profile owner mismatch')
     ids = sorted({key for case in registered['cases'].values() for key in case['metrics']})
-    require(set(ids) <= registry['metrics'].keys(), 'Unknown registered metric')
-    definitions = {registry['metrics'][key]['native_name']: registry['metrics'][key] for key in ids}
+    require(set(ids) <= metrics.keys(), 'Unknown registered metric')
+    definitions = {metrics[key]['native_name']: metrics[key] for key in ids}
     require(len(definitions) == len(ids), 'Ambiguous native metric mapping')
     profile = copy.deepcopy(registered)
     for case in profile['cases'].values():
-        case['metrics'] = [registry['metrics'][key]['native_name'] for key in case['metrics']]
-        case['denominators'] = {registry['metrics'][key]['native_name']: value for key, value in case['denominators'].items()}
-    return profile, definitions, identity({'profile': registered, 'definitions': definitions})
+        case['metrics'] = [metrics[key]['native_name'] for key in case['metrics']]
+        case['denominators'] = {metrics[key]['native_name']: value for key, value in case['denominators'].items()}
+    return profile, definitions, identity({'profile': definition, 'definitions': definitions})
 
 
-def custom_source_manifest(workspace, name, *, purpose=None):
+def custom_source_manifest(workspace, name, *, purpose=None, bound=False):
     if campaign_purpose(purpose):
         from evaluation_evidence import source_manifest
         return source_manifest(workspace, name, purpose)
@@ -4037,14 +4048,17 @@ def custom_source_manifest(workspace, name, *, purpose=None):
                 values.append({'member': 'producer/' + member,
                                'digest': digest_bytes(read_bytes(workspace / '.github' / member))})
     input_guard(directories, states, members)()
+    from evaluation_identity import EFFECTIVENESS_PURPOSES, legacy_inputs
+    if purpose in EFFECTIVENESS_PURPOSES and not bound:
+        return legacy_inputs(workspace, values)
     return values
 
 
-def custom_input_identities(workspace, name, inputs=None, *, purpose=None):
+def custom_input_identities(workspace, name, inputs=None, *, purpose=None, bound=False):
     if campaign_purpose(purpose):
         from evaluation_evidence import identities
         return identities(workspace, name, purpose, inputs)
-    inputs = custom_source_manifest(workspace, name, purpose=purpose) if inputs is None else inputs
+    inputs = custom_source_manifest(workspace, name, purpose=purpose, bound=bound) if inputs is None else inputs
     if purpose in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
         from codex_pilot_iteration import runner_bytes
         from codex_pilot_contract import grader_bytes
@@ -4312,7 +4326,11 @@ def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, age
                    retrospective=None, scheduler_digest=None, producer_versions=None):
     """Prospective capture used by shared collection and credential-free qualification."""
     from importlib.metadata import version
-    profile, definitions, contract = custom_contract(name, workspace, purpose=purpose)
+    from evaluation_identity import execution_binding, profile_for_capture
+
+    profile_id = profile_for_capture(purpose)
+    profile, definitions, contract = custom_contract(name, workspace, purpose=purpose, profile_id=profile_id)
+    binding = execution_binding(workspace, profile, purpose, contract) if profile_id is not None else None
     if 'campaign' in profile:
         from evaluation_evidence import producer as campaign_producer
         producer = campaign_producer(profile)
@@ -4327,7 +4345,7 @@ def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, age
         producer = profiles.runtime(producer_versions, owning=True)
     require(version('skillevaluator') == producer['version'] and version('harbor') == producer['harbor']
             and '.'.join(map(str,sys.version_info[:3])).startswith(producer['python']), 'Unsupported capture runtime')
-    validate_custom_purpose(purpose)
+    validate_custom_purpose(purpose, workspace)
     expected = custom_case_mapping(profile, purpose)
     dataset = read_json(bundle / 'evals/evals.json')
     ids = case_ids(sorted(row['id'] for row in dataset['evals']))
@@ -4340,11 +4358,11 @@ def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, age
         require(sorted(row['case_id'] for row in rows) == ids, 'Incomplete staged custom arms')
     inv = inventory(workspace)
     src = next(row['source'] for row in inv['skills'] if row['source']['skill_id'] == name)
-    if 'skill_source' in profile:
+    if 'skill_source' in profile or (binding is not None and 'campaign' in profile and name != 'gh'):
         from evaluation_evidence import selected_identity
         src = selected_identity(workspace, profile, src)
-    capture = {'schema_version': 1, 'skill': name, 'contract_digest': contract, 'purpose': purpose,
-            'source': src, 'inputs': custom_source_manifest(workspace, name, purpose=purpose),
+    capture = {'schema_version': 2 if binding is not None else 1, 'skill': name, 'contract_digest': contract, 'purpose': purpose,
+            'source': src, 'inputs': custom_source_manifest(workspace, name, purpose=purpose, bound=binding is not None),
             'authored_digest': custom_authored_digest(workspace, name, profile),
             'prepared_dataset_digest': identity(prepared),
             'case_ids': ids, 'tasks': sorted(task_rows, key=lambda row: (row['arm'], row['case_id'])),
@@ -4352,6 +4370,9 @@ def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, age
             'evaluator_revision': producer['revision'], 'evaluator_version': producer['version'],
             'harbor_version': version('harbor'), 'python_version': '.'.join(map(str, sys.version_info[:3])), 'runtime': profile['runtime']}
 
+    if binding is not None:
+        capture['execution'] = binding
+        bind_custom_profile(profile, binding)
     if profile.get('campaign', {}).get('scheduler'):
         sha(scheduler_digest); capture['scheduler_digest'] = scheduler_digest
     else:
@@ -4367,6 +4388,12 @@ def custom_capture(workspace, name, bundle, task_rows, *, purpose, attempts, age
         capture['producer'] = profiles.candidate_versions(producer)
         profiles.runtime(capture['producer'], owning=True)
     return capture
+
+
+def bind_custom_profile(profile, binding):
+    profile['runtime_digest'] = identity(binding)
+    if binding['replay_adapter'] is not None:
+        profile['campaign']['adapter_sha256'] = binding['replay_adapter']
 
 
 def restore_historical_gh_file_order(prepared, snapshot):
@@ -4449,14 +4476,24 @@ def retained_capture_inputs(name, purpose):
 
 def validate_custom_capture(capture, name, workspace, *, captured_state=None, read_prepared_snapshot=None):
     require(type(capture) is dict, 'Invalid custom capture')
+    from evaluation_identity import (EFFECTIVENESS_PURPOSES, LEGACY_INPUTS, REGISTRY, execution_binding,
+                                     profile_for_capture, reusable)
+
+    version = capture.get('schema_version')
+    require(type(version) is int and version in (1, 2), 'Custom capture version')
+    bound = version == 2
     closed(capture, ('schema_version', 'skill', 'contract_digest', 'purpose', 'source', 'inputs',
         'authored_digest', 'prepared_dataset_digest', 'case_ids', 'tasks', 'attempts', 'agent', 'execution_policy', 'numeric_excerpts',
         'evaluator_revision', 'evaluator_version', 'harbor_version', 'python_version', 'runtime') +
         (('producer',) if profiles.candidate_revision(capture.get('evaluator_revision')) else ()) +
         (('retrospective',) if replay_purpose(capture.get('purpose')) else ()) +
-        (('scheduler_digest',) if 'scheduler_digest' in capture else ()))
+        (('scheduler_digest',) if 'scheduler_digest' in capture else ()) + (('execution',) if bound else ()))
     purpose = capture['purpose']
     require(type(purpose) is str, 'Invalid custom capture purpose')
+    profile_id = profile_for_capture(purpose) if bound else None
+    require((bound and profile_id is not None and type(capture['execution']) is dict
+             and type(capture['execution'].get('version')) is int) or
+            (not bound and not reusable(purpose)), 'Custom capture execution identity mismatch')
     from evaluation_registration import REGISTRATION
     from evaluation_evidence import RETAINED_SOURCE_INPUTS, registered_family
     if captured_state is not None:
@@ -4471,11 +4508,19 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
                 track(member)
 
         track(REGISTRATION)
+        if bound:
+            track(REGISTRY)
+        elif campaign_purpose(purpose) or purpose in EFFECTIVENESS_PURPOSES:
+            track(LEGACY_INPUTS)
         track_tree(workspace / '.github/evals' / name)
         for registry_member in (RETAINED_SOURCE_INPUTS, CUSTOM_REGISTRY, SOURCE_SUCCESSORS,
                                 *source_successor_paths(workspace)):
             track(registry_member)
-    profile, definitions, contract = custom_contract(name, workspace, purpose=purpose)
+    profile, definitions, contract = custom_contract(name, workspace, purpose=purpose, profile_id=profile_id)
+    if bound:
+        binding = execution_binding(workspace, profile, purpose, contract)
+        require(capture['execution'] == binding, 'Custom capture execution binding mismatch')
+        bind_custom_profile(profile, binding)
     family = registered_family(profile, workspace)
     local_source = name == 'powershell-pester-6' or family is not None
     if captured_state is not None:
@@ -4486,8 +4531,8 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
         else:
             helper = 'pester_evaluations.py' if name == 'powershell-pester-6' else 'gh_evaluations.py'
             track('.github/scripts/' + helper)
-    approved_inputs = custom_source_manifest(workspace, name, purpose=purpose)
-    if capture['contract_digest'] != contract:
+    approved_inputs = custom_source_manifest(workspace, name, purpose=purpose, bound=bound)
+    if not bound and capture['contract_digest'] != contract:
         for retained_id, digests in retained_capture_inputs(name, purpose):
             candidate = custom_contract(name, workspace, profile_id=retained_id)
             if capture['contract_digest'] == candidate[2]:
@@ -4498,11 +4543,11 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
     require(bool(profile.get('campaign', {}).get('scheduler')) == ('scheduler_digest' in capture),
             'Missing or unexpected scheduler capture')
     if 'scheduler_digest' in capture: sha(capture['scheduler_digest'])
-    require(type(capture['schema_version']) is int and capture['schema_version'] == 1 and capture['skill'] == name
-            and capture['contract_digest'] == contract, 'Custom contract identity mismatch')
+    require(capture['skill'] == name and capture['contract_digest'] == contract, 'Custom contract identity mismatch')
     require(capture['inputs'] == approved_inputs, 'Approved custom input drift')
     identities = custom_input_identities(workspace, name, capture['inputs'], purpose=capture['purpose'])
-    require(all(profile[key] == value for key, value in identities.items()), 'Unregistered grader, fixture or runtime version')
+    require(all(profile[key] == value for key, value in identities.items() if not bound or key != 'runtime_digest'),
+            'Unregistered grader, fixture or runtime version')
     require(capture['authored_digest'] == profile['dataset_digest'] == custom_authored_digest(workspace, name, profile),
             'Authored dataset drift')
     producer = profiles.by_revision(capture['evaluator_revision'])
@@ -4535,8 +4580,11 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
             bool(re.fullmatch(r'3\.13\.[0-9]+', capture['python_version']))), 'Unsupported capture Python')
     require(capture['evaluator_version'] == producer['version'] and capture['harbor_version'] == producer['harbor']
             and capture['runtime'] == profile['runtime'], 'Custom runtime identity mismatch')
-    validate_custom_purpose(capture['purpose']); validate_source(capture['source'])
+    validate_custom_purpose(capture['purpose'], workspace); validate_source(capture['source'])
     if replay_purpose(capture['purpose']):
+        if bound:
+            require(capture['retrospective'].get('corrected_adapter_revision') == binding['revision'],
+                    'Retrospective adapter source drift')
         validate_replay_metadata(capture['retrospective'],profile,capture['purpose'],workspace)
     count(capture['attempts'], 100); require(capture['attempts'] > 0, 'Zero planned attempts')
     if capture['purpose'] in ('cli_pilot', 'cli_pilot_control', 'cli_pilot_probe', 'cli_pilot_replay', 'skill_effectiveness', 'skill_effectiveness_probe', 'skill_effectiveness_control'):
@@ -4564,7 +4612,7 @@ def validate_custom_capture(capture, name, workspace, *, captured_state=None, re
         restore_historical_gh_file_order(prepared, read_prepared_snapshot())
     require(capture['prepared_dataset_digest'] == identity(prepared), 'Prepared dataset identity mismatch')
     source_root = workspace / ('.apm/skills' if local_source else '.agents/skills') / name
-    if 'skill_source' in profile:
+    if 'skill_source' in profile or (bound and 'campaign' in profile and name != 'gh'):
         from evaluation_evidence import selected_source
         source_root = selected_source(workspace, profile)
         require(capture['source']['source_path'] == source_root.relative_to(workspace).as_posix(), 'Campaign source path drift')
@@ -4754,7 +4802,9 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
         from evaluation_evidence import task as campaign_task
         scheduler = read(root / scheduler_evidence.MEMBER)
         require(captured[root / scheduler_evidence.MEMBER][1] == capture['scheduler_digest'], 'Scheduler witness digest mismatch')
-        require(scheduler['mode'] == profile['campaign']['mode'], 'Scheduler/profile origin mismatch')
+        require(scheduler['mode'] == profile['campaign']['mode']
+                and ('execution' not in capture or scheduler['revision'] == capture['execution']['revision']),
+                'Scheduler/profile origin mismatch')
         scheduler_evidence.validate(scheduler, campaign_task(profile), staged=capture['tasks'])
         scheduler_ref = ref(root / scheduler_evidence.MEMBER)
     numeric_excerpts = custom_numeric_excerpts(capture, definitions)
@@ -4833,6 +4883,8 @@ def normalize_custom_behavioral(root, name, selected=None, workspace=ROOT, *, na
         'assurance': copy.deepcopy(CUSTOM_ASSURANCE)}
     if scheduler is not None:
         data['custom']['scheduler'] = {'reference': scheduler_ref, 'witness': copy.deepcopy(scheduler)}
+    if 'execution' in capture:
+        data['custom']['execution'] = copy.deepcopy(capture['execution'])
     if replay_purpose(capture['purpose']):
         data['custom']['retrospective'] = copy.deepcopy(capture['retrospective'])
     old = {(obs['arm'], obs['native_trial']): obs for obs in data['observations']}
@@ -5193,11 +5245,23 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
     require(type(data['schema_version']) is int and data['schema_version'] == 2 and data['kind'] == 'behavioral', 'Custom evidence version')
     validate_source(data['source']); token(data['run_id'])
     validate_policy(data['policy'], custom_only=data['policy']['fields']['grading'] == 'custom_only')
-    profile, definitions, contract = custom_contract(data['source']['skill_id'], profile_id=data['custom']['profile_id'])
+    from evaluation_identity import execution_binding, profile_for_capture, reusable, validate_skill_source
+
     custom = data['custom']
+    profile, definitions, contract = custom_contract(data['source']['skill_id'], profile_id=custom['profile_id'])
+    bound = reusable(custom['profile_id'])
     closed(custom, ('profile_id', 'contract_digest', 'definitions', 'cases', 'purpose', 'agent', 'runtime',
                    'native_metric_set', 'capture_digest', 'capture_reference', 'agent_version', 'grader_digest', 'fixture_digest', 'runtime_digest', 'assurance') + (('retrospective',) if replay_purpose(custom.get('purpose')) else ()) +
-        (('scheduler',) if 'scheduler' in custom else ()))
+        (('scheduler',) if 'scheduler' in custom else ()) + (('execution',) if bound else ()))
+    if bound:
+        require(type(custom['execution']) is dict and profile_for_capture(custom['purpose']) == profile['id'],
+                'Custom report execution identity mismatch')
+        binding = execution_binding(ROOT, profile, custom['purpose'], contract, recorded=custom['execution'])
+        bind_custom_profile(profile, binding)
+        validate_skill_source(ROOT, profile, binding, data['source'])
+        if replay_purpose(custom['purpose']):
+            require(custom['retrospective'].get('corrected_adapter_revision') == binding['revision'],
+                    'Retrospective adapter source drift')
     require(bool(profile.get('campaign', {}).get('scheduler')) == ('scheduler' in custom), 'Scheduler evidence policy mismatch')
     if 'scheduler' in custom:
         import campaign_scheduler_evidence as scheduler_evidence
@@ -5205,7 +5269,9 @@ def validate_custom_evidence(data, *, public=False, _observed_at=None):
         value = custom['scheduler']; closed(value, ('reference', 'witness'))
         require(any(r['id'] == value['reference'] and r['member'] == scheduler_evidence.MEMBER for r in data['references']),
                 'Missing scheduler witness reference')
-        require(value['witness']['mode'] == profile['campaign']['mode'], 'Scheduler/profile origin mismatch')
+        require(value['witness']['mode'] == profile['campaign']['mode']
+                and (not bound or value['witness']['revision'] == binding['revision']),
+                'Scheduler/profile origin mismatch')
         scheduler_evidence.validate(value['witness'], campaign_task(profile), observations=data['observations'])
     require(custom['profile_id'] == profile['id'] and custom['contract_digest'] == contract
             and custom['definitions'] == [{'native_name': key, **definition} for key, definition in sorted(definitions.items())]

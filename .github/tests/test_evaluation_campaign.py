@@ -12,6 +12,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / '.github/scripts'))
 import evaluation_campaign_core as core
+from evaluation_identity import execution_binding
 import evaluation_runtime as runtime
 from evaluation_tasks import load
 import skill_evidence as evidence
@@ -111,9 +112,11 @@ class CampaignContracts(unittest.TestCase):
             task=load(ROOT/('.github/evals/campaigns/'+filename+'.json'))
             for mode in ('oracle','probe'):
                 purpose=__import__('evaluation_campaign').purpose(task,mode)
-                profile,definitions,_=evidence.custom_contract(task.definition['skill'],purpose=purpose)
+                profile, definitions, contract = evidence.custom_contract(task.definition['skill'], purpose=purpose)
                 identities=evidence.custom_input_identities(ROOT,task.definition['skill'],purpose=purpose)
-                self.assertTrue(all(profile[k]==v for k,v in identities.items()),(purpose,identities))
+                self.assertTrue(all(profile[key] == identities[key] for key in ('grader_digest', 'fixture_digest')),
+                                (purpose, identities))
+                self.assertEqual(execution_binding(ROOT, profile, purpose, contract)['grading'], contract)
                 self.assertEqual(profile['qualification_cases'],{k:task.definition['source_case'] for k in task.cases(mode)})
                 self.assertEqual(evidence.custom_prepared_entries(ROOT,task.definition['skill'],list(task.cases(mode)),purpose), sorted(task.entries(mode),key=lambda r:r['id']))
                 self.assertFalse(profile['runtime'].get('inference_enabled',False))

@@ -15,6 +15,7 @@ from evaluation_campaign import purpose
 from evaluation_campaign_core import drive, schedule
 from evaluation_campaign_protocol import protocol, stop_reason
 from evaluation_campaign_selection import selected_task
+from evaluation_identity import REPLAY_ADAPTER, execution_binding
 from codex_pilot_replay import campaign_corpus, campaign_payload, campaign_retrospective, validate_campaign_retrospective
 from pester_admission import runner_bytes
 import skill_evidence as evidence
@@ -86,8 +87,14 @@ class Admission(unittest.TestCase):
         self.assertEqual({k for k in old if old[k] != new[k]}, {'tests/Runner.ps1', 'environment/input/EXECUTION-PROFILE.md'})
         for name, mode in [('pester-transfer-original-v1','oracle'),('pester-transfer-retrospective-v1','replay'),('pester-admission-controls-v2','oracle')]:
             task = self.task(name)
-            profile, _, _ = evidence.custom_contract('powershell-pester-6', purpose=purpose(task,mode))
-            self.assertTrue(all(profile[k] == v for k,v in evidence.custom_input_identities(ROOT,'powershell-pester-6',purpose=purpose(task,mode)).items()))
+            selected = purpose(task, mode)
+            profile, _, contract = evidence.custom_contract('powershell-pester-6', purpose=selected)
+            inputs = evidence.custom_input_identities(ROOT, 'powershell-pester-6', purpose=selected)
+            self.assertTrue(all(profile[key] == inputs[key] for key in ('grader_digest', 'fixture_digest')))
+            binding = execution_binding(ROOT, profile, selected, contract)
+            self.assertEqual(binding['grading'], contract)
+            adapter = evidence.digest_bytes((ROOT / REPLAY_ADAPTER).read_bytes()) if mode == 'replay' else None
+            self.assertEqual(binding['replay_adapter'], adapter)
             self.assertEqual(profile['qualification_cases'], {case: task.definition['source_case'] for case in task.cases(mode)})
 
     @unittest.skipUnless(shutil.which('pwsh'), 'Parser required; full isolation is hosted')

@@ -26,6 +26,7 @@ CAMPAIGNS = [f'pester-return-{case}-{variant}-{version}'
 class SelectionContracts(unittest.TestCase):
     def test_onboarded_fixture_loads_only_registered_definitions(self):
         import evaluation_tasks
+        from evaluation_identity import campaign_profile, resolve_profile
         from evaluation_registration import LEGACY_SELECTIONS, REGISTRATION
         from evaluation_evidence import registered_family
         import skill_evidence as evidence
@@ -87,6 +88,19 @@ class SelectionContracts(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     evidence.extend_qualification_profiles(workspace, 'source-v53', addition,
                                                            {'metrics': existing['metrics'], 'profiles': {}})
+                reusable = {key: copy.deepcopy(value) for key, value in profile.items() if key != 'runtime_digest'}
+                reusable['id'] = campaign_profile('fixture-selection', 'oracle')
+                reusable['campaign']['mode'] = 'oracle'
+                grading = folder / 'grading.json'
+                reports.write_json(grading, {'version': 1, 'metrics': {}, 'profiles': {reusable['id']: reusable}})
+                grading_base = {'metrics': existing['metrics'], 'profiles': {}}
+                resolved, metrics = resolve_profile(workspace, grading_base, reusable['id'])
+                self.assertEqual(resolved, reusable)
+                self.assertEqual(metrics, existing['metrics'])
+                reusable['campaign']['mode'] = 'live'
+                reports.write_json(grading, {'version': 1, 'metrics': {}, 'profiles': {reusable['id']: reusable}})
+                with self.assertRaisesRegex(ValueError, 'Unregistered grading profile purpose'):
+                    resolve_profile(workspace, grading_base, reusable['id'])
                 with self.assertRaisesRegex(ValueError, 'Unregistered preparation producer'):
                     selected.location(task, {'name': 'reusable-evaluation-1'}, {'run_attempt': 1})
                 # An unregistered definition or linked task module cannot execute.
@@ -214,8 +228,9 @@ class SelectionContracts(unittest.TestCase):
             for field in ('grader_digest', 'fixture_digest'):
                 self.assertEqual(old[field], new[field])
             self.assertNotEqual(old['runtime_digest'], new['runtime_digest'])
-            profile, _, _ = custom_contract(task.definition['skill'], purpose=purpose(task, mode))
-            self.assertTrue(all(profile[key] == digest for key, digest in new.items()))
+            profile, _, contract = custom_contract(task.definition['skill'], purpose=purpose(task, mode))
+            self.assertTrue(all(profile[key] == new[key] for key in ('grader_digest', 'fixture_digest')))
+            self.assertEqual(successor['execution_bindings'][mode]['grading'], contract)
             self.assertEqual(profile['runtime']['cli'], successor['runtime']['resolved']['cli'])
             self.assertEqual(profile['runtime']['codex'], successor['runtime']['resolved']['cli'])
 

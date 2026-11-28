@@ -134,7 +134,8 @@ class ReturnContract(unittest.TestCase):
                     selected=purpose(controls,mode)
                     profile,_,_=evidence.custom_contract('powershell-pester-6',purpose=selected)
                     self.assertEqual(profile['skill_source']['digest'],evidence.skill_content(ROOT/task.definition['source'])['digest'])
-                    self.assertTrue(all(profile[k]==v for k,v in evidence.custom_input_identities(ROOT,'powershell-pester-6',purpose=selected).items()))
+                    inputs = evidence.custom_input_identities(ROOT, 'powershell-pester-6', purpose=selected)
+                    self.assertTrue(all(profile[key] == inputs[key] for key in ('grader_digest', 'fixture_digest')))
                 from evaluation_campaign_protocol import protocol
                 self.assertEqual(protocol(task)['attempt_slots'],6)
             self.assertEqual(definitions[0]['candidate'],definitions[1]['candidate'])
