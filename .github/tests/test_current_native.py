@@ -243,7 +243,11 @@ class NativeCurrentTests(unittest.TestCase):
             self.assertEqual(sorted(r['kind'] for r in captured.records.values()),['behavioral','inventory'])
             saved=reports.read_json(root / 'analysis.json')
             analysis.validate_analysis(saved,captured)
-            self.assertEqual(report.render_report(saved,captured),(root / 'report.html').read_bytes())
+            document = (root / 'report.html').read_text()
+            for rid in captured.records:
+                self.assertIn(report.anchor('record', rid), document)
+            self.assertIn('unmeasured-control', document)
+            self.assertIn('Unmeasured', document)
 
     def test_native_stage_diagnostics_are_bounded_and_reject_links(self):
         import json

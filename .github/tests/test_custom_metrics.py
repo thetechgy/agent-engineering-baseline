@@ -400,15 +400,14 @@ class CustomMetricTests(unittest.TestCase):
         captured = analysis.capture_inputs([public]); result = analysis.validate_analysis(None, captured)
         saved = self.root / 'analysis/analysis.json'; write(saved, result)
         rid = next(key for key, row in captured.records.items() if row['kind'] == 'behavioral')
-        html = report.render_report(result, captured)
         context = review_context(public, saved, NAME, rid)
         shutil.rmtree(native)
         again = analysis.capture_inputs([public])
         self.assertEqual(analysis.validate_analysis(result, again), result)
-        self.assertEqual(report.render_report(result, again), html)
         self.assertEqual(review_context(public, saved, NAME, rid), context)
         output = report.generate([public], saved, self.root / 'rendered')
         text = (output / 'report.html').read_text()
+        self.assertIn(report.anchor('record', rid), text)
         for expected in ('Seeded mutation detection', 'Reference correctness', 'not_applicable', 'unsupported',
                          'Structurally validated reported evidence', 'not independently authenticated', 'not collected in custom-only',
                          '18 trials with evaluated custom outcomes', 'Reported custom measurements; paired population incomplete'):

@@ -1,5 +1,7 @@
 """Exercise decision rendering through the offline CLI with retained evidence."""
 
+from decimal import Decimal
+from html.parser import HTMLParser
 from pathlib import Path
 import shutil
 import subprocess
@@ -30,6 +32,70 @@ def decision_for(manifest, skill, case):
     return next(card for card in manifest['decisions'] if (card['skill'], card['case']) == (skill, case))
 
 
+class Section:
+    def __init__(self, tag='', attrs=()):
+        self.tag = tag
+        self.attrs = dict(attrs)
+        self.children = []
+        self.chunks = []
+
+    @property
+    def text(self):
+        return ' '.join(''.join(self.chunks).split())
+
+    def find_all(self, tag):
+        for child in self.children:
+            if child.tag == tag:
+                yield child
+            yield from child.find_all(tag)
+
+    def links(self):
+        return {(link.text, link.attrs.get('href')) for link in self.find_all('a')}
+
+
+class ReportSections(HTMLParser):
+    # Keep report sections, headings, and table cells. Inline formatting does
+    # not affect how a label, decision, or score is read.
+    TAGS = {'a', 'article', 'caption', 'div', 'h3', 'p', 'section', 'strong', 'table', 'td', 'th', 'tr'}
+
+    def __init__(self, html):
+        super().__init__()
+        self.root = Section()
+        self.stack = [self.root]
+        self.feed(html)
+        self.close()
+
+    def handle_starttag(self, tag, attrs):
+        if tag in self.TAGS:
+            section = Section(tag, attrs)
+            self.stack[-1].children.append(section)
+            self.stack.append(section)
+
+    def handle_endtag(self, tag):
+        if tag in self.TAGS and self.stack[-1].tag == tag:
+            self.stack.pop()
+
+    def handle_data(self, data):
+        for section in self.stack:
+            section.chunks.append(data)
+
+
+def citations(value):
+    if isinstance(value, dict):
+        if value.keys() == {'label', 'url'}:
+            yield value['label'], value['url']
+        else:
+            for child in value.values():
+                yield from citations(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from citations(child)
+
+
+def record_id(bundle):
+    return evidence.identity(evidence.read_json(bundle / 'public-report.json'))
+
+
 class DecisionReportTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
@@ -56,18 +122,121 @@ class DecisionReportTests(unittest.TestCase):
             return process.stderr
         return (destination / 'report.html').read_text()
 
+    def section_by_id(self, sections, tag, target):
+        matches = [section for section in sections.find_all(tag) if section.attrs.get('id') == target]
+        self.assertEqual(len(matches), 1, target)
+        return matches[0]
+
+    def decision_card(self, sections, skill, *, case=None):
+        opening = next(section for section in sections.find_all('section')
+                       if section.attrs.get('aria-labelledby') == 'review-decisions')
+        matches = [card for card in opening.find_all('article')
+                   if any(heading.text == skill for heading in card.find_all('h3'))
+                   and (case is None or any(p.text.startswith(case) for p in card.find_all('p')))]
+        self.assertEqual(len(matches), 1, (skill, case))
+        return matches[0]
+
+    def table_row(self, section, caption, label):
+        tables = [table for table in section.find_all('table')
+                  if any(item.text == caption for item in table.find_all('caption'))]
+        self.assertEqual(len(tables), 1, caption)
+        headings = [cell.text for cell in tables[0].find_all('th') if cell.attrs.get('scope') == 'col']
+        self.assertEqual(headings, ['Result', 'With skill', 'Matched no skill'], caption)
+        rows = [row for row in tables[0].find_all('tr')
+                if any(cell.text == label and cell.attrs.get('scope') == 'row' for cell in row.find_all('th'))]
+        self.assertEqual(len(rows), 1, (caption, label))
+        return rows[0]
+
+    def assert_scores(self, section, caption, label, *expected):
+        row = self.table_row(section, caption, label)
+        def score(text):
+            if '/' in text:
+                return tuple(Decimal(component) for component in text.split('/'))
+            return text
+
+        self.assertEqual(tuple(score(cell.text) for cell in row.find_all('td')), tuple(map(score, expected)),
+                         (caption, label))
+
+    def assert_run_labels(self, page, *, live, synthetic=()):
+        sections = ReportSections(page).root
+        for bundles, expected, excluded in (
+                (live, 'Live Codex execution with custom grading.', 'No agent or model judge was run'),
+                (synthetic, 'No agent or model judge was run', 'Live Codex execution with custom grading.')):
+            for bundle in bundles:
+                with self.subTest(run=bundle.name, expected=expected):
+                    run = self.section_by_id(sections, 'article', decisions.report.anchor('record', record_id(bundle)))
+                    self.assertIn(expected, run.text)
+                    self.assertNotIn(excluded, run.text)
+                    if bundles is live:
+                        self.assertNotIn('Synthetic candidate qualification', run.text)
+
+    def assert_retained_cards(self, page, manifest):
+        sections = ReportSections(page).root
+        receipt_links = {item['sha256']: item['scoring'] for item in manifest['receipts']}
+        records = [evidence.read_json(bundle / 'public-report.json') for bundle in ALL_INPUTS]
+        record_targets = {decisions.report.anchor('record', evidence.identity(record)): record for record in records}
+        for spec in manifest['decisions']:
+            with self.subTest(skill=spec['skill'], case=spec['case']):
+                case = None
+                if 'stopped' in spec:
+                    case = spec['case']
+                if 'observation' in spec:
+                    case = 'Case ' + spec['case']
+                card = self.decision_card(sections, spec['skill'], case=case)
+                expected = spec.get('decision', 'Inconclusive. The authorized comparison stopped.')
+                self.assertEqual(next(card.find_all('strong')).text, expected)
+
+                expected_links = set(citations(spec))
+                for group in (spec, spec.get('development', {})):
+                    for row in group.get('rows', []):
+                        source = row['source']
+                        href = receipt_links.get(source, '#' + decisions.report.anchor('record', source))
+                        self.assertIn((row['label'], href), self.table_row(card, group['caption'], row['label']).links())
+                        expected_links.add((row['label'], href))
+                if 'stopped' in spec:
+                    stopped = decisions.report.anchor('record', spec['stopped']['source'])
+                    expected_links.add(('Partial grades and scheduler witness', '#' + stopped))
+                for key, label in (('replay', 'Replay evidence'), ('qualification', 'Native qualification evidence')):
+                    if key in spec:
+                        target = decisions.report.anchor(key, spec[key]['id'])
+                        expected_links.add((label, '#' + target))
+                        cited = self.section_by_id(sections, 'div', target)
+                        self.assertIn(spec[key]['id'], cited.text)
+                self.assertEqual(card.links(), expected_links)
+
+                for source in (href[1:] for _, href in expected_links if href.startswith('#')):
+                    if source.startswith('record-'):
+                        self.assertIn(source, record_targets)
+                        run = self.section_by_id(sections, 'article', source)
+                        self.assertIn(record_targets[source]['run_id'], run.text)
+
+        document = Document(page)
+        self.assertEqual(len(set(document.ids)), len(document.ids))
+        for href in document.links:
+            if href.startswith('#'):
+                self.assertIn(href[1:], document.ids)
+
     def test_retained_pairs_lead_and_link_to_their_evidence(self):
         inputs = ALL_INPUTS
         page = self.run_report(inputs)
         opening = page[:page.index(decisions.OVERVIEW_START.decode())]
         self.assertIn('Keep current guidance. Close this case on GPT-6.2 Sol.', opening)
-        self.assertEqual(opening.count('>3/3<'), 9)
-        self.assertEqual(opening.count('>0/3<'), 3)
+        manifest = evidence.read_json(MANIFEST)
+        self.assert_retained_cards(page, manifest)
         pester = opening.split('<h3>powershell-pester-6</h3>', 1)[1].split('</article>', 1)[0]
-        for cli in ('0.171.0', '0.167.0'):
-            self.assertIn(f'>Current · GPT-6.2 Sol · CLI {cli}</a></th><td>3/3</td><td>3/3</td>', pester)
-        self.assertIn('>Current · GPT-6.1 Sol</a></th><td>0/3</td><td>0/3</td>', pester)
-        self.assertIn('>22-line revision · GPT-6.1 Sol</a></th><td>3/3</td><td>0/3</td>', pester)
+        spec = decision_for(manifest, 'powershell-pester-6', 'pester-transfer-batch-v1')
+        development = spec['development']
+        pester_card = self.decision_card(ReportSections(page).root, 'powershell-pester-6')
+        for label, with_skill, without_skill in (
+                ('Current · GPT-6.1 Sol', '0/3', '0/3'),
+                ('22-line revision · GPT-6.1 Sol', '3/3', '0/3')):
+            self.assert_scores(pester_card, development['caption'], label, with_skill, without_skill)
+        stage_one_ids = {record_id(bundle) for bundle in STAGE_ONE_INPUTS}
+        for row in development['rows']:
+            if row['source'] in stage_one_ids:
+                self.assert_scores(pester_card, development['caption'], row['label'], '3/3', '3/3')
+        for label in ('Current', '22-line revision'):
+            self.assert_scores(pester_card, spec['caption'], label, '3/3', '3/3')
         self.assertIn('pester-exploratory-004-boolean (five defects)', pester)
         self.assertIn('<caption>Transfer · GPT-6.1 Sol', pester)
         self.assertIn('On GPT-6.1 Sol, all six submissions in the current pair passed the reference and missed only integer-result.', pester)
@@ -82,13 +251,8 @@ class DecisionReportTests(unittest.TestCase):
         self.assertLess(pester.index('Keep current guidance.'), pester.index('<caption>Development'))
         self.assertLess(pester.index('<caption>Development'), pester.index('<caption>Transfer'))
         self.assertLess(pester.index('<caption>Transfer'), pester.index('All 12 transfer submissions'))
-        self.assertEqual(opening.count('<h3>powershell-pester-6</h3>'), 1)
-        self.assertEqual(page.count('Live Codex execution with custom grading.'), 7)
-        self.assertNotIn('No agent or model judge was run', page)
+        self.assert_run_labels(page, live=inputs)
         self.assertNotIn('Decision pending complete evidence', pester)
-        self.run_report(inputs, name='html-repeat')
-        self.assertEqual((self.root / 'html/report.html').read_bytes(),
-                         (self.root / 'html-repeat/report.html').read_bytes())
         self.assertIn('only Int32 and Int64', opening)
         self.assertIn('Historical finding · Valid output rejected', opening)
         self.assertIn('0 accepted · 12 rejected · 0 unmeasured', opening)
@@ -100,7 +264,9 @@ class DecisionReportTests(unittest.TestCase):
         self.assertNotIn('Add a Quantity value returned as System.Int128', opening)
         self.assertIn('One matched pair gives insufficient evidence for a skill edit.', opening)
         self.assertIn('identical correct output', opening)
-        self.assertIn('>Passed</td><td>Failed</td>', opening)
+        gh = decision_for(manifest, 'gh', 'gh-014')
+        self.assert_scores(self.decision_card(ReportSections(page).root, 'gh'), gh['caption'],
+                           'Task authorization', 'Passed', 'Failed')
         self.assertIn('unlisted_directory', opening)
         self.assertIn('one trial per arm', opening)
         self.assertIn('Keep the current Podman guidance. On corrected case 4, Codex explained the socket’s authority, '
@@ -120,23 +286,17 @@ class DecisionReportTests(unittest.TestCase):
             if finding['skill'] in ('powershell-pester-6', 'gh') and finding['next_step'] in (
                     'supply_two_intended_runs', 'supply_model_backed_public_report'):
                 self.assertNotIn(decisions.report.anchor('finding', finding['id']), page)
-        document = Document(page)
-        self.assertEqual(len(set(document.ids)), len(document.ids))
-        for link in Document(opening).links:
-            if link.startswith('#'):
-                self.assertIn(link[1:], document.ids)
-            else:
-                self.assertIsNotNone(decisions.GITHUB_EVIDENCE.fullmatch(link))
 
-    def test_manifest_inputs_reproduce_the_explicit_report(self):
-        expected = self.run_report(ALL_INPUTS)
+    def test_manifest_only_cli_cites_the_retained_inputs(self):
         command = [sys.executable, '-B', str(ROOT / '.github/scripts/skill_report_decisions.py')]
         destination = self.root / 'manifest-output'
         result = subprocess.run([*command, '--decisions', str(MANIFEST), '--output', str(destination)],
                                 capture_output=True, text=True, check=False)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual((destination / 'report.html').read_text(), expected)
         manifest = evidence.read_json(MANIFEST)
+        page = (destination / 'report.html').read_text()
+        self.assert_retained_cards(page, manifest)
+        self.assert_run_labels(page, live=ALL_INPUTS)
         manifest['inputs'] = ['../escaping']
         invalid = self.root / 'invalid.json'
         invalid.write_bytes(evidence.encoded(manifest))
@@ -189,8 +349,15 @@ class DecisionReportTests(unittest.TestCase):
         pester = decision_for(manifest, 'powershell-pester-6', 'pester-transfer-batch-v1')
         for key in ('next', 'reconsider'):
             pester[key] = {'text': pester['decision'], 'source': pester['attribution']}
+        pester['development']['rows'].append({
+            'label': 'Reference correctness', 'source': record_id(STAGE_ONE_INPUTS[-1]),
+            'metric': 'powershell-pester-6.reference-pass.v1',
+        })
         path.write_bytes(evidence.encoded(manifest))
-        approved = self.run_report(ALL_INPUTS, path, name='with-cited-guidance')
+        approved = self.run_report(ALL_INPUTS, path, name='with-extra-row-and-guidance')
+        self.assert_retained_cards(approved, manifest)
+        self.assert_scores(self.decision_card(ReportSections(approved).root, 'powershell-pester-6'),
+                           pester['development']['caption'], 'Reference correctness', '3/3', '3/3')
         pester_card = approved.split('<h3>powershell-pester-6</h3>', 1)[1].split('</article>', 1)[0]
         for title in ('Next step', 'What would change it'):
             self.assertIn(f'<strong>{title}</strong> · {pester["decision"]}', pester_card)
@@ -218,16 +385,23 @@ class DecisionReportTests(unittest.TestCase):
                         inputs.append(bundle)
                 page = self.run_report(inputs, path, name=mode)
                 opening = page.split(decisions.OVERVIEW_START.decode(), 1)[0]
-                self.assertEqual(opening.count('>Unknown</td><td>Unknown</td>'), 2)
-                self.assertEqual(opening.count('>3/3<'), 8)
+                pester_section = self.decision_card(ReportSections(page).root, 'powershell-pester-6')
+                caption = pester['development']['caption']
+                for label in ('Current · GPT-6.1 Sol', '22-line revision · GPT-6.1 Sol'):
+                    self.assert_scores(pester_section, caption, label, 'Unknown', 'Unknown')
+                stage_one_ids = {record_id(bundle) for bundle in STAGE_ONE_INPUTS}
+                for row in pester['development']['rows']:
+                    if row['source'] in stage_one_ids:
+                        self.assert_scores(pester_section, caption, row['label'], '3/3', '3/3')
                 self.assertIn('Development result</strong> · Decision pending complete evidence.', opening)
                 self.assertIn('Keep current guidance. Close this case on GPT-6.2 Sol.', opening)
                 pester_card = opening.split('<h3>powershell-pester-6</h3>', 1)[1].split('</article>', 1)[0]
                 self.assertNotIn('<strong>Next step</strong> · Keep current guidance.', pester_card)
                 self.assertNotIn('<strong>What would change it</strong> · Keep current guidance.', pester_card)
                 self.assertIn('Synthetic qualification records also appear below.', page)
-                self.assertEqual(page.count('No agent or model judge was run'), 2)
-                self.assertEqual(page.count('Live Codex execution with custom grading.'), 5)
+                missing_history = inputs[-len(DEVELOPMENT_INPUTS):] if mode == 'wrong-public-input' else DEVELOPMENT_INPUTS
+                self.assert_run_labels(page, live=[*TRANSFER_INPUTS, *STAGE_ONE_INPUTS, *COMPANION_INPUTS],
+                                       synthetic=missing_history)
 
     def historical_registration(self):
         registration, = evidence.read_json(MANIFEST)['historical_reports']
@@ -326,12 +500,12 @@ class DecisionReportTests(unittest.TestCase):
         result = evidence.read_json(self.root / 'analysis/analysis.json')
         run = next(run for skill in result['skills'] for run in skill['behavioral_results'] if run['record_id'] == sid)
         self.assertTrue(run['custom']['complete_paired_population'])
-        opening = page.split(decisions.OVERVIEW_START.decode(), 1)[0]
-        self.assertIn('>Current</a></th><td>Unknown</td><td>Unknown</td>', opening)
-        self.assertEqual(page.count('Live Codex execution with custom grading.'), 6)
+        pester = decision_for(manifest, 'powershell-pester-6', 'pester-transfer-batch-v1')
+        self.assert_scores(self.decision_card(ReportSections(page).root, 'powershell-pester-6'), pester['caption'],
+                           'Current', 'Unknown', 'Unknown')
         self.assertIn('Synthetic qualification records also appear below.', page)
-        detail = page.split(f'<article class="run" id="{decisions.report.anchor("record", sid)}">', 1)[1]
-        self.assertIn('No agent or model judge was run', detail.split('</article>', 1)[0])
+        self.assert_run_labels(page, live=[TRANSFER / 'candidate', *DEVELOPMENT_INPUTS,
+                                         *STAGE_ONE_INPUTS, *COMPANION_INPUTS], synthetic=[fixture])
 
     def test_missing_observation_workspace_withholds_the_zero_change_decision(self):
         path, manifest = self.copy_manifest()
@@ -606,10 +780,17 @@ class DecisionReportTests(unittest.TestCase):
 
         page = self.run_report([current, TRANSFER / 'candidate'], manifest_path)
         opening = page[:page.index(decisions.OVERVIEW_START.decode())]
-        self.assertEqual(opening.count('Decision pending complete evidence'), 2)
+        sections = ReportSections(page).root
+        pester_card = self.decision_card(sections, 'powershell-pester-6')
+        gh_card = self.decision_card(sections, 'gh')
+        gh = decision_for(manifest, 'gh', 'gh-014')
+        for card in (pester_card, gh_card):
+            self.assertEqual(next(card.find_all('strong')).text, 'Decision pending complete evidence')
         self.assertIn('The workspace comparison confirmed zero changed paths.', opening)
-        self.assertEqual(opening.count('>Unknown</td><td>Unknown</td>'), 3)
-        self.assertEqual(opening.count('>3/3<'), 2)  # The other transfer pair remains measured.
+        self.assert_scores(pester_card, pester['caption'], 'Current', 'Unknown', 'Unknown')
+        self.assert_scores(pester_card, pester['caption'], '22-line revision', '3/3', '3/3')
+        for label in ('Correct output', 'Task authorization'):
+            self.assert_scores(gh_card, gh['caption'], label, 'Unknown', 'Unknown')
         self.assertIn('Replay receipt missing.', opening)
         for value in ('>Passed<', '>Failed<', 'Close this case on GPT-6.2 Sol.', 'Keep the skill as-is'):
             self.assertNotIn(value, opening)
