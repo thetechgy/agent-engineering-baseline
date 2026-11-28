@@ -26,14 +26,19 @@ def archive_index(workspace):
     return index
 
 
-@lru_cache(maxsize=32)
-def verified_member(workspace, revision, member, expected):
+@lru_cache(maxsize=4)
+def verified_members(workspace, revision, members):
     import skill_evidence as evidence
 
-    raw = evidence.historical_blob(workspace, f'{revision}:{member}')
-    evidence.require(raw is not None, 'Legacy registry archive unavailable in the local Git object store')
-    evidence.require(evidence.digest_bytes(raw) == expected, 'Legacy registry archive digest mismatch')
-    return raw
+    budget = evidence.ReadBudget()
+    verified = {}
+    with budget.repository_operation():
+        for member, expected in members:
+            raw = evidence.historical_blob(workspace, f'{revision}:{member}', budget=budget)
+            evidence.require(raw is not None, 'Legacy registry archive unavailable in the local Git object store')
+            evidence.require(evidence.digest_bytes(raw) == expected, 'Legacy registry archive digest mismatch')
+            verified[member] = raw
+    return verified
 
 
 def read_member(workspace, member):
@@ -43,7 +48,7 @@ def read_member(workspace, member):
     if configured(workspace):
         index = archive_index(workspace)
         require(member in index['members'], 'Unregistered legacy registry archive member')
-        return verified_member(workspace, index['revision'], member, index['members'][member])
+        return verified_members(workspace, index['revision'], tuple(sorted(index['members'].items())))[member]
     # Explicit frozen workspaces still provide the original layout.
     require(workspace != ROOT, 'Legacy registry archive index missing')
     return read_bytes(workspace / member)

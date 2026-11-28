@@ -55,4 +55,4 @@ class RegistryArchiveTests(unittest.TestCase):
         member = evidence.CUSTOM_REGISTRY
         with patch.object(evidence, 'historical_blob', return_value=b'changed'):
             with self.assertRaisesRegex(ValueError, 'archive digest mismatch'):
-                archive.verified_member(evidence.ROOT, index['revision'], member, 'sha256:' + '0' * 64)
+                archive.verified_members(evidence.ROOT, index['revision'], ((member, 'sha256:' + '0' * 64),))
