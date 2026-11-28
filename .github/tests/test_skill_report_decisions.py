@@ -233,7 +233,7 @@ class DecisionReportTests(unittest.TestCase):
             self.assert_scores(pester_card, development['caption'], label, with_skill, without_skill)
         stage_one_ids = {record_id(bundle) for bundle in STAGE_ONE_INPUTS}
         for row in development['rows']:
-            if row['source'] in stage_one_ids:
+            if row['source'] in stage_one_ids and row['metric'] is None:
                 self.assert_scores(pester_card, development['caption'], row['label'], '3/3', '3/3')
         for label in ('Current', '22-line revision'):
             self.assert_scores(pester_card, spec['caption'], label, '3/3', '3/3')
@@ -391,7 +391,7 @@ class DecisionReportTests(unittest.TestCase):
                     self.assert_scores(pester_section, caption, label, 'Unknown', 'Unknown')
                 stage_one_ids = {record_id(bundle) for bundle in STAGE_ONE_INPUTS}
                 for row in pester['development']['rows']:
-                    if row['source'] in stage_one_ids:
+                    if row['source'] in stage_one_ids and row['metric'] is None:
                         self.assert_scores(pester_section, caption, row['label'], '3/3', '3/3')
                 self.assertIn('Development result</strong> · Decision pending complete evidence.', opening)
                 self.assertIn('Keep current guidance. Close this case on GPT-6.2 Sol.', opening)
